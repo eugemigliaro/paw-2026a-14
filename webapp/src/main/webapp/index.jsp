@@ -1,8 +1,8 @@
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jstl/core_rt" %>
 <%@ taglib tagdir="/WEB-INF/tags" prefix="t" %>
 <html>
 <head>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/card.css" />
+    <link rel="stylesheet" href="<c:url value="/css/card.css"/>" />
 </head>
 <body>
     <h2><c:out value="${message}" /></h2>
