@@ -33,4 +33,9 @@ public class HelloWorldController {
         mav.addObject("message", "Hello World " + user.toString());
         return mav;
     }
+
+    @RequestMapping(value = "/components-demo", method = RequestMethod.GET)
+    public ModelAndView buttonShowcase() {
+        return new ModelAndView("demo.jsp");
+    }
 }
