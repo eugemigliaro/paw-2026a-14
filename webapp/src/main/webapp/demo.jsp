@@ -16,6 +16,10 @@
     />
     <link
       rel="stylesheet"
+      href="${pageContext.request.contextPath}/css/textInput.css"
+    />
+    <link
+      rel="stylesheet"
       href="${pageContext.request.contextPath}/css/demoPage.css"
     />
   </head>
@@ -26,7 +30,8 @@
         <p>
           This page renders the shared JSP tags from
           <code>/WEB-INF/tags/button.tag</code> and
-          <code>/WEB-INF/tags/card.tag</code> so you can inspect their main
+          <code>/WEB-INF/tags/card.tag</code> and
+          <code>/WEB-INF/tags/textInput.tag</code> so you can inspect their main
           variants and supported content patterns.
         </p>
       </section>
@@ -162,6 +167,71 @@
                 </p>
               </jsp:body>
             </ui:card>
+          </div>
+        </article>
+      </section>
+
+      <section class="hero">
+        <h2>Text Input Component</h2>
+      </section>
+
+      <section class="grid">
+        <article class="demo-card">
+          <h2>Basic</h2>
+          <div class="stack row--column">
+            <ui:textInput 
+              name="firstName" 
+              label="First name" 
+              placeholder="Jane" 
+            />
+            <ui:textInput 
+              name="email" 
+              label="Email" 
+              type="email" 
+              placeholder="jane@email.com" 
+              required="${true}" 
+            />
+          </div>
+        </article>
+
+        <article class="demo-card">
+          <h2>Styles</h2>
+          <div class="stack row--column">
+            <ui:textInput 
+              name="search" 
+              label="Search" 
+              size="sm" 
+              rounded="full" 
+              borderColor="blue" 
+              placeholder="Search products" 
+            />
+            <ui:textInput 
+              name="bio" 
+              label="Bio" 
+              size="lg" 
+              rounded="lg" 
+              borderColor="green" 
+              placeholder="Tell us about yourself" 
+            />
+          </div>
+        </article>
+
+        <article class="demo-card">
+          <h2>States</h2>
+          <div class="stack row--column">
+            <ui:textInput 
+              id="readonlyField" 
+              name="readonly"
+              label="Readonly" 
+              value="Locked value" 
+              readonly="${true}" 
+            />
+            <ui:textInput 
+              id="disabledField" 
+              label="Disabled" 
+              value="Disabled value" 
+              disabled="${true}" 
+            />
           </div>
         </article>
       </section>
