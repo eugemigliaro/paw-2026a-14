@@ -1,14 +1,18 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %> 
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Button Component</title>
+    <title>Component Demo</title>
     <link
       rel="stylesheet"
       href="${pageContext.request.contextPath}/css/button.css"
+    />
+    <link
+      rel="stylesheet"
+      href="${pageContext.request.contextPath}/css/card.css"
     />
     <link
       rel="stylesheet"
@@ -18,15 +22,19 @@
   <body>
     <main class="page">
       <section class="hero">
-        <h1>Button Component</h1>
+        <h1>Component Demo</h1>
         <p>
-          This page renders the shared JSP tag from
-          <code>/WEB-INF/tags/button.tag</code> so you can inspect variants,
-          sizes, disabled state, and full-width behavior at
-          <code>/button</code>.
+          This page renders the shared JSP tags from
+          <code>/WEB-INF/tags/button.tag</code> and
+          <code>/WEB-INF/tags/card.tag</code> so you can inspect their main
+          variants and supported content patterns.
         </p>
       </section>
 
+      <section class="hero">
+        <h2>Button Component</h2>
+      </section>
+      
       <section class="grid">
         <article class="demo-card">
           <h2>Variants</h2>
@@ -79,6 +87,81 @@
               variant="danger"
               fullWidth="${true}"
             />
+          </div>
+        </article>
+      </section>
+
+      <section class="hero">
+        <h2>Card Component</h2>
+      </section>
+
+      <section class="grid">
+        <article class="demo-card">
+          <h2>Card Variants</h2>
+          <div class="stack row--column">
+            <ui:card title="Default Card">
+              <p>
+                Basic body content rendered through the tag body, similar to
+                how <code>button.tag</code> supports custom body content.
+              </p>
+            </ui:card>
+
+            <ui:card
+              title="Horizontal Card"
+              variant="horizontal"
+              ariaLabel="Horizontal card example"
+            >
+              <jsp:attribute name="footer">
+                <ui:button label="Read More" size="sm" variant="secondary" />
+              </jsp:attribute>
+              <jsp:body>
+                <p>
+                  The <code>variant</code> attribute maps to card classes and
+                  the footer fragment lets the component render actions.
+                </p>
+              </jsp:body>
+            </ui:card>
+          </div>
+        </article>
+
+        <article class="demo-card">
+          <h2>Card Attributes</h2>
+          <div class="stack row--column">
+            <ui:card
+              id="featured-card"
+              title="Interactive Card"
+              onClick="console.log('card clicked')"
+              ariaLabel="Interactive featured card"
+            >
+              <jsp:attribute name="footer">
+                <ui:button label="Primary Action" size="sm" />
+                <ui:button label="Secondary" size="sm" variant="secondary" />
+              </jsp:attribute>
+              <jsp:body>
+                <p>
+                  This example shows <code>id</code>, <code>className</code>,
+                  <code>ariaLabel</code> and <code>onClick</code> working the
+                  same way as in <code>button.tag</code>.
+                </p>
+              </jsp:body>
+            </ui:card>
+            <ui:card
+              title="Card with Image"
+              ariaLabel="Card with image example"
+              imageUrl="https://picsum.photos/400/200"
+              imageAlt="Example image for card component"
+              imageHeight="150px"
+            >
+              <jsp:attribute name="footer">
+                <ui:button label="View Details" size="sm" variant="secondary" />
+              </jsp:attribute>
+              <jsp:body>
+                <p>
+                  The card body can include any content, such as images, text, 
+                  or even other components.
+                </p>
+              </jsp:body>
+            </ui:card>
           </div>
         </article>
       </section>
