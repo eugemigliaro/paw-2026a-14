@@ -42,10 +42,16 @@ body {
 	border: 1px solid rgba(148, 163, 184, 0.2);
 	border-radius: 20px;
 	box-shadow: 0 20px 45px -32px rgba(15, 23, 42, 0.45);
-	padding: 24px
+	padding: 24px;
+	transition: none
 }
 
-.demo-card h2 {
+.page .demo-card:hover {
+	box-shadow: 0 20px 45px -32px rgba(15, 23, 42, 0.45);
+	transform: none;
+}
+
+.page .demo-card > h3 {
 	font-size: 1.05rem;
 	margin: 0 0 16px
 }

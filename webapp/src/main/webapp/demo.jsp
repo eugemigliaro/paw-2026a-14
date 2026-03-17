@@ -41,8 +41,7 @@
       </section>
       
       <section class="grid">
-        <article class="demo-card">
-          <h2>Variants</h2>
+        <ui:card title="Variants" cssClass="demo-card">
           <div class="stack">
             <div class="row">
               <ui:button label="Primary" />
@@ -53,10 +52,9 @@
               <ui:button label="Danger" variant="danger" />
             </div>
           </div>
-        </article>
+        </ui:card>
 
-        <article class="demo-card">
-          <h2>Sizes</h2>
+        <ui:card title="Sizes" cssClass="demo-card">
           <div class="stack">
             <div class="row">
               <ui:button label="Small" size="sm" />
@@ -64,10 +62,9 @@
               <ui:button label="Large" size="lg" />
             </div>
           </div>
-        </article>
+        </ui:card>
 
-        <article class="demo-card">
-          <h2>States</h2>
+        <ui:card title="States" cssClass="demo-card">
           <div class="stack">
             <div class="row">
               <ui:button label="Disabled" disabled="${true}" />
@@ -81,10 +78,9 @@
               </ui:button>
             </div>
           </div>
-        </article>
+        </ui:card>
 
-        <article class="demo-card">
-          <h2>Full Width</h2>
+        <ui:card title="Full Width" cssClass="demo-card">
           <div class="stack row--column">
             <ui:button label="Continue" fullWidth="${true}" />
             <ui:button
@@ -93,7 +89,7 @@
               fullWidth="${true}"
             />
           </div>
-        </article>
+        </ui:card>
       </section>
 
       <section class="hero">
@@ -101,8 +97,7 @@
       </section>
 
       <section class="grid">
-        <article class="demo-card">
-          <h2>Card Variants</h2>
+        <ui:card title="Card Variants" cssClass="demo-card">
           <div class="stack row--column">
             <ui:card title="Default Card">
               <p>
@@ -127,10 +122,9 @@
               </jsp:body>
             </ui:card>
           </div>
-        </article>
+        </ui:card>
 
-        <article class="demo-card">
-          <h2>Card Attributes</h2>
+        <ui:card title="Card Attributes" cssClass="demo-card">
           <div class="stack row--column">
             <ui:card
               id="featured-card"
@@ -168,7 +162,7 @@
               </jsp:body>
             </ui:card>
           </div>
-        </article>
+        </ui:card>
       </section>
 
       <section class="hero">
@@ -176,8 +170,7 @@
       </section>
 
       <section class="grid">
-        <article class="demo-card">
-          <h2>Basic</h2>
+        <ui:card title="Basic" cssClass="demo-card">
           <div class="stack row--column">
             <ui:textInput 
               name="firstName" 
@@ -192,10 +185,9 @@
               required="${true}" 
             />
           </div>
-        </article>
+        </ui:card>
 
-        <article class="demo-card">
-          <h2>Styles</h2>
+        <ui:card title="Styles" cssClass="demo-card">
           <div class="stack row--column">
             <ui:textInput 
               name="search" 
@@ -214,10 +206,9 @@
               placeholder="Tell us about yourself" 
             />
           </div>
-        </article>
+        </ui:card>
 
-        <article class="demo-card">
-          <h2>States</h2>
+        <ui:card title="States" cssClass="demo-card">
           <div class="stack row--column">
             <ui:textInput 
               id="readonlyField" 
@@ -226,14 +217,15 @@
               value="Locked value" 
               readonly="${true}" 
             />
-            <ui:textInput 
+            <ui:textInput
               id="disabledField" 
+              name="disabled"
               label="Disabled" 
               value="Disabled value" 
               disabled="${true}" 
             />
           </div>
-        </article>
+        </ui:card>
       </section>
     </main>
   </body>
