@@ -34,8 +34,8 @@ public class HelloWorldController {
         return mav;
     }
 
-    @RequestMapping(value = "/button", method = RequestMethod.GET)
+    @RequestMapping(value = "/components-demo", method = RequestMethod.GET)
     public ModelAndView buttonShowcase() {
-        return new ModelAndView("button.jsp");
+        return new ModelAndView("demo.jsp");
     }
 }
