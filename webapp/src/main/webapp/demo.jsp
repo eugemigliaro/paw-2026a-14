@@ -1,4 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -8,19 +9,19 @@
     <title>Component Demo</title>
     <link
       rel="stylesheet"
-      href="${pageContext.request.contextPath}/css/button.css"
+      href="<c:url value="/css/button.css"/>"
     />
     <link
       rel="stylesheet"
-      href="${pageContext.request.contextPath}/css/card.css"
+      href="<c:url value="/css/card.css"/>"
     />
     <link
       rel="stylesheet"
-      href="${pageContext.request.contextPath}/css/textInput.css"
+      href="<c:url value="/css/textInput.css"/>"
     />
     <link
       rel="stylesheet"
-      href="${pageContext.request.contextPath}/css/demoPage.css"
+      href="<c:url value="/css/demoPage.css"/>"
     />
   </head>
   <body>
