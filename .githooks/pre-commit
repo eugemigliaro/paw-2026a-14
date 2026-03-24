@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "[pre-commit] Running formatting checks..."
+
+if ! mvn -q spotless:check; then
+	echo
+	echo "Formatting issues found. Run: mvn spotless:apply"
+	exit 1
+fi
+
+echo "[pre-commit] All checks passed."

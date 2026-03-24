@@ -1,57 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>ar.edu.itba.paw</groupId>
-  <artifactId>paw-webapp2026a</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <packaging>pom</packaging>
-  <name>paw-webapp2026a</name>
-  <modules>
-    <module>webapp</module>
-    <module>services</module>
-    <module>service-contracts</module>
-  </modules>
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>21</maven.compiler.release>
-    <spring.version>5.3.33</spring.version>
-  </properties>
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.springframework</groupId>
-        <artifactId>spring-webmvc</artifactId>
-        <version>${spring.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework</groupId>
-        <artifactId>spring-context</artifactId>
-        <version>${spring.version}</version>
-      </dependency>
-      <!-- JUnit -->
-      <dependency>
-        <groupId>org.junit</groupId>
-        <artifactId>junit-bom</artifactId>
-        <version>5.11.0</version>
-        <type>pom</type>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
-        <version>5.11.0</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-params</artifactId>
-        <scope>test</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-  <dependencies>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-webmvc</artifactId>
-      <version>${spring.version}</version>
-    </dependency>
-  </dependencies>
+<modelVersion>4.0.0</modelVersion>
+<groupId>ar.edu.itba.paw</groupId>
+<artifactId>paw-webapp2026a</artifactId>
+<version>1.0-SNAPSHOT</version>
+<packaging>pom</packaging>
+<name>paw-webapp2026a</name>
+<modules>
+	<module>webapp</module>
+	<module>services</module>
+	<module>service-contracts</module>
+</modules>
+<properties>
+	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<maven.compiler.release>21</maven.compiler.release>
+	<spring.version>5.3.33</spring.version>
+</properties>
+<dependencyManagement>
+	<dependencies>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-webmvc</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-context</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+	<!-- JUnit -->
+	<dependency>
+		<groupId>org.junit</groupId>
+		<artifactId>junit-bom</artifactId>
+		<version>5.11.0</version>
+		<type>pom</type>
+	</dependency>
+	<dependency>
+		<groupId>org.junit.jupiter</groupId>
+		<artifactId>junit-jupiter-api</artifactId>
+		<version>5.11.0</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.junit.jupiter</groupId>
+		<artifactId>junit-jupiter-params</artifactId>
+		<scope>test</scope>
+	</dependency>
+	</dependencies>
+</dependencyManagement>
+<dependencies>
+	<dependency>
+	<groupId>org.springframework</groupId>
+	<artifactId>spring-webmvc</artifactId>
+	<version>${spring.version}</version>
+	</dependency>
+</dependencies>
+<build>
+	<plugins>
+	<plugin>
+		<groupId>com.diffplug.spotless</groupId>
+		<artifactId>spotless-maven-plugin</artifactId>
+		<version>3.4.0</version>
+
+		<configuration>
+		<java>
+			<googleJavaFormat>
+			<version>1.35.0</version>
+			<style>AOSP</style>
+			</googleJavaFormat>
+			<removeUnusedImports/>
+		</java>
+
+		<formats>
+			<format>
+			<includes>
+				<include>**/*.css</include>
+				<include>**/*.html</include>
+				<include>**/*.jsp</include>
+				<include>**/*.sh</include>
+				<include>**/*.xml</include>
+			</includes>
+
+			<excludes>
+				<exclude>**/target/**</exclude>
+			</excludes>
+
+			<indent>
+				<tabs>true</tabs>
+				<spacesPerTab>4</spacesPerTab>
+			</indent>
+			<trimTrailingWhitespace/>
+			<endWithNewline/>
+			</format>
+		</formats>
+		</configuration>
+	</plugin>
+	</plugins>
+</build>
 </project>
