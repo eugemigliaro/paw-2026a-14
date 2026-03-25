@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.User;
-import ar.itba.edu.paw.persistence.UserDao;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
