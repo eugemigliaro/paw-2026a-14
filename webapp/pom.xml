@@ -18,21 +18,27 @@
 
 	<dependencies>
 		<dependency>
-		<groupId>org.springframework</groupId>
-		<artifactId>spring-webmvc</artifactId>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
 		</dependency>
-
 		<dependency>
-		<groupId>ar.edu.itba.paw</groupId>
-		<artifactId>service-contracts</artifactId>
-		<version>${project.version}</version>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 		</dependency>
-
 		<dependency>
-		<groupId>ar.edu.itba.paw</groupId>
-		<artifactId>services</artifactId>
-		<version>${project.version}</version>
-		<scope>runtime</scope>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>ar.edu.itba.paw</groupId>
+			<artifactId>service-contracts</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>ar.edu.itba.paw</groupId>
+			<artifactId>services</artifactId>
+			<version>${project.version}</version>
+			<scope>runtime</scope>
 		</dependency>
 	</dependencies>
 

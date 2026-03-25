@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.UserService;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,9 +40,10 @@ public class HelloWorldController {
     }
 
     @RequestMapping(value = "/profile/{id:[0-9]+}", method = RequestMethod.GET)
-    public ModelAndView helloWorld(@PathVariable("id") final int id) {
+    public ModelAndView helloWorld(@PathVariable("id") final long id) {
         final ModelAndView mav = new ModelAndView("helloworld/index");
-        mav.addObject("message", "This is the profile for " + id);
+        final Optional<User> user = userService.findById(id);
+        mav.addObject("message", "This is the profile for " + user.get().getUsername());
         return mav;
     }
 

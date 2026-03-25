@@ -20,6 +20,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>21</maven.compiler.release>
 		<spring.version>5.3.33</spring.version>
+		<org.postgresql.version>42.2.5</org.postgresql.version>
 	</properties>
 
 	<dependencyManagement>
@@ -33,6 +34,16 @@
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-context</artifactId>
 				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-jdbc</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.postgresql</groupId>
+				<artifactId>postgresql</artifactId>
+				<version>${org.postgresql.version}</version>
 			</dependency>
 			<!-- JUnit -->
 			<dependency>
@@ -84,6 +95,7 @@
 							<include>**/*.html</include>
 							<include>**/*.jsp</include>
 							<include>**/*.sh</include>
+							<include>**/*.sql</include>
 							<include>**/*.xml</include>
 						</includes>
 						<excludes>
