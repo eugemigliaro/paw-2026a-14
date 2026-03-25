@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -26,10 +27,13 @@ public class HelloWorldController {
     }
 
     @RequestMapping(value = "/", method = RequestMethod.POST)
-    public ModelAndView createUser(@RequestParam("email") final String email) {
+    public ModelAndView createUser(
+            @RequestParam("email") final String email,
+            @RequestParam("password") final String password,
+            @RequestParam("username") final String username) {
         final ModelAndView mav = new ModelAndView("index.jsp");
-        Object user = userService.createUser(email);
-        mav.addObject("message", "Hello World " + user.toString());
+        User user = userService.createUser(email, password, username);
+        mav.addObject("message", "Hello World " + user.getUsername());
         return mav;
     }
 
