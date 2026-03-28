@@ -21,6 +21,7 @@
 		<maven.compiler.release>21</maven.compiler.release>
 		<spring.version>5.3.33</spring.version>
 		<org.postgresql.version>42.2.5</org.postgresql.version>
+		<flyway.version>12.1.1</flyway.version>
 		<mockito.version>5.23.0</mockito.version>
 		<junit.version>5.11.0</junit.version>
 		<org.hsqldb.version>2.7.4</org.hsqldb.version>
@@ -47,6 +48,21 @@
 				<groupId>org.postgresql</groupId>
 				<artifactId>postgresql</artifactId>
 				<version>${org.postgresql.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-core</artifactId>
+				<version>${flyway.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-database-postgresql</artifactId>
+				<version>${flyway.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-database-hsqldb</artifactId>
+				<version>${flyway.version}</version>
 			</dependency>
 			<!-- JUnit -->
 			<dependency>

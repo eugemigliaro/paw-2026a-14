@@ -20,7 +20,7 @@ public class UserServiceImplTest {
 
     @Test
     public void testFindByIdWhenUserExists() {
-        final User user = new User(1L, "test", "test", "test");
+        final User user = new User(1L, "test", "test");
         Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(user));
 
         final Optional<User> result = userService.findById(1L);
@@ -40,13 +40,10 @@ public class UserServiceImplTest {
 
     @Test
     public void testCreateUserWhenUserDoesNotExist() {
-        final User user = new User(1L, "test", "test", "test");
-        Mockito.when(
-                        userDao.createUser(
-                                Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-                .thenReturn(user);
+        final User user = new User(1L, "test", "test");
+        Mockito.when(userDao.createUser(Mockito.anyString(), Mockito.anyString())).thenReturn(user);
 
-        final User result = userService.createUser("test", "test", "test");
+        final User result = userService.createUser("test", "test");
 
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1L, result.getId());

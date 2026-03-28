@@ -34,15 +34,13 @@ public class UserJdbcDaoTest {
     @Test
     public void testCreateUserWhenUserDoesNotExist() {
         final String email = "[EMAIL_ADDRESS]";
-        final String password = "[PASSWORD]";
         final String username = "[USERNAME]";
 
-        final User user = userDao.createUser(email, password, username);
+        final User user = userDao.createUser(email, username);
 
         Assertions.assertNotNull(user);
         Assertions.assertEquals(email, user.getEmail());
         Assertions.assertEquals(username, user.getUsername());
-        Assertions.assertEquals(password, user.getPassword());
         Assertions.assertEquals(1, JdbcTestUtils.countRowsInTable(jdbcTemplate, "users"));
     }
 }

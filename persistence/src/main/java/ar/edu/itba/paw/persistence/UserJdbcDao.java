@@ -17,11 +17,7 @@ public class UserJdbcDao implements UserDao {
 
     private static final RowMapper<User> USER_ROW_MAPPER =
             (ResultSet rs, int rowNum) ->
-                    new User(
-                            rs.getLong("id"),
-                            rs.getString("email"),
-                            rs.getString("password"),
-                            rs.getString("username"));
+                    new User(rs.getLong("id"), rs.getString("email"), rs.getString("username"));
 
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
@@ -36,15 +32,16 @@ public class UserJdbcDao implements UserDao {
     }
 
     @Override
-    public User createUser(final String email, final String password, final String username) {
+    public User createUser(final String email, final String username) {
         final Map<String, Object> values = new HashMap<>();
         values.put("email", email);
-        values.put("password", password);
         values.put("username", username);
+        values.put("created_at", new java.sql.Timestamp(System.currentTimeMillis()));
+        values.put("updated_at", new java.sql.Timestamp(System.currentTimeMillis()));
 
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
-        return new User(id.longValue(), email, password, username);
+        return new User(id.longValue(), email, username);
     }
 
     @Override

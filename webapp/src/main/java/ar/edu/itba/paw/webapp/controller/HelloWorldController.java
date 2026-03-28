@@ -31,10 +31,9 @@ public class HelloWorldController {
     @RequestMapping(value = "/", method = RequestMethod.POST)
     public ModelAndView createUser(
             @RequestParam("email") final String email,
-            @RequestParam("password") final String password,
             @RequestParam("username") final String username) {
         final ModelAndView mav = new ModelAndView("helloworld/index");
-        User user = userService.createUser(email, password, username);
+        User user = userService.createUser(email, username);
         mav.addObject("message", "Hello World " + user.getUsername());
         return mav;
     }

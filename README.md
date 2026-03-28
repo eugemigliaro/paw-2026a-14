@@ -7,7 +7,14 @@ sh scripts/setup-git-hooks.sh
 sh scripts/setup-remotes.sh
 ```
 
----
+### Database migrations (Flyway)
+
+Database schema is managed with Flyway.
+
+- Main migrations: `persistence/src/main/resources/db/migration`
+- Test migrations: `persistence/src/test/resources/db/testmigration`
+
+Flyway automatically runs migrations on application startup and during persistence tests.
 
 ## Daily Workflow
 

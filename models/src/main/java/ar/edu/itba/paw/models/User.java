@@ -4,13 +4,11 @@ public class User {
 
     private final Long id;
     private final String email;
-    private final String password;
     private final String username;
 
-    public User(final Long id, final String email, final String password, final String username) {
+    public User(final Long id, final String email, final String username) {
         this.id = id;
         this.email = email;
-        this.password = password;
         this.username = username;
     }
 
@@ -22,10 +20,6 @@ public class User {
         return email;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
     public String getUsername() {
         return username;
     }
@@ -35,9 +29,6 @@ public class User {
         return "User{"
                 + "email='"
                 + email
-                + '\''
-                + ", password='"
-                + password
                 + '\''
                 + ", username='"
                 + username
