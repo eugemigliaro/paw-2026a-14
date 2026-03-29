@@ -1,0 +1,40 @@
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-header__brand" href="${pageContext.request.contextPath}/">
+      <img
+        class="site-header__brand-image"
+        src="${pageContext.request.contextPath}/assets/match-point-logo.png"
+        alt="${shell.brandLabel}" />
+    </a>
+
+    <c:if test="${not empty shell.primaryNav}">
+      <nav class="site-header__nav" aria-label="Primary">
+        <c:forEach var="navItem" items="${shell.primaryNav}">
+          <c:choose>
+            <c:when test="${not empty navItem.href}">
+              <a
+                href="${pageContext.request.contextPath}${navItem.href}"
+                class="site-header__nav-link ${navItem.active ? 'site-header__nav-link--active' : ''}">
+                <c:out value="${navItem.label}" />
+              </a>
+            </c:when>
+            <c:otherwise>
+              <span class="site-header__nav-text"><c:out value="${navItem.label}" /></span>
+            </c:otherwise>
+          </c:choose>
+        </c:forEach>
+      </nav>
+    </c:if>
+
+    <div class="site-header__actions">
+      <c:if test="${not empty shell.hostAction}">
+        <ui:button
+          label="${shell.hostAction.label}"
+          href="${pageContext.request.contextPath}${shell.hostAction.href}"
+          size="sm" />
+      </c:if>
+    </div>
+  </div>
+</header>

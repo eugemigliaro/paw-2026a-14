@@ -1,29 +1,29 @@
 .btn {
-  --btn-background: #1d4ed8;
-  --btn-border: #1d4ed8;
-  --btn-color: #ffffff;
-  --btn-focus-ring: rgba(29, 78, 216, 0.2);
+  --btn-background: #0a695f;
+  --btn-border: #0a695f;
+  --btn-color: #f8fcfa;
+  --btn-focus-ring: rgba(10, 105, 95, 0.18);
   align-items: center;
   appearance: none;
-  background-color: var(--btn-background);
+  background: var(--btn-background);
   border: 1px solid var(--btn-border);
-  border-radius: 999px;
-  box-shadow: 0 10px 20px -16px rgba(15, 23, 42, 0.9);
+  border-radius: 10px;
+  box-shadow: none;
   color: var(--btn-color);
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.86rem;
+  font-weight: 700;
   gap: 0.5rem;
   justify-content: center;
   line-height: 1;
-  min-height: 2.75rem;
-  padding: 0.75rem 1.25rem;
+  min-height: 2.45rem;
+  padding: 0.65rem 1rem;
   text-align: center;
   text-decoration: none;
   transition:
-    background-color 0.2s ease,
+    background 0.2s ease,
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     color 0.2s ease,
@@ -31,7 +31,6 @@
 }
 
 .btn:hover {
-  box-shadow: 0 16px 30px -20px rgba(15, 23, 42, 0.85);
   transform: translateY(-1px);
 }
 
@@ -54,49 +53,158 @@
 }
 
 .btn--primary {
-  --btn-background: #1d4ed8;
-  --btn-border: #1d4ed8;
-  --btn-color: #ffffff;
-  --btn-focus-ring: rgba(29, 78, 216, 0.24);
+  --btn-background: #0a695f;
+  --btn-border: #0a695f;
+  --btn-color: #f8fcfa;
 }
 
 .btn--secondary {
   --btn-background: #ffffff;
-  --btn-border: #cbd5e1;
-  --btn-color: #0f172a;
-  --btn-focus-ring: rgba(148, 163, 184, 0.28);
+  --btn-border: #d8ddd8;
+  --btn-color: #20443f;
+  --btn-focus-ring: rgba(10, 105, 95, 0.12);
 }
 
 .btn--ghost {
   --btn-background: transparent;
   --btn-border: transparent;
-  --btn-color: #1d4ed8;
-  --btn-focus-ring: rgba(29, 78, 216, 0.18);
+  --btn-color: #0d6e63;
+  --btn-focus-ring: rgba(15, 112, 101, 0.18);
   box-shadow: none;
 }
 
 .btn--danger {
-  --btn-background: #dc2626;
-  --btn-border: #dc2626;
-  --btn-color: #ffffff;
-  --btn-focus-ring: rgba(220, 38, 38, 0.24);
+  --btn-background: linear-gradient(135deg, #c0563f 0%, #a53928 100%);
+  --btn-border: rgba(130, 42, 28, 0.45);
+  --btn-color: #fffaf8;
 }
 
 .btn--sm {
-  min-height: 2.25rem;
-  padding: 0.55rem 1rem;
+  min-height: 2rem;
+  padding: 0.45rem 0.85rem;
 }
 
 .btn--md {
-  min-height: 2.75rem;
-  padding: 0.75rem 1.25rem;
+  min-height: 2.45rem;
+  padding: 0.65rem 1rem;
 }
 
 .btn--lg {
-  min-height: 3.25rem;
-  padding: 0.95rem 1.5rem;
+  min-height: 2.85rem;
+  padding: 0.85rem 1.25rem;
 }
 
 .btn--full-width {
   width: 100%;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(9, 51, 46, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 10px 24px -22px rgba(32, 56, 50, 0.24);
+  color: inherit;
+  display: block;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.card--interactive {
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card--interactive:hover {
+  border-color: rgba(13, 110, 99, 0.14);
+  box-shadow: 0 12px 26px -22px rgba(32, 56, 50, 0.28);
+  transform: translateY(-1px);
+}
+
+.card--interactive:focus-visible {
+  outline: 3px solid rgba(15, 112, 101, 0.18);
+  outline-offset: 3px;
+}
+
+.chip {
+  align-items: center;
+  background: #f2f1ed;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #526560;
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  letter-spacing: 0.01em;
+  min-height: 1.9rem;
+  padding: 0.32rem 0.72rem;
+  text-decoration: none;
+}
+
+.chip--active {
+  background: #0a695f;
+  border-color: #0a695f;
+  color: #f7fcfa;
+}
+
+.chip--muted {
+  background: rgba(236, 242, 239, 0.85);
+}
+
+.field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.field__label {
+  color: #305650;
+  font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.field__control {
+  background: #ffffff;
+  border: 1px solid #dcded8;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  color: #183733;
+  font: inherit;
+  min-height: 2.9rem;
+  padding: 0.8rem 0.95rem;
+  width: 100%;
+}
+
+.field__control:focus {
+  border-color: rgba(13, 110, 99, 0.32);
+  box-shadow: 0 0 0 4px rgba(15, 112, 101, 0.1);
+  outline: none;
+}
+
+.field__control--textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.field__control--select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #2b5b55 50%),
+    linear-gradient(135deg, #2b5b55 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) calc(50% - 3px),
+    calc(100% - 14px) calc(50% - 3px);
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  padding-right: 2.8rem;
+}
+
+.field__hint {
+  color: #6b7d78;
+  font-size: 0.84rem;
+  line-height: 1.5;
 }
