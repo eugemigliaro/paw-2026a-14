@@ -170,7 +170,8 @@
 }
 
 .chip--active:hover {
-  background: #00584f;
+  background: #00645a;
+  color: #f7fcfa;
 }
 
 .chip--muted {

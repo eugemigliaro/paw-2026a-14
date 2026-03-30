@@ -83,6 +83,7 @@
                 options="${createPage.skillLevels}" />
               <ui:selectField
                 label="Pricing mode"
+                id="pricingMode"
                 name="pricingMode"
                 options="${createPage.priceModes}" />
             </div>
@@ -90,6 +91,8 @@
             <div class="create-stack">
               <ui:textInput
                 label="Ticket price"
+                id="ticketPrice"
+                className="pricing-field"
                 name="ticketPrice"
                 type="number"
                 value="15"
@@ -131,5 +134,26 @@
         </aside>
       </main>
     </div>
+    <script>
+      (function() {
+        var pricingMode = document.getElementById("pricingMode");
+        var ticketPriceField = document.querySelector(".pricing-field");
+        var ticketPriceInput = document.getElementById("ticketPrice");
+
+        if (!pricingMode || !ticketPriceField || !ticketPriceInput) {
+          return;
+        }
+
+        function syncTicketPriceVisibility() {
+          var isFree = pricingMode.value === "free";
+          ticketPriceField.classList.toggle("field--hidden", isFree);
+          ticketPriceField.setAttribute("aria-hidden", isFree ? "true" : "false");
+          ticketPriceInput.disabled = isFree;
+        }
+
+        pricingMode.addEventListener("change", syncTicketPriceVisibility);
+        syncTicketPriceVisibility();
+      })();
+    </script>
   </body>
 </html>

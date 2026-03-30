@@ -135,7 +135,7 @@ public final class PawUiMockData {
     public static ShellViewModel hostShell() {
         return new ShellViewModel(
                 "Match Point",
-                null,
+                new NavItemViewModel("Switch to Joining", "/", false),
                 List.of()
         );
     }
