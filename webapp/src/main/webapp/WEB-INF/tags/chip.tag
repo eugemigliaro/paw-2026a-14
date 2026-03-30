@@ -20,6 +20,6 @@
     <a href="${href}" class="${classes}"><c:out value="${label}" /></a>
   </c:when>
   <c:otherwise>
-    <span class="${classes}"><c:out value="${label}" /></span>
+    <button type="button" class="${classes}" aria-pressed="${active ? 'true' : 'false'}"><c:out value="${label}" /></button>
   </c:otherwise>
 </c:choose>

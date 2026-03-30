@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ attribute name="label" required="true" rtexprvalue="true" %>
 <%@ attribute name="name" required="true" rtexprvalue="true" %>
-<%@ attribute name="options" required="true" rtexprvalue="true" %>
+<%@ attribute name="options" required="true" rtexprvalue="true" type="java.util.List" %>
 <%@ attribute name="id" required="false" rtexprvalue="true" %>
 <%@ attribute name="hint" required="false" rtexprvalue="true" %>
 <%@ attribute name="className" required="false" rtexprvalue="true" %>

@@ -12,38 +12,50 @@
       <%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
       <main class="page-shell page-shell--feed">
-        <aside class="panel filter-rail" aria-label="Event filters">
-          <c:forEach var="group" items="${feedPage.filterGroups}">
-            <section class="filter-rail__group">
-              <h2 class="filter-rail__title"><c:out value="${group.title}" /></h2>
-              <div class="filter-rail__options">
-                <c:forEach var="option" items="${group.options}">
-                  <div class="filter-rail__option ${option.active ? 'filter-rail__option--active' : ''}">
-                    <span><c:out value="${option.label}" /></span>
-                    <c:if test="${not empty option.meta}">
-                      <span><c:out value="${option.meta}" /></span>
-                    </c:if>
-                  </div>
-                </c:forEach>
-              </div>
-            </section>
-          </c:forEach>
+        <aside class="feed-sidebar" aria-label="Event filters">
+          <div class="panel filter-rail">
+            <c:forEach var="group" items="${feedPage.filterGroups}">
+              <section class="filter-rail__group">
+                <h2 class="filter-rail__title"><c:out value="${group.title}" /></h2>
+                <div class="filter-rail__options" data-filter-group="${group.title}">
+                  <c:forEach var="option" items="${group.options}">
+                    <button
+                      type="button"
+                      class="filter-rail__option ${option.active ? 'filter-rail__option--active' : ''}"
+                      aria-pressed="${option.active ? 'true' : 'false'}">
+                      <span><c:out value="${option.label}" /></span>
+                      <c:if test="${not empty option.meta}">
+                        <span><c:out value="${option.meta}" /></span>
+                      </c:if>
+                    </button>
+                  </c:forEach>
+                </div>
+              </section>
+            </c:forEach>
+          </div>
         </aside>
 
-        <section class="feed-stage">
-          <section class="panel hero-panel">
-            <p class="eyebrow"><c:out value="${feedPage.eyebrow}" /></p>
-            <h1 class="hero-panel__title"><c:out value="${feedPage.title}" /></h1>
-            <p class="hero-panel__description"><c:out value="${feedPage.description}" /></p>
-          </section>
+        <section class="feed-main">
+          <section class="feed-hero-stage">
+            <section class="hero-panel">
+              <c:if test="${not empty feedPage.eyebrow}">
+                <p class="eyebrow"><c:out value="${feedPage.eyebrow}" /></p>
+              </c:if>
+              <h1 class="hero-panel__title"><c:out value="${feedPage.title}" /></h1>
+              <p class="hero-panel__description"><c:out value="${feedPage.description}" /></p>
+            </section>
 
-          <section class="panel search-panel" aria-label="Search events">
-            <div class="search-panel__row">
-              <div class="search-panel__input"><c:out value="${feedPage.searchPlaceholder}" /></div>
-              <ui:button label="${feedPage.searchButtonLabel}" disabled="${true}" />
-            </div>
+            <section class="search-panel" aria-label="Search events">
+              <div class="search-panel__row">
+                <div class="search-panel__input">
+                  <span class="search-panel__icon" aria-hidden="true"></span>
+                  <span><c:out value="${feedPage.searchPlaceholder}" /></span>
+                </div>
+                <ui:button label="${feedPage.searchButtonLabel}" disabled="${true}" />
+              </div>
+            </section>
 
-            <div class="chip-row">
+            <div class="chip-row chip-row--centered" data-chip-group="quick-filters">
               <c:forEach var="chip" items="${feedPage.quickFilters}">
                 <c:set var="chipHref" value="" />
                 <c:if test="${not empty chip.href}">
@@ -61,8 +73,8 @@
           <section>
             <div class="section-head">
               <div>
-                <h2 class="section-head__title">Feed layout</h2>
-                <p class="section-head__meta">Use this screen to validate the top bar, side rail, search strip, chips, and card grid.</p>
+                <h2 class="section-head__title">Trending this week</h2>
+                <p class="section-head__meta">Popular community sessions around the city.</p>
               </div>
             </div>
 
@@ -106,5 +118,40 @@
         </section>
       </main>
     </div>
+    <script>
+      document.querySelectorAll("[data-filter-group]").forEach(function(group) {
+        group.addEventListener("click", function(event) {
+          var option = event.target.closest(".filter-rail__option");
+          if (!option) {
+            return;
+          }
+
+          group.querySelectorAll(".filter-rail__option").forEach(function(button) {
+            button.classList.remove("filter-rail__option--active");
+            button.setAttribute("aria-pressed", "false");
+          });
+
+          option.classList.add("filter-rail__option--active");
+          option.setAttribute("aria-pressed", "true");
+        });
+      });
+
+      document.querySelectorAll("[data-chip-group]").forEach(function(group) {
+        group.addEventListener("click", function(event) {
+          var chip = event.target.closest(".chip");
+          if (!chip || chip.tagName === "A") {
+            return;
+          }
+
+          group.querySelectorAll(".chip").forEach(function(button) {
+            button.classList.remove("chip--active");
+            button.setAttribute("aria-pressed", "false");
+          });
+
+          chip.classList.add("chip--active");
+          chip.setAttribute("aria-pressed", "true");
+        });
+      });
+    </script>
   </body>
 </html>

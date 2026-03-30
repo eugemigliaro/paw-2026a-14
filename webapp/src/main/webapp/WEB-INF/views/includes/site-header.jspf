@@ -3,10 +3,7 @@
 <header class="site-header">
   <div class="site-header__inner">
     <a class="site-header__brand" href="${pageContext.request.contextPath}/">
-      <img
-        class="site-header__brand-image"
-        src="${pageContext.request.contextPath}/assets/match-point-logo.png"
-        alt="${shell.brandLabel}" />
+      <span class="site-header__brand-text"><c:out value="${shell.brandLabel}" /></span>
     </a>
 
     <c:if test="${not empty shell.primaryNav}">
@@ -33,7 +30,9 @@
         <ui:button
           label="${shell.hostAction.label}"
           href="${pageContext.request.contextPath}${shell.hostAction.href}"
-          size="sm" />
+          variant="primary"
+          size="md"
+          className="site-header__host-button" />
       </c:if>
     </div>
   </div>

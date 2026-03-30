@@ -26,14 +26,14 @@ public final class PawUiMockData {
                     "sunrise-padel-championship",
                     "Padel",
                     "Sunrise Padel Championship",
-                    "Delta Padel Hub",
-                    "Sun, Oct 13 - 09:00",
+                    "Club de Padel Estrella, Madrid",
+                    "Every Saturday, 08:00 AM",
                     "$15.00",
                     "6 spots left",
                     "Intermediate",
                     "media-tile--padel",
                     "A premium sunrise session focused on doubles rotation, structured matchups, and a social breakfast cooldown.",
-                    "Hosted by Club Social Padel",
+                    "Marcos Silva",
                     "Two curated rounds, level-matched pairings, and an easy flow from warm-up to competitive play."
             ),
             new EventSeed(
@@ -47,7 +47,7 @@ public final class PawUiMockData {
                     "All levels",
                     "media-tile--football",
                     "A weekday match designed for quick check-in, balanced teams, and an easy after-office rhythm.",
-                    "Hosted by SVS Match Club",
+                    "Sofia Varela",
                     "Expect a sharp kickoff, organized rotations, and a low-friction join flow for casual players."
             ),
             new EventSeed(
@@ -61,7 +61,7 @@ public final class PawUiMockData {
                     "Beginner friendly",
                     "media-tile--tennis",
                     "A friendly social padel evening with flexible doubles pairings and plenty of coaching cues.",
-                    "Hosted by Riverside Club",
+                    "Lucia Mendez",
                     "Warm lighting, fast turnaround on courts, and just enough structure to keep play moving."
             ),
             new EventSeed(
@@ -75,7 +75,7 @@ public final class PawUiMockData {
                     "All levels",
                     "media-tile--yoga",
                     "A restorative outdoor flow with mobility work, mindful breathing, and a golden-hour cooldown.",
-                    "Hosted by Flow Collective",
+                    "Mila Ortega",
                     "Bring a mat, expect a calm pace, and stay for a short social circle after the session."
             ),
             new EventSeed(
@@ -89,7 +89,7 @@ public final class PawUiMockData {
                     "Intermediate",
                     "media-tile--running",
                     "A paced urban run with route markers, hydration support, and a short coffee stop at the finish.",
-                    "Hosted by Loft Run Crew",
+                    "Tomas Rivas",
                     "Ideal for runners who want a coached rhythm and an easy community-first weekend plan."
             ),
             new EventSeed(
@@ -103,7 +103,7 @@ public final class PawUiMockData {
                     "All levels",
                     "media-tile--basketball",
                     "A pickup session with balanced teams, scoreboard tracking, and quick on/off court rotations.",
-                    "Hosted by Urban Court 23",
+                    "Jordan Molina",
                     "Fast transitions, community energy, and enough structure to keep games competitive."
             )
     );
@@ -142,13 +142,13 @@ public final class PawUiMockData {
 
     public static FeedPageViewModel feedPage() {
         return new FeedPageViewModel(
-                "Emerald Reserve layout",
+                "",
                 "Find your next game.",
-                "This MVP only shows the rough browse flow, the main layout regions, and the component look-and-feel.",
+                "Discover local sports events, join communities, and get active with Match Point.",
                 "What sports event are you looking for?",
                 "Find Matches",
                 List.of(
-                        new ChipViewModel("All", "/", true, "default"),
+                        new ChipViewModel("All", null, true, "default"),
                         new ChipViewModel("Football", null, false, "default"),
                         new ChipViewModel("Tennis", null, false, "default"),
                         new ChipViewModel("Yoga", null, false, "default"),
@@ -203,7 +203,7 @@ public final class PawUiMockData {
 
         return Optional.of(new EventDetailPageViewModel(
                 toCard(seed),
-                seed.getSport() + " session layout",
+                seed.getSport() + " tournament",
                 seed.getSchedule() + " - " + seed.getVenue(),
                 seed.getHostLabel(),
                 List.of(seed.getAboutLead(), seed.getAboutFollowUp()),
@@ -211,18 +211,18 @@ public final class PawUiMockData {
                         new InfoTileViewModel(
                                 "Format",
                                 "Structured pairings",
-                                "Use this area to validate the left content column, spacing, and information hierarchy.",
+                                "Hosted rounds and easy rotations keep the session moving from warm-up to final point.",
                                 "mint"
                         ),
                         new InfoTileViewModel(
                                 "Atmosphere",
                                 "Community-first hosting",
-                                "Use this area to validate supporting cards and right-side balance before real content arrives.",
+                                "Expect quick check-in, level-aware matchmaking, and a social rhythm around the courts.",
                                 "sand"
                         )
                 ),
                 seed.getVenue(),
-                "Placeholder venue block for the MVP detail screen.",
+                "Check in 15 minutes before kickoff and head to the main reception for court assignment.",
                 seed.getPriceLabel(),
                 List.of(
                         new BookingDetailViewModel("Session", seed.getSchedule()),
