@@ -16,6 +16,21 @@ Database schema is managed with Flyway.
 
 Flyway automatically runs migrations on application startup and during persistence tests.
 
+### Runtime configuration
+
+The deployed WAR expects these runtime variables to be available to the Tomcat process:
+
+- `PAW_DB_URL`
+- `PAW_DB_USERNAME`
+- `PAW_DB_PASSWORD`
+
+For local development, the repository includes:
+
+- `.env.example` with the required variable names
+- `.env` with the current local values
+
+Before running Jetty or deploying to Tomcat, make sure those variables are exported into the process environment. The application now fails fast at startup if any of them are missing.
+
 ## Daily Workflow
 
 1. Create a branch:
