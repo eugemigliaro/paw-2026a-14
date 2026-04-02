@@ -18,18 +18,49 @@ Flyway automatically runs migrations on application startup and during persisten
 
 ### Runtime configuration
 
-The deployed WAR expects these runtime variables to be available to the Tomcat process:
+This project uses a committed Spring `application.properties` file whose values are filled by Maven resource filtering from gitignored profile files.
 
-- `PAW_DB_URL`
-- `PAW_DB_USERNAME`
-- `PAW_DB_PASSWORD`
+Local development uses:
 
-For local development, the repository includes:
+- `config/local.properties`
 
-- `.env.example` with the required variable names
-- `.env` with the current local values
+Pampero deployment packaging uses:
 
-Before running Jetty or deploying to Tomcat, make sure those variables are exported into the process environment. The application now fails fast at startup if any of them are missing.
+- `config/pampero.properties`
+
+The repository includes example files for both environments:
+
+- `config/local.example.properties`
+- `config/pampero.example.properties`
+
+Do not commit the real `config/local.properties` or `config/pampero.properties` files.
+
+### Run locally
+
+Create `config/local.properties` from `config/local.example.properties`, then run:
+
+```sh
+cd webapp
+mvn jetty:run
+```
+
+`mvn jetty:run` uses the default `local` Maven profile, so no extra `source` or environment export is needed.
+
+### Build For Pampero
+
+Create `config/pampero.properties` with the faculty DB credentials, then package the WAR with:
+
+```sh
+mvn -Ppampero clean package
+```
+
+The generated WAR is:
+
+```sh
+webapp/target/webapp.war
+```
+
+Upload that file as `web/app.war` through the faculty SFTP flow.
 
 ## Daily Workflow
 
