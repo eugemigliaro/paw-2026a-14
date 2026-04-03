@@ -105,8 +105,9 @@
 
 						<div class="event-grid">
 							<c:forEach var="event" items="${feedPage.featuredEvents}">
+								<c:url var="eventHref" value="${event.href}" />
 								<ui:card
-									href="${event.href}"
+									href="${eventHref}"
 									className="event-card"
 									ariaLabel="${event.title}">
 									<div class="event-card__media ${event.mediaClass}">
