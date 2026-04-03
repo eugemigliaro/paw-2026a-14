@@ -21,12 +21,14 @@ class PawUiRouteTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
 
-        mockMvc = MockMvcBuilders.standaloneSetup(
-                new FeedController(),
-                new EventController(),
-                new HostController(),
-                new UiController()
-        ).setViewResolvers(viewResolver).build();
+        mockMvc =
+                MockMvcBuilders.standaloneSetup(
+                                new FeedController(),
+                                new EventController(),
+                                new HostController(),
+                                new UiController())
+                        .setViewResolvers(viewResolver)
+                        .build();
     }
 
     @Test
@@ -67,7 +69,6 @@ class PawUiRouteTest {
 
     @Test
     void getUnknownEventReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/events/unknown"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/events/unknown")).andExpect(status().isNotFound());
     }
 }
