@@ -72,9 +72,13 @@ public class FeedController {
             final PaginatedResult<Match> result) {
 
         final ZoneId zoneId = parseZone(timezone);
-        final String normalizedSport = selectedSport == null ? "" : selectedSport;
-        final String normalizedTime =
-                selectedTime == null || selectedTime.isBlank() ? "all" : selectedTime;
+        final String normalizedSport =
+                selectedSport == null
+                        ? ""
+                        : Sport.fromDbValue(selectedSport)
+                                .map(Sport::getDbValue)
+                                .orElse("");
+        final String normalizedTime = normalizeTime(selectedTime);
 
         return new FeedPageViewModel(
                 "",
@@ -303,5 +307,21 @@ public class FeedController {
         return MatchSort.fromQueryValue(sort)
                 .map(MatchSort::getQueryValue)
                 .orElse(MatchSort.SOONEST.getQueryValue());
+    }
+
+    private static String normalizeTime(final String time) {
+        if (time == null || time.isBlank()) {
+            return "all";
+        }
+        switch (time.toLowerCase(Locale.ROOT)) {
+            case "today":
+                return "today";
+            case "tomorrow":
+                return "tomorrow";
+            case "week":
+                return "week";
+            default:
+                return "all";
+        }
     }
 }
