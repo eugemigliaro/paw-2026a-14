@@ -233,7 +233,7 @@ public class FeedController {
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
-                null,
+                "/events/" + match.getId(),
                 match.getSport().getDisplayName(),
                 match.getTitle(),
                 match.getAddress(),

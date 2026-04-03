@@ -221,12 +221,8 @@ public class MatchJdbcDao implements MatchDao {
             return new TimeRange(start.toInstant(), start.plusDays(1).toInstant());
         }
 
-        if (timeFilter == EventTimeFilter.TODAY) {
-            final ZonedDateTime end = today.plusDays(1).atStartOfDay(zoneId);
-            return new TimeRange(now.toInstant(), end.toInstant());
-        }
-        final ZonedDateTime start = today.atStartOfDay(zoneId);
-        return new TimeRange(start.toInstant(), start.plusDays(1).toInstant());
+        final ZonedDateTime startOfTomorrow = today.plusDays(1).atStartOfDay(zoneId);
+        return new TimeRange(now.toInstant(), startOfTomorrow.toInstant());
     }
 
     private record TimeRange(java.time.Instant start, java.time.Instant end) {}
