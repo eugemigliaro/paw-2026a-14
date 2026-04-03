@@ -22,7 +22,7 @@
 							</c:url>
 							<ui:button
 								label="Clear all"
-								href="${pageContext.request.contextPath}${clearFiltersHref}"
+								href="${clearFiltersHref}"
 								variant="ghost"
 								size="sm"
 								className="filter-rail__clear" />
