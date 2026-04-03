@@ -79,17 +79,24 @@ public final class PawUiViewModels {
 
     public static final class FilterOptionViewModel {
         private final String label;
+        private final String href;
         private final String meta;
         private final boolean active;
 
-        public FilterOptionViewModel(final String label, final String meta, final boolean active) {
+        public FilterOptionViewModel(
+                final String label, final String href, final String meta, final boolean active) {
             this.label = label;
+            this.href = href;
             this.meta = meta;
             this.active = active;
         }
 
         public String getLabel() {
             return label;
+        }
+
+        public String getHref() {
+            return href;
         }
 
         public String getMeta() {
@@ -224,6 +231,10 @@ public final class PawUiViewModels {
         private final List<ChipViewModel> quickFilters;
         private final List<FilterGroupViewModel> filterGroups;
         private final List<EventCardViewModel> featuredEvents;
+        private final int page;
+        private final int totalPages;
+        private final String previousPageHref;
+        private final String nextPageHref;
 
         public FeedPageViewModel(
                 final String eyebrow,
@@ -233,7 +244,11 @@ public final class PawUiViewModels {
                 final String searchButtonLabel,
                 final List<ChipViewModel> quickFilters,
                 final List<FilterGroupViewModel> filterGroups,
-                final List<EventCardViewModel> featuredEvents) {
+                final List<EventCardViewModel> featuredEvents,
+                final int page,
+                final int totalPages,
+                final String previousPageHref,
+                final String nextPageHref) {
             this.eyebrow = eyebrow;
             this.title = title;
             this.description = description;
@@ -242,6 +257,10 @@ public final class PawUiViewModels {
             this.quickFilters = quickFilters;
             this.filterGroups = filterGroups;
             this.featuredEvents = featuredEvents;
+            this.page = page;
+            this.totalPages = totalPages;
+            this.previousPageHref = previousPageHref;
+            this.nextPageHref = nextPageHref;
         }
 
         public String getEyebrow() {
@@ -274,6 +293,22 @@ public final class PawUiViewModels {
 
         public List<EventCardViewModel> getFeaturedEvents() {
             return featuredEvents;
+        }
+
+        public int getPage() {
+            return page;
+        }
+
+        public int getTotalPages() {
+            return totalPages;
+        }
+
+        public String getPreviousPageHref() {
+            return previousPageHref;
+        }
+
+        public String getNextPageHref() {
+            return nextPageHref;
         }
     }
 
