@@ -1,0 +1,137 @@
+package ar.edu.itba.paw.services;
+
+import ar.edu.itba.paw.models.EventTimeFilter;
+import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.MatchSort;
+import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.persistence.MatchDao;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.List;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+public class MatchServiceImplTest {
+
+    @InjectMocks private MatchServiceImpl matchService;
+
+    @Mock private MatchDao matchDao;
+
+    @Test
+    public void testSearchPublicMatchesWithValidInputs() {
+        final Match match = createTestMatch(1L, "Football", "football");
+        Mockito.when(
+                        matchDao.findPublicMatches(
+                                "football",
+                                Sport.FOOTBALL,
+                                EventTimeFilter.WEEK,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
+                                10,
+                                10))
+                .thenReturn(List.of(match));
+        Mockito.when(
+                        matchDao.countPublicMatches(
+                                "football", Sport.FOOTBALL, EventTimeFilter.WEEK, ZoneId.of("UTC")))
+                .thenReturn(25);
+
+        final PaginatedResult<Match> result =
+                matchService.searchPublicMatches(
+                        "football", "football", "week", "soonest", 2, 10, "UTC");
+
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals("Football", result.getItems().get(0).getTitle());
+        Assertions.assertEquals(25, result.getTotalCount());
+        Assertions.assertEquals(3, result.getTotalPages());
+        Assertions.assertEquals(2, result.getPage());
+    }
+
+    @Test
+    public void testSearchPublicMatchesWithNullQuery() {
+        final Match match = createTestMatch(1L, "Padel", "padel");
+        Mockito.when(
+                        matchDao.findPublicMatches(
+                                null,
+                                Sport.PADEL,
+                                EventTimeFilter.ALL,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
+                                0,
+                                12))
+                .thenReturn(List.of(match));
+        Mockito.when(
+                        matchDao.countPublicMatches(
+                                null, Sport.PADEL, EventTimeFilter.ALL, ZoneId.of("UTC")))
+                .thenReturn(1);
+
+        final PaginatedResult<Match> result =
+                matchService.searchPublicMatches(null, "padel", null, null, 1, 0, "UTC");
+
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals("Padel", result.getItems().get(0).getTitle());
+        Assertions.assertEquals(1, result.getTotalPages());
+    }
+
+    @Test
+    public void testCreateMatchDelegates() {
+        final Instant now = Instant.now();
+        final Match expectedMatch = createTestMatch(1L, "Test Match", "football");
+        Mockito.when(
+                        matchDao.createMatch(
+                                1L,
+                                "Test Address",
+                                "Test Match",
+                                "Test Description",
+                                now,
+                                null,
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                "public",
+                                "open"))
+                .thenReturn(expectedMatch);
+
+        final Match result =
+                matchService.createMatch(
+                        1L,
+                        "Test Address",
+                        "Test Match",
+                        "Test Description",
+                        now,
+                        null,
+                        10,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open");
+
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(1L, result.getId());
+        Assertions.assertEquals("Test Match", result.getTitle());
+    }
+
+    private Match createTestMatch(final Long id, final String title, final String sport) {
+        return new Match(
+                id,
+                Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
+                1L,
+                "Test Address",
+                title,
+                "Test Description",
+                Instant.now(),
+                null,
+                10,
+                BigDecimal.ZERO,
+                "public",
+                "open",
+                0);
+    }
+}

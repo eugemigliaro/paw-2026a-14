@@ -16,8 +16,7 @@ public final class PawUiViewModels {
         public ShellViewModel(
                 final String brandLabel,
                 final NavItemViewModel hostAction,
-                final List<NavItemViewModel> primaryNav
-        ) {
+                final List<NavItemViewModel> primaryNav) {
             this.brandLabel = brandLabel;
             this.hostAction = hostAction;
             this.primaryNav = primaryNav;
@@ -80,17 +79,24 @@ public final class PawUiViewModels {
 
     public static final class FilterOptionViewModel {
         private final String label;
+        private final String href;
         private final String meta;
         private final boolean active;
 
-        public FilterOptionViewModel(final String label, final String meta, final boolean active) {
+        public FilterOptionViewModel(
+                final String label, final String href, final String meta, final boolean active) {
             this.label = label;
+            this.href = href;
             this.meta = meta;
             this.active = active;
         }
 
         public String getLabel() {
             return label;
+        }
+
+        public String getHref() {
+            return href;
         }
 
         public String getMeta() {
@@ -108,7 +114,8 @@ public final class PawUiViewModels {
         private final boolean active;
         private final String tone;
 
-        public ChipViewModel(final String label, final String href, final boolean active, final String tone) {
+        public ChipViewModel(
+                final String label, final String href, final boolean active, final String tone) {
             this.label = label;
             this.href = href;
             this.active = active;
@@ -156,8 +163,7 @@ public final class PawUiViewModels {
                 final String badge,
                 final String level,
                 final String mediaClass,
-                final List<String> attendeeInitials
-        ) {
+                final List<String> attendeeInitials) {
             this.id = id;
             this.href = href;
             this.sport = sport;
@@ -225,6 +231,10 @@ public final class PawUiViewModels {
         private final List<ChipViewModel> quickFilters;
         private final List<FilterGroupViewModel> filterGroups;
         private final List<EventCardViewModel> featuredEvents;
+        private final int page;
+        private final int totalPages;
+        private final String previousPageHref;
+        private final String nextPageHref;
 
         public FeedPageViewModel(
                 final String eyebrow,
@@ -234,8 +244,11 @@ public final class PawUiViewModels {
                 final String searchButtonLabel,
                 final List<ChipViewModel> quickFilters,
                 final List<FilterGroupViewModel> filterGroups,
-                final List<EventCardViewModel> featuredEvents
-        ) {
+                final List<EventCardViewModel> featuredEvents,
+                final int page,
+                final int totalPages,
+                final String previousPageHref,
+                final String nextPageHref) {
             this.eyebrow = eyebrow;
             this.title = title;
             this.description = description;
@@ -244,6 +257,10 @@ public final class PawUiViewModels {
             this.quickFilters = quickFilters;
             this.filterGroups = filterGroups;
             this.featuredEvents = featuredEvents;
+            this.page = page;
+            this.totalPages = totalPages;
+            this.previousPageHref = previousPageHref;
+            this.nextPageHref = nextPageHref;
         }
 
         public String getEyebrow() {
@@ -277,6 +294,22 @@ public final class PawUiViewModels {
         public List<EventCardViewModel> getFeaturedEvents() {
             return featuredEvents;
         }
+
+        public int getPage() {
+            return page;
+        }
+
+        public int getTotalPages() {
+            return totalPages;
+        }
+
+        public String getPreviousPageHref() {
+            return previousPageHref;
+        }
+
+        public String getNextPageHref() {
+            return nextPageHref;
+        }
     }
 
     public static final class InfoTileViewModel {
@@ -285,7 +318,11 @@ public final class PawUiViewModels {
         private final String description;
         private final String tone;
 
-        public InfoTileViewModel(final String eyebrow, final String title, final String description, final String tone) {
+        public InfoTileViewModel(
+                final String eyebrow,
+                final String title,
+                final String description,
+                final String tone) {
             this.eyebrow = eyebrow;
             this.title = title;
             this.description = description;
@@ -355,8 +392,7 @@ public final class PawUiViewModels {
                 final List<BookingDetailViewModel> bookingDetails,
                 final String availabilityLabel,
                 final String ctaLabel,
-                final List<EventCardViewModel> nearbyEvents
-        ) {
+                final List<EventCardViewModel> nearbyEvents) {
             this.event = event;
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
@@ -430,7 +466,8 @@ public final class PawUiViewModels {
         private final String label;
         private final boolean selected;
 
-        public SelectOptionViewModel(final String value, final String label, final boolean selected) {
+        public SelectOptionViewModel(
+                final String value, final String label, final boolean selected) {
             this.value = value;
             this.label = label;
             this.selected = selected;
@@ -469,8 +506,7 @@ public final class PawUiViewModels {
                 final List<SelectOptionViewModel> priceModes,
                 final List<String> snapshotItems,
                 final String uploadHint,
-                final String uploadCaption
-        ) {
+                final String uploadCaption) {
             this.eyebrow = eyebrow;
             this.title = title;
             this.description = description;
@@ -529,8 +565,7 @@ public final class PawUiViewModels {
                 final EventCardViewModel sampleEvent,
                 final List<ChipViewModel> sampleChips,
                 final List<SelectOptionViewModel> skillLevels,
-                final List<SelectOptionViewModel> priceModes
-        ) {
+                final List<SelectOptionViewModel> priceModes) {
             this.sampleEvent = sampleEvent;
             this.sampleChips = sampleChips;
             this.skillLevels = skillLevels;

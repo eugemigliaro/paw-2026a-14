@@ -63,6 +63,7 @@ out/
 # Database
 *.db
 *.sqlite
+scripts/*.sql
 
 # Application specific
 application-local.properties

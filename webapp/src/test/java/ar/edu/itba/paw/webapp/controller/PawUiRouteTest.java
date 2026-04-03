@@ -5,6 +5,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.services.MatchService;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,12 +28,45 @@ class PawUiRouteTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
 
-        mockMvc = MockMvcBuilders.standaloneSetup(
-                new FeedController(),
-                new EventController(),
-                new HostController(),
-                new UiController()
-        ).setViewResolvers(viewResolver).build();
+        final MatchService matchService =
+                new MatchService() {
+                    @Override
+                    public Match createMatch(
+                            final Long hostUserId,
+                            final String address,
+                            final String title,
+                            final String description,
+                            final Instant startsAt,
+                            final Instant endsAt,
+                            final int maxPlayers,
+                            final BigDecimal pricePerPlayer,
+                            final Sport sport,
+                            final String visibility,
+                            final String status) {
+                        return null;
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> searchPublicMatches(
+                            final String query,
+                            final String sport,
+                            final String time,
+                            final String sort,
+                            final int page,
+                            final int pageSize,
+                            final String timezone) {
+                        return new PaginatedResult<>(List.of(), 0, 1, 12);
+                    }
+                };
+
+        mockMvc =
+                MockMvcBuilders.standaloneSetup(
+                                new FeedController(matchService),
+                                new EventController(),
+                                new HostController(),
+                                new UiController())
+                        .setViewResolvers(viewResolver)
+                        .build();
     }
 
     @Test
@@ -67,7 +107,6 @@ class PawUiRouteTest {
 
     @Test
     void getUnknownEventReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/events/unknown"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/events/unknown")).andExpect(status().isNotFound());
     }
 }
