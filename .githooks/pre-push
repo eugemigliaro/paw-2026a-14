@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
 
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$CURRENT_BRANCH" = "main" ]; then
+    echo "[pre-push] Push to main is blocked."
+    echo "[pre-push] Please push to a feature branch and open a PR into main."
+    exit 1
+fi
+
 command -v mvn >/dev/null 2>&1 || {
     echo "Maven is required but not installed."
     exit 1
