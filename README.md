@@ -64,6 +64,12 @@ Upload that file as `web/app.war` through the faculty SFTP flow.
 
 ## Daily Workflow
 
+## Branch Policy
+
+- `main` contains deployed content.
+- `dev` contains the sprint work in progress.
+- Do not push directly to `main`; use branches and Pull Requests.
+
 1. Create a branch:
 
 ```sh
