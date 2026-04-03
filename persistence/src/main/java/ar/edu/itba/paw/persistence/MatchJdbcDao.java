@@ -221,6 +221,10 @@ public class MatchJdbcDao implements MatchDao {
             return new TimeRange(start.toInstant(), start.plusDays(1).toInstant());
         }
 
+        if (timeFilter == EventTimeFilter.TODAY) {
+            final ZonedDateTime end = today.plusDays(1).atStartOfDay(zoneId);
+            return new TimeRange(now.toInstant(), end.toInstant());
+        }
         final ZonedDateTime startOfTomorrow = today.plusDays(1).atStartOfDay(zoneId);
         return new TimeRange(now.toInstant(), startOfTomorrow.toInstant());
     }
