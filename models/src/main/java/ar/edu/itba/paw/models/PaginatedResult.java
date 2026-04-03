@@ -11,6 +11,9 @@ public class PaginatedResult<T> {
 
     public PaginatedResult(
             final List<T> items, final int totalCount, final int page, final int pageSize) {
+        if (pageSize <= 0) {
+            throw new IllegalArgumentException("pageSize must be positive, got: " + pageSize);
+        }
         this.items = items;
         this.totalCount = totalCount;
         this.page = page;
