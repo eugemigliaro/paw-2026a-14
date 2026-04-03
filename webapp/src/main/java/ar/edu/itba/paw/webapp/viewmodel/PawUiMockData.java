@@ -21,104 +21,98 @@ import java.util.Optional;
 
 public final class PawUiMockData {
 
-    private static final List<EventSeed> EVENT_SEEDS = List.of(
-            new EventSeed(
-                    "sunrise-padel-championship",
-                    "Padel",
-                    "Sunrise Padel Championship",
-                    "Club de Padel Estrella, Madrid",
-                    "Every Saturday, 08:00 AM",
-                    "$15.00",
-                    "6 spots left",
-                    "Intermediate",
-                    "media-tile--padel",
-                    "A premium sunrise session focused on doubles rotation, structured matchups, and a social breakfast cooldown.",
-                    "Marcos Silva",
-                    "Two curated rounds, level-matched pairings, and an easy flow from warm-up to competitive play."
-            ),
-            new EventSeed(
-                    "svs-midweek-football-match",
-                    "Football",
-                    "5v5 Midweek Football Match",
-                    "Ciudad Verde",
-                    "Tomorrow - 19:30",
-                    "$10.00",
-                    "6 spots left",
-                    "All levels",
-                    "media-tile--football",
-                    "A weekday match designed for quick check-in, balanced teams, and an easy after-office rhythm.",
-                    "Sofia Varela",
-                    "Expect a sharp kickoff, organized rotations, and a low-friction join flow for casual players."
-            ),
-            new EventSeed(
-                    "doubles-social-night",
-                    "Padel",
-                    "Doubles Social Night",
-                    "Riverside Club",
-                    "Friday - 20:00",
-                    "Free",
-                    "2 spots left",
-                    "Beginner friendly",
-                    "media-tile--tennis",
-                    "A friendly social padel evening with flexible doubles pairings and plenty of coaching cues.",
-                    "Lucia Mendez",
-                    "Warm lighting, fast turnaround on courts, and just enough structure to keep play moving."
-            ),
-            new EventSeed(
-                    "sunset-flow-in-the-park",
-                    "Yoga",
-                    "Sunset Flow in the Park",
-                    "Parque Central",
-                    "Today - 18:00",
-                    "Free",
-                    "8 spots left",
-                    "All levels",
-                    "media-tile--yoga",
-                    "A restorative outdoor flow with mobility work, mindful breathing, and a golden-hour cooldown.",
-                    "Mila Ortega",
-                    "Bring a mat, expect a calm pace, and stay for a short social circle after the session."
-            ),
-            new EventSeed(
-                    "weekend-loft-run",
-                    "Running",
-                    "Weekend Loft Run",
-                    "Loft Trail Hub",
-                    "Sun - 08:00",
-                    "$12.00",
-                    "12 spots left",
-                    "Intermediate",
-                    "media-tile--running",
-                    "A paced urban run with route markers, hydration support, and a short coffee stop at the finish.",
-                    "Tomas Rivas",
-                    "Ideal for runners who want a coached rhythm and an easy community-first weekend plan."
-            ),
-            new EventSeed(
-                    "pickup-basketball",
-                    "Basketball",
-                    "Pick-up Basketball",
-                    "Urban Court 23",
-                    "Tonight - 20:30",
-                    "$8.00",
-                    "3 spots left",
-                    "All levels",
-                    "media-tile--basketball",
-                    "A pickup session with balanced teams, scoreboard tracking, and quick on/off court rotations.",
-                    "Jordan Molina",
-                    "Fast transitions, community energy, and enough structure to keep games competitive."
-            )
-    );
+    private static final List<EventSeed> EVENT_SEEDS =
+            List.of(
+                    new EventSeed(
+                            "sunrise-padel-championship",
+                            "Padel",
+                            "Sunrise Padel Championship",
+                            "Club de Padel Estrella, Madrid",
+                            "Every Saturday, 08:00 AM",
+                            "$15.00",
+                            "6 spots left",
+                            "Intermediate",
+                            "media-tile--padel",
+                            "A premium sunrise session focused on doubles rotation, structured matchups, and a social breakfast cooldown.",
+                            "Marcos Silva",
+                            "Two curated rounds, level-matched pairings, and an easy flow from warm-up to competitive play."),
+                    new EventSeed(
+                            "svs-midweek-football-match",
+                            "Football",
+                            "5v5 Midweek Football Match",
+                            "Ciudad Verde",
+                            "Tomorrow - 19:30",
+                            "$10.00",
+                            "6 spots left",
+                            "All levels",
+                            "media-tile--football",
+                            "A weekday match designed for quick check-in, balanced teams, and an easy after-office rhythm.",
+                            "Sofia Varela",
+                            "Expect a sharp kickoff, organized rotations, and a low-friction join flow for casual players."),
+                    new EventSeed(
+                            "doubles-social-night",
+                            "Padel",
+                            "Doubles Social Night",
+                            "Riverside Club",
+                            "Friday - 20:00",
+                            "Free",
+                            "2 spots left",
+                            "Beginner friendly",
+                            "media-tile--tennis",
+                            "A friendly social padel evening with flexible doubles pairings and plenty of coaching cues.",
+                            "Lucia Mendez",
+                            "Warm lighting, fast turnaround on courts, and just enough structure to keep play moving."),
+                    new EventSeed(
+                            "sunset-flow-in-the-park",
+                            "Yoga",
+                            "Sunset Flow in the Park",
+                            "Parque Central",
+                            "Today - 18:00",
+                            "Free",
+                            "8 spots left",
+                            "All levels",
+                            "media-tile--yoga",
+                            "A restorative outdoor flow with mobility work, mindful breathing, and a golden-hour cooldown.",
+                            "Mila Ortega",
+                            "Bring a mat, expect a calm pace, and stay for a short social circle after the session."),
+                    new EventSeed(
+                            "weekend-loft-run",
+                            "Running",
+                            "Weekend Loft Run",
+                            "Loft Trail Hub",
+                            "Sun - 08:00",
+                            "$12.00",
+                            "12 spots left",
+                            "Intermediate",
+                            "media-tile--running",
+                            "A paced urban run with route markers, hydration support, and a short coffee stop at the finish.",
+                            "Tomas Rivas",
+                            "Ideal for runners who want a coached rhythm and an easy community-first weekend plan."),
+                    new EventSeed(
+                            "pickup-basketball",
+                            "Basketball",
+                            "Pick-up Basketball",
+                            "Urban Court 23",
+                            "Tonight - 20:30",
+                            "$8.00",
+                            "3 spots left",
+                            "All levels",
+                            "media-tile--basketball",
+                            "A pickup session with balanced teams, scoreboard tracking, and quick on/off court rotations.",
+                            "Jordan Molina",
+                            "Fast transitions, community energy, and enough structure to keep games competitive."));
 
     private static final Map<String, EventSeed> EVENTS_BY_ID = buildEventMap();
-    private static final List<SelectOptionViewModel> SKILL_LEVELS = List.of(
-            new SelectOptionViewModel("all-levels", "All levels", false),
-            new SelectOptionViewModel("beginner-friendly", "Beginner friendly", false),
-            new SelectOptionViewModel("intermediate", "Intermediate", true),
-            new SelectOptionViewModel("advanced", "Advanced", false)
-    );
-    private static final List<SelectOptionViewModel> PRICE_MODES = List.of(
-            new SelectOptionViewModel("paid", "Paid", true),
-            new SelectOptionViewModel("free", "Free", false)
-    );
+    private static final List<SelectOptionViewModel> SKILL_LEVELS =
+            List.of(
+                    new SelectOptionViewModel("all-levels", "All levels", false),
+                    new SelectOptionViewModel("beginner-friendly", "Beginner friendly", false),
+                    new SelectOptionViewModel("intermediate", "Intermediate", true),
+                    new SelectOptionViewModel("advanced", "Advanced", false));
+    private static final List<SelectOptionViewModel> PRICE_MODES =
+            List.of(
+                    new SelectOptionViewModel("paid", "Paid", true),
+                    new SelectOptionViewModel("free", "Free", false));
 
     private PawUiMockData() {
         // Static mock content only.
@@ -128,16 +122,12 @@ public final class PawUiMockData {
         return new ShellViewModel(
                 "Match Point",
                 new NavItemViewModel("Switch to Hosting", "/host/events/new", false),
-                List.of()
-        );
+                List.of());
     }
 
     public static ShellViewModel hostShell() {
         return new ShellViewModel(
-                "Match Point",
-                new NavItemViewModel("Switch to Joining", "/", false),
-                List.of()
-        );
+                "Match Point", new NavItemViewModel("Switch to Joining", "/", false), List.of());
     }
 
     public static FeedPageViewModel feedPage() {
@@ -152,8 +142,7 @@ public final class PawUiMockData {
                         new ChipViewModel("Football", null, false, "default"),
                         new ChipViewModel("Tennis", null, false, "default"),
                         new ChipViewModel("Yoga", null, false, "default"),
-                        new ChipViewModel("Padel", null, false, "default")
-                ),
+                        new ChipViewModel("Padel", null, false, "default")),
                 List.of(
                         new FilterGroupViewModel(
                                 "Categories",
@@ -161,37 +150,25 @@ public final class PawUiMockData {
                                         new FilterOptionViewModel("Football", "14", true),
                                         new FilterOptionViewModel("Tennis", "8", false),
                                         new FilterOptionViewModel("Yoga", "7", false),
-                                        new FilterOptionViewModel("Padel", "11", false)
-                                )
-                        ),
+                                        new FilterOptionViewModel("Padel", "11", false))),
                         new FilterGroupViewModel(
                                 "Time",
                                 List.of(
                                         new FilterOptionViewModel("Today", null, false),
                                         new FilterOptionViewModel("Tomorrow", null, false),
-                                        new FilterOptionViewModel("Weekend", null, true)
-                                )
-                        ),
+                                        new FilterOptionViewModel("Weekend", null, true))),
                         new FilterGroupViewModel(
                                 "Price",
                                 List.of(
                                         new FilterOptionViewModel("Free", null, false),
-                                        new FilterOptionViewModel("Paid", null, true)
-                                )
-                        ),
+                                        new FilterOptionViewModel("Paid", null, true))),
                         new FilterGroupViewModel(
                                 "Skill level",
                                 List.of(
                                         new FilterOptionViewModel("Beginner", null, false),
                                         new FilterOptionViewModel("Intermediate", null, true),
-                                        new FilterOptionViewModel("Advanced", null, false)
-                                )
-                        )
-                ),
-                EVENT_SEEDS.stream()
-                        .map(PawUiMockData::toCard)
-                        .toList()
-        );
+                                        new FilterOptionViewModel("Advanced", null, false)))),
+                EVENT_SEEDS.stream().map(PawUiMockData::toCard).toList());
     }
 
     public static Optional<EventDetailPageViewModel> findEventPage(final String eventId) {
@@ -201,44 +178,40 @@ public final class PawUiMockData {
             return Optional.empty();
         }
 
-        return Optional.of(new EventDetailPageViewModel(
-                toCard(seed),
-                seed.getSport() + " tournament",
-                seed.getSchedule() + " - " + seed.getVenue(),
-                seed.getHostLabel(),
-                List.of(seed.getAboutLead(), seed.getAboutFollowUp()),
-                List.of(
-                        new InfoTileViewModel(
-                                "Format",
-                                "Structured pairings",
-                                "Hosted rounds and easy rotations keep the session moving from warm-up to final point.",
-                                "mint"
-                        ),
-                        new InfoTileViewModel(
-                                "Atmosphere",
-                                "Community-first hosting",
-                                "Expect quick check-in, level-aware matchmaking, and a social rhythm around the courts.",
-                                "sand"
-                        )
-                ),
-                seed.getVenue(),
-                "Check in 15 minutes before kickoff and head to the main reception for court assignment.",
-                seed.getPriceLabel(),
-                List.of(
-                        new BookingDetailViewModel("Session", seed.getSchedule()),
-                        new BookingDetailViewModel("Level", seed.getLevel()),
-                        new BookingDetailViewModel("Venue", seed.getVenue()),
-                        new BookingDetailViewModel("Format", "Hosted community event")
-                ),
-                seed.getBadge(),
-                "Sign up",
-                EVENT_SEEDS.stream()
-                        .filter(event -> !event.getId().equals(seed.getId()))
-                        .sorted(Comparator.comparing(EventSeed::getSport))
-                        .limit(3)
-                        .map(PawUiMockData::toCard)
-                        .toList()
-        ));
+        return Optional.of(
+                new EventDetailPageViewModel(
+                        toCard(seed),
+                        seed.getSport() + " tournament",
+                        seed.getSchedule() + " - " + seed.getVenue(),
+                        seed.getHostLabel(),
+                        List.of(seed.getAboutLead(), seed.getAboutFollowUp()),
+                        List.of(
+                                new InfoTileViewModel(
+                                        "Format",
+                                        "Structured pairings",
+                                        "Hosted rounds and easy rotations keep the session moving from warm-up to final point.",
+                                        "mint"),
+                                new InfoTileViewModel(
+                                        "Atmosphere",
+                                        "Community-first hosting",
+                                        "Expect quick check-in, level-aware matchmaking, and a social rhythm around the courts.",
+                                        "sand")),
+                        seed.getVenue(),
+                        "Check in 15 minutes before kickoff and head to the main reception for court assignment.",
+                        seed.getPriceLabel(),
+                        List.of(
+                                new BookingDetailViewModel("Session", seed.getSchedule()),
+                                new BookingDetailViewModel("Level", seed.getLevel()),
+                                new BookingDetailViewModel("Venue", seed.getVenue()),
+                                new BookingDetailViewModel("Format", "Hosted community event")),
+                        seed.getBadge(),
+                        "Sign up",
+                        EVENT_SEEDS.stream()
+                                .filter(event -> !event.getId().equals(seed.getId()))
+                                .sorted(Comparator.comparing(EventSeed::getSport))
+                                .limit(3)
+                                .map(PawUiMockData::toCard)
+                                .toList()));
     }
 
     public static CreateEventPageViewModel createEventPage() {
@@ -251,18 +224,12 @@ public final class PawUiMockData {
                         new ChipViewModel("Tennis", null, false, "default"),
                         new ChipViewModel("Yoga", null, false, "default"),
                         new ChipViewModel("Padel", null, false, "default"),
-                        new ChipViewModel("Other", null, false, "default")
-                ),
+                        new ChipViewModel("Other", null, false, "default")),
                 SKILL_LEVELS,
                 PRICE_MODES,
-                List.of(
-                        "Public listed event",
-                        "Auto-approve attendees",
-                        "Visual placeholder only"
-                ),
+                List.of("Public listed event", "Auto-approve attendees", "Visual placeholder only"),
                 "Upload cover photo",
-                "Recommended size: 1600 x 900 px"
-        );
+                "Recommended size: 1600 x 900 px");
     }
 
     public static ComponentPreviewPageViewModel componentPreviewPage() {
@@ -271,11 +238,9 @@ public final class PawUiMockData {
                 List.of(
                         new ChipViewModel("Featured", null, true, "default"),
                         new ChipViewModel("Open spots", null, false, "default"),
-                        new ChipViewModel("Premium", null, false, "muted")
-                ),
+                        new ChipViewModel("Premium", null, false, "muted")),
                 SKILL_LEVELS,
-                PRICE_MODES
-        );
+                PRICE_MODES);
     }
 
     private static EventCardViewModel toCard(final EventSeed seed) {
@@ -290,8 +255,7 @@ public final class PawUiMockData {
                 seed.getBadge(),
                 seed.getLevel(),
                 seed.getMediaClass(),
-                attendeesFor(seed.getSport())
-        );
+                attendeesFor(seed.getSport()));
     }
 
     private static List<String> attendeesFor(final String sport) {
@@ -339,8 +303,7 @@ public final class PawUiMockData {
                 final String mediaClass,
                 final String aboutLead,
                 final String hostLabel,
-                final String aboutFollowUp
-        ) {
+                final String aboutFollowUp) {
             this.id = id;
             this.sport = sport;
             this.title = title;

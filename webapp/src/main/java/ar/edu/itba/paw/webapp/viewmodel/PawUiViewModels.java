@@ -16,8 +16,7 @@ public final class PawUiViewModels {
         public ShellViewModel(
                 final String brandLabel,
                 final NavItemViewModel hostAction,
-                final List<NavItemViewModel> primaryNav
-        ) {
+                final List<NavItemViewModel> primaryNav) {
             this.brandLabel = brandLabel;
             this.hostAction = hostAction;
             this.primaryNav = primaryNav;
@@ -108,7 +107,8 @@ public final class PawUiViewModels {
         private final boolean active;
         private final String tone;
 
-        public ChipViewModel(final String label, final String href, final boolean active, final String tone) {
+        public ChipViewModel(
+                final String label, final String href, final boolean active, final String tone) {
             this.label = label;
             this.href = href;
             this.active = active;
@@ -156,8 +156,7 @@ public final class PawUiViewModels {
                 final String badge,
                 final String level,
                 final String mediaClass,
-                final List<String> attendeeInitials
-        ) {
+                final List<String> attendeeInitials) {
             this.id = id;
             this.href = href;
             this.sport = sport;
@@ -234,8 +233,7 @@ public final class PawUiViewModels {
                 final String searchButtonLabel,
                 final List<ChipViewModel> quickFilters,
                 final List<FilterGroupViewModel> filterGroups,
-                final List<EventCardViewModel> featuredEvents
-        ) {
+                final List<EventCardViewModel> featuredEvents) {
             this.eyebrow = eyebrow;
             this.title = title;
             this.description = description;
@@ -285,7 +283,11 @@ public final class PawUiViewModels {
         private final String description;
         private final String tone;
 
-        public InfoTileViewModel(final String eyebrow, final String title, final String description, final String tone) {
+        public InfoTileViewModel(
+                final String eyebrow,
+                final String title,
+                final String description,
+                final String tone) {
             this.eyebrow = eyebrow;
             this.title = title;
             this.description = description;
@@ -355,8 +357,7 @@ public final class PawUiViewModels {
                 final List<BookingDetailViewModel> bookingDetails,
                 final String availabilityLabel,
                 final String ctaLabel,
-                final List<EventCardViewModel> nearbyEvents
-        ) {
+                final List<EventCardViewModel> nearbyEvents) {
             this.event = event;
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
@@ -430,7 +431,8 @@ public final class PawUiViewModels {
         private final String label;
         private final boolean selected;
 
-        public SelectOptionViewModel(final String value, final String label, final boolean selected) {
+        public SelectOptionViewModel(
+                final String value, final String label, final boolean selected) {
             this.value = value;
             this.label = label;
             this.selected = selected;
@@ -469,8 +471,7 @@ public final class PawUiViewModels {
                 final List<SelectOptionViewModel> priceModes,
                 final List<String> snapshotItems,
                 final String uploadHint,
-                final String uploadCaption
-        ) {
+                final String uploadCaption) {
             this.eyebrow = eyebrow;
             this.title = title;
             this.description = description;
@@ -529,8 +530,7 @@ public final class PawUiViewModels {
                 final EventCardViewModel sampleEvent,
                 final List<ChipViewModel> sampleChips,
                 final List<SelectOptionViewModel> skillLevels,
-                final List<SelectOptionViewModel> priceModes
-        ) {
+                final List<SelectOptionViewModel> priceModes) {
             this.sampleEvent = sampleEvent;
             this.sampleChips = sampleChips;
             this.skillLevels = skillLevels;
