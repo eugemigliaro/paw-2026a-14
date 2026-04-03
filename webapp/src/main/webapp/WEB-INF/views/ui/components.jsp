@@ -52,15 +52,17 @@
             <h2 class="section-head__title">Event card</h2>
             <ui:card className="event-card" href="${pageContext.request.contextPath}${componentPage.sampleEvent.href}">
               <div class="event-card__media ${componentPage.sampleEvent.mediaClass}">
-                <span class="event-card__badge"><c:out value="${componentPage.sampleEvent.badge}" /></span>
+                <span class="event-card__badge"><c:out value="${componentPage.sampleEvent.sport}" /></span>
               </div>
               <div class="event-card__body">
-                <span class="event-card__sport"><c:out value="${componentPage.sampleEvent.sport}" /></span>
                 <h3 class="event-card__title"><c:out value="${componentPage.sampleEvent.title}" /></h3>
                 <div class="event-card__meta">
-                  <span><c:out value="${componentPage.sampleEvent.venue}" /></span>
                   <span><c:out value="${componentPage.sampleEvent.schedule}" /></span>
-                  <span><c:out value="${componentPage.sampleEvent.priceLabel}" /></span>
+                  <span><c:out value="${componentPage.sampleEvent.venue}" /></span>
+                  <span><c:out value="${componentPage.sampleEvent.badge}" /></span>
+                </div>
+                <div class="event-card__footer">
+                  <strong class="event-card__price"><c:out value="${componentPage.sampleEvent.priceLabel}" /></strong>
                 </div>
               </div>
             </ui:card>

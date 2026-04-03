@@ -11,7 +11,7 @@
     <div class="app-shell">
       <%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
-      <main class="page-shell page-shell--split">
+      <main class="page-shell">
         <section class="create-layout__main">
           <header class="page-heading">
             <p class="eyebrow"><c:out value="${createPage.eyebrow}" /></p>
@@ -96,13 +96,10 @@
                 name="ticketPrice"
                 type="number"
                 value="15"
-                step="0.01"
-                hint="Visible in the booking sidebar once backend wiring exists." />
+                step="0.01" />
             </div>
           </article>
-        </section>
 
-        <aside class="create-layout__sidebar">
           <article class="panel upload-card">
             <span class="detail-label">Upload cover</span>
             <div class="upload-card__placeholder">
@@ -113,25 +110,15 @@
             </div>
           </article>
 
-          <article class="panel detail-card">
-            <span class="detail-label">Event snapshot</span>
-            <h2 class="detail-card__title">Host-ready defaults</h2>
-            <ul class="snapshot-list">
-              <c:forEach var="item" items="${createPage.snapshotItems}">
-                <li><c:out value="${item}" /></li>
-              </c:forEach>
-            </ul>
-          </article>
-
-          <article class="panel map-card">
-            <span class="detail-label">Venue preview</span>
-            <div class="map-placeholder">
-              <span class="map-placeholder__pin">9</span>
-            </div>
-          </article>
-
-          <ui:button label="Create Event" fullWidth="${true}" disabled="${true}" />
-        </aside>
+          <div class="create-layout__actions">
+            <ui:button
+              label="Create Event"
+              size="lg"
+              fullWidth="${true}"
+              className="create-layout__submit"
+              disabled="${true}" />
+          </div>
+        </section>
       </main>
     </div>
     <script>

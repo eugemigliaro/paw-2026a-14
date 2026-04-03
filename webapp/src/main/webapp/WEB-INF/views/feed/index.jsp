@@ -14,9 +14,12 @@
       <main class="page-shell page-shell--feed">
         <aside class="feed-sidebar" aria-label="Event filters">
           <div class="panel filter-rail">
-            <c:forEach var="group" items="${feedPage.filterGroups}">
-              <section class="filter-rail__group">
-                <h2 class="filter-rail__title"><c:out value="${group.title}" /></h2>
+            <h2 class="filter-rail__heading">Filters</h2>
+            <c:forEach var="group" items="${feedPage.filterGroups}" varStatus="status">
+              <details class="filter-rail__group" <c:if test="${status.first}">open="open"</c:if>>
+                <summary class="filter-rail__summary">
+                  <span class="filter-rail__title"><c:out value="${group.title}" /></span>
+                </summary>
                 <div class="filter-rail__options" data-filter-group="${group.title}">
                   <c:forEach var="option" items="${group.options}">
                     <button
@@ -30,7 +33,7 @@
                     </button>
                   </c:forEach>
                 </div>
-              </section>
+              </details>
             </c:forEach>
           </div>
         </aside>
@@ -78,36 +81,26 @@
               </div>
             </div>
 
-            <div class="event-grid">
+            <div class="event-grid event-grid--detail">
               <c:forEach var="event" items="${feedPage.featuredEvents}">
                 <ui:card
                   href="${pageContext.request.contextPath}${event.href}"
                   className="event-card"
                   ariaLabel="${event.title}">
                   <div class="event-card__media ${event.mediaClass}">
-                    <span class="event-card__badge"><c:out value="${event.badge}" /></span>
+                    <span class="event-card__badge"><c:out value="${event.sport}" /></span>
                   </div>
 
                   <div class="event-card__body">
-                    <span class="event-card__sport"><c:out value="${event.sport}" /></span>
                     <h3 class="event-card__title"><c:out value="${event.title}" /></h3>
                     <div class="event-card__meta">
-                      <span><c:out value="${event.venue}" /></span>
                       <span><c:out value="${event.schedule}" /></span>
-                      <span><c:out value="${event.level}" /></span>
+                      <span><c:out value="${event.venue}" /></span>
+                      <span><c:out value="${event.badge}" /></span>
                     </div>
 
                     <div class="event-card__footer">
-                      <div class="event-card__avatars" aria-hidden="true">
-                        <c:forEach var="attendee" items="${event.attendeeInitials}">
-                          <span class="avatar-badge"><c:out value="${attendee}" /></span>
-                        </c:forEach>
-                      </div>
-
-                      <div class="event-card__cta">
-                        <span><c:out value="${event.priceLabel}" /></span>
-                        <span>&middot; View event</span>
-                      </div>
+                      <strong class="event-card__price"><c:out value="${event.priceLabel}" /></strong>
                     </div>
                   </div>
                 </ui:card>

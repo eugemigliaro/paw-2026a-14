@@ -135,7 +135,7 @@ public final class PawUiMockData {
     public static ShellViewModel hostShell() {
         return new ShellViewModel(
                 "Match Point",
-                new NavItemViewModel("Switch to Joining", "/", false),
+                new NavItemViewModel("Switch to Player", "/", false),
                 List.of()
         );
     }
@@ -148,7 +148,7 @@ public final class PawUiMockData {
                 "What sports event are you looking for?",
                 "Find Matches",
                 List.of(
-                        new ChipViewModel("All", null, true, "default"),
+                        new ChipViewModel("All", null, false, "default"),
                         new ChipViewModel("Football", null, false, "default"),
                         new ChipViewModel("Tennis", null, false, "default"),
                         new ChipViewModel("Yoga", null, false, "default"),
@@ -156,9 +156,9 @@ public final class PawUiMockData {
                 ),
                 List.of(
                         new FilterGroupViewModel(
-                                "Categories",
+                                "Sport",
                                 List.of(
-                                        new FilterOptionViewModel("Football", "14", true),
+                                        new FilterOptionViewModel("Football", "14", false),
                                         new FilterOptionViewModel("Tennis", "8", false),
                                         new FilterOptionViewModel("Yoga", "7", false),
                                         new FilterOptionViewModel("Padel", "11", false)
@@ -169,21 +169,21 @@ public final class PawUiMockData {
                                 List.of(
                                         new FilterOptionViewModel("Today", null, false),
                                         new FilterOptionViewModel("Tomorrow", null, false),
-                                        new FilterOptionViewModel("Weekend", null, true)
+                                        new FilterOptionViewModel("Weekend", null, false)
                                 )
                         ),
                         new FilterGroupViewModel(
                                 "Price",
                                 List.of(
                                         new FilterOptionViewModel("Free", null, false),
-                                        new FilterOptionViewModel("Paid", null, true)
+                                        new FilterOptionViewModel("Paid", null, false)
                                 )
                         ),
                         new FilterGroupViewModel(
                                 "Skill level",
                                 List.of(
                                         new FilterOptionViewModel("Beginner", null, false),
-                                        new FilterOptionViewModel("Intermediate", null, true),
+                                        new FilterOptionViewModel("Intermediate", null, false),
                                         new FilterOptionViewModel("Advanced", null, false)
                                 )
                         )
@@ -207,20 +207,7 @@ public final class PawUiMockData {
                 seed.getSchedule() + " - " + seed.getVenue(),
                 seed.getHostLabel(),
                 List.of(seed.getAboutLead(), seed.getAboutFollowUp()),
-                List.of(
-                        new InfoTileViewModel(
-                                "Format",
-                                "Structured pairings",
-                                "Hosted rounds and easy rotations keep the session moving from warm-up to final point.",
-                                "mint"
-                        ),
-                        new InfoTileViewModel(
-                                "Atmosphere",
-                                "Community-first hosting",
-                                "Expect quick check-in, level-aware matchmaking, and a social rhythm around the courts.",
-                                "sand"
-                        )
-                ),
+                List.of(),
                 seed.getVenue(),
                 "Check in 15 minutes before kickoff and head to the main reception for court assignment.",
                 seed.getPriceLabel(),
