@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.Sport;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -18,6 +19,7 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.SqlParameterValue;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
@@ -89,7 +91,7 @@ public class MatchJdbcDao implements MatchDao {
         values.put("ends_at", endsAt == null ? null : Timestamp.from(endsAt));
         values.put("max_players", maxPlayers);
         values.put("price_per_player", pricePerPlayer);
-        values.put("sport", sport.getDbValue());
+        values.put("sport", new SqlParameterValue(Types.OTHER, sport.getDbValue()));
         values.put("visibility", visibility);
         values.put("status", status);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));

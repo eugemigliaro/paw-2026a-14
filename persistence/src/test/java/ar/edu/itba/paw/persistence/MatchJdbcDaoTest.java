@@ -42,6 +42,39 @@ public class MatchJdbcDaoTest {
     }
 
     @Test
+    public void testCreateMatchPersistsSportCorrectly() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Stadium A",
+                        "Tennis Singles",
+                        "Open match",
+                        startsAt.toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        "public",
+                        "open");
+
+        Assertions.assertNotNull(created.getId());
+        Assertions.assertEquals(Sport.TENNIS, created.getSport());
+
+        final List<Match> found =
+                matchDao.findPublicMatches(
+                        null,
+                        Sport.TENNIS,
+                        EventTimeFilter.WEEK,
+                        MatchSort.SOONEST,
+                        ZoneId.systemDefault(),
+                        0,
+                        20);
+        Assertions.assertEquals(1, found.size());
+        Assertions.assertEquals(Sport.TENNIS, found.get(0).getSport());
+    }
+
+    @Test
     public void testFindPublicEventsBySearchText() {
         insertMatch(
                 "Morning Football",
