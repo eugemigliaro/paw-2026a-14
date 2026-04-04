@@ -41,10 +41,6 @@
 			<artifactId>spring-webmvc</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>javax.validation</groupId>
-			<artifactId>validation-api</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.hibernate.validator</groupId>
 			<artifactId>hibernate-validator</artifactId>
 		</dependency>
@@ -64,11 +60,6 @@
 			<artifactId>javax.servlet-api</artifactId>
 			<version>4.0.1</version>
 			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>jstl</artifactId>
-			<version>1.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
@@ -151,8 +142,9 @@
 							<port>8080</port>
 						</httpConnector>
 						<webApp>
-							<!-- This app is bootstrapped through web.xml, so Jetty's annotation scan only
-								adds duplicate JSTL scan warnings during local development. -->
+							<!-- This app is bootstrapped through web.xml, but Jetty still needs annotation
+								configuration so the JSP/JSTL ServletContainerInitializer runs and prepares
+								Jasper's TLD cache. -->
 							<configurationClasses>
 								<configurationClass>org.eclipse.jetty.maven.plugin.MavenWebInfConfiguration</configurationClass>
 								<configurationClass>org.eclipse.jetty.webapp.WebXmlConfiguration</configurationClass>
@@ -160,6 +152,7 @@
 								<configurationClass>org.eclipse.jetty.webapp.FragmentConfiguration</configurationClass>
 								<configurationClass>org.eclipse.jetty.plus.webapp.EnvConfiguration</configurationClass>
 								<configurationClass>org.eclipse.jetty.plus.webapp.PlusConfiguration</configurationClass>
+								<configurationClass>org.eclipse.jetty.annotations.AnnotationConfiguration</configurationClass>
 								<configurationClass>org.eclipse.jetty.webapp.JettyWebXmlConfiguration</configurationClass>
 							</configurationClasses>
 						</webApp>
@@ -175,6 +168,16 @@
 			<activation>
 				<activeByDefault>true</activeByDefault>
 			</activation>
+			<dependencies>
+				<!-- Jetty already provides JSTL during local development, so keep it off the
+					webapp classpath to avoid duplicate-class scan warnings. -->
+				<dependency>
+					<groupId>javax.servlet</groupId>
+					<artifactId>jstl</artifactId>
+					<version>1.2</version>
+					<scope>provided</scope>
+				</dependency>
+			</dependencies>
 			<build>
 				<filters>
 					<filter>${project.basedir}/../config/local.properties</filter>
@@ -183,6 +186,13 @@
 		</profile>
 		<profile>
 			<id>pampero</id>
+			<dependencies>
+				<dependency>
+					<groupId>javax.servlet</groupId>
+					<artifactId>jstl</artifactId>
+					<version>1.2</version>
+				</dependency>
+			</dependencies>
 			<build>
 				<filters>
 					<filter>${project.basedir}/../config/pampero.properties</filter>
