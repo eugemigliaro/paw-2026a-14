@@ -19,7 +19,7 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.SqlParameterValue;
+import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
@@ -168,7 +168,9 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(" WHERE m.visibility = 'public' AND m.status = 'open'");
 
         if (query != null && !query.trim().isEmpty()) {
-            sql.append(" AND (LOWER(m.title) LIKE ? OR LOWER(COALESCE(m.description, '')) LIKE ?)");
+            sql.append(
+                    " AND (LOWER(m.title) LIKE ? OR "
+                            + "LOWER(COALESCE(m.description, '')) LIKE ?)");
             final String queryPattern = "%" + query.trim().toLowerCase() + "%";
             params.add(queryPattern);
             params.add(queryPattern);
@@ -201,7 +203,8 @@ public class MatchJdbcDao implements MatchDao {
                 sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC");
                 break;
             case SPOTS_DESC:
-                sql.append(" ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, m.starts_at ASC");
+                sql.append(
+                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, " + "m.starts_at ASC");
                 break;
             case SOONEST:
             default:
