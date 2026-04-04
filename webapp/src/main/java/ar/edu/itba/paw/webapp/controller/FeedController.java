@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
@@ -17,9 +18,12 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -40,12 +44,17 @@ public class FeedController {
 
     @GetMapping("/")
     public ModelAndView showFeed(
-            @RequestParam(value = "q", defaultValue = "") final String query,
+            @Valid @ModelAttribute("feedSearchForm") final FeedSearchForm feedSearchForm,
+            final BindingResult bindingResult,
             @RequestParam(value = "sport", required = false) final String sport,
             @RequestParam(value = "time", defaultValue = "all") final String time,
             @RequestParam(value = "sort", defaultValue = "soonest") final String sort,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             @RequestParam(value = "tz", required = false) final String timezone) {
+        final String query =
+                bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
+                        ? ""
+                        : feedSearchForm.getQ();
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
                         query, sport, time, sort, page, PAGE_SIZE, timezone);

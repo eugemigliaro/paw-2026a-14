@@ -41,6 +41,14 @@
 			<artifactId>spring-webmvc</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate.validator</groupId>
+			<artifactId>hibernate-validator</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>ar.edu.itba.paw</groupId>
 			<artifactId>service-contracts</artifactId>
 			<version>${project.version}</version>
@@ -144,7 +152,7 @@
 						</httpConnector>
 						<webApp>
 							<!-- This app is bootstrapped through web.xml, so Jetty's annotation scan only
-							     adds duplicate JSTL scan warnings during local development. -->
+								adds duplicate JSTL scan warnings during local development. -->
 							<configurationClasses>
 								<configurationClass>org.eclipse.jetty.maven.plugin.MavenWebInfConfiguration</configurationClass>
 								<configurationClass>org.eclipse.jetty.webapp.WebXmlConfiguration</configurationClass>

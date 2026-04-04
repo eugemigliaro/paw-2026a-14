@@ -202,6 +202,11 @@ gap: 0.55rem;
 grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.search-panel__form {
+display: grid;
+gap: 0.55rem;
+}
+
 .search-panel .btn {
 min-height: 3.3rem;
 min-width: 10.75rem;
@@ -258,6 +263,14 @@ padding: 0.2rem 0.5rem 0.2rem 0;
 .search-panel__control:focus {
 box-shadow: none;
 outline: none;
+}
+
+.search-panel__error {
+color: #b42318;
+font-size: 0.84rem;
+font-weight: 600;
+margin: 0;
+padding: 0.5rem;
 }
 
 .sort-panel {

@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+import org.springframework.validation.Validator;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -61,6 +63,11 @@ public class WebConfig implements WebMvcConfigurer {
         return new PropertySourcesPlaceholderConfigurer();
     }
 
+    @Bean
+    public LocalValidatorFactoryBean validator() {
+        return new LocalValidatorFactoryBean();
+    }
+
     @Bean(initMethod = "migrate")
     public Flyway flyway(final DataSource dataSource) {
         return Flyway.configure()
@@ -74,6 +81,11 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/css/**").addResourceLocations("/css/");
         registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
+    }
+
+    @Override
+    public Validator getValidator() {
+        return validator();
     }
 
     private String requireNonBlank(final String value, final String propertyName) {
