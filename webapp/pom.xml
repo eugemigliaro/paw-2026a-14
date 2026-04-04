@@ -142,6 +142,19 @@
 						<httpConnector>
 							<port>8080</port>
 						</httpConnector>
+						<webApp>
+							<!-- This app is bootstrapped through web.xml, so Jetty's annotation scan only
+							     adds duplicate JSTL scan warnings during local development. -->
+							<configurationClasses>
+								<configurationClass>org.eclipse.jetty.maven.plugin.MavenWebInfConfiguration</configurationClass>
+								<configurationClass>org.eclipse.jetty.webapp.WebXmlConfiguration</configurationClass>
+								<configurationClass>org.eclipse.jetty.webapp.MetaInfConfiguration</configurationClass>
+								<configurationClass>org.eclipse.jetty.webapp.FragmentConfiguration</configurationClass>
+								<configurationClass>org.eclipse.jetty.plus.webapp.EnvConfiguration</configurationClass>
+								<configurationClass>org.eclipse.jetty.plus.webapp.PlusConfiguration</configurationClass>
+								<configurationClass>org.eclipse.jetty.webapp.JettyWebXmlConfiguration</configurationClass>
+							</configurationClasses>
+						</webApp>
 					</configuration>
 				</plugin>
 			</plugins>
