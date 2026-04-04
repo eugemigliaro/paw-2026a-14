@@ -70,7 +70,7 @@ public final class PawUiMockData {
                             "Free",
                             "8 spots left",
                             "All levels",
-                            "media-tile--yoga",
+                            "media-tile--basketball",
                             "A restorative outdoor flow with mobility work, mindful breathing, and a golden-hour cooldown.",
                             "Mila Ortega",
                             "Bring a mat, expect a calm pace, and stay for a short social circle after the session."),
@@ -137,37 +137,41 @@ public final class PawUiMockData {
                 "What sports event are you looking for?",
                 "Find Matches",
                 List.of(
-                        new ChipViewModel("All", null, false, "default"),
+                        new ChipViewModel("All", null, true, "default"),
                         new ChipViewModel("Football", null, false, "default"),
                         new ChipViewModel("Tennis", null, false, "default"),
-                        new ChipViewModel("Yoga", null, false, "default"),
+                        new ChipViewModel("Basketball", null, false, "default"),
                         new ChipViewModel("Padel", null, false, "default")),
                 List.of(
                         new FilterGroupViewModel(
-                                "Sport",
+                                "Categories",
                                 List.of(
-                                        new FilterOptionViewModel("Football", "14", false),
-                                        new FilterOptionViewModel("Tennis", "8", false),
-                                        new FilterOptionViewModel("Yoga", "7", false),
-                                        new FilterOptionViewModel("Padel", "11", false))),
+                                        new FilterOptionViewModel("Football", null, "14", true),
+                                        new FilterOptionViewModel("Tennis", null, "8", false),
+                                        new FilterOptionViewModel("Basketball", null, "7", false),
+                                        new FilterOptionViewModel("Padel", null, "11", false))),
                         new FilterGroupViewModel(
                                 "Time",
                                 List.of(
-                                        new FilterOptionViewModel("Today", null, false),
-                                        new FilterOptionViewModel("Tomorrow", null, false),
-                                        new FilterOptionViewModel("Weekend", null, false))),
+                                        new FilterOptionViewModel("Today", null, null, false),
+                                        new FilterOptionViewModel("Tomorrow", null, null, false),
+                                        new FilterOptionViewModel("Weekend", null, null, true))),
                         new FilterGroupViewModel(
                                 "Price",
                                 List.of(
-                                        new FilterOptionViewModel("Free", null, false),
-                                        new FilterOptionViewModel("Paid", null, false))),
+                                        new FilterOptionViewModel("Free", null, null, false),
+                                        new FilterOptionViewModel("Paid", null, null, true))),
                         new FilterGroupViewModel(
                                 "Skill level",
                                 List.of(
-                                        new FilterOptionViewModel("Beginner", null, false),
-                                        new FilterOptionViewModel("Intermediate", null, false),
-                                        new FilterOptionViewModel("Advanced", null, false)))),
-                EVENT_SEEDS.stream().map(PawUiMockData::toCard).toList());
+                                        new FilterOptionViewModel("Beginner", null, null, false),
+                                        new FilterOptionViewModel("Intermediate", null, null, true),
+                                        new FilterOptionViewModel("Advanced", null, null, false)))),
+                EVENT_SEEDS.stream().map(PawUiMockData::toCard).toList(),
+                1,
+                1,
+                null,
+                null);
     }
 
     public static Optional<EventDetailPageViewModel> findEventPage(final String eventId) {
@@ -211,7 +215,7 @@ public final class PawUiMockData {
                 List.of(
                         new ChipViewModel("Football", null, true, "default"),
                         new ChipViewModel("Tennis", null, false, "default"),
-                        new ChipViewModel("Yoga", null, false, "default"),
+                        new ChipViewModel("Basketball", null, false, "default"),
                         new ChipViewModel("Padel", null, false, "default"),
                         new ChipViewModel("Other", null, false, "default")),
                 SKILL_LEVELS,
@@ -253,7 +257,7 @@ public final class PawUiMockData {
                 return List.of("AL", "JM", "SR");
             case "Basketball":
                 return List.of("MK", "PS", "TR");
-            case "Yoga":
+            case "Tennis":
                 return List.of("LC", "DA");
             default:
                 return List.of("MP", "IA", "JV");

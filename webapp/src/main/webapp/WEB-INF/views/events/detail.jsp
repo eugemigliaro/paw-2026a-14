@@ -106,15 +106,17 @@
 				</div>
 
 				<div class="event-card__body">
+				<span class="event-card__sport"><c:out value="${event.sport}" /></span>
 				<h3 class="event-card__title"><c:out value="${event.title}" /></h3>
 				<div class="event-card__meta">
-					<span><c:out value="${event.schedule}" /></span>
 					<span><c:out value="${event.venue}" /></span>
-					<span><c:out value="${event.badge}" /></span>
+					<span><c:out value="${event.schedule}" /></span>
+					<span><c:out value="${event.level}" /></span>
 				</div>
 
 				<div class="event-card__footer">
-					<strong class="event-card__price"><c:out value="${event.priceLabel}" /></strong>
+					<strong class="event-card__price"><c:out value="${event.priceLabel}" /> / person</strong>
+					<span class="event-card__spots"><c:out value="${event.badge}" /></span>
 				</div>
 				</div>
 			</ui:card>

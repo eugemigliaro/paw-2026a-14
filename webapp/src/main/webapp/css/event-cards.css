@@ -109,8 +109,30 @@ font-size: 0.82rem;
 .event-card__footer {
 align-items: center;
 display: flex;
-justify-content: flex-end;
-width: 100%;
+justify-content: space-between;
+}
+
+.event-card__avatars {
+display: flex;
+}
+
+.avatar-badge {
+align-items: center;
+background: linear-gradient(135deg, #edf5f1 0%, #d8ede6 100%);
+border: 2px solid rgba(255, 255, 255, 0.85);
+border-radius: 999px;
+color: var(--accent-strong);
+display: inline-flex;
+font-size: 0.72rem;
+font-weight: 700;
+height: 1.8rem;
+justify-content: center;
+margin-left: -0.35rem;
+width: 1.8rem;
+}
+
+.avatar-badge:first-child {
+margin-left: 0;
 }
 
 .event-card__cta {
@@ -122,10 +144,7 @@ text-decoration: none;
 }
 
 .event-card__price {
-display: block;
 font-size: 0.95rem;
-text-align: right;
-width: 100%;
 }
 
 .event-card__spots {

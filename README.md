@@ -16,7 +16,59 @@ Database schema is managed with Flyway.
 
 Flyway automatically runs migrations on application startup and during persistence tests.
 
+### Runtime configuration
+
+This project uses a committed Spring `application.properties` file whose values are filled by Maven resource filtering from gitignored profile files.
+
+Local development uses:
+
+- `config/local.properties`
+
+Pampero deployment packaging uses:
+
+- `config/pampero.properties`
+
+The repository includes example files for both environments:
+
+- `config/local.example.properties`
+- `config/pampero.example.properties`
+
+Do not commit the real `config/local.properties` or `config/pampero.properties` files.
+
+### Run locally
+
+Create `config/local.properties` from `config/local.example.properties`, then run:
+
+```sh
+cd webapp
+mvn jetty:run
+```
+
+`mvn jetty:run` uses the default `local` Maven profile, so no extra `source` or environment export is needed.
+
+### Build For Pampero
+
+Create `config/pampero.properties` with the faculty DB credentials, then package the WAR with:
+
+```sh
+mvn -Ppampero clean package
+```
+
+The generated WAR is:
+
+```sh
+webapp/target/webapp.war
+```
+
+Upload that file as `web/app.war` through the faculty SFTP flow.
+
 ## Daily Workflow
+
+## Branch Policy
+
+- `main` contains deployed content.
+- `dev` contains the sprint work in progress.
+- Do not push directly to `main`; use branches and Pull Requests.
 
 1. Create a branch:
 

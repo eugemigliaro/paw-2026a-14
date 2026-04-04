@@ -18,30 +18,42 @@ gap: 1.6rem;
 .filter-rail {
 align-self: start;
 display: grid;
-gap: 0.85rem;
+gap: 1.15rem;
 padding: 1.1rem;
 position: sticky;
 top: 6.25rem;
 }
 
-.filter-rail__heading,
+.filter-rail__header {
+align-items: center;
+border-bottom: 1px solid #ebece8;
+display: flex;
+gap: 0.75rem;
+justify-content: space-between;
+padding-bottom: 0.2rem;
+}
+
+.filter-rail__main-title {
+color: var(--accent-strong);
+font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+font-size: 0.9rem;
+font-weight: 700;
+letter-spacing: 0.08em;
+margin: 0;
+text-transform: uppercase;
+}
+
+.filter-rail__clear {
+padding-inline: 0.5rem;
+}
+
 .filter-rail__title {
 color: var(--text-secondary);
 font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
 font-size: 0.78rem;
 font-weight: 700;
 letter-spacing: 0.08em;
-margin: 0;
-}
-
-.filter-rail__heading {
-color: var(--text-primary);
-font-size: 0.95rem;
-letter-spacing: 0.02em;
-text-transform: none;
-}
-
-.filter-rail__title {
+margin: 0 0 0.85rem;
 text-transform: uppercase;
 }
 
@@ -85,6 +97,11 @@ transform: rotate(225deg);
 display: grid;
 gap: 0.45rem;
 margin-top: 0.7rem;
+}
+
+.filter-rail__chip {
+justify-content: space-between;
+width: 100%;
 }
 
 .filter-rail__option {
@@ -175,6 +192,7 @@ gap: 1rem;
 margin: 0 auto;
 max-width: 56rem;
 padding: 0.45rem;
+width: 64%;
 }
 
 .search-panel__row {
@@ -191,14 +209,20 @@ min-width: 10.75rem;
 
 .search-panel__input {
 align-items: center;
-background: #ffffff;
-border: 0;
+background: rgba(255, 255, 255, 0.92);
+border: 1px solid #dde4df;
 border-radius: 999px;
+box-shadow: 0 10px 20px -18px rgba(16, 50, 44, 0.28);
 color: var(--text-secondary);
 display: inline-flex;
 gap: 0.85rem;
 min-height: 3.3rem;
-padding: 0.95rem 1.1rem;
+padding: 0.35rem 0.45rem 0.35rem 0.9rem;
+}
+
+.search-panel__input:focus-within {
+border-color: rgba(13, 110, 99, 0.34);
+box-shadow: 0 0 0 4px rgba(15, 112, 101, 0.12);
 }
 
 .search-panel__icon {
@@ -223,9 +247,45 @@ transform: rotate(-45deg);
 width: 2px;
 }
 
+.search-panel__control {
+background: transparent;
+border: 0;
+box-shadow: none;
+min-height: 2.45rem;
+padding: 0.2rem 0.5rem 0.2rem 0;
+}
+
+.search-panel__control:focus {
+box-shadow: none;
+outline: none;
+}
+
+.sort-panel {
+display: flex;
+justify-content: center;
+}
+
+.sort-panel__field {
+max-width: 20rem;
+width: 100%;
+}
+
+.sort-panel__field .field__label {
+text-align: left;
+}
+
+.sort-panel__select {
+background-color: #ffffff;
+}
+
 @media (max-width: 980px) {
 .page-shell--feed {
 	grid-template-columns: 1fr;
+}
+
+.search-panel {
+	max-width: none;
+	width: 100%;
 }
 
 .filter-rail {

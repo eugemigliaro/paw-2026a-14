@@ -2,9 +2,12 @@ package ar.edu.itba.paw.webapp.config;
 
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -18,8 +21,22 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
     "ar.edu.itba.paw.persistence"
 })
 @EnableWebMvc
+@PropertySource("classpath:application.properties")
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    private final String databaseUrl;
+    private final String databaseUsername;
+    private final String databasePassword;
+
+    public WebConfig(
+            @Value("${db.url}") final String databaseUrl,
+            @Value("${db.username}") final String databaseUsername,
+            @Value("${db.password}") final String databasePassword) {
+        this.databaseUrl = requireNonBlank(databaseUrl, "db.url");
+        this.databaseUsername = requireNonBlank(databaseUsername, "db.username");
+        this.databasePassword = requireNonBlank(databasePassword, "db.password");
+    }
 
     @Bean
     public ViewResolver viewResolver() {
@@ -33,10 +50,15 @@ public class WebConfig implements WebMvcConfigurer {
     public DataSource dataSource() {
         final SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
         dataSource.setDriverClass(org.postgresql.Driver.class);
-        dataSource.setUrl("jdbc:postgresql://localhost/paw");
-        dataSource.setUsername("pawdbuser");
-        dataSource.setPassword("pawdbsecret");
+        dataSource.setUrl(databaseUrl);
+        dataSource.setUsername(databaseUsername);
+        dataSource.setPassword(databasePassword);
         return dataSource;
+    }
+
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+        return new PropertySourcesPlaceholderConfigurer();
     }
 
     @Bean(initMethod = "migrate")
@@ -52,5 +74,12 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/css/**").addResourceLocations("/css/");
         registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
+    }
+
+    private String requireNonBlank(final String value, final String propertyName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing required property: " + propertyName);
+        }
+        return value;
     }
 }

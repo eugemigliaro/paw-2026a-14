@@ -60,14 +60,14 @@ build/
 dist/
 out/
 
-# Environment variables
-.env
-.env.local
-
 # Database
 *.db
 *.sqlite
+scripts/*.sql
 
 # Application specific
 application-local.properties
 application-local.yml
+config/local.properties
+config/pampero.properties
+webapp/tmp/
