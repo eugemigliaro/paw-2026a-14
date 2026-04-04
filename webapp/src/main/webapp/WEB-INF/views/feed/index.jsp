@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <c:set var="pageTitle" value="Match Point | Explore" />
 <!DOCTYPE html>
@@ -56,22 +57,27 @@
 						</section>
 
 						<section class="search-panel" aria-label="Search events">
-							<form method="get" action="${pageContext.request.contextPath}/" class="search-panel__row">
+							<form:form
+								method="get"
+								action="${pageContext.request.contextPath}/"
+								modelAttribute="feedSearchForm"
+								cssClass="search-panel__form">
 								<input type="hidden" name="sport" value="<c:out value='${param.sport}' />" />
 								<input type="hidden" name="time" value="<c:out value='${param.time}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 								<input type="hidden" name="tz" value="<c:out value='${param.tz}' />" />
-								<div class="search-panel__input">
-									<span class="search-panel__icon" aria-hidden="true"></span>
-									<input
-										type="text"
-										name="q"
-										class="field__control search-panel__control"
-										value="<c:out value='${param.q}' />"
-										placeholder="${feedPage.searchPlaceholder}" />
+								<div class="search-panel__row">
+									<div class="search-panel__input">
+										<span class="search-panel__icon" aria-hidden="true"></span>
+										<form:input
+											path="q"
+											cssClass="field__control search-panel__control"
+											placeholder="${feedPage.searchPlaceholder}" />
+									</div>
+									<ui:button label="${feedPage.searchButtonLabel}" type="submit" />
 								</div>
-								<ui:button label="${feedPage.searchButtonLabel}" type="submit" />
-							</form>
+								<form:errors path="q" cssClass="search-panel__error" element="p" />
+							</form:form>
 						</section>
 
 						<form method="get" action="${pageContext.request.contextPath}/" class="sort-panel" aria-label="Sort events">
@@ -118,21 +124,22 @@
 										<span class="event-card__sport"><c:out value="${event.sport}" /></span>
 										<h3 class="event-card__title"><c:out value="${event.title}" /></h3>
 										<div class="event-card__meta">
-										<span><c:out value="${event.venue}" /></span>
-										<span><c:out value="${event.schedule}" /></span>
-										<span><c:out value="${event.level}" /></span>
-									</div>
-
-									<div class="event-card__footer">
-										<div class="event-card__avatars" aria-hidden="true">
-											<c:forEach var="attendee" items="${event.attendeeInitials}">
-												<span class="avatar-badge"><c:out value="${attendee}" /></span>
-											</c:forEach>
+											<span><c:out value="${event.venue}" /></span>
+											<span><c:out value="${event.schedule}" /></span>
+											<span><c:out value="${event.level}" /></span>
 										</div>
 
-										<div class="event-card__cta">
-											<span><c:out value="${event.priceLabel}" /></span>
-											<span>&middot; View event</span>
+										<div class="event-card__footer">
+											<div class="event-card__avatars" aria-hidden="true">
+												<c:forEach var="attendee" items="${event.attendeeInitials}">
+													<span class="avatar-badge"><c:out value="${attendee}" /></span>
+												</c:forEach>
+											</div>
+
+											<div class="event-card__cta">
+												<span><c:out value="${event.priceLabel}" /></span>
+												<span>&middot; View event</span>
+											</div>
 										</div>
 									</div>
 								</ui:card>
