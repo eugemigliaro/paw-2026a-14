@@ -9,7 +9,6 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventDetailPageViewModel
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.InfoTileViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.NavItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.SelectOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
@@ -127,7 +126,7 @@ public final class PawUiMockData {
 
     public static ShellViewModel hostShell() {
         return new ShellViewModel(
-                "Match Point", new NavItemViewModel("Switch to Joining", "/", false), List.of());
+                "Match Point", new NavItemViewModel("Switch to Player", "/", false), List.of());
     }
 
     public static FeedPageViewModel feedPage() {
@@ -189,17 +188,7 @@ public final class PawUiMockData {
                         seed.getSchedule() + " - " + seed.getVenue(),
                         seed.getHostLabel(),
                         List.of(seed.getAboutLead(), seed.getAboutFollowUp()),
-                        List.of(
-                                new InfoTileViewModel(
-                                        "Format",
-                                        "Structured pairings",
-                                        "Hosted rounds and easy rotations keep the session moving from warm-up to final point.",
-                                        "mint"),
-                                new InfoTileViewModel(
-                                        "Atmosphere",
-                                        "Community-first hosting",
-                                        "Expect quick check-in, level-aware matchmaking, and a social rhythm around the courts.",
-                                        "sand")),
+                        List.of(),
                         seed.getVenue(),
                         "Check in 15 minutes before kickoff and head to the main reception for court assignment.",
                         seed.getPriceLabel(),
