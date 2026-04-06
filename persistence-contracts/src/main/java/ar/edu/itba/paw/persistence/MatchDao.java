@@ -25,6 +25,8 @@ public interface MatchDao {
             String visibility,
             String status);
 
+    Optional<Match> findById(Long matchId);
+
     Optional<Match> findPublicMatchById(Long matchId);
 
     List<Match> findPublicMatches(
@@ -37,8 +39,4 @@ public interface MatchDao {
             int limit);
 
     int countPublicMatches(String query, Sport sport, EventTimeFilter timeFilter, ZoneId zoneId);
-
-    boolean hasActiveParticipant(Long matchId, Long userId);
-
-    boolean addParticipantIfSpace(Long matchId, Long userId);
 }

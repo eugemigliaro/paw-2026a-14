@@ -65,7 +65,9 @@ public class EmailActionRequestJdbcDao implements EmailActionRequestDao {
         values.put("user_id", userId);
         values.put("token_hash", tokenHash);
         values.put("payload_json", payloadJson);
-        values.put("status", new SqlParameterValue(Types.OTHER, EmailActionStatus.PENDING.getDbValue()));
+        values.put(
+                "status",
+                new SqlParameterValue(Types.OTHER, EmailActionStatus.PENDING.getDbValue()));
         values.put("expires_at", Timestamp.from(expiresAt));
         values.put("consumed_at", null);
         values.put("created_at", now);

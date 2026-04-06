@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.MatchReservationPayload;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.MatchDao;
+import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import ar.edu.itba.paw.services.mail.MailService;
@@ -44,7 +45,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
     private final EmailActionRequestDao emailActionRequestDao;
     private final MatchDao matchDao;
-    private final UserService userService;
+    private final MvpIdentityService mvpIdentityService;
+    private final MatchReservationService matchReservationService;
     private final MailProperties mailProperties;
     private final MailService mailService;
     private final ThymeleafMailTemplateRenderer templateRenderer;
@@ -55,7 +57,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     public ActionVerificationServiceImpl(
             final EmailActionRequestDao emailActionRequestDao,
             final MatchDao matchDao,
-            final UserService userService,
+            final MvpIdentityService mvpIdentityService,
+            final MatchReservationService matchReservationService,
             final MailProperties mailProperties,
             final MailService mailService,
             final ThymeleafMailTemplateRenderer templateRenderer,
@@ -63,7 +66,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
             final Clock clock) {
         this.emailActionRequestDao = emailActionRequestDao;
         this.matchDao = matchDao;
-        this.userService = userService;
+        this.mvpIdentityService = mvpIdentityService;
+        this.matchReservationService = matchReservationService;
         this.mailProperties = mailProperties;
         this.mailService = mailService;
         this.templateRenderer = templateRenderer;
@@ -85,13 +89,13 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
         if (match.getAvailableSpots() <= 0) {
             throw new VerificationFailureException(
-                    VerificationFailureReason.INVALID_ACTION,
-                    "This event is already full.");
+                    VerificationFailureReason.INVALID_ACTION, "This event is already full.");
         }
 
-        final Optional<User> existingUser = userService.findByEmail(normalizedEmail);
+        final Optional<User> existingUser = mvpIdentityService.findExistingByEmail(normalizedEmail);
         if (existingUser.isPresent()
-                && matchDao.hasActiveParticipant(matchId, existingUser.get().getId())) {
+                && matchReservationService.hasActiveReservation(
+                        matchId, existingUser.get().getId())) {
             throw new VerificationFailureException(
                     VerificationFailureReason.INVALID_ACTION,
                     "This email already has a confirmed reservation for the event.");
@@ -111,7 +115,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 payloadJson,
                 expiresAt);
 
-        final VerificationPreview preview = buildReservationPreview(match, normalizedEmail, expiresAt);
+        final VerificationPreview preview =
+                buildReservationPreview(match, normalizedEmail, expiresAt);
         final String confirmationUrl = buildConfirmationUrl(rawToken);
         final MailContent mailContent =
                 templateRenderer.renderReservationConfirmation(
@@ -156,22 +161,13 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                                 request.getUserId(),
                                                 "This event is no longer available for reservation."));
 
-        final User user = resolveUser(request.getEmail());
+        final User user = mvpIdentityService.resolveOrCreateByEmail(request.getEmail());
         final Long userId = user.getId();
 
-        if (matchDao.hasActiveParticipant(match.getId(), userId)) {
-            throw invalidateRequest(
-                    request,
-                    userId,
-                    "This email already has a confirmed reservation for the event.");
-        }
-
-        if (!matchDao.addParticipantIfSpace(match.getId(), userId)) {
-            final String failureMessage =
-                    matchDao.findPublicMatchById(match.getId()).isEmpty()
-                            ? "This event is no longer available for reservation."
-                            : "The event filled up before the reservation could be confirmed.";
-            throw invalidateRequest(request, userId, failureMessage);
+        try {
+            matchReservationService.reserveSpot(match.getId(), userId);
+        } catch (final MatchReservationException exception) {
+            throw invalidateRequest(request, userId, exception.getMessage());
         }
 
         emailActionRequestDao.updateStatus(
@@ -203,15 +199,15 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                     "That verification link was already used.");
         }
 
-        if (request.getStatus() == EmailActionStatus.EXPIRED || request.isExpired(Instant.now(clock))) {
+        if (request.getStatus() == EmailActionStatus.EXPIRED
+                || request.isExpired(Instant.now(clock))) {
             emailActionRequestDao.updateStatus(
                     request.getId(),
                     EmailActionStatus.EXPIRED,
                     request.getUserId(),
                     Instant.now(clock));
             throw new VerificationFailureException(
-                    VerificationFailureReason.EXPIRED,
-                    "That verification link has expired.");
+                    VerificationFailureReason.EXPIRED, "That verification link has expired.");
         }
 
         return request;
@@ -233,39 +229,10 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 "Schedule",
                                 MATCH_SCHEDULE_FORMATTER.format(
                                         match.getStartsAt().atZone(ZoneId.systemDefault()))),
-                        new VerificationPreviewDetail("Price", toPriceLabel(match.getPricePerPlayer())),
+                        new VerificationPreviewDetail(
+                                "Price", toPriceLabel(match.getPricePerPlayer())),
                         new VerificationPreviewDetail(
                                 "Spots left", String.valueOf(match.getAvailableSpots()))));
-    }
-
-    private User resolveUser(final String email) {
-        return userService.findByEmail(email).orElseGet(() -> createUserForEmail(email));
-    }
-
-    private User createUserForEmail(final String email) {
-        final String baseUsername = sanitizeUsername(email);
-        String candidate = baseUsername;
-        int suffix = 1;
-
-        while (userService.findByUsername(candidate).isPresent()) {
-            candidate = truncateUsername(baseUsername, suffix) + suffix;
-            suffix++;
-        }
-
-        return userService.createUser(email, candidate);
-    }
-
-    private static String sanitizeUsername(final String email) {
-        final String localPart = email.split("@", 2)[0].toLowerCase(Locale.ROOT);
-        final String sanitized = localPart.replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
-        return sanitized.isBlank() ? "player" : truncateUsername(sanitized, 0);
-    }
-
-    private static String truncateUsername(final String username, final int suffix) {
-        final int maxLength = 50;
-        final int reserved = suffix == 0 ? 0 : String.valueOf(suffix).length();
-        final int limit = Math.max(1, maxLength - reserved);
-        return username.length() <= limit ? username : username.substring(0, limit);
     }
 
     private String buildConfirmationUrl(final String rawToken) {
@@ -280,7 +247,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         try {
             return objectMapper.readValue(payloadJson, MatchReservationPayload.class);
         } catch (final JsonProcessingException exception) {
-            throw new IllegalStateException("Failed to deserialize verification payload", exception);
+            throw new IllegalStateException(
+                    "Failed to deserialize verification payload", exception);
         }
     }
 

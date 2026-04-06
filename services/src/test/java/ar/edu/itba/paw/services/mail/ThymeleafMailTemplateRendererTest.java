@@ -28,7 +28,8 @@ public class ThymeleafMailTemplateRendererTest {
                                         new VerificationPreviewDetail("Price", "$10"))));
 
         Assertions.assertTrue(content.getHtmlBody().contains("Padel Night"));
-        Assertions.assertTrue(content.getHtmlBody().contains("http://localhost:8080/verifications/token"));
+        Assertions.assertTrue(
+                content.getHtmlBody().contains("http://localhost:8080/verifications/token"));
         Assertions.assertTrue(content.getTextBody().contains("Downtown Club"));
         Assertions.assertEquals("Confirm your reservation for Padel Night", content.getSubject());
     }

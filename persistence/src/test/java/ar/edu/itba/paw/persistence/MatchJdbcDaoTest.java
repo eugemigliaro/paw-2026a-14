@@ -239,32 +239,34 @@ public class MatchJdbcDaoTest {
     }
 
     @Test
-    public void testAddParticipantIfSpacePersistsReservation() {
+    public void testFindByIdIncludesJoinedPlayersForNonPublicMatch() {
         final Match created =
                 matchDao.createMatch(
                         hostUserId,
                         "Downtown Club",
-                        "Football Night",
-                        "Open 5v5",
+                        "Private Football Night",
+                        "Private 5v5",
                         ZonedDateTime.now().plusDays(1).toInstant(),
                         null,
                         2,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
+                        "private",
                         "open");
 
         jdbcTemplate.update(
                 "INSERT INTO users (id, username, email, created_at, updated_at)"
                         + " VALUES (2, 'player', 'player@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (?, 2, 'joined', CURRENT_TIMESTAMP)",
+                created.getId());
 
-        final boolean inserted = matchDao.addParticipantIfSpace(created.getId(), 2L);
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
 
-        Assertions.assertTrue(inserted);
-        Assertions.assertTrue(matchDao.hasActiveParticipant(created.getId(), 2L));
-        Assertions.assertEquals(
-                1,
-                matchDao.findPublicMatchById(created.getId()).orElseThrow().getJoinedPlayers());
+        Assertions.assertEquals(created.getId(), found.getId());
+        Assertions.assertEquals("private", found.getVisibility());
+        Assertions.assertEquals(1, found.getJoinedPlayers());
     }
 
     private void insertMatch(

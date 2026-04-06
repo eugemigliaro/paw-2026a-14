@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.MatchDao;
+import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
@@ -18,7 +19,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +36,8 @@ public class ActionVerificationServiceImplTest {
 
     @Mock private EmailActionRequestDao emailActionRequestDao;
     @Mock private MatchDao matchDao;
-    @Mock private UserService userService;
+    @Mock private MvpIdentityService mvpIdentityService;
+    @Mock private MatchReservationService matchReservationService;
     @Mock private MailService mailService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
 
@@ -48,7 +49,8 @@ public class ActionVerificationServiceImplTest {
                 new ActionVerificationServiceImpl(
                         emailActionRequestDao,
                         matchDao,
-                        userService,
+                        mvpIdentityService,
+                        matchReservationService,
                         new MailProperties(
                                 MailMode.LOG,
                                 "http://localhost:8080",
@@ -70,7 +72,8 @@ public class ActionVerificationServiceImplTest {
     public void testRequestMatchReservationCreatesPendingRequestAndSendsMail() {
         final Match match = createMatch(10L, "Morning Padel", 0);
         Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
-        Mockito.when(userService.findByEmail("player@test.com")).thenReturn(Optional.empty());
+        Mockito.when(mvpIdentityService.findExistingByEmail("player@test.com"))
+                .thenReturn(Optional.empty());
         Mockito.when(
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.MATCH_RESERVATION),
@@ -100,7 +103,8 @@ public class ActionVerificationServiceImplTest {
 
         Assertions.assertEquals("player@test.com", result.getEmail());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(24 * 3600L), result.getExpiresAt());
-        Mockito.verify(mailService).send(ArgumentMatchers.eq("player@test.com"), ArgumentMatchers.any());
+        Mockito.verify(mailService)
+                .send(ArgumentMatchers.eq("player@test.com"), ArgumentMatchers.any());
     }
 
     @Test
@@ -112,13 +116,10 @@ public class ActionVerificationServiceImplTest {
         Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
         Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
-        Mockito.when(userService.findByEmail("player@test.com")).thenReturn(Optional.empty());
-        Mockito.when(userService.findByUsername("player")).thenReturn(Optional.empty());
-        Mockito.when(userService.createUser("player@test.com", "player")).thenReturn(user);
-        Mockito.when(matchDao.hasActiveParticipant(10L, 5L)).thenReturn(false);
-        Mockito.when(matchDao.addParticipantIfSpace(10L, 5L)).thenReturn(true);
+        Mockito.when(mvpIdentityService.resolveOrCreateByEmail("player@test.com")).thenReturn(user);
 
-        final VerificationConfirmationResult result = actionVerificationService.confirm("raw-token");
+        final VerificationConfirmationResult result =
+                actionVerificationService.confirm("raw-token");
 
         Assertions.assertEquals(5L, result.getUserId());
         Assertions.assertEquals("/events/10?reservation=confirmed", result.getRedirectUrl());
@@ -164,9 +165,13 @@ public class ActionVerificationServiceImplTest {
         Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
         Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
-        Mockito.when(userService.findByEmail("player@test.com")).thenReturn(Optional.of(user));
-        Mockito.when(matchDao.hasActiveParticipant(10L, 5L)).thenReturn(false);
-        Mockito.when(matchDao.addParticipantIfSpace(10L, 5L)).thenReturn(false);
+        Mockito.when(mvpIdentityService.resolveOrCreateByEmail("player@test.com")).thenReturn(user);
+        Mockito.doThrow(
+                        new MatchReservationException(
+                                "full",
+                                "The event filled up before the reservation could be confirmed."))
+                .when(matchReservationService)
+                .reserveSpot(10L, 5L);
 
         final VerificationFailureException exception =
                 Assertions.assertThrows(
@@ -178,8 +183,7 @@ public class ActionVerificationServiceImplTest {
                 .updateStatus(7L, EmailActionStatus.FAILED, 5L, FIXED_NOW);
     }
 
-    private static Match createMatch(
-            final Long id, final String title, final int joinedPlayers) {
+    private static Match createMatch(final Long id, final String title, final int joinedPlayers) {
         return new Match(
                 id,
                 Sport.PADEL,

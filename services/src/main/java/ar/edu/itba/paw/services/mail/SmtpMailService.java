@@ -21,8 +21,7 @@ public class SmtpMailService implements MailService {
     public void send(final String recipientEmail, final MailContent content) {
         try {
             final MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-            final MimeMessageHelper helper =
-                    new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            final MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
             helper.setFrom(mailProperties.getFrom());
             helper.setTo(recipientEmail);
             helper.setSubject(content.getSubject());

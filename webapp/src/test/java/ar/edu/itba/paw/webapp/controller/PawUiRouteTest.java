@@ -154,7 +154,8 @@ class PawUiRouteTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new FeedController(matchService),
-                                new EventController(matchService, userService, actionVerificationService),
+                                new EventController(
+                                        matchService, userService, actionVerificationService),
                                 new HostController(),
                                 new UiController(),
                                 new VerificationController(actionVerificationService))

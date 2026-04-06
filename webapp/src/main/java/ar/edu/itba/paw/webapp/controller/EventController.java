@@ -78,7 +78,7 @@ public class EventController {
     public ModelAndView requestReservation(
             @PathVariable("eventId") final Long eventId,
             @Valid @ModelAttribute("reservationRequestForm")
-            final ReservationRequestForm reservationRequestForm,
+                    final ReservationRequestForm reservationRequestForm,
             final BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return showRealEventDetails(
@@ -95,7 +95,8 @@ public class EventController {
                     actionVerificationService.requestMatchReservation(
                             eventId, reservationRequestForm.getEmail());
             final Match match =
-                    matchService.findPublicMatchById(eventId)
+                    matchService
+                            .findPublicMatchById(eventId)
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
             final ModelAndView mav = new ModelAndView("verification/check-email");
             mav.addObject("shell", PawUiMockData.browseShell());
@@ -114,7 +115,8 @@ public class EventController {
             mav.addObject("backHref", "/events/" + eventId);
             return mav;
         } catch (final VerificationFailureException exception) {
-            return showRealEventDetails(eventId, null, exception.getMessage(), reservationRequestForm);
+            return showRealEventDetails(
+                    eventId, null, exception.getMessage(), reservationRequestForm);
         }
     }
 
@@ -138,7 +140,8 @@ public class EventController {
             final String reservationError,
             final ReservationRequestForm reservationRequestForm) {
         final Match match =
-                matchService.findPublicMatchById(eventId)
+                matchService
+                        .findPublicMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final ModelAndView mav = new ModelAndView("events/detail");
         mav.addObject("shell", PawUiMockData.browseShell());
@@ -186,7 +189,8 @@ public class EventController {
     private List<BookingDetailViewModel> buildBookingDetails(final Match match) {
         return List.of(
                 new BookingDetailViewModel(
-                        "Date", DATE_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault()))),
+                        "Date",
+                        DATE_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault()))),
                 new BookingDetailViewModel(
                         "Time",
                         TIME_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault()))

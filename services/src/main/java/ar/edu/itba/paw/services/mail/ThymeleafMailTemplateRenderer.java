@@ -34,7 +34,8 @@ public class ThymeleafMailTemplateRenderer {
         context.setVariable("confirmationUrl", templateData.getConfirmationUrl());
         context.setVariable(
                 "expiresAtLabel",
-                EXPIRY_FORMATTER.format(templateData.getExpiresAt().atZone(ZoneId.systemDefault())));
+                EXPIRY_FORMATTER.format(
+                        templateData.getExpiresAt().atZone(ZoneId.systemDefault())));
         context.setVariable("details", templateData.getDetails());
 
         return new MailContent(
