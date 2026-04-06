@@ -71,3 +71,6 @@ application-local.yml
 config/local.properties
 config/pampero.properties
 webapp/tmp/
+
+*.codex
+.playwright-mcp/

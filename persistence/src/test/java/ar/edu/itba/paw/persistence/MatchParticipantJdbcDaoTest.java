@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.User;
 import java.time.Instant;
+import java.util.List;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,5 +99,42 @@ public class MatchParticipantJdbcDaoTest {
                         + " VALUES (10, 2, 'cancelled', CURRENT_TIMESTAMP)");
 
         Assertions.assertFalse(matchParticipantDao.hasActiveReservation(10L, 2L));
+    }
+
+    @Test
+    public void testFindConfirmedParticipantsReturnsJoinedUsersInJoinOrder() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 1, 'joined', TIMESTAMP '2026-04-06 10:00:00')");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'checked_in', TIMESTAMP '2026-04-06 11:00:00')");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'joined', TIMESTAMP '2026-04-06 09:00:00')");
+
+        final List<User> participants = matchParticipantDao.findConfirmedParticipants(10L);
+
+        Assertions.assertEquals(2, participants.size());
+        Assertions.assertEquals(2L, participants.get(0).getId());
+        Assertions.assertEquals(3L, participants.get(1).getId());
+    }
+
+    @Test
+    public void testFindConfirmedParticipantsExcludesCancelledUsersAndHost() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 1, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'cancelled', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final List<User> participants = matchParticipantDao.findConfirmedParticipants(10L);
+
+        Assertions.assertEquals(1, participants.size());
+        Assertions.assertEquals(3L, participants.get(0).getId());
     }
 }
