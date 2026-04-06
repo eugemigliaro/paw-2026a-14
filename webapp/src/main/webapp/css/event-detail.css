@@ -351,24 +351,9 @@ font-weight: 600;
 justify-content: space-between;
 }
 
-.booking-panel__progress {
-background: #e3e3df;
-border-radius: 999px;
-height: 0.38rem;
-overflow: hidden;
-}
-
-.booking-panel__progress span {
-background: var(--accent);
-border-radius: inherit;
-display: block;
-height: 100%;
-width: 76%;
-}
-
 .booking-panel__note {
-color: var(--text-muted);
-font-size: 0.72rem;
+	color: var(--text-muted);
+	font-size: 0.72rem;
 font-style: italic;
 margin: 0;
 text-align: center;
