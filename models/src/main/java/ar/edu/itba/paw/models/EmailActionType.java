@@ -4,7 +4,8 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public enum EmailActionType {
-    MATCH_RESERVATION("match_reservation");
+    MATCH_RESERVATION("match_reservation"),
+    MATCH_CREATION("match_creation");
 
     private final String dbValue;
 

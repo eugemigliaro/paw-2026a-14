@@ -8,8 +8,6 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
-import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -33,30 +31,19 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public Match createMatch(
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final Sport sport,
-            final String visibility,
-            final String status) {
+    public Match createMatch(final CreateMatchRequest request) {
         return matchDao.createMatch(
-                hostUserId,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                sport,
-                visibility,
-                status);
+                request.getHostUserId(),
+                request.getAddress(),
+                request.getTitle(),
+                request.getDescription(),
+                request.getStartsAt(),
+                request.getEndsAt(),
+                request.getMaxPlayers(),
+                request.getPricePerPlayer(),
+                request.getSport(),
+                request.getVisibility(),
+                request.getStatus());
     }
 
     @Override

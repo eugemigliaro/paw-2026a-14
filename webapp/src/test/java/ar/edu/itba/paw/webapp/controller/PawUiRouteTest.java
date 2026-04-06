@@ -61,18 +61,21 @@ class PawUiRouteTest {
                 new MatchService() {
                     @Override
                     public Match createMatch(
-                            final Long hostUserId,
-                            final String address,
-                            final String title,
-                            final String description,
-                            final Instant startsAt,
-                            final Instant endsAt,
-                            final int maxPlayers,
-                            final BigDecimal pricePerPlayer,
-                            final Sport sport,
-                            final String visibility,
-                            final String status) {
-                        return null;
+                            final ar.edu.itba.paw.services.CreateMatchRequest request) {
+                        return new Match(
+                                43L,
+                                request.getSport(),
+                                request.getHostUserId(),
+                                request.getAddress(),
+                                request.getTitle(),
+                                request.getDescription(),
+                                request.getStartsAt(),
+                                request.getEndsAt(),
+                                request.getMaxPlayers(),
+                                request.getPricePerPlayer(),
+                                request.getVisibility(),
+                                request.getStatus(),
+                                0);
                     }
 
                     @Override
@@ -135,6 +138,14 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public VerificationRequestResult requestMatchCreation(
+                            final ar.edu.itba.paw.services.CreateMatchRequest request,
+                            final String email) {
+                        return new VerificationRequestResult(
+                                email, Instant.parse("2026-04-06T18:00:00Z"));
+                    }
+
+                    @Override
                     public VerificationPreview getPreview(final String rawToken) {
                         if ("invalid".equals(rawToken)) {
                             throw new VerificationFailureException(
@@ -166,7 +177,7 @@ class PawUiRouteTest {
                                 new FeedController(matchService),
                                 new EventController(
                                         matchService, userService, actionVerificationService),
-                                new HostController(),
+                                new HostController(actionVerificationService),
                                 new UiController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)
@@ -239,5 +250,24 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/error"))
                 .andExpect(model().attributeExists("message"));
+    }
+
+    @Test
+    void postHostPublishCreatesAndRedirects() throws Exception {
+        mockMvc.perform(
+                        post("/host/events/new")
+                                .param("email", "host@test.com")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2026-04-10")
+                                .param("eventTime", "18:00")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification/check-email"))
+                .andExpect(model().attributeExists("title"))
+                .andExpect(model().attributeExists("summary"));
     }
 }

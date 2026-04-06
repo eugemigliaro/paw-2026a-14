@@ -36,6 +36,13 @@ display: none;
 margin-top: 0.6rem;
 }
 
+.field__error {
+color: #8a1f1f;
+font-size: 0.85rem;
+margin-top: 0.35rem;
+display: block;
+}
+
 .upload-card {
 display: grid;
 gap: 1rem;

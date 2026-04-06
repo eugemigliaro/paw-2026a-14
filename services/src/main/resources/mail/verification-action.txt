@@ -8,13 +8,13 @@ One-time verification
 Requested for: [[${recipientEmail}]]
 
 [# th:if="${details != null and !details.isEmpty()}"]
-Reservation details:
+Details:
 [# th:each="detail : ${details}"]
 - [[${detail.label}]]: [[${detail.value}]]
 [/]
 [/]
 
-Review and confirm reservation:
+Review and confirm action:
 [[${confirmationUrl}]]
 
 This link expires at [[${expiresAtLabel}]].

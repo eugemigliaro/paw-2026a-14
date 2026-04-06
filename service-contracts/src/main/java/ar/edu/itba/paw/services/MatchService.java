@@ -11,18 +11,34 @@ import java.util.Optional;
 
 public interface MatchService {
 
-    Match createMatch(
-            Long hostUserId,
-            String address,
-            String title,
-            String description,
-            Instant startsAt,
-            Instant endsAt,
-            int maxPlayers,
-            BigDecimal pricePerPlayer,
-            Sport sport,
-            String visibility,
-            String status);
+    Match createMatch(CreateMatchRequest request);
+
+    default Match createMatch(
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String status) {
+        return createMatch(
+                new CreateMatchRequest(
+                        hostUserId,
+                        address,
+                        title,
+                        description,
+                        startsAt,
+                        endsAt,
+                        maxPlayers,
+                        pricePerPlayer,
+                        sport,
+                        visibility,
+                        status));
+    }
 
     Optional<Match> findPublicMatchById(Long matchId);
 
