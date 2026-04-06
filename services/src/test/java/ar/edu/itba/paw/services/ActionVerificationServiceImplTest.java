@@ -10,9 +10,9 @@ import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.mail.MailContent;
+import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
-import ar.edu.itba.paw.services.mail.MailService;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -38,7 +38,7 @@ public class ActionVerificationServiceImplTest {
     @Mock private MatchDao matchDao;
     @Mock private MvpIdentityService mvpIdentityService;
     @Mock private MatchReservationService matchReservationService;
-    @Mock private MailService mailService;
+    @Mock private MailDispatchService mailDispatchService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
 
     private ActionVerificationServiceImpl actionVerificationService;
@@ -62,7 +62,7 @@ public class ActionVerificationServiceImplTest {
                                 false,
                                 true,
                                 24),
-                        mailService,
+                        mailDispatchService,
                         templateRenderer,
                         new ObjectMapper(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
@@ -103,8 +103,8 @@ public class ActionVerificationServiceImplTest {
 
         Assertions.assertEquals("player@test.com", result.getEmail());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(24 * 3600L), result.getExpiresAt());
-        Mockito.verify(mailService)
-                .send(ArgumentMatchers.eq("player@test.com"), ArgumentMatchers.any());
+        Mockito.verify(mailDispatchService)
+                .dispatch(ArgumentMatchers.eq("player@test.com"), ArgumentMatchers.any());
     }
 
     @Test

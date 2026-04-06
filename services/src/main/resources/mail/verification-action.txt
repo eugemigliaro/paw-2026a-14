@@ -1,4 +1,5 @@
 Match Point
+One-time verification
 
 [[${title}]]
 
@@ -7,12 +8,13 @@ Match Point
 Requested for: [[${recipientEmail}]]
 
 [# th:if="${details != null and !details.isEmpty()}"]
+Reservation details:
 [# th:each="detail : ${details}"]
 - [[${detail.label}]]: [[${detail.value}]]
 [/]
 [/]
 
-Review and confirm:
+Review and confirm reservation:
 [[${confirmationUrl}]]
 
 This link expires at [[${expiresAtLabel}]].

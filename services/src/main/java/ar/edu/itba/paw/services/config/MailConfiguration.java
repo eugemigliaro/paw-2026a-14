@@ -8,15 +8,19 @@ import ar.edu.itba.paw.services.mail.SmtpMailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
 @Configuration
+@EnableAsync
 public class MailConfiguration {
 
     @Bean
@@ -111,6 +115,17 @@ public class MailConfiguration {
             return new SmtpMailService(javaMailSender, mailProperties);
         }
         return new LoggingMailService(mailProperties);
+    }
+
+    @Bean(name = "mailTaskExecutor")
+    public Executor mailTaskExecutor() {
+        final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("verification-mail-");
+        executor.initialize();
+        return executor;
     }
 
     @Bean

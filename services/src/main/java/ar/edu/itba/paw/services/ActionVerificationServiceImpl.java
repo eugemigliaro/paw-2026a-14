@@ -10,8 +10,8 @@ import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.mail.MailContent;
+import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
-import ar.edu.itba.paw.services.mail.MailService;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import ar.edu.itba.paw.services.mail.VerificationMailTemplateData;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -48,7 +48,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     private final MvpIdentityService mvpIdentityService;
     private final MatchReservationService matchReservationService;
     private final MailProperties mailProperties;
-    private final MailService mailService;
+    private final MailDispatchService mailDispatchService;
     private final ThymeleafMailTemplateRenderer templateRenderer;
     private final ObjectMapper objectMapper;
     private final Clock clock;
@@ -60,7 +60,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
             final MvpIdentityService mvpIdentityService,
             final MatchReservationService matchReservationService,
             final MailProperties mailProperties,
-            final MailService mailService,
+            final MailDispatchService mailDispatchService,
             final ThymeleafMailTemplateRenderer templateRenderer,
             final ObjectMapper objectMapper,
             final Clock clock) {
@@ -69,7 +69,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         this.mvpIdentityService = mvpIdentityService;
         this.matchReservationService = matchReservationService;
         this.mailProperties = mailProperties;
-        this.mailService = mailService;
+        this.mailDispatchService = mailDispatchService;
         this.templateRenderer = templateRenderer;
         this.objectMapper = objectMapper;
         this.clock = clock;
@@ -127,7 +127,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 confirmationUrl,
                                 expiresAt,
                                 preview.getDetails()));
-        mailService.send(normalizedEmail, mailContent);
+        mailDispatchService.dispatch(normalizedEmail, mailContent);
 
         return new VerificationRequestResult(normalizedEmail, expiresAt);
     }
