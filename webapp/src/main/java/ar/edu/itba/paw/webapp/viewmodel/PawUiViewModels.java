@@ -312,40 +312,6 @@ public final class PawUiViewModels {
         }
     }
 
-    public static final class InfoTileViewModel {
-        private final String eyebrow;
-        private final String title;
-        private final String description;
-        private final String tone;
-
-        public InfoTileViewModel(
-                final String eyebrow,
-                final String title,
-                final String description,
-                final String tone) {
-            this.eyebrow = eyebrow;
-            this.title = title;
-            this.description = description;
-            this.tone = tone;
-        }
-
-        public String getEyebrow() {
-            return eyebrow;
-        }
-
-        public String getTitle() {
-            return title;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-
-        public String getTone() {
-            return tone;
-        }
-    }
-
     public static final class BookingDetailViewModel {
         private final String label;
         private final String value;
@@ -364,15 +330,33 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class ParticipantViewModel {
+        private final String username;
+        private final String avatarLabel;
+
+        public ParticipantViewModel(final String username, final String avatarLabel) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+    }
+
     public static final class EventDetailPageViewModel {
         private final EventCardViewModel event;
         private final String heroSubtitle;
         private final String heroMeta;
         private final String hostLabel;
+        private final List<ParticipantViewModel> participants;
+        private final String participantCountLabel;
+        private final String participantsEmptyState;
         private final List<String> aboutParagraphs;
-        private final List<InfoTileViewModel> highlights;
-        private final String locationTitle;
-        private final String locationHint;
         private final String bookingPrice;
         private final List<BookingDetailViewModel> bookingDetails;
         private final String availabilityLabel;
@@ -384,10 +368,10 @@ public final class PawUiViewModels {
                 final String heroSubtitle,
                 final String heroMeta,
                 final String hostLabel,
+                final List<ParticipantViewModel> participants,
+                final String participantCountLabel,
+                final String participantsEmptyState,
                 final List<String> aboutParagraphs,
-                final List<InfoTileViewModel> highlights,
-                final String locationTitle,
-                final String locationHint,
                 final String bookingPrice,
                 final List<BookingDetailViewModel> bookingDetails,
                 final String availabilityLabel,
@@ -397,10 +381,10 @@ public final class PawUiViewModels {
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
             this.hostLabel = hostLabel;
+            this.participants = participants;
+            this.participantCountLabel = participantCountLabel;
+            this.participantsEmptyState = participantsEmptyState;
             this.aboutParagraphs = aboutParagraphs;
-            this.highlights = highlights;
-            this.locationTitle = locationTitle;
-            this.locationHint = locationHint;
             this.bookingPrice = bookingPrice;
             this.bookingDetails = bookingDetails;
             this.availabilityLabel = availabilityLabel;
@@ -424,20 +408,20 @@ public final class PawUiViewModels {
             return hostLabel;
         }
 
+        public List<ParticipantViewModel> getParticipants() {
+            return participants;
+        }
+
+        public String getParticipantCountLabel() {
+            return participantCountLabel;
+        }
+
+        public String getParticipantsEmptyState() {
+            return participantsEmptyState;
+        }
+
         public List<String> getAboutParagraphs() {
             return aboutParagraphs;
-        }
-
-        public List<InfoTileViewModel> getHighlights() {
-            return highlights;
-        }
-
-        public String getLocationTitle() {
-            return locationTitle;
-        }
-
-        public String getLocationHint() {
-            return locationHint;
         }
 
         public String getBookingPrice() {

@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.User;
+import java.util.List;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -52,5 +54,21 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         matchId,
                         userId);
         return insertedRows == 1;
+    }
+
+    @Override
+    public List<User> findConfirmedParticipants(final Long matchId) {
+        return jdbcTemplate.query(
+                "SELECT u.id, u.email, u.username"
+                        + " FROM match_participants mp"
+                        + " JOIN users u ON u.id = mp.user_id"
+                        + " JOIN matches m ON m.id = mp.match_id"
+                        + " WHERE mp.match_id = ?"
+                        + " AND mp.status IN ('joined', 'checked_in')"
+                        + " AND mp.user_id <> m.host_user_id"
+                        + " ORDER BY mp.joined_at ASC, u.username ASC",
+                (rs, rowNum) ->
+                        new User(rs.getLong("id"), rs.getString("email"), rs.getString("username")),
+                matchId);
     }
 }

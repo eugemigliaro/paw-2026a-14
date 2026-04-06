@@ -5,7 +5,9 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
+import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -25,6 +27,7 @@ public class MatchServiceImplTest {
     @InjectMocks private MatchServiceImpl matchService;
 
     @Mock private MatchDao matchDao;
+    @Mock private MatchParticipantDao matchParticipantDao;
 
     @Test
     public void testSearchPublicMatchesWithValidInputs() {
@@ -128,6 +131,22 @@ public class MatchServiceImplTest {
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals("Late Football", result.get().getTitle());
+    }
+
+    @Test
+    public void testFindConfirmedParticipantsDelegates() {
+        final List<User> expectedParticipants =
+                List.of(
+                        new User(2L, "first@test.com", "first"),
+                        new User(3L, "second@test.com", "second"));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(8L))
+                .thenReturn(expectedParticipants);
+
+        final List<User> result = matchService.findConfirmedParticipants(8L);
+
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertEquals("first", result.get(0).getUsername());
+        Assertions.assertEquals("second", result.get(1).getUsername());
     }
 
     private Match createTestMatch(final Long id, final String title, final String sport) {

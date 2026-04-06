@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -77,6 +78,15 @@ class PawUiRouteTest {
                     @Override
                     public Optional<Match> findPublicMatchById(final Long matchId) {
                         return matchId == 42L ? Optional.of(realMatch) : Optional.empty();
+                    }
+
+                    @Override
+                    public List<User> findConfirmedParticipants(final Long matchId) {
+                        return matchId == 42L
+                                ? List.of(
+                                        new User(2L, "first@test.com", "first-player"),
+                                        new User(3L, "second@test.com", "second-player"))
+                                : List.of();
                     }
 
                     @Override
@@ -187,7 +197,11 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("events/detail"))
                 .andExpect(model().attribute("realEvent", true))
-                .andExpect(model().attributeExists("reservationRequestPath"));
+                .andExpect(model().attributeExists("reservationRequestPath"))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty("participants", Matchers.hasSize(2))));
     }
 
     @Test
