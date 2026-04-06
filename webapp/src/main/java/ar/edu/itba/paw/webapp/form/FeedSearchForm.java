@@ -4,7 +4,7 @@ import javax.validation.constraints.Size;
 
 public class FeedSearchForm {
 
-    @Size(max = 100, message = "Search cannot exceed 100 characters")
+    @Size(max = 150, message = "Search cannot exceed 150 characters")
     private String q = "";
 
     public String getQ() {
