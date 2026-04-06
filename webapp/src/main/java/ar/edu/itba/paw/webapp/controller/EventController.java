@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
@@ -13,6 +14,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiMockData;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventDetailPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -143,9 +145,10 @@ public class EventController {
                 matchService
                         .findPublicMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("events/detail");
         mav.addObject("shell", PawUiMockData.browseShell());
-        mav.addObject("eventPage", buildRealEventPage(match));
+        mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants));
         mav.addObject("realEvent", true);
         mav.addObject("reservationEnabled", match.getAvailableSpots() > 0);
         mav.addObject("availabilityPercent", calculateAvailabilityPercent(match));
@@ -158,19 +161,20 @@ public class EventController {
         return mav;
     }
 
-    private EventDetailPageViewModel buildRealEventPage(final Match match) {
+    private EventDetailPageViewModel buildRealEventPage(
+            final Match match, final List<User> confirmedParticipants) {
         return new EventDetailPageViewModel(
                 toCard(match),
                 match.getSport().getDisplayName() + " event",
-                SCHEDULE_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault())),
+                "Review the confirmed roster, then reserve your place with a one-time email confirmation.",
                 userService
                         .findById(match.getHostUserId())
                         .map(user -> user.getUsername())
                         .orElse("Host #" + match.getHostUserId()),
+                toParticipantViewModels(confirmedParticipants),
+                buildParticipantCountLabel(confirmedParticipants.size()),
+                "No one has joined yet. Be the first confirmed player.",
                 buildAboutParagraphs(match),
-                List.of(),
-                match.getAddress(),
-                "Use your email to request a one-time reservation confirmation link.",
                 toPriceLabel(match.getPricePerPlayer()),
                 buildBookingDetails(match),
                 buildAvailabilityLabel(match),
@@ -200,8 +204,18 @@ public class EventController {
                                                 + TIME_FORMATTER.format(
                                                         match.getEndsAt()
                                                                 .atZone(ZoneId.systemDefault())))),
-                new BookingDetailViewModel("Venue", match.getAddress()),
-                new BookingDetailViewModel("Availability", buildAvailabilityLabel(match)));
+                new BookingDetailViewModel("Venue", match.getAddress()));
+    }
+
+    private List<ParticipantViewModel> toParticipantViewModels(
+            final List<User> confirmedParticipants) {
+        return confirmedParticipants.stream()
+                .map(
+                        participant ->
+                                new ParticipantViewModel(
+                                        participant.getUsername(),
+                                        avatarLabelForUsername(participant.getUsername())))
+                .toList();
     }
 
     private List<EventCardViewModel> loadNearbyEvents(final Long currentMatchId) {
@@ -233,6 +247,12 @@ public class EventController {
         return match.getAvailableSpots() + " of " + match.getMaxPlayers() + " spots left";
     }
 
+    private static String buildParticipantCountLabel(final int participantCount) {
+        return participantCount == 1
+                ? "1 confirmed player"
+                : participantCount + " confirmed players";
+    }
+
     private static int calculateAvailabilityPercent(final Match match) {
         if (match.getMaxPlayers() <= 0) {
             return 0;
@@ -246,6 +266,23 @@ public class EventController {
             return "Price TBD";
         }
         return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0 ? "Free" : "$" + pricePerPlayer;
+    }
+
+    private static String avatarLabelForUsername(final String username) {
+        if (username == null || username.isBlank()) {
+            return "?";
+        }
+
+        final String[] segments = username.trim().split("[^A-Za-z0-9]+");
+        if (segments.length >= 2) {
+            return (segments[0].substring(0, 1) + segments[1].substring(0, 1)).toUpperCase();
+        }
+
+        final String compact = username.replaceAll("[^A-Za-z0-9]", "");
+        if (compact.length() >= 2) {
+            return compact.substring(0, 2).toUpperCase();
+        }
+        return compact.substring(0, 1).toUpperCase();
     }
 
     private static boolean isNumeric(final String value) {

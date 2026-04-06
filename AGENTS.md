@@ -12,8 +12,8 @@ When requirements conflict, use this order:
 
 1. The repository code and tests.
 2. This `AGENTS.md`.
-3. `prd.md`.
-4. `design.md`.
+3. `./docs/prd.md`.
+4. `./docs/design.md`.
 
 If the code already establishes a pattern, follow it unless the task explicitly asks to replace it.
 
@@ -173,7 +173,7 @@ The current `HelloWorldController` and demo pages are scaffolding. It is fine to
 
 ## 9. Design Guidance
 
-Use `design.md` as direction, not as permission to overbuild the frontend.
+Use `./docs/design.md` as direction, not as permission to overbuild the frontend.
 
 For MVP work:
 
@@ -199,6 +199,8 @@ Expectations:
 - add DAO tests when queries or inserts change
 - keep tests deterministic
 - prefer one scenario per test
+- do not use `Mockito.verify()` in unit tests
+- structure every unit test as: 1. Arrange, 2. Exercise, 3. Assert
 
 At minimum, run:
 

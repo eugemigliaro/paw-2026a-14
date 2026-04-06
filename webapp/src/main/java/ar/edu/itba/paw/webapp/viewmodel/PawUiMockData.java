@@ -10,6 +10,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.NavItemViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.SelectOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
 import java.util.Comparator;
@@ -187,10 +188,10 @@ public final class PawUiMockData {
                         seed.getSport() + " tournament",
                         seed.getSchedule() + " - " + seed.getVenue(),
                         seed.getHostLabel(),
+                        participantsFor(seed),
+                        participantCountLabel(participantsFor(seed).size()),
+                        "No one has joined yet. Be the first confirmed player.",
                         List.of(seed.getAboutLead(), seed.getAboutFollowUp()),
-                        List.of(),
-                        seed.getVenue(),
-                        "Check in 15 minutes before kickoff and head to the main reception for court assignment.",
                         seed.getPriceLabel(),
                         List.of(
                                 new BookingDetailViewModel("Session", seed.getSchedule()),
@@ -262,6 +263,59 @@ public final class PawUiMockData {
             default:
                 return List.of("MP", "IA", "JV");
         }
+    }
+
+    private static List<ParticipantViewModel> participantsFor(final EventSeed seed) {
+        final List<String> usernames;
+        switch (seed.getSport()) {
+            case "Football":
+                usernames = List.of("alvaro", "julia", "sofi");
+                break;
+            case "Basketball":
+                usernames = List.of("mika", "pablo", "tomi");
+                break;
+            case "Tennis":
+                usernames = List.of("lucia", "dario");
+                break;
+            case "Yoga":
+                usernames = List.of("ines", "camila", "mora");
+                break;
+            case "Running":
+                usernames = List.of("nico", "vale", "santi", "lena");
+                break;
+            default:
+                usernames = List.of("marti", "ines", "javi");
+                break;
+        }
+        return usernames.stream()
+                .map(
+                        username ->
+                                new ParticipantViewModel(
+                                        username, avatarLabelForUsername(username)))
+                .toList();
+    }
+
+    private static String participantCountLabel(final int participantCount) {
+        return participantCount == 1
+                ? "1 confirmed player"
+                : participantCount + " confirmed players";
+    }
+
+    private static String avatarLabelForUsername(final String username) {
+        if (username == null || username.isBlank()) {
+            return "?";
+        }
+
+        final String[] segments = username.trim().split("[^A-Za-z0-9]+");
+        if (segments.length >= 2) {
+            return (segments[0].substring(0, 1) + segments[1].substring(0, 1)).toUpperCase();
+        }
+
+        final String compact = username.replaceAll("[^A-Za-z0-9]", "");
+        if (compact.length() >= 2) {
+            return compact.substring(0, 2).toUpperCase();
+        }
+        return compact.substring(0, 1).toUpperCase();
     }
 
     private static Map<String, EventSeed> buildEventMap() {

@@ -105,8 +105,6 @@ public class ActionVerificationServiceImplTest {
 
         Assertions.assertEquals("player@test.com", result.getEmail());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(24 * 3600L), result.getExpiresAt());
-        Mockito.verify(mailDispatchService)
-                .dispatch(ArgumentMatchers.eq("player@test.com"), ArgumentMatchers.any());
     }
 
     @Test
@@ -125,8 +123,6 @@ public class ActionVerificationServiceImplTest {
 
         Assertions.assertEquals(5L, result.getUserId());
         Assertions.assertEquals("/events/10?reservation=confirmed", result.getRedirectUrl());
-        Mockito.verify(emailActionRequestDao)
-                .updateStatus(7L, EmailActionStatus.COMPLETED, 5L, FIXED_NOW);
     }
 
     @Test
@@ -154,8 +150,6 @@ public class ActionVerificationServiceImplTest {
                         () -> actionVerificationService.getPreview("raw-token"));
 
         Assertions.assertEquals(VerificationFailureReason.EXPIRED, exception.getReason());
-        Mockito.verify(emailActionRequestDao)
-                .updateStatus(7L, EmailActionStatus.EXPIRED, null, FIXED_NOW);
     }
 
     @Test
@@ -231,8 +225,6 @@ public class ActionVerificationServiceImplTest {
                         () -> actionVerificationService.confirm("raw-token"));
 
         Assertions.assertEquals(VerificationFailureReason.INVALID_ACTION, exception.getReason());
-        Mockito.verify(emailActionRequestDao)
-                .updateStatus(7L, EmailActionStatus.FAILED, 5L, FIXED_NOW);
     }
 
     private static Match createMatch(final Long id, final String title, final int joinedPlayers) {

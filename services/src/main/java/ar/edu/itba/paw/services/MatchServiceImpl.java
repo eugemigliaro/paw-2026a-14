@@ -5,8 +5,11 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
+import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +21,13 @@ public class MatchServiceImpl implements MatchService {
     private static final int DEFAULT_PAGE_SIZE = 12;
 
     private final MatchDao matchDao;
+    private final MatchParticipantDao matchParticipantDao;
 
     @Autowired
-    public MatchServiceImpl(final MatchDao matchDao) {
+    public MatchServiceImpl(
+            final MatchDao matchDao, final MatchParticipantDao matchParticipantDao) {
         this.matchDao = matchDao;
+        this.matchParticipantDao = matchParticipantDao;
     }
 
     @Override
@@ -43,6 +49,11 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
         return matchDao.findPublicMatchById(matchId);
+    }
+
+    @Override
+    public List<User> findConfirmedParticipants(final Long matchId) {
+        return matchParticipantDao.findConfirmedParticipants(matchId);
     }
 
     @Override
