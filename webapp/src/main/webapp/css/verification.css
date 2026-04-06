@@ -5,6 +5,7 @@
 .verification-panel {
 	display: grid;
 	gap: 1.25rem;
+	padding: 2rem;
 }
 
 .verification-details {
@@ -23,4 +24,10 @@
 .verification-actions {
 	display: flex;
 	justify-content: flex-start;
+}
+
+@media (max-width: 640px) {
+	.verification-panel {
+		padding: 1.5rem;
+	}
 }

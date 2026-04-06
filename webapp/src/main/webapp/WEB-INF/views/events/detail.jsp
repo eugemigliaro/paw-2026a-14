@@ -108,12 +108,6 @@
 				<span>Spots available</span>
 				<strong><c:out value="${eventPage.availabilityLabel}" /></strong>
 			</div>
-			<div class="booking-panel__progress" aria-hidden="true">
-				<span
-					<c:if test="${realEvent}">
-						style="width: ${availabilityPercent}%"
-					</c:if>></span>
-			</div>
 			<p class="booking-panel__note">
 				<c:choose>
 					<c:when test="${realEvent}">
