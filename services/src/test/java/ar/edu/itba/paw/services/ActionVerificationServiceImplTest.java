@@ -36,6 +36,7 @@ public class ActionVerificationServiceImplTest {
 
     @Mock private EmailActionRequestDao emailActionRequestDao;
     @Mock private MatchDao matchDao;
+    @Mock private MatchService matchService;
     @Mock private MvpIdentityService mvpIdentityService;
     @Mock private MatchReservationService matchReservationService;
     @Mock private MailDispatchService mailDispatchService;
@@ -49,6 +50,7 @@ public class ActionVerificationServiceImplTest {
                 new ActionVerificationServiceImpl(
                         emailActionRequestDao,
                         matchDao,
+                        matchService,
                         mvpIdentityService,
                         matchReservationService,
                         new MailProperties(
@@ -154,6 +156,56 @@ public class ActionVerificationServiceImplTest {
         Assertions.assertEquals(VerificationFailureReason.EXPIRED, exception.getReason());
         Mockito.verify(emailActionRequestDao)
                 .updateStatus(7L, EmailActionStatus.EXPIRED, null, FIXED_NOW);
+    }
+
+    @Test
+    public void testRequestMatchCreationCreatesPendingRequestAndSendsMail() {
+        final CreateMatchRequest createRequest =
+                new CreateMatchRequest(
+                        null,
+                        "Club Address",
+                        "Host Event",
+                        "Description",
+                        FIXED_NOW.plusSeconds(7200),
+                        null,
+                        10,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "open");
+
+        Mockito.when(mvpIdentityService.findExistingByEmail("host@test.com"))
+                .thenReturn(Optional.empty());
+        Mockito.when(
+                        emailActionRequestDao.create(
+                                ArgumentMatchers.eq(EmailActionType.MATCH_CREATION),
+                                ArgumentMatchers.eq("host@test.com"),
+                                ArgumentMatchers.isNull(),
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
+                .thenReturn(
+                        new EmailActionRequest(
+                                30L,
+                                EmailActionType.MATCH_CREATION,
+                                "host@test.com",
+                                null,
+                                "token-hash",
+                                "{}",
+                                EmailActionStatus.PENDING,
+                                FIXED_NOW.plusSeconds(24 * 3600L),
+                                null,
+                                FIXED_NOW,
+                                FIXED_NOW));
+        Mockito.when(templateRenderer.renderReservationConfirmation(ArgumentMatchers.any()))
+                .thenReturn(new MailContent("subject", "<p>html</p>", "text"));
+
+        final VerificationRequestResult result =
+                actionVerificationService.requestMatchCreation(createRequest, "host@test.com");
+
+        Assertions.assertEquals("host@test.com", result.getEmail());
+        Mockito.verify(mailDispatchService)
+                .dispatch(ArgumentMatchers.eq("host@test.com"), ArgumentMatchers.any());
     }
 
     @Test

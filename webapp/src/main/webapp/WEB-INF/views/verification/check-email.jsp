@@ -13,14 +13,16 @@
 
 	<main class="page-shell verification-shell">
 		<section class="panel verification-panel">
-			<p class="eyebrow">Reservation requested</p>
+			<p class="eyebrow"><c:out value="${empty eyebrow ? 'Action requested' : eyebrow}" /></p>
 			<h1 class="page-heading__title"><c:out value="${title}" /></h1>
 			<p class="page-heading__description"><c:out value="${summary}" /></p>
 			<p class="muted-copy">
 				The confirmation link expires on <c:out value="${expiresAtLabel}" />.
 			</p>
 			<div class="verification-actions">
-				<ui:button href="${pageContext.request.contextPath}${backHref}" label="Back to event" />
+				<ui:button
+					href="${pageContext.request.contextPath}${backHref}"
+					label="${empty actionLabel ? 'Back' : actionLabel}" />
 			</div>
 		</section>
 	</main>

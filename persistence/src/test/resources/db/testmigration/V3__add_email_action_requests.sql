@@ -10,8 +10,8 @@ CREATE TABLE email_action_requests (
 	consumed_at TIMESTAMP,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	CHECK (action_type IN ('match_reservation')),
-	CHECK (status IN ('pending', 'completed', 'failed', 'expired'))
+	CONSTRAINT ck_email_action_type CHECK (action_type IN ('match_reservation')),
+	CONSTRAINT ck_email_action_status CHECK (status IN ('pending', 'completed', 'failed', 'expired'))
 );
 
 CREATE INDEX idx_email_action_requests_email ON email_action_requests(email);

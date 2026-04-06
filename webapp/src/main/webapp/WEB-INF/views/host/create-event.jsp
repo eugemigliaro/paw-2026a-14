@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <c:set var="pageTitle" value="Match Point | Host Mode" />
 <!DOCTYPE html>
@@ -19,86 +20,119 @@
 			<p class="page-heading__description"><c:out value="${createPage.description}" /></p>
 		</header>
 
-		<article class="panel form-card">
-			<span class="detail-label">01 - The Basics</span>
-			<h2 class="form-card__title">Give the event a clear point of view</h2>
-			<div class="create-stack">
-			<ui:textInput
-				label="Event title"
-				name="eventTitle"
-				placeholder="Saturday Morning Padel Championship" />
+		<form:form
+			method="post"
+			action="${pageContext.request.contextPath}/host/events/new"
+			modelAttribute="createEventForm"
+			cssClass="create-form">
+			<c:if test="${not empty formError}">
+				<p class="field__error"><c:out value="${formError}" /></p>
+			</c:if>
+			<article class="panel form-card">
+				<span class="detail-label">01 - The Basics</span>
+				<h2 class="form-card__title">Give the event a clear point of view</h2>
+				<div class="create-stack">
+					<label class="field" for="event-email">
+						<span class="field__label">Your email</span>
+						<form:input
+							path="email"
+							id="event-email"
+							type="email"
+							cssClass="field__control"
+							placeholder="you@example.com" />
+						<form:errors path="email" cssClass="field__error" element="span" />
+					</label>
 
-			<div>
-				<span class="field__label">Category</span>
-				<div class="chip-row">
-				<c:forEach var="chip" items="${createPage.categoryChips}">
-					<ui:chip label="${chip.label}" active="${chip.active}" tone="${chip.tone}" />
-				</c:forEach>
+					<label class="field" for="event-title">
+						<span class="field__label">Event title</span>
+						<form:input
+							path="title"
+							id="event-title"
+							cssClass="field__control"
+							placeholder="Saturday Morning Padel Championship" />
+						<form:errors path="title" cssClass="field__error" element="span" />
+					</label>
+
+					<label class="field" for="event-sport">
+						<span class="field__label">Category</span>
+						<span class="field__select-wrap">
+							<form:select path="sport" id="event-sport" cssClass="field__control field__control--select">
+								<form:option value="padel">Padel</form:option>
+								<form:option value="football">Football</form:option>
+								<form:option value="tennis">Tennis</form:option>
+								<form:option value="basketball">Basketball</form:option>
+							</form:select>
+						</span>
+						<form:errors path="sport" cssClass="field__error" element="span" />
+					</label>
+
+					<label class="field" for="event-description">
+						<span class="field__label">Description</span>
+						<form:textarea
+							path="description"
+							id="event-description"
+							cssClass="field__control field__control--textarea"
+							placeholder="Tell participants what to expect from the format, venue, and vibe." />
+						<form:errors path="description" cssClass="field__error" element="span" />
+					</label>
 				</div>
-			</div>
+			</article>
 
-			<ui:textArea
-				label="Description"
-				name="description"
-				placeholder="Tell participants what to expect from the format, venue, and vibe." />
-			</div>
-		</article>
+			<article class="panel form-card">
+				<span class="detail-label">02 - Logistics</span>
+				<h2 class="form-card__title">Set the venue and time</h2>
+				<div class="form-card__grid">
+					<label class="field" for="event-address">
+						<span class="field__label">Location</span>
+						<form:input
+							path="address"
+							id="event-address"
+							cssClass="field__control"
+							placeholder="Enter venue address" />
+						<form:errors path="address" cssClass="field__error" element="span" />
+					</label>
 
-		<article class="panel form-card">
-			<span class="detail-label">02 - Logistics</span>
-			<h2 class="form-card__title">Set the venue and time</h2>
-			<div class="form-card__grid">
-			<ui:textInput
-				label="Location"
-				name="location"
-				placeholder="Enter venue address" />
-			<ui:textInput
-				label="Date"
-				name="date"
-				type="date" />
-			<ui:textInput
-				label="Start time"
-				name="startTime"
-				type="time" />
-			<ui:textInput
-				label="End time"
-				name="endTime"
-				type="time" />
-			</div>
-		</article>
+					<label class="field" for="event-date">
+						<span class="field__label">Date</span>
+						<form:input path="eventDate" id="event-date" type="date" cssClass="field__control" />
+						<form:errors path="eventDate" cssClass="field__error" element="span" />
+					</label>
 
-		<article class="panel form-card">
-			<span class="detail-label">03 - Details & Capacity</span>
-			<h2 class="form-card__title">Control who joins and how the event is priced</h2>
-			<div class="form-card__grid form-card__grid--three">
-			<ui:textInput
-				label="Capacity"
-				name="capacity"
-				type="number"
-				value="12"
-				min="1" />
-			<ui:selectField
-				label="Skill level"
-				name="skillLevel"
-				options="${createPage.skillLevels}" />
-			<ui:selectField
-				label="Pricing mode"
-				id="pricingMode"
-				name="pricingMode"
-				options="${createPage.priceModes}" />
-			</div>
+					<label class="field" for="event-time">
+						<span class="field__label">Start time</span>
+						<form:input path="eventTime" id="event-time" type="time" cssClass="field__control" />
+						<form:errors path="eventTime" cssClass="field__error" element="span" />
+					</label>
+				</div>
+			</article>
 
-			<div class="create-stack">
-			<ui:textInput
-				label="Ticket price"
-				id="ticketPrice"
-				className="pricing-field"
-				name="ticketPrice"
-				type="number"
-				value="15"
-				step="0.01" />
+			<article class="panel form-card">
+				<span class="detail-label">03 - Capacity</span>
+				<h2 class="form-card__title">Control who joins and event price</h2>
+				<div class="form-card__grid form-card__grid--three">
+					<label class="field" for="event-capacity">
+						<span class="field__label">Capacity</span>
+						<form:input path="maxPlayers" id="event-capacity" type="number" min="1" cssClass="field__control" />
+						<form:errors path="maxPlayers" cssClass="field__error" element="span" />
+					</label>
+
+					<label class="field" for="event-price">
+						<span class="field__label">Price per player</span>
+						<form:input path="pricePerPlayer" id="event-price" type="number" min="0" step="0.01" cssClass="field__control" />
+						<form:errors path="pricePerPlayer" cssClass="field__error" element="span" />
+					</label>
+				</div>
+			</article>
+
+			<div class="create-layout__actions">
+				<ui:button
+					label="Publish Event"
+					type="submit"
+					size="lg"
+					fullWidth="${true}"
+					className="create-layout__submit" />
 			</div>
-		</article>
+		</form:form>
 
 		<article class="panel upload-card">
 			<span class="detail-label">Upload cover</span>
@@ -110,37 +144,8 @@
 			</div>
 		</article>
 
-		<div class="create-layout__actions">
-			<ui:button
-			label="Create Event"
-			size="lg"
-			fullWidth="${true}"
-			className="create-layout__submit"
-			disabled="${true}" />
-		</div>
 		</section>
 	</main>
 	</div>
-	<script>
-	(function() {
-		var pricingMode = document.getElementById("pricingMode");
-		var ticketPriceField = document.querySelector(".pricing-field");
-		var ticketPriceInput = document.getElementById("ticketPrice");
-
-		if (!pricingMode || !ticketPriceField || !ticketPriceInput) {
-		return;
-		}
-
-		function syncTicketPriceVisibility() {
-		var isFree = pricingMode.value === "free";
-		ticketPriceField.classList.toggle("field--hidden", isFree);
-		ticketPriceField.setAttribute("aria-hidden", isFree ? "true" : "false");
-		ticketPriceInput.disabled = isFree;
-		}
-
-		pricingMode.addEventListener("change", syncTicketPriceVisibility);
-		syncTicketPriceVisibility();
-	})();
-	</script>
 </body>
 </html>

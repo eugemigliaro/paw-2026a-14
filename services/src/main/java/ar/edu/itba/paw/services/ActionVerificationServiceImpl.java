@@ -4,7 +4,9 @@ import ar.edu.itba.paw.models.EmailActionRequest;
 import ar.edu.itba.paw.models.EmailActionStatus;
 import ar.edu.itba.paw.models.EmailActionType;
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.MatchCreationPayload;
 import ar.edu.itba.paw.models.MatchReservationPayload;
+import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.MatchDao;
@@ -45,6 +47,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
     private final EmailActionRequestDao emailActionRequestDao;
     private final MatchDao matchDao;
+    private final MatchService matchService;
     private final MvpIdentityService mvpIdentityService;
     private final MatchReservationService matchReservationService;
     private final MailProperties mailProperties;
@@ -57,6 +60,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     public ActionVerificationServiceImpl(
             final EmailActionRequestDao emailActionRequestDao,
             final MatchDao matchDao,
+            final MatchService matchService,
             final MvpIdentityService mvpIdentityService,
             final MatchReservationService matchReservationService,
             final MailProperties mailProperties,
@@ -66,6 +70,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
             final Clock clock) {
         this.emailActionRequestDao = emailActionRequestDao;
         this.matchDao = matchDao;
+        this.matchService = matchService;
         this.mvpIdentityService = mvpIdentityService;
         this.matchReservationService = matchReservationService;
         this.mailProperties = mailProperties;
@@ -133,8 +138,70 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     }
 
     @Override
+    public VerificationRequestResult requestMatchCreation(
+            final CreateMatchRequest request, final String email) {
+        final String normalizedEmail = normalizeEmail(email);
+        final Instant expiresAt =
+                Instant.now(clock).plusSeconds(mailProperties.getVerificationTtlHours() * 3600L);
+        final String rawToken = generateToken();
+        final String tokenHash = hashToken(rawToken);
+        final String payloadJson =
+                serializePayload(
+                        new MatchCreationPayload(
+                                null,
+                                request.getAddress(),
+                                request.getTitle(),
+                                request.getDescription(),
+                                request.getStartsAt() == null
+                                        ? null
+                                        : request.getStartsAt().toEpochMilli(),
+                                request.getEndsAt() == null
+                                        ? null
+                                        : request.getEndsAt().toEpochMilli(),
+                                request.getMaxPlayers(),
+                                request.getPricePerPlayer(),
+                                request.getSport() == null ? null : request.getSport().getDbValue(),
+                                request.getVisibility(),
+                                request.getStatus()));
+
+        emailActionRequestDao.create(
+                EmailActionType.MATCH_CREATION,
+                normalizedEmail,
+                mvpIdentityService
+                        .findExistingByEmail(normalizedEmail)
+                        .map(User::getId)
+                        .orElse(null),
+                tokenHash,
+                payloadJson,
+                expiresAt);
+
+        final VerificationPreview preview =
+                buildMatchCreationPreview(
+                        deserializeMatchCreationPayload(payloadJson), normalizedEmail, expiresAt);
+        final String confirmationUrl = buildConfirmationUrl(rawToken);
+        final MailContent mailContent =
+                templateRenderer.renderReservationConfirmation(
+                        new VerificationMailTemplateData(
+                                preview.getTitle(),
+                                preview.getSummary(),
+                                normalizedEmail,
+                                confirmationUrl,
+                                expiresAt,
+                                preview.getDetails()));
+        mailDispatchService.dispatch(normalizedEmail, mailContent);
+
+        return new VerificationRequestResult(normalizedEmail, expiresAt);
+    }
+
+    @Override
     public VerificationPreview getPreview(final String rawToken) {
         final EmailActionRequest request = getRequiredPendingRequest(rawToken, false);
+        if (request.getActionType() == EmailActionType.MATCH_CREATION) {
+            final MatchCreationPayload payload =
+                    deserializeMatchCreationPayload(request.getPayloadJson());
+            return buildMatchCreationPreview(payload, request.getEmail(), request.getExpiresAt());
+        }
+
         final MatchReservationPayload payload = deserializePayload(request.getPayloadJson());
         final Match match =
                 matchDao.findPublicMatchById(payload.getMatchId())
@@ -151,6 +218,10 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     @Transactional
     public VerificationConfirmationResult confirm(final String rawToken) {
         final EmailActionRequest request = getRequiredPendingRequest(rawToken, true);
+        if (request.getActionType() == EmailActionType.MATCH_CREATION) {
+            return confirmMatchCreation(request);
+        }
+
         final MatchReservationPayload payload = deserializePayload(request.getPayloadJson());
         final Match match =
                 matchDao.findPublicMatchById(payload.getMatchId())
@@ -177,6 +248,40 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 userId,
                 "/events/" + match.getId() + "?reservation=confirmed",
                 "Your reservation is now confirmed.");
+    }
+
+    private VerificationConfirmationResult confirmMatchCreation(final EmailActionRequest request) {
+        final MatchCreationPayload payload =
+                deserializeMatchCreationPayload(request.getPayloadJson());
+        final User user = mvpIdentityService.resolveOrCreateByEmail(request.getEmail());
+
+        final Sport sport =
+                payload.getSport() == null
+                        ? Sport.PADEL
+                        : Sport.fromDbValue(payload.getSport()).orElse(Sport.PADEL);
+
+        final Match createdMatch =
+                matchService.createMatch(
+                        new CreateMatchRequest(
+                                user.getId(),
+                                payload.getAddress(),
+                                payload.getTitle(),
+                                payload.getDescription(),
+                                Instant.ofEpochMilli(payload.getStartsAtEpochMillis()),
+                                payload.getEndsAtEpochMillis() == null
+                                        ? null
+                                        : Instant.ofEpochMilli(payload.getEndsAtEpochMillis()),
+                                payload.getMaxPlayers(),
+                                payload.getPricePerPlayer(),
+                                sport,
+                                payload.getVisibility(),
+                                payload.getStatus()));
+
+        emailActionRequestDao.updateStatus(
+                request.getId(), EmailActionStatus.COMPLETED, user.getId(), Instant.now(clock));
+
+        return new VerificationConfirmationResult(
+                user.getId(), "/events/" + createdMatch.getId(), "Your event is now published.");
     }
 
     private EmailActionRequest getRequiredPendingRequest(
@@ -252,7 +357,16 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         }
     }
 
-    private String serializePayload(final MatchReservationPayload payload) {
+    private MatchCreationPayload deserializeMatchCreationPayload(final String payloadJson) {
+        try {
+            return objectMapper.readValue(payloadJson, MatchCreationPayload.class);
+        } catch (final JsonProcessingException exception) {
+            throw new IllegalStateException(
+                    "Failed to deserialize verification payload", exception);
+        }
+    }
+
+    private String serializePayload(final Object payload) {
         try {
             return objectMapper.writeValueAsString(payload);
         } catch (final JsonProcessingException exception) {
@@ -295,5 +409,40 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
             return "Price TBD";
         }
         return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0 ? "Free" : "$" + pricePerPlayer;
+    }
+
+    private VerificationPreview buildMatchCreationPreview(
+            final MatchCreationPayload payload, final String email, final Instant expiresAt) {
+        return new VerificationPreview(
+                "Confirm your event publication",
+                "Use this one-time confirmation to publish your event.",
+                email,
+                expiresAt,
+                "Confirm event publication",
+                "/host/events/new",
+                List.of(
+                        new VerificationPreviewDetail("Sport", prettySport(payload.getSport())),
+                        new VerificationPreviewDetail("Title", safeValue(payload.getTitle())),
+                        new VerificationPreviewDetail("Venue", safeValue(payload.getAddress())),
+                        new VerificationPreviewDetail(
+                                "Schedule",
+                                MATCH_SCHEDULE_FORMATTER.format(
+                                        Instant.ofEpochMilli(payload.getStartsAtEpochMillis())
+                                                .atZone(ZoneId.systemDefault()))),
+                        new VerificationPreviewDetail(
+                                "Price", toPriceLabel(payload.getPricePerPlayer())),
+                        new VerificationPreviewDetail(
+                                "Capacity", String.valueOf(payload.getMaxPlayers()))));
+    }
+
+    private static String safeValue(final String value) {
+        return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private static String prettySport(final String sport) {
+        if (sport == null || sport.isBlank()) {
+            return "Padel";
+        }
+        return Sport.fromDbValue(sport).map(Sport::getDisplayName).orElse("Padel");
     }
 }

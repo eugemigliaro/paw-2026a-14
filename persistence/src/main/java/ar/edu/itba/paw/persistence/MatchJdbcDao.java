@@ -93,8 +93,8 @@ public class MatchJdbcDao implements MatchDao {
         values.put("max_players", maxPlayers);
         values.put("price_per_player", pricePerPlayer);
         values.put("sport", new SqlParameterValue(Types.OTHER, sport.getDbValue()));
-        values.put("visibility", visibility);
-        values.put("status", status);
+        values.put("visibility", new SqlParameterValue(Types.OTHER, visibility));
+        values.put("status", new SqlParameterValue(Types.OTHER, status));
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
         values.put("updated_at", new Timestamp(System.currentTimeMillis()));
 
