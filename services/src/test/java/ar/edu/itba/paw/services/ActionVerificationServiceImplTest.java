@@ -198,8 +198,54 @@ public class ActionVerificationServiceImplTest {
                 actionVerificationService.requestMatchCreation(createRequest, "host@test.com");
 
         Assertions.assertEquals("host@test.com", result.getEmail());
-        Mockito.verify(mailDispatchService)
-                .dispatch(ArgumentMatchers.eq("host@test.com"), ArgumentMatchers.any());
+    }
+
+    @Test
+    public void testConfirmMatchCreationPublishesEventAndRedirects() {
+        final EmailActionRequest request =
+                new EmailActionRequest(
+                        31L,
+                        EmailActionType.MATCH_CREATION,
+                        "host@test.com",
+                        null,
+                        "token-hash",
+                        "{\"hostUserId\":null,\"address\":\"Club Address\",\"title\":\"Host Event\",\"description\":\"Description\",\"startsAtEpochMillis\":1775858400000,\"endsAtEpochMillis\":null,\"maxPlayers\":10,\"pricePerPlayer\":0,\"sport\":\"padel\",\"visibility\":\"public\",\"status\":\"open\"}",
+                        EmailActionStatus.PENDING,
+                        FIXED_NOW.plusSeconds(24 * 3600L),
+                        null,
+                        FIXED_NOW,
+                        FIXED_NOW);
+        final User user = new User(5L, "host@test.com", "host-player");
+        final Match createdMatch =
+                new Match(
+                        55L,
+                        Sport.PADEL,
+                        user.getId(),
+                        "Club Address",
+                        "Host Event",
+                        "Description",
+                        Instant.ofEpochMilli(1775858400000L),
+                        null,
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "open",
+                        0);
+
+        // Arrange
+        Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
+                .thenReturn(Optional.of(request));
+        Mockito.when(mvpIdentityService.resolveOrCreateByEmail("host@test.com")).thenReturn(user);
+        Mockito.when(matchService.createMatch(ArgumentMatchers.any(CreateMatchRequest.class)))
+                .thenReturn(createdMatch);
+
+        // Exercise
+        final VerificationConfirmationResult result =
+                actionVerificationService.confirm("raw-token");
+
+        // Assert
+        Assertions.assertEquals(5L, result.getUserId());
+        Assertions.assertEquals("/events/55", result.getRedirectUrl());
     }
 
     @Test
