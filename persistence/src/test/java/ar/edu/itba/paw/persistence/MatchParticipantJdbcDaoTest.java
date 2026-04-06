@@ -115,13 +115,14 @@ public class MatchParticipantJdbcDaoTest {
 
         final List<User> participants = matchParticipantDao.findConfirmedParticipants(10L);
 
-        Assertions.assertEquals(2, participants.size());
+        Assertions.assertEquals(3, participants.size());
         Assertions.assertEquals(2L, participants.get(0).getId());
-        Assertions.assertEquals(3L, participants.get(1).getId());
+        Assertions.assertEquals(1L, participants.get(1).getId());
+        Assertions.assertEquals(3L, participants.get(2).getId());
     }
 
     @Test
-    public void testFindConfirmedParticipantsExcludesCancelledUsersAndHost() {
+    public void testFindConfirmedParticipantsExcludesCancelledUsersAndIncludesHost() {
         jdbcTemplate.update(
                 "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
                         + " VALUES (10, 1, 'joined', CURRENT_TIMESTAMP)");
@@ -134,7 +135,8 @@ public class MatchParticipantJdbcDaoTest {
 
         final List<User> participants = matchParticipantDao.findConfirmedParticipants(10L);
 
-        Assertions.assertEquals(1, participants.size());
-        Assertions.assertEquals(3L, participants.get(0).getId());
+        Assertions.assertEquals(2, participants.size());
+        Assertions.assertEquals(1L, participants.get(0).getId());
+        Assertions.assertEquals(3L, participants.get(1).getId());
     }
 }
