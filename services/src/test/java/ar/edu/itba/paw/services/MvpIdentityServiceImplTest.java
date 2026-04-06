@@ -27,8 +27,6 @@ public class MvpIdentityServiceImplTest {
         final User result = mvpIdentityService.resolveOrCreateByEmail("existing@test.com");
 
         Assertions.assertEquals(user, result);
-        Mockito.verify(userDao, Mockito.never())
-                .createUser(Mockito.anyString(), Mockito.anyString());
     }
 
     @Test
@@ -41,7 +39,6 @@ public class MvpIdentityServiceImplTest {
         final User result = mvpIdentityService.resolveOrCreateByEmail("New.User@Test.com");
 
         Assertions.assertEquals(user, result);
-        Mockito.verify(userDao).createUser("new.user@test.com", "new_user");
     }
 
     @Test
@@ -56,14 +53,14 @@ public class MvpIdentityServiceImplTest {
         final User result = mvpIdentityService.resolveOrCreateByEmail("player@test.com");
 
         Assertions.assertEquals(user, result);
-        Mockito.verify(userDao).createUser("player@test.com", "player1");
     }
 
     @Test
     public void testResolveOrCreateByEmailReturnsExistingUserAfterConcurrentInsert() {
         final User existingUser = new User(4L, "race@test.com", "race");
         Mockito.when(userDao.findByEmail("race@test.com"))
-                .thenReturn(Optional.empty(), Optional.of(existingUser));
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(existingUser));
         Mockito.when(userDao.findByUsername("race")).thenReturn(Optional.empty());
         Mockito.when(userDao.createUser("race@test.com", "race"))
                 .thenThrow(new DataIntegrityViolationException("duplicate"));

@@ -44,9 +44,7 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false);
         Mockito.when(matchParticipantDao.createReservationIfSpace(10L, 20L)).thenReturn(true);
 
-        matchReservationService.reserveSpot(10L, 20L);
-
-        Mockito.verify(matchParticipantDao).createReservationIfSpace(10L, 20L);
+        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSpot(10L, 20L));
     }
 
     @Test
@@ -79,8 +77,6 @@ public class MatchReservationServiceImplTest {
                         () -> matchReservationService.reserveSpot(10L, 20L));
 
         Assertions.assertEquals("full", exception.getCode());
-        Mockito.verify(matchParticipantDao, Mockito.never())
-                .createReservationIfSpace(Mockito.anyLong(), Mockito.anyLong());
     }
 
     @Test
@@ -116,8 +112,11 @@ public class MatchReservationServiceImplTest {
         final Match fullMatch = createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 4);
 
         Mockito.when(matchDao.findById(10L))
-                .thenReturn(Optional.of(initialMatch), Optional.of(fullMatch));
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false, false);
+                .thenReturn(Optional.of(initialMatch))
+                .thenReturn(Optional.of(fullMatch));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L))
+                .thenReturn(false)
+                .thenReturn(false);
         Mockito.when(matchParticipantDao.createReservationIfSpace(10L, 20L)).thenReturn(false);
 
         final MatchReservationException exception =

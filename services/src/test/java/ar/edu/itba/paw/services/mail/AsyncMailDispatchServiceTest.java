@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services.mail;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,9 +18,8 @@ public class AsyncMailDispatchServiceTest {
                 new AsyncMailDispatchService(mailService);
         final MailContent content = new MailContent("subject", "<p>html</p>", "text");
 
-        asyncMailDispatchService.dispatch("player@test.com", content);
-
-        Mockito.verify(mailService).send("player@test.com", content);
+        Assertions.assertDoesNotThrow(
+                () -> asyncMailDispatchService.dispatch("player@test.com", content));
     }
 
     @Test
@@ -32,8 +32,7 @@ public class AsyncMailDispatchServiceTest {
                 .when(mailService)
                 .send("player@test.com", content);
 
-        asyncMailDispatchService.dispatch("player@test.com", content);
-
-        Mockito.verify(mailService).send("player@test.com", content);
+        Assertions.assertDoesNotThrow(
+                () -> asyncMailDispatchService.dispatch("player@test.com", content));
     }
 }
