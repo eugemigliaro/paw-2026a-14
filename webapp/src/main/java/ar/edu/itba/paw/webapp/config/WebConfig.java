@@ -8,7 +8,10 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.ViewResolver;
@@ -23,6 +26,7 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
     "ar.edu.itba.paw.persistence"
 })
 @EnableWebMvc
+@EnableTransactionManagement
 @PropertySource("classpath:application.properties")
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -61,6 +65,11 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();
+    }
+
+    @Bean
+    public PlatformTransactionManager transactionManager(final DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
     }
 
     @Bean

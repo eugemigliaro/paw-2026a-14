@@ -215,6 +215,60 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Upcoming Match", result.get(0).getTitle());
     }
 
+    @Test
+    public void testFindPublicMatchByIdIncludesAvailability() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Downtown Club",
+                        "Padel Morning",
+                        "Friendly doubles session",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "open");
+
+        final Match found = matchDao.findPublicMatchById(created.getId()).orElseThrow();
+
+        Assertions.assertEquals(created.getId(), found.getId());
+        Assertions.assertEquals("Padel Morning", found.getTitle());
+        Assertions.assertEquals(4, found.getAvailableSpots());
+    }
+
+    @Test
+    public void testFindByIdIncludesJoinedPlayersForNonPublicMatch() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Downtown Club",
+                        "Private Football Night",
+                        "Private 5v5",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        2,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "private",
+                        "open");
+
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, created_at, updated_at)"
+                        + " VALUES (2, 'player', 'player@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (?, 2, 'joined', CURRENT_TIMESTAMP)",
+                created.getId());
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertEquals(created.getId(), found.getId());
+        Assertions.assertEquals("private", found.getVisibility());
+        Assertions.assertEquals(1, found.getJoinedPlayers());
+    }
+
     private void insertMatch(
             final String title,
             final String description,

@@ -31,7 +31,7 @@
 			</article>
 
 			<section class="detail-section">
-			<h2 class="detail-section__title">About this tournament</h2>
+			<h2 class="detail-section__title">About this event</h2>
 			<div class="detail-stack">
 				<c:forEach var="paragraph" items="${eventPage.aboutParagraphs}">
 				<p class="body-copy"><c:out value="${paragraph}" /></p>
@@ -55,33 +55,75 @@
 
 		<aside class="detail-layout__sidebar">
 			<article class="panel booking-panel">
-			<div class="booking-panel__field">
-				<span class="detail-label">Date</span>
-				<strong>Sat, Oct 14, 2023</strong>
-				<span class="booking-panel__chevron" aria-hidden="true"></span>
-			</div>
+			<c:if test="${reservationConfirmed}">
+				<p class="booking-panel__notice booking-panel__notice--success">
+					Your reservation is confirmed.
+				</p>
+			</c:if>
+			<c:if test="${not empty reservationError}">
+				<p class="booking-panel__notice booking-panel__notice--error">
+					<c:out value="${reservationError}" />
+				</p>
+			</c:if>
 
-			<div class="booking-panel__field">
-				<span class="detail-label">Time slot</span>
-				<strong>08:00 AM - 10:30 AM</strong>
-				<span class="booking-panel__status-dot" aria-hidden="true"></span>
-			</div>
+			<c:forEach var="detail" items="${eventPage.bookingDetails}">
+				<div class="booking-panel__field">
+					<span class="detail-label"><c:out value="${detail.label}" /></span>
+					<strong><c:out value="${detail.value}" /></strong>
+				</div>
+			</c:forEach>
 
 			<div class="booking-panel__field">
 				<span class="detail-label">Price</span>
 				<strong><c:out value="${eventPage.bookingPrice}" /></strong>
 			</div>
 
-			<ui:button label="Reserve a spot" fullWidth="${true}" disabled="${true}" />
+			<c:choose>
+				<c:when test="${realEvent}">
+					<form
+						method="post"
+						action="${pageContext.request.contextPath}${reservationRequestPath}"
+						class="booking-panel__request-form">
+						<ui:textInput
+							label="Email"
+							name="email"
+							type="email"
+							value="${reservationRequestForm.email}"
+							placeholder="you@example.com"
+							required="${true}"
+							autocomplete="email" />
+						<ui:button
+							label="${eventPage.ctaLabel}"
+							type="submit"
+							fullWidth="${true}"
+							disabled="${not reservationEnabled}" />
+					</form>
+				</c:when>
+				<c:otherwise>
+					<ui:button label="Reserve a spot" fullWidth="${true}" disabled="${true}" />
+				</c:otherwise>
+			</c:choose>
 
 			<div class="booking-panel__availability">
 				<span>Spots available</span>
-				<strong>4 of 16 left</strong>
+				<strong><c:out value="${eventPage.availabilityLabel}" /></strong>
 			</div>
 			<div class="booking-panel__progress" aria-hidden="true">
-				<span></span>
+				<span
+					<c:if test="${realEvent}">
+						style="width: ${availabilityPercent}%"
+					</c:if>></span>
 			</div>
-			<p class="booking-panel__note">Hurry! Only 4 spots remaining for this Saturday.</p>
+			<p class="booking-panel__note">
+				<c:choose>
+					<c:when test="${realEvent}">
+						Use a one-time email link to confirm the reservation.
+					</c:when>
+					<c:otherwise>
+						Hurry! Only 4 spots remaining for this Saturday.
+					</c:otherwise>
+				</c:choose>
+			</p>
 			</article>
 
 		</aside>

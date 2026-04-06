@@ -1,0 +1,26 @@
+.verification-shell {
+	max-width: 720px;
+}
+
+.verification-panel {
+	display: grid;
+	gap: 1.25rem;
+}
+
+.verification-details {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.verification-details__row {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding-bottom: 0.75rem;
+	border-bottom: 1px solid rgba(30, 54, 49, 0.08);
+}
+
+.verification-actions {
+	display: flex;
+	justify-content: flex-start;
+}

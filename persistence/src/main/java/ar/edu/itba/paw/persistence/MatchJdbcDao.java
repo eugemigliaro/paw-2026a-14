@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -113,6 +114,28 @@ public class MatchJdbcDao implements MatchDao {
                 visibility,
                 status,
                 0);
+    }
+
+    @Override
+    public Optional<Match> findById(final Long matchId) {
+        final String sql =
+                "SELECT m.*, COUNT(mp.id) AS joined_players"
+                        + BASE_FROM
+                        + " WHERE m.id = ? GROUP BY m.id";
+
+        return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
+    }
+
+    @Override
+    public Optional<Match> findPublicMatchById(final Long matchId) {
+        final String sql =
+                "SELECT m.*, COUNT(mp.id) AS joined_players"
+                        + BASE_FROM
+                        + " WHERE m.id = ? AND m.visibility = 'public'"
+                        + " AND m.status = 'open' AND m.starts_at >= CURRENT_TIMESTAMP"
+                        + " GROUP BY m.id";
+
+        return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
     }
 
     @Override

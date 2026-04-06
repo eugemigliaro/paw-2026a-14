@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 public interface MatchDao {
 
@@ -23,6 +24,10 @@ public interface MatchDao {
             Sport sport,
             String visibility,
             String status);
+
+    Optional<Match> findById(Long matchId);
+
+    Optional<Match> findPublicMatchById(Long matchId);
 
     List<Match> findPublicMatches(
             String query,

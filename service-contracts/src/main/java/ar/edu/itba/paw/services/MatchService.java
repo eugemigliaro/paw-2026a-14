@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 
 public interface MatchService {
 
@@ -20,6 +21,8 @@ public interface MatchService {
             Sport sport,
             String visibility,
             String status);
+
+    Optional<Match> findPublicMatchById(Long matchId);
 
     PaginatedResult<Match> searchPublicMatches(
             String query,
