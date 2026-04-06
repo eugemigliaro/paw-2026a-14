@@ -1,0 +1,19 @@
+Match Point
+
+[[${title}]]
+
+[[${summary}]]
+
+Requested for: [[${recipientEmail}]]
+
+[# th:if="${details != null and !details.isEmpty()}"]
+[# th:each="detail : ${details}"]
+- [[${detail.label}]]: [[${detail.value}]]
+[/]
+[/]
+
+Review and confirm:
+[[${confirmationUrl}]]
+
+This link expires at [[${expiresAtLabel}]].
+If you did not request this action, you can ignore this email.

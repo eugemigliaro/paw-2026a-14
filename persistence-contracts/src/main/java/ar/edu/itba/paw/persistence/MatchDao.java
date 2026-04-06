@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 public interface MatchDao {
 
@@ -24,6 +25,8 @@ public interface MatchDao {
             String visibility,
             String status);
 
+    Optional<Match> findPublicMatchById(Long matchId);
+
     List<Match> findPublicMatches(
             String query,
             Sport sport,
@@ -34,4 +37,8 @@ public interface MatchDao {
             int limit);
 
     int countPublicMatches(String query, Sport sport, EventTimeFilter timeFilter, ZoneId zoneId);
+
+    boolean hasActiveParticipant(Long matchId, Long userId);
+
+    boolean addParticipantIfSpace(Long matchId, Long userId);
 }

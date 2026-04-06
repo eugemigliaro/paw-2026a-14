@@ -374,6 +374,28 @@ margin: 0;
 text-align: center;
 }
 
+.booking-panel__notice {
+border-radius: 16px;
+font-size: 0.95rem;
+margin: 0;
+padding: 0.875rem 1rem;
+}
+
+.booking-panel__notice--success {
+background: rgba(15, 118, 110, 0.12);
+color: #0f766e;
+}
+
+.booking-panel__notice--error {
+background: rgba(220, 38, 38, 0.1);
+color: #b91c1c;
+}
+
+.booking-panel__request-form {
+display: grid;
+gap: 1rem;
+}
+
 .booking-card {
 display: grid;
 gap: 1rem;

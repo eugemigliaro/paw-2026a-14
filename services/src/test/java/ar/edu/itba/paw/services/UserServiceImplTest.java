@@ -48,4 +48,15 @@ public class UserServiceImplTest {
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1L, result.getId());
     }
+
+    @Test
+    public void testFindByUsernameDelegates() {
+        final User user = new User(2L, "player@test.com", "player");
+        Mockito.when(userDao.findByUsername("player")).thenReturn(Optional.of(user));
+
+        final Optional<User> result = userService.findByUsername("player");
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("player", result.get().getUsername());
+    }
 }

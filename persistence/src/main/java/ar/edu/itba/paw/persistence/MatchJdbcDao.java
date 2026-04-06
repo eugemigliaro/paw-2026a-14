@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -116,6 +117,18 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
+    public Optional<Match> findPublicMatchById(final Long matchId) {
+        final String sql =
+                "SELECT m.*, COUNT(mp.id) AS joined_players"
+                        + BASE_FROM
+                        + " WHERE m.id = ? AND m.visibility = 'public'"
+                        + " AND m.status = 'open' AND m.starts_at >= CURRENT_TIMESTAMP"
+                        + " GROUP BY m.id";
+
+        return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
+    }
+
+    @Override
     public List<Match> findPublicMatches(
             final String query,
             final Sport sport,
@@ -156,6 +169,44 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(") filtered_matches");
 
         return jdbcTemplate.queryForObject(sql.toString(), Integer.class, params.toArray());
+    }
+
+    @Override
+    public boolean hasActiveParticipant(final Long matchId, final Long userId) {
+        final Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE match_id = ? AND user_id = ?"
+                                + " AND status IN ('joined', 'checked_in')",
+                        Integer.class,
+                        matchId,
+                        userId);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean addParticipantIfSpace(final Long matchId, final Long userId) {
+        final int insertedRows =
+                jdbcTemplate.update(
+                        "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                                + " SELECT m.id, ?, 'joined', CURRENT_TIMESTAMP"
+                                + " FROM matches m"
+                                + " LEFT JOIN match_participants mp"
+                                + " ON mp.match_id = m.id"
+                                + " AND mp.status IN ('joined', 'checked_in')"
+                                + " WHERE m.id = ?"
+                                + " AND m.visibility = 'public'"
+                                + " AND m.status = 'open'"
+                                + " AND m.starts_at > CURRENT_TIMESTAMP"
+                                + " AND NOT EXISTS ("
+                                + " SELECT 1 FROM match_participants existing"
+                                + " WHERE existing.match_id = m.id AND existing.user_id = ?)"
+                                + " GROUP BY m.id, m.max_players"
+                                + " HAVING COUNT(mp.id) < MAX(m.max_players)",
+                        userId,
+                        matchId,
+                        userId);
+        return insertedRows == 1;
     }
 
     private static void appendFilters(

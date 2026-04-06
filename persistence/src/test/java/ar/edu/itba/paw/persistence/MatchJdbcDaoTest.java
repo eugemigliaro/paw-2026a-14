@@ -215,6 +215,58 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Upcoming Match", result.get(0).getTitle());
     }
 
+    @Test
+    public void testFindPublicMatchByIdIncludesAvailability() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Downtown Club",
+                        "Padel Morning",
+                        "Friendly doubles session",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "open");
+
+        final Match found = matchDao.findPublicMatchById(created.getId()).orElseThrow();
+
+        Assertions.assertEquals(created.getId(), found.getId());
+        Assertions.assertEquals("Padel Morning", found.getTitle());
+        Assertions.assertEquals(4, found.getAvailableSpots());
+    }
+
+    @Test
+    public void testAddParticipantIfSpacePersistsReservation() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Downtown Club",
+                        "Football Night",
+                        "Open 5v5",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        2,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open");
+
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, created_at, updated_at)"
+                        + " VALUES (2, 'player', 'player@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+
+        final boolean inserted = matchDao.addParticipantIfSpace(created.getId(), 2L);
+
+        Assertions.assertTrue(inserted);
+        Assertions.assertTrue(matchDao.hasActiveParticipant(created.getId(), 2L));
+        Assertions.assertEquals(
+                1,
+                matchDao.findPublicMatchById(created.getId()).orElseThrow().getJoinedPlayers());
+    }
+
     private void insertMatch(
             final String title,
             final String description,

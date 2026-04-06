@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -50,6 +51,11 @@ public class MatchServiceImpl implements MatchService {
                 sport,
                 visibility,
                 status);
+    }
+
+    @Override
+    public Optional<Match> findPublicMatchById(final Long matchId) {
+        return matchDao.findPublicMatchById(matchId);
     }
 
     @Override

@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -116,6 +117,17 @@ public class MatchServiceImplTest {
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1L, result.getId());
         Assertions.assertEquals("Test Match", result.getTitle());
+    }
+
+    @Test
+    public void testFindPublicMatchByIdDelegates() {
+        final Match expectedMatch = createTestMatch(8L, "Late Football", "football");
+        Mockito.when(matchDao.findPublicMatchById(8L)).thenReturn(Optional.of(expectedMatch));
+
+        final Optional<Match> result = matchService.findPublicMatchById(8L);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("Late Football", result.get().getTitle());
     }
 
     private Match createTestMatch(final Long id, final String title, final String sport) {
