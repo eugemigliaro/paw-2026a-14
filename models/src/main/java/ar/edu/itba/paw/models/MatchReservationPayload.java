@@ -1,22 +1,18 @@
 package ar.edu.itba.paw.models;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class MatchReservationPayload {
 
-    private Long matchId;
+    private final Long matchId;
 
-    public MatchReservationPayload() {
-        // Jackson constructor.
-    }
-
-    public MatchReservationPayload(final Long matchId) {
+    @JsonCreator
+    public MatchReservationPayload(@JsonProperty("matchId") final Long matchId) {
         this.matchId = matchId;
     }
 
     public Long getMatchId() {
         return matchId;
-    }
-
-    public void setMatchId(final Long matchId) {
-        this.matchId = matchId;
     }
 }

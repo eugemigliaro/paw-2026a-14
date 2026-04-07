@@ -1,35 +1,36 @@
 package ar.edu.itba.paw.models;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 
 public class MatchCreationPayload {
 
-    private Long hostUserId;
-    private String address;
-    private String title;
-    private String description;
-    private Long startsAtEpochMillis;
-    private Long endsAtEpochMillis;
-    private int maxPlayers;
-    private BigDecimal pricePerPlayer;
-    private String sport;
-    private String visibility;
-    private String status;
+    private final Long hostUserId;
+    private final String address;
+    private final String title;
+    private final String description;
+    private final Long startsAtEpochMillis;
+    private final Long endsAtEpochMillis;
+    private final int maxPlayers;
+    private final BigDecimal pricePerPlayer;
+    private final String sport;
+    private final String visibility;
+    private final String status;
 
-    public MatchCreationPayload() {}
-
+    @JsonCreator
     public MatchCreationPayload(
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Long startsAtEpochMillis,
-            final Long endsAtEpochMillis,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final String sport,
-            final String visibility,
-            final String status) {
+            @JsonProperty("hostUserId") final Long hostUserId,
+            @JsonProperty("address") final String address,
+            @JsonProperty("title") final String title,
+            @JsonProperty("description") final String description,
+            @JsonProperty("startsAtEpochMillis") final Long startsAtEpochMillis,
+            @JsonProperty("endsAtEpochMillis") final Long endsAtEpochMillis,
+            @JsonProperty("maxPlayers") final int maxPlayers,
+            @JsonProperty("pricePerPlayer") final BigDecimal pricePerPlayer,
+            @JsonProperty("sport") final String sport,
+            @JsonProperty("visibility") final String visibility,
+            @JsonProperty("status") final String status) {
         this.hostUserId = hostUserId;
         this.address = address;
         this.title = title;
