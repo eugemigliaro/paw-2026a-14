@@ -24,6 +24,9 @@
 			method="post"
 			action="${pageContext.request.contextPath}/host/events/new"
 			modelAttribute="createEventForm"
+			id="create-event-form"
+			data-submit-guard="true"
+			data-submit-loading-label="Publishing..."
 			cssClass="create-form">
 			<c:if test="${not empty formError}">
 				<p class="field__error"><c:out value="${formError}" /></p>
@@ -130,6 +133,7 @@
 				<ui:button
 					label="Publish Event"
 					type="submit"
+					id="publish-event-button"
 					size="lg"
 					fullWidth="${true}"
 					className="create-layout__submit" />
