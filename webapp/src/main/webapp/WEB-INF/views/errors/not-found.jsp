@@ -12,7 +12,7 @@
 	<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
 	<main class="page-shell error-shell">
-		<section class="panel error-hero">
+		<section class="error-hero">
 			<div class="error-hero__copy">
 				<p class="eyebrow">Route missing</p>
 				<header class="page-heading">

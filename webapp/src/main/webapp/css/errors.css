@@ -4,19 +4,20 @@
 
 .error-hero {
 	align-items: center;
+	background: var(--bg-surface);
+	border: 0;
+	border-radius: var(--radius-panel);
+	box-shadow: var(--shadow-soft);
 	display: grid;
 	gap: 1.5rem;
 	grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
+	overflow: hidden;
 	padding: clamp(1.5rem, 2vw, 2.5rem);
 	position: relative;
 }
 
 .error-hero::after {
-	background: linear-gradient(135deg, rgba(0, 100, 90, 0.05), transparent 55%);
-	content: "";
-	inset: 0;
-	pointer-events: none;
-	position: absolute;
+	content: none;
 }
 
 .error-hero__copy,
@@ -71,7 +72,6 @@
 		display: grid;
 	}
 
-	.error-hero__actions .btn,
 	.error-hero__actions .btn {
 		width: 100%;
 	}
