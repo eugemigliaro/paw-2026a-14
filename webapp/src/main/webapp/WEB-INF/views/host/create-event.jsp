@@ -42,6 +42,7 @@
 							id="event-email"
 							type="email"
 							cssClass="field__control"
+							required="required"
 							placeholder="you@example.com" />
 						<form:errors path="email" cssClass="field__error" element="span" />
 					</label>
