@@ -178,6 +178,7 @@ class PawUiRouteTest {
                                 new EventController(
                                         matchService, userService, actionVerificationService),
                                 new HostController(actionVerificationService),
+                                new ErrorPageController(),
                                 new UiController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)
@@ -250,6 +251,14 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/error"))
                 .andExpect(model().attributeExists("message"));
+    }
+
+    @Test
+    void getNotFoundErrorRouteRenders404Page() throws Exception {
+        mockMvc.perform(get("/errors/404"))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("errors/not-found"))
+                .andExpect(model().attributeExists("shell"));
     }
 
     @Test

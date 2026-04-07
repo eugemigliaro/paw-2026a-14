@@ -16,3 +16,4 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/host-create.css" />
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/ui-preview.css" />
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/verification.css" />
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/errors.css" />
