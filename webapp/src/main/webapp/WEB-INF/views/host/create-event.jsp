@@ -49,6 +49,7 @@
 							path="title"
 							id="event-title"
 							cssClass="field__control"
+							required="required"
 							placeholder="Saturday Morning Padel Championship" />
 						<form:errors path="title" cssClass="field__error" element="span" />
 					</label>
@@ -88,6 +89,7 @@
 							path="address"
 							id="event-address"
 							cssClass="field__control"
+							required="required"
 							placeholder="Enter venue address" />
 						<form:errors path="address" cssClass="field__error" element="span" />
 					</label>
