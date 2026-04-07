@@ -24,6 +24,9 @@
 			method="post"
 			action="${pageContext.request.contextPath}/host/events/new"
 			modelAttribute="createEventForm"
+			id="create-event-form"
+			data-submit-guard="true"
+			data-submit-loading-label="Publishing..."
 			cssClass="create-form">
 			<c:if test="${not empty formError}">
 				<p class="field__error"><c:out value="${formError}" /></p>
@@ -39,6 +42,7 @@
 							id="event-email"
 							type="email"
 							cssClass="field__control"
+							required="required"
 							placeholder="you@example.com" />
 						<form:errors path="email" cssClass="field__error" element="span" />
 					</label>
@@ -49,6 +53,7 @@
 							path="title"
 							id="event-title"
 							cssClass="field__control"
+							required="required"
 							placeholder="Saturday Morning Padel Championship" />
 						<form:errors path="title" cssClass="field__error" element="span" />
 					</label>
@@ -88,6 +93,7 @@
 							path="address"
 							id="event-address"
 							cssClass="field__control"
+							required="required"
 							placeholder="Enter venue address" />
 						<form:errors path="address" cssClass="field__error" element="span" />
 					</label>
@@ -128,6 +134,7 @@
 				<ui:button
 					label="Publish Event"
 					type="submit"
+					id="publish-event-button"
 					size="lg"
 					fullWidth="${true}"
 					className="create-layout__submit" />

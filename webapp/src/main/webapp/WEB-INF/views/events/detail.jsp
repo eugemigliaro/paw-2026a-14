@@ -143,6 +143,8 @@
 							<form
 								method="post"
 								action="${pageContext.request.contextPath}${reservationRequestPath}"
+								data-submit-guard="true"
+								data-submit-loading-label="Joining..."
 								class="booking-panel__request-form">
 								<ui:textInput
 									label="Email"
