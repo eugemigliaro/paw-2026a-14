@@ -8,6 +8,11 @@ display: grid;
 gap: 1.2rem;
 }
 
+.create-form {
+display: grid;
+gap: 1.5rem;
+}
+
 .form-card,
 .upload-card {
 padding: 1.15rem;
