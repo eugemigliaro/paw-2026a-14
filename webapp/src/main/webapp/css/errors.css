@@ -1,0 +1,78 @@
+.error-shell {
+	display: block;
+}
+
+.error-hero {
+	align-items: center;
+	background: var(--bg-surface);
+	border: 0;
+	border-radius: var(--radius-panel);
+	box-shadow: var(--shadow-soft);
+	display: grid;
+	gap: 1.5rem;
+	grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
+	overflow: hidden;
+	padding: clamp(1.5rem, 2vw, 2.5rem);
+	position: relative;
+}
+
+.error-hero::after {
+	content: none;
+}
+
+.error-hero__copy,
+.error-hero__visual {
+	position: relative;
+	z-index: 1;
+}
+
+.error-hero__copy {
+	align-content: start;
+	display: grid;
+	gap: 1.25rem;
+}
+
+.error-hero__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.85rem;
+}
+
+.error-hero__display {
+	align-items: center;
+	display: flex;
+	justify-content: center;
+	min-height: 100%;
+}
+
+.error-hero__number {
+	color: var(--accent);
+	font-size: clamp(6rem, 16vw, 11rem);
+	font-weight: 800;
+	letter-spacing: -0.08em;
+	line-height: 0.9;
+}
+
+@media (max-width: 980px) {
+	.error-hero {
+		grid-template-columns: 1fr;
+	}
+
+	.error-hero__display {
+		justify-content: flex-start;
+	}
+}
+
+@media (max-width: 640px) {
+	.error-hero {
+		padding: 1.35rem;
+	}
+
+	.error-hero__actions {
+		display: grid;
+	}
+
+	.error-hero__actions .btn {
+		width: 100%;
+	}
+}
