@@ -178,7 +178,9 @@ public class EventController {
                 .replace("\\r\\n", "\n")
                 .replace("\\n", "\n")
                 .replace("\r\n", "\n")
-                .replace('\r', '\n');
+                .replace('\r', '\n')
+                .replaceAll("\\n{3,}", "\n\n")
+                .strip();
     }
 
     private List<BookingDetailViewModel> buildBookingDetails(final Match match) {
@@ -229,6 +231,7 @@ public class EventController {
                 SCHEDULE_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault())),
                 toPriceLabel(match.getPricePerPlayer()),
                 buildAvailabilityLabel(match),
+                null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }

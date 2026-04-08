@@ -148,6 +148,7 @@ public final class PawUiViewModels {
         private final String schedule;
         private final String priceLabel;
         private final String badge;
+        private final String level;
         private final String mediaClass;
         private final String bannerImageUrl;
 
@@ -160,6 +161,7 @@ public final class PawUiViewModels {
                 final String schedule,
                 final String priceLabel,
                 final String badge,
+                final String level,
                 final String mediaClass,
                 final String bannerImageUrl) {
             this.id = id;
@@ -170,6 +172,7 @@ public final class PawUiViewModels {
             this.schedule = schedule;
             this.priceLabel = priceLabel;
             this.badge = badge;
+            this.level = level;
             this.mediaClass = mediaClass;
             this.bannerImageUrl = bannerImageUrl;
         }
@@ -204,6 +207,10 @@ public final class PawUiViewModels {
 
         public String getBadge() {
             return badge;
+        }
+
+        public String getLevel() {
+            return level;
         }
 
         public String getMediaClass() {

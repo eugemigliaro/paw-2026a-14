@@ -165,7 +165,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 						</section>
 
 						<section
-							class="detail-section"
+							class="detail-section detail-section--about"
 							aria-labelledby="about-event-title"
 						>
 							<div
@@ -186,9 +186,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 									var="paragraph"
 									items="${eventPage.aboutParagraphs}"
 								>
-									<p class="body-copy detail-stack__paragraph">
-										<c:out value="${paragraph}" />
-									</p>
+									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
 								</c:forEach>
 							</div>
 						</section>

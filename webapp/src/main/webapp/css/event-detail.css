@@ -264,6 +264,14 @@
 	font-weight: 600;
 }
 
+.detail-section--about {
+	gap: 0.55rem;
+}
+
+.detail-section--about .detail-stack {
+	gap: 0.45rem;
+}
+
 .host-card {
 	align-items: center;
 	display: flex;
@@ -394,6 +402,8 @@
 }
 
 .detail-stack__paragraph {
+	margin: 0;
+	padding: 0;
 	white-space: pre-line;
 }
 

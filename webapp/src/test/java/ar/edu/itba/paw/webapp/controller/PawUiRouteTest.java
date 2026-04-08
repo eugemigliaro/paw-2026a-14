@@ -268,8 +268,7 @@ class PawUiRouteTest {
 
     @Test
     void getRemovedMockEventRouteReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/events/sunrise-padel-championship"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/events/sunrise-padel-championship")).andExpect(status().isNotFound());
     }
 
     @Test

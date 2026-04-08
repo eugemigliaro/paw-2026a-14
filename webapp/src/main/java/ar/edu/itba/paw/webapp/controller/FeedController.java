@@ -247,6 +247,7 @@ public class FeedController {
                 schedule,
                 priceLabel,
                 match.getAvailableSpots() + " spots left",
+                null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }
