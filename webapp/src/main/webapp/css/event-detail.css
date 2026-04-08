@@ -393,6 +393,10 @@
 	gap: 1rem;
 }
 
+.detail-stack__paragraph {
+	white-space: pre-line;
+}
+
 .booking-panel {
 	display: grid;
 	gap: 1rem;

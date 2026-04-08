@@ -52,7 +52,7 @@ class PawUiRouteTest {
                         7L,
                         "Downtown Club",
                         "Sunrise Padel",
-                        "Friendly doubles session",
+                        "Friendly\\n doubles session",
                         Instant.parse("2026-04-06T10:00:00Z"),
                         Instant.parse("2026-04-06T12:00:00Z"),
                         8,
@@ -241,6 +241,12 @@ class PawUiRouteTest {
                 .andExpect(view().name("events/detail"))
                 .andExpect(model().attribute("realEvent", true))
                 .andExpect(model().attributeExists("reservationRequestPath"))
+                .andExpect(
+                        model().attribute(
+                                "eventPage",
+                                Matchers.hasProperty(
+                                        "aboutParagraphs",
+                                        Matchers.contains("Friendly\n doubles session"))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",

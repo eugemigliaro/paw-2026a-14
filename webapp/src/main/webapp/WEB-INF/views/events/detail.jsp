@@ -29,15 +29,19 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 							><c:out value="${eventPage.event.sport}"
 						/></span>
 						<div class="event-hero__copy">
-							<p class="event-hero__eyebrow">
-								<c:out value="${eventPage.heroSubtitle}" />
-							</p>
+							<c:if test="${not empty eventPage.heroSubtitle}">
+								<p class="event-hero__eyebrow">
+									<c:out value="${eventPage.heroSubtitle}" />
+								</p>
+							</c:if>
 							<h1 class="event-hero__title">
 								<c:out value="${eventPage.event.title}" />
 							</h1>
-							<p class="event-hero__meta">
-								<c:out value="${eventPage.heroMeta}" />
-							</p>
+							<c:if test="${not empty eventPage.heroMeta}">
+								<p class="event-hero__meta">
+									<c:out value="${eventPage.heroMeta}" />
+								</p>
+							</c:if>
 						</div>
 						<ul
 							class="event-hero__status-list"
@@ -87,10 +91,6 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 									/></strong>
 								</div>
 							</div>
-							<p class="host-card__note">
-								Open community session with a visible confirmed
-								roster before you reserve.
-							</p>
 						</article>
 
 						<section
@@ -186,7 +186,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 									var="paragraph"
 									items="${eventPage.aboutParagraphs}"
 								>
-									<p class="body-copy">
+									<p class="body-copy detail-stack__paragraph">
 										<c:out value="${paragraph}" />
 									</p>
 								</c:forEach>

@@ -138,15 +138,8 @@
 										</div>
 
 										<div class="event-card__footer">
-											<div class="event-card__avatars" aria-hidden="true">
-												<c:forEach var="attendee" items="${event.attendeeInitials}">
-													<span class="avatar-badge"><c:out value="${attendee}" /></span>
-												</c:forEach>
-											</div>
-
 											<div class="event-card__cta">
 												<span><c:out value="${event.priceLabel}" /></span>
-												<span>&middot; View event</span>
 											</div>
 										</div>
 									</div>

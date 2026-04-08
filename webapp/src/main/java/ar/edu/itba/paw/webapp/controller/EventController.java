@@ -167,8 +167,8 @@ public class EventController {
             final Match match, final List<User> confirmedParticipants) {
         return new EventDetailPageViewModel(
                 toCard(match),
-                match.getSport().getDisplayName() + " event",
-                "Review the confirmed roster, then reserve your place with a one-time email confirmation.",
+                null,
+                null,
                 userService
                         .findById(match.getHostUserId())
                         .map(user -> user.getUsername())
@@ -189,7 +189,15 @@ public class EventController {
                 match.getDescription() == null || match.getDescription().isBlank()
                         ? "A community sports event hosted through Match Point."
                         : match.getDescription();
-        return List.of(description);
+        return List.of(normalizeDescriptionLineBreaks(description));
+    }
+
+    private static String normalizeDescriptionLineBreaks(final String description) {
+        return description
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\r\n", "\n")
+                .replace('\r', '\n');
     }
 
     private List<BookingDetailViewModel> buildBookingDetails(final Match match) {
