@@ -17,6 +17,7 @@ public class CreateMatchRequest {
     private final Sport sport;
     private final String visibility;
     private final String status;
+    private final Long bannerImageId;
 
     public CreateMatchRequest(
             final Long hostUserId,
@@ -29,7 +30,8 @@ public class CreateMatchRequest {
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final String visibility,
-            final String status) {
+            final String status,
+            final Long bannerImageId) {
         this.hostUserId = hostUserId;
         this.address = address;
         this.title = title;
@@ -41,6 +43,7 @@ public class CreateMatchRequest {
         this.sport = sport;
         this.visibility = visibility;
         this.status = status;
+        this.bannerImageId = bannerImageId;
     }
 
     public Long getHostUserId() {
@@ -85,5 +88,9 @@ public class CreateMatchRequest {
 
     public String getStatus() {
         return status;
+    }
+
+    public Long getBannerImageId() {
+        return bannerImageId;
     }
 }

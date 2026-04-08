@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ActionVerificationService;
+import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
@@ -20,6 +21,9 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -48,14 +52,15 @@ class PawUiRouteTest {
                         7L,
                         "Downtown Club",
                         "Sunrise Padel",
-                        "Friendly doubles session",
+                        "Friendly\\n doubles session",
                         Instant.parse("2026-04-06T10:00:00Z"),
                         Instant.parse("2026-04-06T12:00:00Z"),
                         8,
                         BigDecimal.TEN,
                         "public",
                         "open",
-                        2);
+                        2,
+                        null);
 
         final MatchService matchService =
                 new MatchService() {
@@ -75,7 +80,8 @@ class PawUiRouteTest {
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
                                 request.getStatus(),
-                                0);
+                                0,
+                                null);
                     }
 
                     @Override
@@ -172,13 +178,38 @@ class PawUiRouteTest {
                     }
                 };
 
+        final ImageService imageService =
+                new ImageService() {
+                    @Override
+                    public Long store(
+                            final String contentType,
+                            final long contentLength,
+                            final InputStream contentStream)
+                            throws IOException {
+                        return 500L;
+                    }
+
+                    @Override
+                    public Optional<ar.edu.itba.paw.models.ImageMetadata> findMetadataById(
+                            final Long imageId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public boolean streamContentById(
+                            final Long imageId, final OutputStream outputStream)
+                            throws IOException {
+                        return false;
+                    }
+                };
+
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new FeedController(matchService),
                                 new EventController(
                                         matchService, userService, actionVerificationService),
-                                new HostController(actionVerificationService),
-                                new UiController(),
+                                new HostController(actionVerificationService, imageService),
+                                new ErrorPageController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)
                         .build();
@@ -194,21 +225,17 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getMockEventDetailsRouteRendersEventPage() throws Exception {
-        mockMvc.perform(get("/events/sunrise-padel-championship"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("events/detail"))
-                .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attributeExists("eventPage"));
-    }
-
-    @Test
     void getRealEventDetailsRouteRendersEventPage() throws Exception {
         mockMvc.perform(get("/events/42"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("events/detail"))
-                .andExpect(model().attribute("realEvent", true))
                 .andExpect(model().attributeExists("reservationRequestPath"))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "aboutParagraphs",
+                                                Matchers.contains("Friendly\n doubles session"))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -240,8 +267,13 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getUnknownEventReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/events/unknown")).andExpect(status().isNotFound());
+    void getRemovedMockEventRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/events/sunrise-padel-championship")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getRemovedComponentPreviewRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/ui/components")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -250,6 +282,14 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/error"))
                 .andExpect(model().attributeExists("message"));
+    }
+
+    @Test
+    void getNotFoundErrorRouteRenders404Page() throws Exception {
+        mockMvc.perform(get("/errors/404"))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("errors/not-found"))
+                .andExpect(model().attributeExists("shell"));
     }
 
     @Test

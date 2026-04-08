@@ -100,22 +100,25 @@ public class MatchServiceImplTest {
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
                                 "public",
-                                "open"))
+                                "open",
+                                null))
                 .thenReturn(expectedMatch);
 
         final Match result =
                 matchService.createMatch(
-                        1L,
-                        "Test Address",
-                        "Test Match",
-                        "Test Description",
-                        now,
-                        null,
-                        10,
-                        BigDecimal.ZERO,
-                        Sport.FOOTBALL,
-                        "public",
-                        "open");
+                        new CreateMatchRequest(
+                                1L,
+                                "Test Address",
+                                "Test Match",
+                                "Test Description",
+                                now,
+                                null,
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                "public",
+                                "open",
+                                null));
 
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1L, result.getId());
@@ -163,6 +166,7 @@ public class MatchServiceImplTest {
                 BigDecimal.ZERO,
                 "public",
                 "open",
-                0);
+                0,
+                null);
     }
 }

@@ -3,10 +3,13 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
+import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.VerificationFailureException;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiMockData;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.time.ZoneId;
 import javax.validation.Valid;
@@ -22,10 +25,14 @@ import org.springframework.web.servlet.ModelAndView;
 public class HostController {
 
     private final ActionVerificationService actionVerificationService;
+    private final ImageService imageService;
 
     @Autowired
-    public HostController(final ActionVerificationService actionVerificationService) {
+    public HostController(
+            final ActionVerificationService actionVerificationService,
+            final ImageService imageService) {
         this.actionVerificationService = actionVerificationService;
+        this.imageService = imageService;
     }
 
     @ModelAttribute("createEventForm")
@@ -36,8 +43,7 @@ public class HostController {
     @GetMapping("/host/events/new")
     public ModelAndView showCreateEvent() {
         final ModelAndView mav = new ModelAndView("host/create-event");
-        mav.addObject("shell", PawUiMockData.hostShell());
-        mav.addObject("createPage", PawUiMockData.createEventPage());
+        mav.addObject("shell", ShellViewModelFactory.hostShell());
         mav.addObject("createEventForm", createEventForm());
         return mav;
     }
@@ -57,6 +63,16 @@ public class HostController {
                         .atZone(ZoneId.systemDefault())
                         .toInstant();
 
+        final Long bannerImageId;
+        try {
+            bannerImageId = storeBannerIfPresent(createEventForm);
+        } catch (final IllegalArgumentException exception) {
+            return hostFormView(createEventForm, exception.getMessage());
+        } catch (final IOException exception) {
+            return hostFormView(
+                    createEventForm, "We could not process the uploaded image. Please try again.");
+        }
+
         final CreateMatchRequest request =
                 new CreateMatchRequest(
                         null,
@@ -69,14 +85,15 @@ public class HostController {
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
                         "public",
-                        "open");
+                        "open",
+                        bannerImageId);
 
         try {
             final VerificationRequestResult requestResult =
                     actionVerificationService.requestMatchCreation(
                             request, createEventForm.getEmail());
             final ModelAndView mav = new ModelAndView("verification/check-email");
-            mav.addObject("shell", PawUiMockData.hostShell());
+            mav.addObject("shell", ShellViewModelFactory.hostShell());
             mav.addObject("title", "Check your email");
             mav.addObject(
                     "summary",
@@ -101,10 +118,22 @@ public class HostController {
 
     private ModelAndView hostFormView(final CreateEventForm form, final String formError) {
         final ModelAndView mav = new ModelAndView("host/create-event");
-        mav.addObject("shell", PawUiMockData.hostShell());
-        mav.addObject("createPage", PawUiMockData.createEventPage());
+        mav.addObject("shell", ShellViewModelFactory.hostShell());
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         return mav;
+    }
+
+    private Long storeBannerIfPresent(final CreateEventForm form) throws IOException {
+        if (form.getBannerImage() == null || form.getBannerImage().isEmpty()) {
+            return null;
+        }
+
+        try (InputStream inputStream = form.getBannerImage().getInputStream()) {
+            return imageService.store(
+                    form.getBannerImage().getContentType(),
+                    form.getBannerImage().getSize(),
+                    inputStream);
+        }
     }
 }

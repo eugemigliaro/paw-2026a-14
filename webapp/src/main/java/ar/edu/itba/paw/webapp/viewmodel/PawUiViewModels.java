@@ -150,7 +150,7 @@ public final class PawUiViewModels {
         private final String badge;
         private final String level;
         private final String mediaClass;
-        private final List<String> attendeeInitials;
+        private final String bannerImageUrl;
 
         public EventCardViewModel(
                 final String id,
@@ -163,7 +163,7 @@ public final class PawUiViewModels {
                 final String badge,
                 final String level,
                 final String mediaClass,
-                final List<String> attendeeInitials) {
+                final String bannerImageUrl) {
             this.id = id;
             this.href = href;
             this.sport = sport;
@@ -174,7 +174,7 @@ public final class PawUiViewModels {
             this.badge = badge;
             this.level = level;
             this.mediaClass = mediaClass;
-            this.attendeeInitials = attendeeInitials;
+            this.bannerImageUrl = bannerImageUrl;
         }
 
         public String getId() {
@@ -217,8 +217,12 @@ public final class PawUiViewModels {
             return mediaClass;
         }
 
-        public List<String> getAttendeeInitials() {
-            return attendeeInitials;
+        public String getBannerImageUrl() {
+            return bannerImageUrl;
+        }
+
+        public boolean hasBannerImage() {
+            return bannerImageUrl != null && !bannerImageUrl.isBlank();
         }
     }
 
@@ -467,109 +471,6 @@ public final class PawUiViewModels {
 
         public boolean isSelected() {
             return selected;
-        }
-    }
-
-    public static final class CreateEventPageViewModel {
-        private final String eyebrow;
-        private final String title;
-        private final String description;
-        private final List<ChipViewModel> categoryChips;
-        private final List<SelectOptionViewModel> skillLevels;
-        private final List<SelectOptionViewModel> priceModes;
-        private final List<String> snapshotItems;
-        private final String uploadHint;
-        private final String uploadCaption;
-
-        public CreateEventPageViewModel(
-                final String eyebrow,
-                final String title,
-                final String description,
-                final List<ChipViewModel> categoryChips,
-                final List<SelectOptionViewModel> skillLevels,
-                final List<SelectOptionViewModel> priceModes,
-                final List<String> snapshotItems,
-                final String uploadHint,
-                final String uploadCaption) {
-            this.eyebrow = eyebrow;
-            this.title = title;
-            this.description = description;
-            this.categoryChips = categoryChips;
-            this.skillLevels = skillLevels;
-            this.priceModes = priceModes;
-            this.snapshotItems = snapshotItems;
-            this.uploadHint = uploadHint;
-            this.uploadCaption = uploadCaption;
-        }
-
-        public String getEyebrow() {
-            return eyebrow;
-        }
-
-        public String getTitle() {
-            return title;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-
-        public List<ChipViewModel> getCategoryChips() {
-            return categoryChips;
-        }
-
-        public List<SelectOptionViewModel> getSkillLevels() {
-            return skillLevels;
-        }
-
-        public List<SelectOptionViewModel> getPriceModes() {
-            return priceModes;
-        }
-
-        public List<String> getSnapshotItems() {
-            return snapshotItems;
-        }
-
-        public String getUploadHint() {
-            return uploadHint;
-        }
-
-        public String getUploadCaption() {
-            return uploadCaption;
-        }
-    }
-
-    public static final class ComponentPreviewPageViewModel {
-        private final EventCardViewModel sampleEvent;
-        private final List<ChipViewModel> sampleChips;
-        private final List<SelectOptionViewModel> skillLevels;
-        private final List<SelectOptionViewModel> priceModes;
-
-        public ComponentPreviewPageViewModel(
-                final EventCardViewModel sampleEvent,
-                final List<ChipViewModel> sampleChips,
-                final List<SelectOptionViewModel> skillLevels,
-                final List<SelectOptionViewModel> priceModes) {
-            this.sampleEvent = sampleEvent;
-            this.sampleChips = sampleChips;
-            this.skillLevels = skillLevels;
-            this.priceModes = priceModes;
-        }
-
-        public EventCardViewModel getSampleEvent() {
-            return sampleEvent;
-        }
-
-        public List<ChipViewModel> getSampleChips() {
-            return sampleChips;
-        }
-
-        public List<SelectOptionViewModel> getSkillLevels() {
-            return skillLevels;
-        }
-
-        public List<SelectOptionViewModel> getPriceModes() {
-            return priceModes;
         }
     }
 }

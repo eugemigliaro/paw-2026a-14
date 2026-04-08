@@ -10,6 +10,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
 
 public class CreateEventForm {
 
@@ -47,6 +48,8 @@ public class CreateEventForm {
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0", inclusive = true, message = "Price cannot be negative")
     private BigDecimal pricePerPlayer = BigDecimal.ZERO;
+
+    private MultipartFile bannerImage;
 
     public String getEmail() {
         return email;
@@ -118,5 +121,13 @@ public class CreateEventForm {
 
     public void setPricePerPlayer(final BigDecimal pricePerPlayer) {
         this.pricePerPlayer = pricePerPlayer;
+    }
+
+    public MultipartFile getBannerImage() {
+        return bannerImage;
+    }
+
+    public void setBannerImage(final MultipartFile bannerImage) {
+        this.bannerImage = bannerImage;
     }
 }

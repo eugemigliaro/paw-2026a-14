@@ -43,7 +43,8 @@ public class MatchServiceImpl implements MatchService {
                 request.getPricePerPlayer(),
                 request.getSport(),
                 request.getVisibility(),
-                request.getStatus());
+                request.getStatus(),
+                request.getBannerImageId());
     }
 
     @Override

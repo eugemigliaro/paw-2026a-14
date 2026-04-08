@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
@@ -10,18 +12,17 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationFailureException;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.webapp.form.ReservationRequestForm;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiMockData;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -69,22 +70,20 @@ public class EventController {
     public ModelAndView showEventDetails(
             @PathVariable("eventId") final String eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus) {
-        if (isNumeric(eventId)) {
-            return showRealEventDetails(Long.valueOf(eventId), reservationStatus, null, null);
-        }
-
-        return showMockEventDetails(eventId);
+        return showRealEventDetails(
+                parseEventIdOrThrowNotFound(eventId), reservationStatus, null, null);
     }
 
     @PostMapping("/events/{eventId}/reservations")
     public ModelAndView requestReservation(
-            @PathVariable("eventId") final Long eventId,
+            @PathVariable("eventId") final String eventId,
             @Valid @ModelAttribute("reservationRequestForm")
                     final ReservationRequestForm reservationRequestForm,
             final BindingResult bindingResult) {
+        final Long matchId = parseEventIdOrThrowNotFound(eventId);
         if (bindingResult.hasErrors()) {
             return showRealEventDetails(
-                    eventId,
+                    matchId,
                     null,
                     bindingResult.getFieldError("email") == null
                             ? "Enter a valid email address."
@@ -95,13 +94,13 @@ public class EventController {
         try {
             final VerificationRequestResult requestResult =
                     actionVerificationService.requestMatchReservation(
-                            eventId, reservationRequestForm.getEmail());
+                            matchId, reservationRequestForm.getEmail());
             final Match match =
                     matchService
-                            .findPublicMatchById(eventId)
+                            .findPublicMatchById(matchId)
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
             final ModelAndView mav = new ModelAndView("verification/check-email");
-            mav.addObject("shell", PawUiMockData.browseShell());
+            mav.addObject("shell", ShellViewModelFactory.browseShell());
             mav.addObject("title", "Check your email");
             mav.addObject(
                     "summary",
@@ -114,26 +113,12 @@ public class EventController {
                     "expiresAtLabel",
                     SCHEDULE_FORMATTER.format(
                             requestResult.getExpiresAt().atZone(ZoneId.systemDefault())));
-            mav.addObject("backHref", "/events/" + eventId);
+            mav.addObject("backHref", "/events/" + matchId);
             return mav;
         } catch (final VerificationFailureException exception) {
             return showRealEventDetails(
-                    eventId, null, exception.getMessage(), reservationRequestForm);
+                    matchId, null, exception.getMessage(), reservationRequestForm);
         }
-    }
-
-    private ModelAndView showMockEventDetails(final String eventId) {
-        final Optional<EventDetailPageViewModel> eventPage = PawUiMockData.findEventPage(eventId);
-
-        if (eventPage.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-
-        final ModelAndView mav = new ModelAndView("events/detail");
-        mav.addObject("shell", PawUiMockData.browseShell());
-        mav.addObject("eventPage", eventPage.get());
-        mav.addObject("realEvent", false);
-        return mav;
     }
 
     private ModelAndView showRealEventDetails(
@@ -147,11 +132,9 @@ public class EventController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("events/detail");
-        mav.addObject("shell", PawUiMockData.browseShell());
+        mav.addObject("shell", ShellViewModelFactory.browseShell());
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants));
-        mav.addObject("realEvent", true);
         mav.addObject("reservationEnabled", match.getAvailableSpots() > 0);
-        mav.addObject("availabilityPercent", calculateAvailabilityPercent(match));
         mav.addObject("reservationRequestPath", "/events/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
@@ -165,8 +148,8 @@ public class EventController {
             final Match match, final List<User> confirmedParticipants) {
         return new EventDetailPageViewModel(
                 toCard(match),
-                match.getSport().getDisplayName() + " event",
-                "Review the confirmed roster, then reserve your place with a one-time email confirmation.",
+                null,
+                null,
                 userService
                         .findById(match.getHostUserId())
                         .map(user -> user.getUsername())
@@ -187,7 +170,17 @@ public class EventController {
                 match.getDescription() == null || match.getDescription().isBlank()
                         ? "A community sports event hosted through Match Point."
                         : match.getDescription();
-        return List.of(description);
+        return List.of(normalizeDescriptionLineBreaks(description));
+    }
+
+    private static String normalizeDescriptionLineBreaks(final String description) {
+        return description
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\r\n", "\n")
+                .replace('\r', '\n')
+                .replaceAll("\\n{3,}", "\n\n")
+                .strip();
     }
 
     private List<BookingDetailViewModel> buildBookingDetails(final Match match) {
@@ -238,9 +231,9 @@ public class EventController {
                 SCHEDULE_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault())),
                 toPriceLabel(match.getPricePerPlayer()),
                 buildAvailabilityLabel(match),
-                "All levels",
+                null,
                 mediaClassFor(match.getSport()),
-                List.of());
+                bannerUrlFor(match));
     }
 
     private static String buildAvailabilityLabel(final Match match) {
@@ -251,14 +244,6 @@ public class EventController {
         return participantCount == 1
                 ? "1 confirmed player"
                 : participantCount + " confirmed players";
-    }
-
-    private static int calculateAvailabilityPercent(final Match match) {
-        if (match.getMaxPlayers() <= 0) {
-            return 0;
-        }
-        final int reserved = Math.max(match.getJoinedPlayers(), 0);
-        return Math.min(100, (reserved * 100) / match.getMaxPlayers());
     }
 
     private static String toPriceLabel(final BigDecimal pricePerPlayer) {
@@ -285,8 +270,16 @@ public class EventController {
         return compact.substring(0, 1).toUpperCase();
     }
 
-    private static boolean isNumeric(final String value) {
-        return value != null && value.matches("\\d+");
+    private static Long parseEventIdOrThrowNotFound(final String eventId) {
+        if (eventId == null || !eventId.matches("\\d+")) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        
+        try {
+            return Long.valueOf(eventId);
+        } catch (final NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
     }
 
     private static String mediaClassFor(final Sport sport) {

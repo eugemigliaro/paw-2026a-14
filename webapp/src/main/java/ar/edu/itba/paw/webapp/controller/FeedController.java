@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -10,8 +12,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.NavItemViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -59,12 +60,7 @@ public class FeedController {
                 matchService.searchPublicMatches(
                         query, sport, time, sort, page, PAGE_SIZE, timezone);
         final ModelAndView mav = new ModelAndView("feed/index");
-        mav.addObject(
-                "shell",
-                new ShellViewModel(
-                        "Match Point",
-                        new NavItemViewModel("Switch to Hosting", "/host/events/new", false),
-                        List.of()));
+        mav.addObject("shell", ShellViewModelFactory.browseShell());
         final String safeSort = normalizeSort(sort);
         mav.addObject("selectedSort", safeSort);
         mav.addObject(
@@ -251,9 +247,9 @@ public class FeedController {
                 schedule,
                 priceLabel,
                 match.getAvailableSpots() + " spots left",
-                "All levels",
+                null,
                 mediaClassFor(match.getSport()),
-                List.of("MP", "IA", "JV"));
+                bannerUrlFor(match));
     }
 
     private static String mediaClassFor(final Sport sport) {

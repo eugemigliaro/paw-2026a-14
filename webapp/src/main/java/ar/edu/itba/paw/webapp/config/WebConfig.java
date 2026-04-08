@@ -14,6 +14,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.web.multipart.MultipartResolver;
+import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -49,7 +51,13 @@ public class WebConfig implements WebMvcConfigurer {
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
+        viewResolver.setContentType("text/html; charset=UTF-8");
         return viewResolver;
+    }
+
+    @Bean(name = "multipartResolver")
+    public MultipartResolver multipartResolver() {
+        return new StandardServletMultipartResolver();
     }
 
     @Bean

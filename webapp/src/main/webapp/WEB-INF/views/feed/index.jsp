@@ -117,6 +117,14 @@
 									className="event-card"
 									ariaLabel="${event.title}">
 									<div class="event-card__media ${event.mediaClass}">
+										<c:if test="${not empty event.bannerImageUrl}">
+											<img
+												class="event-card__image"
+												src="${pageContext.request.contextPath}${event.bannerImageUrl}"
+												alt=""
+												loading="lazy"
+												decoding="async" />
+										</c:if>
 										<span class="event-card__badge"><c:out value="${event.badge}" /></span>
 									</div>
 
@@ -126,19 +134,11 @@
 										<div class="event-card__meta">
 											<span><c:out value="${event.venue}" /></span>
 											<span><c:out value="${event.schedule}" /></span>
-											<span><c:out value="${event.level}" /></span>
 										</div>
 
 										<div class="event-card__footer">
-											<div class="event-card__avatars" aria-hidden="true">
-												<c:forEach var="attendee" items="${event.attendeeInitials}">
-													<span class="avatar-badge"><c:out value="${attendee}" /></span>
-												</c:forEach>
-											</div>
-
 											<div class="event-card__cta">
 												<span><c:out value="${event.priceLabel}" /></span>
-												<span>&middot; View event</span>
 											</div>
 										</div>
 									</div>
