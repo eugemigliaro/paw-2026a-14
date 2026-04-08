@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
@@ -240,6 +242,7 @@ public class EventController {
                 buildAvailabilityLabel(match),
                 "All levels",
                 mediaClassFor(match.getSport()),
+                bannerUrlFor(match),
                 List.of());
     }
 

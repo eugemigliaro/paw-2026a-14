@@ -17,6 +17,7 @@ public class MatchCreationPayload {
     private final String sport;
     private final String visibility;
     private final String status;
+    private final Long bannerImageId;
 
     @JsonCreator
     public MatchCreationPayload(
@@ -30,7 +31,8 @@ public class MatchCreationPayload {
             @JsonProperty("pricePerPlayer") final BigDecimal pricePerPlayer,
             @JsonProperty("sport") final String sport,
             @JsonProperty("visibility") final String visibility,
-            @JsonProperty("status") final String status) {
+            @JsonProperty("status") final String status,
+            @JsonProperty("bannerImageId") final Long bannerImageId) {
         this.hostUserId = hostUserId;
         this.address = address;
         this.title = title;
@@ -42,6 +44,7 @@ public class MatchCreationPayload {
         this.sport = sport;
         this.visibility = visibility;
         this.status = status;
+        this.bannerImageId = bannerImageId;
     }
 
     public Long getHostUserId() {
@@ -86,5 +89,9 @@ public class MatchCreationPayload {
 
     public String getStatus() {
         return status;
+    }
+
+    public Long getBannerImageId() {
+        return bannerImageId;
     }
 }

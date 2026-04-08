@@ -23,7 +23,8 @@ public interface MatchDao {
             BigDecimal pricePerPlayer,
             Sport sport,
             String visibility,
-            String status);
+            String status,
+            Long bannerImageId);
 
     Optional<Match> findById(Long matchId);
 

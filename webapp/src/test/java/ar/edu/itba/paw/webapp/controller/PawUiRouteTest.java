@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ActionVerificationService;
+import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
@@ -20,6 +21,9 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -55,7 +59,8 @@ class PawUiRouteTest {
                         BigDecimal.TEN,
                         "public",
                         "open",
-                        2);
+                        2,
+                        null);
 
         final MatchService matchService =
                 new MatchService() {
@@ -75,7 +80,8 @@ class PawUiRouteTest {
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
                                 request.getStatus(),
-                                0);
+                                0,
+                                null);
                     }
 
                     @Override
@@ -172,12 +178,37 @@ class PawUiRouteTest {
                     }
                 };
 
+        final ImageService imageService =
+                new ImageService() {
+                    @Override
+                    public Long store(
+                            final String contentType,
+                            final long contentLength,
+                            final InputStream contentStream)
+                            throws IOException {
+                        return 500L;
+                    }
+
+                    @Override
+                    public Optional<ar.edu.itba.paw.models.ImageMetadata> findMetadataById(
+                            final Long imageId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public boolean streamContentById(
+                            final Long imageId, final OutputStream outputStream)
+                            throws IOException {
+                        return false;
+                    }
+                };
+
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new FeedController(matchService),
                                 new EventController(
                                         matchService, userService, actionVerificationService),
-                                new HostController(actionVerificationService),
+                                new HostController(actionVerificationService, imageService),
                                 new UiController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)

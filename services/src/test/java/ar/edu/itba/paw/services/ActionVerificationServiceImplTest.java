@@ -166,7 +166,8 @@ public class ActionVerificationServiceImplTest {
                         BigDecimal.ZERO,
                         Sport.PADEL,
                         "public",
-                        "open");
+                        "open",
+                        null);
 
         Mockito.when(mvpIdentityService.findExistingByEmail("host@test.com"))
                 .thenReturn(Optional.empty());
@@ -230,7 +231,8 @@ public class ActionVerificationServiceImplTest {
                         BigDecimal.ZERO,
                         "public",
                         "open",
-                        0);
+                        0,
+                        null);
 
         // Arrange
         Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
@@ -287,7 +289,8 @@ public class ActionVerificationServiceImplTest {
                 BigDecimal.TEN,
                 "public",
                 "open",
-                joinedPlayers);
+                joinedPlayers,
+                null);
     }
 
     private static EmailActionRequest pendingRequest(final String payloadJson) {

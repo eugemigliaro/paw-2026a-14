@@ -55,7 +55,10 @@ public class MatchJdbcDao implements MatchDao {
                         price,
                         rs.getString("visibility"),
                         rs.getString("status"),
-                        rs.getInt("joined_players"));
+                        rs.getInt("joined_players"),
+                        rs.getObject("banner_image_id") == null
+                                ? null
+                                : rs.getLong("banner_image_id"));
             };
 
     private final JdbcTemplate jdbcTemplate;
@@ -82,7 +85,8 @@ public class MatchJdbcDao implements MatchDao {
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final String visibility,
-            final String status) {
+            final String status,
+            final Long bannerImageId) {
         final Map<String, Object> values = new HashMap<>();
         values.put("host_user_id", hostUserId);
         values.put("address", address);
@@ -95,6 +99,7 @@ public class MatchJdbcDao implements MatchDao {
         values.put("sport", new SqlParameterValue(Types.OTHER, sport.getDbValue()));
         values.put("visibility", new SqlParameterValue(Types.OTHER, visibility));
         values.put("status", new SqlParameterValue(Types.OTHER, status));
+        values.put("banner_image_id", bannerImageId);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
         values.put("updated_at", new Timestamp(System.currentTimeMillis()));
 
@@ -113,7 +118,8 @@ public class MatchJdbcDao implements MatchDao {
                 pricePerPlayer,
                 visibility,
                 status,
-                0);
+                0,
+                bannerImageId);
     }
 
     @Override

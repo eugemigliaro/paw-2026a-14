@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -253,6 +255,7 @@ public class FeedController {
                 match.getAvailableSpots() + " spots left",
                 "All levels",
                 mediaClassFor(match.getSport()),
+                bannerUrlFor(match),
                 List.of("MP", "IA", "JV"));
     }
 

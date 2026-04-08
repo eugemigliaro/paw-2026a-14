@@ -249,6 +249,7 @@ public final class PawUiMockData {
                 seed.getBadge(),
                 seed.getLevel(),
                 seed.getMediaClass(),
+                null,
                 attendeesFor(seed.getSport()));
     }
 

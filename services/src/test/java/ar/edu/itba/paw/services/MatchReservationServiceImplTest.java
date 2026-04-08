@@ -146,6 +146,7 @@ public class MatchReservationServiceImplTest {
                 BigDecimal.ZERO,
                 visibility,
                 status,
-                joinedPlayers);
+                joinedPlayers,
+                null);
     }
 }
