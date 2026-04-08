@@ -56,7 +56,8 @@ public class MatchJdbcDaoTest {
                         BigDecimal.ZERO,
                         Sport.TENNIS,
                         "public",
-                        "open");
+                        "open",
+                        null);
 
         Assertions.assertNotNull(created.getId());
         Assertions.assertEquals(Sport.TENNIS, created.getSport());
@@ -229,7 +230,8 @@ public class MatchJdbcDaoTest {
                         BigDecimal.ZERO,
                         Sport.PADEL,
                         "public",
-                        "open");
+                        "open",
+                        null);
 
         final Match found = matchDao.findPublicMatchById(created.getId()).orElseThrow();
 
@@ -252,7 +254,8 @@ public class MatchJdbcDaoTest {
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
                         "private",
-                        "open");
+                        "open",
+                        null);
 
         jdbcTemplate.update(
                 "INSERT INTO users (id, username, email, created_at, updated_at)"
@@ -288,7 +291,8 @@ public class MatchJdbcDaoTest {
                         BigDecimal.ZERO,
                         Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
                         "public",
-                        "open");
+                        "open",
+                        null);
 
         final Long matchId = created.getId();
 

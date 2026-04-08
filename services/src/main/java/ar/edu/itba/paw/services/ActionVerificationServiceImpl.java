@@ -162,7 +162,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 request.getPricePerPlayer(),
                                 request.getSport() == null ? null : request.getSport().getDbValue(),
                                 request.getVisibility(),
-                                request.getStatus()));
+                                request.getStatus(),
+                                request.getBannerImageId()));
 
         emailActionRequestDao.create(
                 EmailActionType.MATCH_CREATION,
@@ -275,7 +276,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 payload.getPricePerPlayer(),
                                 sport,
                                 payload.getVisibility(),
-                                payload.getStatus()));
+                                payload.getStatus(),
+                                payload.getBannerImageId()));
 
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.COMPLETED, user.getId(), Instant.now(clock));

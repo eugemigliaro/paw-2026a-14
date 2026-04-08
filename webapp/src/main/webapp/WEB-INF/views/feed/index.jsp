@@ -117,6 +117,14 @@
 									className="event-card"
 									ariaLabel="${event.title}">
 									<div class="event-card__media ${event.mediaClass}">
+										<c:if test="${not empty event.bannerImageUrl}">
+											<img
+												class="event-card__image"
+												src="${pageContext.request.contextPath}${event.bannerImageUrl}"
+												alt=""
+												loading="lazy"
+												decoding="async" />
+										</c:if>
 										<span class="event-card__badge"><c:out value="${event.badge}" /></span>
 									</div>
 

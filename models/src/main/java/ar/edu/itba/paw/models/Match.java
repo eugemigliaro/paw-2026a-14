@@ -18,6 +18,7 @@ public class Match {
     private final String visibility;
     private final String status;
     private final int joinedPlayers;
+    private final Long bannerImageId;
 
     public Match(
             final Long id,
@@ -32,7 +33,8 @@ public class Match {
             final BigDecimal pricePerPlayer,
             final String visibility,
             final String status,
-            final int joinedPlayers) {
+            final int joinedPlayers,
+            final Long bannerImageId) {
         this.id = id;
         this.sport = sport;
         this.hostUserId = hostUserId;
@@ -46,6 +48,7 @@ public class Match {
         this.visibility = visibility;
         this.status = status;
         this.joinedPlayers = joinedPlayers;
+        this.bannerImageId = bannerImageId;
     }
 
     public Long getId() {
@@ -98,6 +101,14 @@ public class Match {
 
     public int getJoinedPlayers() {
         return joinedPlayers;
+    }
+
+    public Long getBannerImageId() {
+        return bannerImageId;
+    }
+
+    public boolean hasBannerImage() {
+        return bannerImageId != null;
     }
 
     public int getAvailableSpots() {

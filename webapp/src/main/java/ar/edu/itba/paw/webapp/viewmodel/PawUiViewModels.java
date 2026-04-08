@@ -150,6 +150,7 @@ public final class PawUiViewModels {
         private final String badge;
         private final String level;
         private final String mediaClass;
+        private final String bannerImageUrl;
         private final List<String> attendeeInitials;
 
         public EventCardViewModel(
@@ -163,6 +164,7 @@ public final class PawUiViewModels {
                 final String badge,
                 final String level,
                 final String mediaClass,
+                final String bannerImageUrl,
                 final List<String> attendeeInitials) {
             this.id = id;
             this.href = href;
@@ -174,6 +176,7 @@ public final class PawUiViewModels {
             this.badge = badge;
             this.level = level;
             this.mediaClass = mediaClass;
+            this.bannerImageUrl = bannerImageUrl;
             this.attendeeInitials = attendeeInitials;
         }
 
@@ -215,6 +218,14 @@ public final class PawUiViewModels {
 
         public String getMediaClass() {
             return mediaClass;
+        }
+
+        public String getBannerImageUrl() {
+            return bannerImageUrl;
+        }
+
+        public boolean hasBannerImage() {
+            return bannerImageUrl != null && !bannerImageUrl.isBlank();
         }
 
         public List<String> getAttendeeInitials() {
