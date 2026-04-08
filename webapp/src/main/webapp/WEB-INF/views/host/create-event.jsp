@@ -15,14 +15,11 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 			<main class="page-shell">
 				<section class="create-layout__main">
 					<header class="page-heading">
-						<p class="eyebrow">
-							<c:out value="${createPage.eyebrow}" />
-						</p>
-						<h1 class="page-heading__title">
-							<c:out value="${createPage.title}" />
-						</h1>
+						<p class="eyebrow">Hosting</p>
+						<h1 class="page-heading__title">Create your event</h1>
 						<p class="page-heading__description">
-							<c:out value="${createPage.description}" />
+							Share the sport, location, schedule, and details players need
+							before they reserve a spot.
 						</p>
 					</header>
 
@@ -248,11 +245,9 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 								>
 							</label>
 							<div class="upload-card__guidance" role="note">
-								<p class="upload-card__guidance-title">
-									<c:out value="${createPage.uploadHint}" />
-								</p>
+								<p class="upload-card__guidance-title">Upload cover photo</p>
 								<p class="upload-card__guidance-copy">
-									<c:out value="${createPage.uploadCaption}" />
+									Recommended size: 1600 x 900 px
 								</p>
 								<p class="upload-card__guidance-copy">
 									The banner appears on the feed and event detail page.

@@ -7,7 +7,7 @@ import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.VerificationFailureException;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiMockData;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
@@ -43,8 +43,7 @@ public class HostController {
     @GetMapping("/host/events/new")
     public ModelAndView showCreateEvent() {
         final ModelAndView mav = new ModelAndView("host/create-event");
-        mav.addObject("shell", PawUiMockData.hostShell());
-        mav.addObject("createPage", PawUiMockData.createEventPage());
+        mav.addObject("shell", ShellViewModelFactory.hostShell());
         mav.addObject("createEventForm", createEventForm());
         return mav;
     }
@@ -94,7 +93,7 @@ public class HostController {
                     actionVerificationService.requestMatchCreation(
                             request, createEventForm.getEmail());
             final ModelAndView mav = new ModelAndView("verification/check-email");
-            mav.addObject("shell", PawUiMockData.hostShell());
+            mav.addObject("shell", ShellViewModelFactory.hostShell());
             mav.addObject("title", "Check your email");
             mav.addObject(
                     "summary",
@@ -119,8 +118,7 @@ public class HostController {
 
     private ModelAndView hostFormView(final CreateEventForm form, final String formError) {
         final ModelAndView mav = new ModelAndView("host/create-event");
-        mav.addObject("shell", PawUiMockData.hostShell());
-        mav.addObject("createPage", PawUiMockData.createEventPage());
+        mav.addObject("shell", ShellViewModelFactory.hostShell());
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         return mav;

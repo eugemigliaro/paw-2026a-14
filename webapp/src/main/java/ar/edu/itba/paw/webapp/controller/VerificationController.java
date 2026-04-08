@@ -5,7 +5,7 @@ import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureException;
 import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiMockData;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -36,7 +36,7 @@ public class VerificationController {
         try {
             final VerificationPreview preview = actionVerificationService.getPreview(token);
             final ModelAndView mav = new ModelAndView("verification/confirm");
-            mav.addObject("shell", PawUiMockData.browseShell());
+            mav.addObject("shell", ShellViewModelFactory.browseShell());
             mav.addObject("preview", preview);
             mav.addObject("confirmPath", "/verifications/" + token + "/confirm");
             mav.addObject(
@@ -60,7 +60,7 @@ public class VerificationController {
 
     private ModelAndView buildErrorView(final VerificationFailureException exception) {
         final ModelAndView mav = new ModelAndView("verification/error");
-        mav.addObject("shell", PawUiMockData.browseShell());
+        mav.addObject("shell", ShellViewModelFactory.browseShell());
         mav.addObject("title", titleFor(exception.getReason()));
         mav.addObject("message", exception.getMessage());
         mav.addObject("backHref", "/");

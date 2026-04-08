@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.webapp.viewmodel.PawUiMockData;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,7 +14,7 @@ public class ErrorPageController {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ModelAndView showNotFoundPage() {
         final ModelAndView mav = new ModelAndView("errors/not-found");
-        mav.addObject("shell", PawUiMockData.browseShell());
+        mav.addObject("shell", ShellViewModelFactory.browseShell());
         return mav;
     }
 }

@@ -256,52 +256,33 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 								</c:forEach>
 							</dl>
 
-							<c:choose>
-								<c:when test="${realEvent}">
-									<form
-										method="post"
-										action="${pageContext.request.contextPath}${reservationRequestPath}"
-										data-submit-guard="true"
-										data-submit-loading-label="Joining..."
-										class="booking-panel__request-form"
-									>
-										<ui:textInput
-											label="Email"
-											name="email"
-											type="email"
-											value="${reservationRequestForm.email}"
-											placeholder="you@example.com"
-											required="${true}"
-											autocomplete="email"
-										/>
-										<ui:button
-											label="${eventPage.ctaLabel}"
-											type="submit"
-											fullWidth="${true}"
-											disabled="${not reservationEnabled}"
-										/>
-									</form>
-								</c:when>
-								<c:otherwise>
-									<ui:button
-										label="Reserve a spot"
-										fullWidth="${true}"
-										disabled="${true}"
-									/>
-								</c:otherwise>
-							</c:choose>
+							<form
+								method="post"
+								action="${pageContext.request.contextPath}${reservationRequestPath}"
+								data-submit-guard="true"
+								data-submit-loading-label="Joining..."
+								class="booking-panel__request-form"
+							>
+								<ui:textInput
+									label="Email"
+									name="email"
+									type="email"
+									value="${reservationRequestForm.email}"
+									placeholder="you@example.com"
+									required="${true}"
+									autocomplete="email"
+								/>
+								<ui:button
+									label="${eventPage.ctaLabel}"
+									type="submit"
+									fullWidth="${true}"
+									disabled="${not reservationEnabled}"
+								/>
+							</form>
 
 							<p class="booking-panel__note">
-								<c:choose>
-									<c:when test="${realEvent}">
-										We send a one-time confirmation link to
-										finish the reservation.
-									</c:when>
-									<c:otherwise>
-										Preview only. Reservation stays disabled
-										on the mock event.
-									</c:otherwise>
-								</c:choose>
+								We send a one-time confirmation link to
+								finish the reservation.
 							</p>
 						</article>
 					</aside>
@@ -366,9 +347,6 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 										/></span>
 										<span
 											><c:out value="${event.schedule}"
-										/></span>
-										<span
-											><c:out value="${event.level}"
 										/></span>
 									</div>
 

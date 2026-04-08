@@ -134,7 +134,6 @@
 										<div class="event-card__meta">
 											<span><c:out value="${event.venue}" /></span>
 											<span><c:out value="${event.schedule}" /></span>
-											<span><c:out value="${event.level}" /></span>
 										</div>
 
 										<div class="event-card__footer">

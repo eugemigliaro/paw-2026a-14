@@ -210,7 +210,6 @@ class PawUiRouteTest {
                                         matchService, userService, actionVerificationService),
                                 new HostController(actionVerificationService, imageService),
                                 new ErrorPageController(),
-                                new UiController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)
                         .build();
@@ -226,27 +225,17 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getMockEventDetailsRouteRendersEventPage() throws Exception {
-        mockMvc.perform(get("/events/sunrise-padel-championship"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("events/detail"))
-                .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attributeExists("eventPage"));
-    }
-
-    @Test
     void getRealEventDetailsRouteRendersEventPage() throws Exception {
         mockMvc.perform(get("/events/42"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("events/detail"))
-                .andExpect(model().attribute("realEvent", true))
                 .andExpect(model().attributeExists("reservationRequestPath"))
                 .andExpect(
                         model().attribute(
-                                "eventPage",
-                                Matchers.hasProperty(
-                                        "aboutParagraphs",
-                                        Matchers.contains("Friendly\n doubles session"))))
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "aboutParagraphs",
+                                                Matchers.contains("Friendly\n doubles session"))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -278,8 +267,14 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getUnknownEventReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/events/unknown")).andExpect(status().isNotFound());
+    void getRemovedMockEventRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/events/sunrise-padel-championship"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getRemovedComponentPreviewRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/ui/components")).andExpect(status().isNotFound());
     }
 
     @Test
