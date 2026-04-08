@@ -2,24 +2,17 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.services.ImageService;
-import java.io.IOException;
-import java.io.InputStream;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @Controller
@@ -35,31 +28,9 @@ public class ImageController {
         this.imageService = imageService;
     }
 
-    @PostMapping(value = "/images", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> uploadImage(
-            @RequestParam("file") final MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Image file is required."));
-        }
-
-        try (InputStream inputStream = file.getInputStream()) {
-            final Long imageId =
-                    imageService.store(file.getContentType(), file.getSize(), inputStream);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("id", imageId, "url", "/images/" + imageId));
-        } catch (final IllegalArgumentException exception) {
-            return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
-        } catch (final IOException exception) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Unable to upload image."));
-        }
-    }
-
     @GetMapping("/images/{id}")
     public ResponseEntity<StreamingResponseBody> getImage(
-            @PathVariable("id") final Long imageId,
-            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false)
-                    final String ifNoneMatch) {
+            @PathVariable("id") final Long imageId, final WebRequest request) {
         final Optional<ImageMetadata> metadataOptional = imageService.findMetadataById(imageId);
         if (metadataOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -67,7 +38,7 @@ public class ImageController {
 
         final ImageMetadata metadata = metadataOptional.get();
         final String eTag = toWeakEtag(metadata);
-        if (eTag.equals(ifNoneMatch)) {
+        if (request.checkNotModified(eTag)) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
                     .cacheControl(IMAGE_CACHE_CONTROL)
                     .eTag(eTag)
