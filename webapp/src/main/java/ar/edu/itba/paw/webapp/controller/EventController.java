@@ -274,7 +274,12 @@ public class EventController {
         if (eventId == null || !eventId.matches("\\d+")) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return Long.valueOf(eventId);
+        
+        try {
+            return Long.valueOf(eventId);
+        } catch (final NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
     }
 
     private static String mediaClassFor(final Sport sport) {

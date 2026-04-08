@@ -20,8 +20,7 @@
 	content: none;
 }
 
-.error-hero__copy,
-.error-hero__visual {
+.error-hero__copy {
 	position: relative;
 	z-index: 1;
 }
