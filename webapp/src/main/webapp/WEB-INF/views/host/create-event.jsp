@@ -33,6 +33,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 						data-submit-loading-label="Publishing..."
 						cssClass="create-form"
 					>
+						<form:hidden path="timezone" id="event-timezone" />
 						<c:if test="${not empty formError}">
 							<p class="field__error">
 								<c:out value="${formError}" />
@@ -132,7 +133,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 							<h2 class="form-card__title">
 								Set the venue and time
 							</h2>
-							<div class="form-card__grid">
+							<div class="create-stack">
 								<label class="field" for="event-address">
 									<span class="field__label">Location</span>
 									<form:input
@@ -269,5 +270,18 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 				</section>
 			</main>
 		</div>
+		<script>
+			(function() {
+				var timezoneInput = document.getElementById("event-timezone");
+				if (!timezoneInput || !window.Intl || !Intl.DateTimeFormat) {
+					return;
+				}
+
+				var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+				if (timezone) {
+					timezoneInput.value = timezone;
+				}
+			})();
+		</script>
 	</body>
 </html>

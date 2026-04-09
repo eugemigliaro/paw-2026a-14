@@ -10,6 +10,7 @@ import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import javax.validation.Valid;
@@ -26,13 +27,16 @@ public class HostController {
 
     private final ActionVerificationService actionVerificationService;
     private final ImageService imageService;
+    private final Clock clock;
 
     @Autowired
     public HostController(
             final ActionVerificationService actionVerificationService,
-            final ImageService imageService) {
+            final ImageService imageService,
+            final Clock clock) {
         this.actionVerificationService = actionVerificationService;
         this.imageService = imageService;
+        this.clock = clock;
     }
 
     @ModelAttribute("createEventForm")
@@ -52,15 +56,23 @@ public class HostController {
     public ModelAndView publishEvent(
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult) {
+        if (!bindingResult.hasFieldErrors("eventDate")
+                && !bindingResult.hasFieldErrors("eventTime")
+                && !isScheduledInFuture(createEventForm)) {
+            bindingResult.rejectValue(
+                    "eventTime", "eventTime.past", "Event date and time cannot be in the past");
+        }
+
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null);
         }
 
+        final ZoneId eventZoneId = resolveZoneId(createEventForm.getTimezone());
         final Instant startsAt =
                 createEventForm
                         .getEventDate()
                         .atTime(createEventForm.getEventTime())
-                        .atZone(ZoneId.systemDefault())
+                        .atZone(eventZoneId)
                         .toInstant();
 
         final Long bannerImageId;
@@ -134,6 +146,25 @@ public class HostController {
                     form.getBannerImage().getContentType(),
                     form.getBannerImage().getSize(),
                     inputStream);
+        }
+    }
+
+    private boolean isScheduledInFuture(final CreateEventForm form) {
+        final ZoneId zoneId = resolveZoneId(form.getTimezone());
+        final Instant startsAt =
+                form.getEventDate().atTime(form.getEventTime()).atZone(zoneId).toInstant();
+        return startsAt.isAfter(Instant.now(clock));
+    }
+
+    private static ZoneId resolveZoneId(final String timezone) {
+        if (timezone == null || timezone.isBlank()) {
+            return ZoneId.systemDefault();
+        }
+
+        try {
+            return ZoneId.of(timezone);
+        } catch (final Exception ignored) {
+            return ZoneId.systemDefault();
         }
     }
 }

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Email;
+import javax.validation.constraints.FutureOrPresent;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -34,6 +35,7 @@ public class CreateEventForm {
     private String sport = "padel";
 
     @NotNull(message = "Event date is required")
+    @FutureOrPresent(message = "Event date cannot be in the past")
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate eventDate = LocalDate.now().plusDays(1);
 
@@ -48,6 +50,8 @@ public class CreateEventForm {
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0", inclusive = true, message = "Price cannot be negative")
     private BigDecimal pricePerPlayer = BigDecimal.ZERO;
+
+    private String timezone = "";
 
     private MultipartFile bannerImage;
 
@@ -121,6 +125,14 @@ public class CreateEventForm {
 
     public void setPricePerPlayer(final BigDecimal pricePerPlayer) {
         this.pricePerPlayer = pricePerPlayer;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(final String timezone) {
+        this.timezone = timezone;
     }
 
     public MultipartFile getBannerImage() {

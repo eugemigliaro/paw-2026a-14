@@ -25,17 +25,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 class PawUiRouteTest {
+
+    private static final Instant FIXED_NOW = Instant.parse("2026-04-10T18:00:00Z");
 
     private MockMvc mockMvc;
 
@@ -44,6 +50,9 @@ class PawUiRouteTest {
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
+        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.setMessageInterpolator(new ParameterMessageInterpolator());
+        validator.afterPropertiesSet();
 
         final Match realMatch =
                 new Match(
@@ -208,10 +217,14 @@ class PawUiRouteTest {
                                 new FeedController(matchService),
                                 new EventController(
                                         matchService, userService, actionVerificationService),
-                                new HostController(actionVerificationService, imageService),
+                                new HostController(
+                                        actionVerificationService,
+                                        imageService,
+                                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC)),
                                 new ErrorPageController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)
+                        .setValidator(validator)
                         .build();
     }
 
@@ -301,13 +314,52 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2026-04-10")
+                                .param("eventDate", "2026-04-11")
                                 .param("eventTime", "18:00")
+                                .param("timezone", "UTC")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/check-email"))
                 .andExpect(model().attributeExists("title"))
                 .andExpect(model().attributeExists("summary"));
+    }
+
+    @Test
+    void postHostPublishWithPastDateShowsValidationError() throws Exception {
+        mockMvc.perform(
+                        post("/host/events/new")
+                                .param("email", "host@test.com")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2020-04-10")
+                                .param("eventTime", "18:00")
+                                .param("timezone", "UTC")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-event"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "eventDate"));
+    }
+
+    @Test
+    void postHostPublishWithPastTimeTodayShowsValidationError() throws Exception {
+        mockMvc.perform(
+                        post("/host/events/new")
+                                .param("email", "host@test.com")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2026-04-10")
+                                .param("eventTime", "17:00")
+                                .param("timezone", "UTC")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-event"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "eventTime"));
     }
 }
