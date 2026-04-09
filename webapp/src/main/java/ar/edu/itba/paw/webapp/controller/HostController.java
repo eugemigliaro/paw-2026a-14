@@ -62,18 +62,30 @@ public class HostController {
             bindingResult.rejectValue(
                     "eventTime", "eventTime.past", "Event date and time cannot be in the past");
         }
+        if (!bindingResult.hasFieldErrors("eventDate")
+                && !bindingResult.hasFieldErrors("eventTime")
+                && !bindingResult.hasFieldErrors("endTime")
+                && !isEndTimeAfterStartTime(createEventForm)) {
+            bindingResult.rejectValue(
+                    "endTime", "endTime.beforeStart", "End time must be after start time");
+        }
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null);
         }
 
-        final ZoneId eventZoneId = resolveZoneId(createEventForm.getTimezone());
         final Instant startsAt =
-                createEventForm
-                        .getEventDate()
-                        .atTime(createEventForm.getEventTime())
-                        .atZone(eventZoneId)
-                        .toInstant();
+                toInstant(
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getTimezone());
+        final Instant endsAt =
+                createEventForm.getEndTime() == null
+                        ? null
+                        : toInstant(
+                                createEventForm.getEventDate(),
+                                createEventForm.getEndTime(),
+                                createEventForm.getTimezone());
 
         final Long bannerImageId;
         try {
@@ -92,7 +104,7 @@ public class HostController {
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
                         startsAt,
-                        null,
+                        endsAt,
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
@@ -150,10 +162,28 @@ public class HostController {
     }
 
     private boolean isScheduledInFuture(final CreateEventForm form) {
-        final ZoneId zoneId = resolveZoneId(form.getTimezone());
         final Instant startsAt =
-                form.getEventDate().atTime(form.getEventTime()).atZone(zoneId).toInstant();
+                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
         return startsAt.isAfter(Instant.now(clock));
+    }
+
+    private boolean isEndTimeAfterStartTime(final CreateEventForm form) {
+        if (form.getEndTime() == null) {
+            return true;
+        }
+
+        final Instant startsAt =
+                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
+        final Instant endsAt =
+                toInstant(form.getEventDate(), form.getEndTime(), form.getTimezone());
+        return endsAt.isAfter(startsAt);
+    }
+
+    private static Instant toInstant(
+            final java.time.LocalDate eventDate,
+            final java.time.LocalTime eventTime,
+            final String timezone) {
+        return eventDate.atTime(eventTime).atZone(resolveZoneId(timezone)).toInstant();
     }
 
     private static ZoneId resolveZoneId(final String timezone) {

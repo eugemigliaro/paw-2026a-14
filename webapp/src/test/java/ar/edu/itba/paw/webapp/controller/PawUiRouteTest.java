@@ -316,6 +316,7 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2026-04-11")
                                 .param("eventTime", "18:00")
+                                .param("endTime", "20:00")
                                 .param("timezone", "UTC")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
@@ -336,6 +337,7 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2020-04-10")
                                 .param("eventTime", "18:00")
+                                .param("endTime", "20:00")
                                 .param("timezone", "UTC")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
@@ -355,11 +357,32 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2026-04-10")
                                 .param("eventTime", "17:00")
+                                .param("endTime", "19:00")
                                 .param("timezone", "UTC")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-event"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "eventTime"));
+    }
+
+    @Test
+    void postHostPublishWithEndTimeBeforeStartTimeShowsValidationError() throws Exception {
+        mockMvc.perform(
+                        post("/host/events/new")
+                                .param("email", "host@test.com")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2026-04-11")
+                                .param("eventTime", "18:00")
+                                .param("endTime", "17:30")
+                                .param("timezone", "UTC")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-event"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
     }
 }

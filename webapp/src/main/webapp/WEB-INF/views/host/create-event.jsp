@@ -179,6 +179,21 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 										element="span"
 									/>
 								</label>
+
+								<label class="field" for="event-end-time">
+									<span class="field__label">End time</span>
+									<form:input
+										path="endTime"
+										id="event-end-time"
+										type="time"
+										cssClass="field__control"
+									/>
+									<form:errors
+										path="endTime"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
 							</div>
 						</article>
 

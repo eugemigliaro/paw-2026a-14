@@ -43,6 +43,9 @@ public class CreateEventForm {
     @DateTimeFormat(pattern = "HH:mm")
     private LocalTime eventTime = LocalTime.of(18, 0);
 
+    @DateTimeFormat(pattern = "HH:mm")
+    private LocalTime endTime;
+
     @NotNull(message = "Capacity is required")
     @Min(value = 1, message = "Capacity must be at least 1")
     private Integer maxPlayers = 8;
@@ -109,6 +112,14 @@ public class CreateEventForm {
 
     public void setEventTime(final LocalTime eventTime) {
         this.eventTime = eventTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(final LocalTime endTime) {
+        this.endTime = endTime;
     }
 
     public Integer getMaxPlayers() {

@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +43,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     private static final DateTimeFormatter MATCH_SCHEDULE_FORMATTER =
             DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
                     .withLocale(Locale.US);
+    private static final DateTimeFormatter MATCH_END_TIME_FORMATTER =
+            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.US);
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -415,6 +418,17 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
     private VerificationPreview buildMatchCreationPreview(
             final MatchCreationPayload payload, final String email, final Instant expiresAt) {
+        final List<VerificationPreviewDetail> details = new ArrayList<>();
+        details.add(new VerificationPreviewDetail("Sport", prettySport(payload.getSport())));
+        details.add(new VerificationPreviewDetail("Title", safeValue(payload.getTitle())));
+        details.add(new VerificationPreviewDetail("Venue", safeValue(payload.getAddress())));
+        details.add(new VerificationPreviewDetail("Schedule", formatStartSchedule(payload)));
+        if (payload.getEndsAtEpochMillis() != null) {
+            details.add(new VerificationPreviewDetail("End time", formatEndTime(payload)));
+        }
+        details.add(new VerificationPreviewDetail("Price", toPriceLabel(payload.getPricePerPlayer())));
+        details.add(new VerificationPreviewDetail("Capacity", String.valueOf(payload.getMaxPlayers())));
+
         return new VerificationPreview(
                 "Confirm your event publication",
                 "Use this one-time confirmation to publish your event.",
@@ -422,19 +436,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 expiresAt,
                 "Confirm event publication",
                 "/host/events/new",
-                List.of(
-                        new VerificationPreviewDetail("Sport", prettySport(payload.getSport())),
-                        new VerificationPreviewDetail("Title", safeValue(payload.getTitle())),
-                        new VerificationPreviewDetail("Venue", safeValue(payload.getAddress())),
-                        new VerificationPreviewDetail(
-                                "Schedule",
-                                MATCH_SCHEDULE_FORMATTER.format(
-                                        Instant.ofEpochMilli(payload.getStartsAtEpochMillis())
-                                                .atZone(ZoneId.systemDefault()))),
-                        new VerificationPreviewDetail(
-                                "Price", toPriceLabel(payload.getPricePerPlayer())),
-                        new VerificationPreviewDetail(
-                                "Capacity", String.valueOf(payload.getMaxPlayers()))));
+                details);
     }
 
     private static String safeValue(final String value) {
@@ -446,5 +448,17 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
             return "Padel";
         }
         return Sport.fromDbValue(sport).map(Sport::getDisplayName).orElse("Padel");
+    }
+
+    private static String formatStartSchedule(final MatchCreationPayload payload) {
+        final ZoneId zoneId = ZoneId.systemDefault();
+        return MATCH_SCHEDULE_FORMATTER.format(
+                Instant.ofEpochMilli(payload.getStartsAtEpochMillis()).atZone(zoneId));
+    }
+
+    private static String formatEndTime(final MatchCreationPayload payload) {
+        return MATCH_END_TIME_FORMATTER.format(
+                Instant.ofEpochMilli(payload.getEndsAtEpochMillis())
+                        .atZone(ZoneId.systemDefault()));
     }
 }
