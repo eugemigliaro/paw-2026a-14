@@ -274,7 +274,7 @@ public class EventController {
         if (eventId == null || !eventId.matches("\\d+")) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        
+
         try {
             return Long.valueOf(eventId);
         } catch (final NumberFormatException e) {

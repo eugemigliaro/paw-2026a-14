@@ -426,8 +426,10 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         if (payload.getEndsAtEpochMillis() != null) {
             details.add(new VerificationPreviewDetail("End time", formatEndTime(payload)));
         }
-        details.add(new VerificationPreviewDetail("Price", toPriceLabel(payload.getPricePerPlayer())));
-        details.add(new VerificationPreviewDetail("Capacity", String.valueOf(payload.getMaxPlayers())));
+        details.add(
+                new VerificationPreviewDetail("Price", toPriceLabel(payload.getPricePerPlayer())));
+        details.add(
+                new VerificationPreviewDetail("Capacity", String.valueOf(payload.getMaxPlayers())));
 
         return new VerificationPreview(
                 "Confirm your event publication",

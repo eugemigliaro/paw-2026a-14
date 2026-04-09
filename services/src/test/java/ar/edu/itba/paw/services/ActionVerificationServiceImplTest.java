@@ -221,7 +221,8 @@ public class ActionVerificationServiceImplTest {
                         .anyMatch(
                                 detail ->
                                         "End time".equals(detail.getLabel())
-                                                && END_TIME_FORMATTER.format(
+                                                && END_TIME_FORMATTER
+                                                        .format(
                                                                 endsAt.atZone(
                                                                         ZoneId.systemDefault()))
                                                         .equals(detail.getValue())));
@@ -329,7 +330,8 @@ public class ActionVerificationServiceImplTest {
                 actionVerificationService.confirm("raw-token");
 
         Assertions.assertEquals(5L, result.getUserId());
-        Assertions.assertEquals(Instant.ofEpochMilli(endsAtEpochMillis), capturedRequest.get().getEndsAt());
+        Assertions.assertEquals(
+                Instant.ofEpochMilli(endsAtEpochMillis), capturedRequest.get().getEndsAt());
     }
 
     @Test
