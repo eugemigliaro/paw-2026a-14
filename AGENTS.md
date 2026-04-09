@@ -28,6 +28,8 @@ This repository is currently a Maven multi-module Java project with these module
 - `persistence-contracts`
 - `models`
 
+For a compact repository map focused on codebase orientation, see `./docs/repo-structure.md`.
+
 The implemented stack today is:
 
 - Java 21
