@@ -289,11 +289,10 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 				<section class="detail-recommendations">
 					<div class="section-head">
 						<div>
-							<span class="detail-label">Around the area</span>
 							<h2
 								class="section-head__title section-head__title--detail"
 							>
-								More sports near you
+								You may also like
 							</h2>
 						</div>
 						<a

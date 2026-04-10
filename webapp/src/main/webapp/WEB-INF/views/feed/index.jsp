@@ -106,10 +106,9 @@
 					</section>
 
 					<section>
-						<div class="section-head">
+						<div class="section-head section-head--feed-list">
 							<div>
-								<h2 class="section-head__title">Trending this week</h2>
-								<p class="section-head__meta">Popular community sessions around the city.</p>
+								<h2 class="section-head__title section-head__title--feed-list">All events</h2>
 							</div>
 						</div>
 
