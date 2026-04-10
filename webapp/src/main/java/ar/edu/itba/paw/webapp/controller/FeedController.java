@@ -13,6 +13,7 @@ import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterOptionViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.PaginationItemViewModel;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -103,6 +104,14 @@ public class FeedController {
                 result.getItems().stream().map(match -> toCard(match, zoneId)).toList(),
                 result.getPage(),
                 result.getTotalPages(),
+                buildPaginationItems(
+                        query,
+                        normalizedSports,
+                        normalizedTime,
+                        selectedSort,
+                        timezone,
+                        result.getPage(),
+                        result.getTotalPages()),
                 result.hasPrevious()
                         ? buildUrl(
                                 query,
@@ -121,6 +130,73 @@ public class FeedController {
                                 result.getPage() + 1,
                                 timezone)
                         : null);
+    }
+
+    private static List<PaginationItemViewModel> buildPaginationItems(
+            final String query,
+            final List<String> selectedSports,
+            final String selectedTime,
+            final String selectedSort,
+            final String timezone,
+            final int currentPage,
+            final int totalPages) {
+        if (totalPages <= 1) {
+            return List.of();
+        }
+
+        final List<PaginationItemViewModel> items = new ArrayList<>();
+        final int startPage = Math.max(2, Math.min(currentPage - 1, totalPages - 3));
+        final int endPage = Math.min(totalPages - 1, Math.max(currentPage + 1, 4));
+
+        items.add(pageItem(
+                1, query, selectedSports, selectedTime, selectedSort, timezone, currentPage));
+
+        if (startPage > 2) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+
+        for (int page = startPage; page <= endPage; page++) {
+            items.add(
+                    pageItem(
+                            page,
+                            query,
+                            selectedSports,
+                            selectedTime,
+                            selectedSort,
+                            timezone,
+                            currentPage));
+        }
+
+        if (endPage < totalPages - 1) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+
+        items.add(
+                pageItem(
+                        totalPages,
+                        query,
+                        selectedSports,
+                        selectedTime,
+                        selectedSort,
+                        timezone,
+                        currentPage));
+
+        return items;
+    }
+
+    private static PaginationItemViewModel pageItem(
+            final int page,
+            final String query,
+            final List<String> selectedSports,
+            final String selectedTime,
+            final String selectedSort,
+            final String timezone,
+            final int currentPage) {
+        return new PaginationItemViewModel(
+                Integer.toString(page),
+                buildUrl(query, selectedSports, selectedTime, selectedSort, page, timezone),
+                page == currentPage,
+                false);
     }
 
     private static List<FilterGroupViewModel> buildFilterGroups(

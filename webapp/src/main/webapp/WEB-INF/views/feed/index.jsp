@@ -149,27 +149,57 @@
 							</c:forEach>
 						</div>
 
-						<div class="section-head">
-							<div>
-								<p class="section-head__meta">Page ${feedPage.page} of ${feedPage.totalPages}</p>
-							</div>
-							<div class="chip-row">
-								<c:if test="${not empty feedPage.previousPageHref}">
-									<ui:chip
-										label="Previous"
-										href="${pageContext.request.contextPath}${feedPage.previousPageHref}"
-										active="${false}"
-										tone="default" />
-								</c:if>
-								<c:if test="${not empty feedPage.nextPageHref}">
-									<ui:chip
-										label="Next"
-										href="${pageContext.request.contextPath}${feedPage.nextPageHref}"
-										active="${false}"
-										tone="default" />
-								</c:if>
-							</div>
-						</div>
+						<c:if test="${feedPage.totalPages > 1}">
+							<section class="feed-pagination" aria-label="Pagination">
+								<nav class="feed-pagination__nav" aria-label="Feed pages">
+									<c:choose>
+										<c:when test="${not empty feedPage.previousPageHref}">
+											<a
+												class="feed-pagination__control"
+												href="${pageContext.request.contextPath}${feedPage.previousPageHref}">
+												Previous
+											</a>
+										</c:when>
+										<c:otherwise>
+											<span class="feed-pagination__control feed-pagination__control--disabled">Previous</span>
+										</c:otherwise>
+									</c:choose>
+
+									<div class="feed-pagination__pages">
+										<c:forEach var="item" items="${feedPage.paginationItems}">
+											<c:choose>
+												<c:when test="${item.ellipsis}">
+													<span class="feed-pagination__ellipsis" aria-hidden="true">${item.label}</span>
+												</c:when>
+												<c:when test="${item.current}">
+													<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">${item.label}</span>
+												</c:when>
+												<c:otherwise>
+													<a
+														class="feed-pagination__page"
+														href="${pageContext.request.contextPath}${item.href}">
+														${item.label}
+													</a>
+												</c:otherwise>
+											</c:choose>
+										</c:forEach>
+									</div>
+
+									<c:choose>
+										<c:when test="${not empty feedPage.nextPageHref}">
+											<a
+												class="feed-pagination__control"
+												href="${pageContext.request.contextPath}${feedPage.nextPageHref}">
+												Next
+											</a>
+										</c:when>
+										<c:otherwise>
+											<span class="feed-pagination__control feed-pagination__control--disabled">Next</span>
+										</c:otherwise>
+									</c:choose>
+								</nav>
+							</section>
+						</c:if>
 					</section>
 				</section>
 			</main>

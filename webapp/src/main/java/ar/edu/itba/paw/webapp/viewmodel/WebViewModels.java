@@ -139,6 +139,40 @@ public final class WebViewModels {
         }
     }
 
+    public static final class PaginationItemViewModel {
+        private final String label;
+        private final String href;
+        private final boolean current;
+        private final boolean ellipsis;
+
+        public PaginationItemViewModel(
+                final String label,
+                final String href,
+                final boolean current,
+                final boolean ellipsis) {
+            this.label = label;
+            this.href = href;
+            this.current = current;
+            this.ellipsis = ellipsis;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getHref() {
+            return href;
+        }
+
+        public boolean isCurrent() {
+            return current;
+        }
+
+        public boolean isEllipsis() {
+            return ellipsis;
+        }
+    }
+
     public static final class EventCardViewModel {
         private final String id;
         private final String href;
@@ -237,6 +271,7 @@ public final class WebViewModels {
         private final List<EventCardViewModel> featuredEvents;
         private final int page;
         private final int totalPages;
+        private final List<PaginationItemViewModel> paginationItems;
         private final String previousPageHref;
         private final String nextPageHref;
 
@@ -251,6 +286,7 @@ public final class WebViewModels {
                 final List<EventCardViewModel> featuredEvents,
                 final int page,
                 final int totalPages,
+                final List<PaginationItemViewModel> paginationItems,
                 final String previousPageHref,
                 final String nextPageHref) {
             this.eyebrow = eyebrow;
@@ -263,6 +299,7 @@ public final class WebViewModels {
             this.featuredEvents = featuredEvents;
             this.page = page;
             this.totalPages = totalPages;
+            this.paginationItems = paginationItems;
             this.previousPageHref = previousPageHref;
             this.nextPageHref = nextPageHref;
         }
@@ -305,6 +342,10 @@ public final class WebViewModels {
 
         public int getTotalPages() {
             return totalPages;
+        }
+
+        public List<PaginationItemViewModel> getPaginationItems() {
+            return paginationItems;
         }
 
         public String getPreviousPageHref() {
