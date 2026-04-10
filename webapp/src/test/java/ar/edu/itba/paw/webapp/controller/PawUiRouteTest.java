@@ -238,6 +238,14 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getFeedRoutePreservesMultipleSelectedSports() throws Exception {
+        mockMvc.perform(get("/").param("sport", "football", "tennis"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(model().attribute("selectedSports", Matchers.contains("football", "tennis")));
+    }
+
+    @Test
     void getRealEventDetailsRouteRendersEventPage() throws Exception {
         mockMvc.perform(get("/events/42"))
                 .andExpect(status().isOk())

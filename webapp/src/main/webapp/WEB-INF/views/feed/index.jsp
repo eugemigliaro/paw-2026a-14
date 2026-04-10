@@ -62,7 +62,9 @@
 								action="${pageContext.request.contextPath}/"
 								modelAttribute="feedSearchForm"
 								cssClass="search-panel__form">
-								<input type="hidden" name="sport" value="<c:out value='${param.sport}' />" />
+								<c:forEach var="selectedSport" items="${selectedSports}">
+									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
+								</c:forEach>
 								<input type="hidden" name="time" value="<c:out value='${param.time}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 								<input type="hidden" name="tz" value="<c:out value='${param.tz}' />" />
@@ -82,7 +84,9 @@
 
 						<form method="get" action="${pageContext.request.contextPath}/" class="sort-panel" aria-label="Sort events">
 							<input type="hidden" name="q" value="<c:out value='${param.q}' />" />
-							<input type="hidden" name="sport" value="<c:out value='${param.sport}' />" />
+							<c:forEach var="selectedSport" items="${selectedSports}">
+								<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
+							</c:forEach>
 							<input type="hidden" name="time" value="<c:out value='${param.time}' />" />
 							<input type="hidden" name="tz" value="<c:out value='${param.tz}' />" />
 							<input type="hidden" name="page" value="1" />

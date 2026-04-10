@@ -35,7 +35,7 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDao.findPublicMatches(
                                 "football",
-                                Sport.FOOTBALL,
+                                List.of(Sport.FOOTBALL),
                                 EventTimeFilter.WEEK,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
@@ -44,7 +44,10 @@ public class MatchServiceImplTest {
                 .thenReturn(List.of(match));
         Mockito.when(
                         matchDao.countPublicMatches(
-                                "football", Sport.FOOTBALL, EventTimeFilter.WEEK, ZoneId.of("UTC")))
+                                "football",
+                                List.of(Sport.FOOTBALL),
+                                EventTimeFilter.WEEK,
+                                ZoneId.of("UTC")))
                 .thenReturn(25);
 
         final PaginatedResult<Match> result =
@@ -64,7 +67,7 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDao.findPublicMatches(
                                 null,
-                                Sport.PADEL,
+                                List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
@@ -73,7 +76,7 @@ public class MatchServiceImplTest {
                 .thenReturn(List.of(match));
         Mockito.when(
                         matchDao.countPublicMatches(
-                                null, Sport.PADEL, EventTimeFilter.ALL, ZoneId.of("UTC")))
+                                null, List.of(Sport.PADEL), EventTimeFilter.ALL, ZoneId.of("UTC")))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
@@ -81,6 +84,43 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Padel", result.getItems().get(0).getTitle());
+        Assertions.assertEquals(1, result.getTotalPages());
+    }
+
+    @Test
+    public void testSearchPublicMatchesWithMultipleSports() {
+        final Match footballMatch = createTestMatch(1L, "Football", "football");
+        final Match tennisMatch = createTestMatch(2L, "Tennis", "tennis");
+        Mockito.when(
+                        matchDao.findPublicMatches(
+                                null,
+                                List.of(Sport.FOOTBALL, Sport.TENNIS),
+                                EventTimeFilter.ALL,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
+                                0,
+                                12))
+                .thenReturn(List.of(footballMatch, tennisMatch));
+        Mockito.when(
+                        matchDao.countPublicMatches(
+                                null,
+                                List.of(Sport.FOOTBALL, Sport.TENNIS),
+                                EventTimeFilter.ALL,
+                                ZoneId.of("UTC")))
+                .thenReturn(2);
+
+        final PaginatedResult<Match> result =
+                matchService.searchPublicMatches(
+                        null,
+                        "football,tennis,invalid,football",
+                        null,
+                        null,
+                        1,
+                        12,
+                        "UTC");
+
+        Assertions.assertEquals(2, result.getItems().size());
+        Assertions.assertEquals(2, result.getTotalCount());
         Assertions.assertEquals(1, result.getTotalPages());
     }
 

@@ -65,7 +65,7 @@ public class MatchJdbcDaoTest {
         final List<Match> found =
                 matchDao.findPublicMatches(
                         null,
-                        Sport.TENNIS,
+                        List.of(Sport.TENNIS),
                         EventTimeFilter.WEEK,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
@@ -95,7 +95,7 @@ public class MatchJdbcDaoTest {
         final List<Match> result =
                 matchDao.findPublicMatches(
                         "football",
-                        null,
+                        List.of(),
                         EventTimeFilter.WEEK,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
@@ -121,7 +121,7 @@ public class MatchJdbcDaoTest {
         final List<Match> result =
                 matchDao.findPublicMatches(
                         null,
-                        Sport.PADEL,
+                        List.of(Sport.PADEL),
                         EventTimeFilter.WEEK,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
@@ -141,7 +141,7 @@ public class MatchJdbcDaoTest {
         final List<Match> result =
                 matchDao.findPublicMatches(
                         null,
-                        null,
+                        List.of(),
                         EventTimeFilter.WEEK,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
@@ -161,7 +161,7 @@ public class MatchJdbcDaoTest {
         final List<Match> firstPage =
                 matchDao.findPublicMatches(
                         null,
-                        null,
+                        List.of(),
                         EventTimeFilter.WEEK,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
@@ -170,7 +170,7 @@ public class MatchJdbcDaoTest {
         final List<Match> secondPage =
                 matchDao.findPublicMatches(
                         null,
-                        null,
+                        List.of(),
                         EventTimeFilter.WEEK,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
@@ -182,7 +182,7 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(
                 3,
                 matchDao.countPublicMatches(
-                        null, null, EventTimeFilter.WEEK, ZoneId.systemDefault()));
+                        null, List.of(), EventTimeFilter.WEEK, ZoneId.systemDefault()));
     }
 
     @Test
@@ -205,7 +205,7 @@ public class MatchJdbcDaoTest {
         final List<Match> result =
                 matchDao.findPublicMatches(
                         null,
-                        null,
+                        List.of(),
                         EventTimeFilter.ALL,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
@@ -214,6 +214,44 @@ public class MatchJdbcDaoTest {
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals("Upcoming Match", result.get(0).getTitle());
+    }
+
+    @Test
+    public void testFindPublicEventsByMultipleSportFilters() {
+        insertMatch(
+                "Morning Football",
+                "Fast 5v5 match",
+                "football",
+                10,
+                0,
+                ZonedDateTime.now().plusDays(1));
+        insertMatch(
+                "Evening Padel", "Doubles games", "padel", 10, 0, ZonedDateTime.now().plusDays(1));
+        insertMatch(
+                "Basketball Session",
+                "Stretching",
+                "basketball",
+                10,
+                0,
+                ZonedDateTime.now().plusDays(1));
+
+        final List<Match> result =
+                matchDao.findPublicMatches(
+                        null,
+                        List.of(Sport.FOOTBALL, Sport.PADEL),
+                        EventTimeFilter.WEEK,
+                        MatchSort.SOONEST,
+                        ZoneId.systemDefault(),
+                        0,
+                        20);
+
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertTrue(
+                result.stream()
+                        .allMatch(
+                                match ->
+                                        match.getSport() == Sport.FOOTBALL
+                                                || match.getSport() == Sport.PADEL));
     }
 
     @Test

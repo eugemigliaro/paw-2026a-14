@@ -147,7 +147,7 @@ public class MatchJdbcDao implements MatchDao {
     @Override
     public List<Match> findPublicMatches(
             final String query,
-            final Sport sport,
+            final List<Sport> sports,
             final EventTimeFilter timeFilter,
             final MatchSort sort,
             final ZoneId zoneId,
@@ -158,7 +158,7 @@ public class MatchJdbcDao implements MatchDao {
 
         sql.append("SELECT m.*, COUNT(mp.id) AS joined_players");
         sql.append(BASE_FROM);
-        appendFilters(sql, params, query, sport, timeFilter, zoneId);
+        appendFilters(sql, params, query, sports, timeFilter, zoneId);
         sql.append(BASE_GROUP_BY);
         appendSort(sql, sort);
         sql.append(" LIMIT ? OFFSET ?");
@@ -171,7 +171,7 @@ public class MatchJdbcDao implements MatchDao {
     @Override
     public int countPublicMatches(
             final String query,
-            final Sport sport,
+            final List<Sport> sports,
             final EventTimeFilter timeFilter,
             final ZoneId zoneId) {
         final StringBuilder sql = new StringBuilder();
@@ -180,7 +180,7 @@ public class MatchJdbcDao implements MatchDao {
         sql.append("SELECT COUNT(*) FROM (");
         sql.append("SELECT m.id");
         sql.append(BASE_FROM);
-        appendFilters(sql, params, query, sport, timeFilter, zoneId);
+        appendFilters(sql, params, query, sports, timeFilter, zoneId);
         sql.append(BASE_GROUP_BY);
         sql.append(") filtered_matches");
 
@@ -191,7 +191,7 @@ public class MatchJdbcDao implements MatchDao {
             final StringBuilder sql,
             final List<Object> params,
             final String query,
-            final Sport sport,
+            final List<Sport> sports,
             final EventTimeFilter timeFilter,
             final ZoneId zoneId) {
         sql.append(" WHERE m.visibility = 'public' AND m.status = 'open'");
@@ -205,9 +205,16 @@ public class MatchJdbcDao implements MatchDao {
             params.add(queryPattern);
         }
 
-        if (sport != null) {
-            sql.append(" AND CAST(m.sport AS VARCHAR(30)) = ?");
-            params.add(sport.getDbValue());
+        if (sports != null && !sports.isEmpty()) {
+            sql.append(" AND CAST(m.sport AS VARCHAR(30)) IN (");
+            for (int i = 0; i < sports.size(); i++) {
+                if (i > 0) {
+                    sql.append(", ");
+                }
+                sql.append("?");
+                params.add(sports.get(i).getDbValue());
+            }
+            sql.append(")");
         }
 
         if (timeFilter != null) {

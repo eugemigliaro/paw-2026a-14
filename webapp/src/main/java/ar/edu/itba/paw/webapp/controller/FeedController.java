@@ -17,6 +17,8 @@ import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -47,7 +49,7 @@ public class FeedController {
     public ModelAndView showFeed(
             @Valid @ModelAttribute("feedSearchForm") final FeedSearchForm feedSearchForm,
             final BindingResult bindingResult,
-            @RequestParam(value = "sport", required = false) final String sport,
+            @RequestParam(value = "sport", required = false) final List<String> sports,
             @RequestParam(value = "time", defaultValue = "all") final String time,
             @RequestParam(value = "sort", defaultValue = "soonest") final String sort,
             @RequestParam(value = "page", defaultValue = "1") final int page,
@@ -56,31 +58,32 @@ public class FeedController {
                 bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
                         ? ""
                         : feedSearchForm.getQ();
+        final List<String> normalizedSports = normalizeSports(sports);
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        query, sport, time, sort, page, PAGE_SIZE, timezone);
+                        query, encodeSports(normalizedSports), time, sort, page, PAGE_SIZE, timezone);
         final ModelAndView mav = new ModelAndView("feed/index");
         mav.addObject("shell", ShellViewModelFactory.browseShell());
         final String safeSort = normalizeSort(sort);
         mav.addObject("selectedSort", safeSort);
+        mav.addObject("selectedSports", normalizedSports);
         mav.addObject(
-                "feedPage", buildFeedPageViewModel(query, sport, time, safeSort, timezone, result));
+                "feedPage",
+                buildFeedPageViewModel(
+                        query, normalizedSports, time, safeSort, timezone, result));
         return mav;
     }
 
     private FeedPageViewModel buildFeedPageViewModel(
             final String query,
-            final String selectedSport,
+            final List<String> selectedSports,
             final String selectedTime,
             final String selectedSort,
             final String timezone,
             final PaginatedResult<Match> result) {
 
         final ZoneId zoneId = parseZone(timezone);
-        final String normalizedSport =
-                selectedSport == null
-                        ? ""
-                        : Sport.fromDbValue(selectedSport).map(Sport::getDbValue).orElse("");
+        final List<String> normalizedSports = normalizeSports(selectedSports);
         final String normalizedTime = normalizeTime(selectedTime);
 
         return new FeedPageViewModel(
@@ -91,14 +94,14 @@ public class FeedController {
                 "What sports event are you looking for?",
                 "Find Matches",
                 List.of(),
-                buildFilterGroups(query, normalizedSport, normalizedTime, selectedSort, timezone),
+                buildFilterGroups(query, normalizedSports, normalizedTime, selectedSort, timezone),
                 result.getItems().stream().map(match -> toCard(match, zoneId)).toList(),
                 result.getPage(),
                 result.getTotalPages(),
                 result.hasPrevious()
                         ? buildUrl(
                                 query,
-                                normalizedSport,
+                                normalizedSports,
                                 normalizedTime,
                                 selectedSort,
                                 result.getPage() - 1,
@@ -107,7 +110,7 @@ public class FeedController {
                 result.hasNext()
                         ? buildUrl(
                                 query,
-                                normalizedSport,
+                                normalizedSports,
                                 normalizedTime,
                                 selectedSort,
                                 result.getPage() + 1,
@@ -117,7 +120,7 @@ public class FeedController {
 
     private static List<FilterGroupViewModel> buildFilterGroups(
             final String query,
-            final String selectedSport,
+            final List<String> selectedSports,
             final String selectedTime,
             final String selectedSort,
             final String timezone) {
@@ -129,57 +132,58 @@ public class FeedController {
                                 new FilterOptionViewModel(
                                         "Any sport",
                                         buildUrl(
-                                                query, "", selectedTime, selectedSort, 1, timezone),
+                                                query,
+                                                List.of(),
+                                                selectedTime,
+                                                selectedSort,
+                                                1,
+                                                timezone),
                                         null,
-                                        selectedSport.isBlank()),
+                                        selectedSports.isEmpty()),
                                 new FilterOptionViewModel(
                                         "Football",
                                         buildUrl(
                                                 query,
-                                                Sport.FOOTBALL.getDbValue(),
+                                                toggleSport(selectedSports, Sport.FOOTBALL),
                                                 selectedTime,
                                                 selectedSort,
                                                 1,
                                                 timezone),
                                         null,
-                                        Sport.FOOTBALL
-                                                .getDbValue()
-                                                .equalsIgnoreCase(selectedSport)),
+                                        isSportSelected(selectedSports, Sport.FOOTBALL)),
                                 new FilterOptionViewModel(
                                         "Tennis",
                                         buildUrl(
                                                 query,
-                                                Sport.TENNIS.getDbValue(),
+                                                toggleSport(selectedSports, Sport.TENNIS),
                                                 selectedTime,
                                                 selectedSort,
                                                 1,
                                                 timezone),
                                         null,
-                                        Sport.TENNIS.getDbValue().equalsIgnoreCase(selectedSport)),
+                                        isSportSelected(selectedSports, Sport.TENNIS)),
                                 new FilterOptionViewModel(
                                         "Basketball",
                                         buildUrl(
                                                 query,
-                                                Sport.BASKETBALL.getDbValue(),
+                                                toggleSport(selectedSports, Sport.BASKETBALL),
                                                 selectedTime,
                                                 selectedSort,
                                                 1,
                                                 timezone),
                                         null,
-                                        Sport.BASKETBALL
-                                                .getDbValue()
-                                                .equalsIgnoreCase(selectedSport)),
+                                        isSportSelected(selectedSports, Sport.BASKETBALL)),
                                 new FilterOptionViewModel(
                                         "Padel",
                                         buildUrl(
                                                 query,
-                                                Sport.PADEL.getDbValue(),
+                                                toggleSport(selectedSports, Sport.PADEL),
                                                 selectedTime,
                                                 selectedSort,
                                                 1,
                                                 timezone),
                                         null,
-                                        Sport.PADEL.getDbValue().equalsIgnoreCase(selectedSport)))),
+                                        isSportSelected(selectedSports, Sport.PADEL)))),
                 new FilterGroupViewModel(
                         "Time",
                         List.of(
@@ -187,7 +191,7 @@ public class FeedController {
                                         "Any time",
                                         buildUrl(
                                                 query,
-                                                selectedSport,
+                                                selectedSports,
                                                 "all",
                                                 selectedSort,
                                                 1,
@@ -198,7 +202,7 @@ public class FeedController {
                                         "Today",
                                         buildUrl(
                                                 query,
-                                                selectedSport,
+                                                selectedSports,
                                                 "today",
                                                 selectedSort,
                                                 1,
@@ -209,7 +213,7 @@ public class FeedController {
                                         "Tomorrow",
                                         buildUrl(
                                                 query,
-                                                selectedSport,
+                                                selectedSports,
                                                 "tomorrow",
                                                 selectedSort,
                                                 1,
@@ -220,7 +224,7 @@ public class FeedController {
                                         "This week",
                                         buildUrl(
                                                 query,
-                                                selectedSport,
+                                                selectedSports,
                                                 "week",
                                                 selectedSort,
                                                 1,
@@ -280,7 +284,7 @@ public class FeedController {
 
     private static String buildUrl(
             final String query,
-            final String sport,
+            final List<String> sports,
             final String time,
             final String sort,
             final int page,
@@ -293,7 +297,7 @@ public class FeedController {
                         .queryParam("sort", normalizeSort(sort))
                         .queryParam("page", page);
 
-        if (sport != null && !sport.isBlank()) {
+        for (final String sport : normalizeSports(sports)) {
             builder.queryParam("sport", sport.toLowerCase(Locale.ROOT));
         }
         if (timezone != null && !timezone.isBlank()) {
@@ -326,5 +330,39 @@ public class FeedController {
             default:
                 return "all";
         }
+    }
+
+    private static List<String> normalizeSports(final List<String> sports) {
+        if (sports == null || sports.isEmpty()) {
+            return List.of();
+        }
+
+        final LinkedHashSet<String> normalizedSports = new LinkedHashSet<>();
+        for (final String sport : sports) {
+            if (sport == null || sport.isBlank()) {
+                continue;
+            }
+            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(normalizedSports::add);
+        }
+
+        return List.copyOf(normalizedSports);
+    }
+
+    private static boolean isSportSelected(final List<String> selectedSports, final Sport sport) {
+        return normalizeSports(selectedSports).contains(sport.getDbValue());
+    }
+
+    private static String encodeSports(final List<String> sports) {
+        return String.join(",", normalizeSports(sports));
+    }
+
+    private static List<String> toggleSport(
+            final List<String> selectedSports, final Sport sportToToggle) {
+        final List<String> toggledSports = new ArrayList<>(normalizeSports(selectedSports));
+        if (!toggledSports.remove(sportToToggle.getDbValue())) {
+            toggledSports.add(sportToToggle.getDbValue());
+        }
+
+        return List.copyOf(toggledSports);
     }
 }

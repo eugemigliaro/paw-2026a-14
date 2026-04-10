@@ -32,12 +32,13 @@ public interface MatchDao {
 
     List<Match> findPublicMatches(
             String query,
-            Sport sport,
+            List<Sport> sports,
             EventTimeFilter timeFilter,
             MatchSort sort,
             ZoneId zoneId,
             int offset,
             int limit);
 
-    int countPublicMatches(String query, Sport sport, EventTimeFilter timeFilter, ZoneId zoneId);
+    int countPublicMatches(
+            String query, List<Sport> sports, EventTimeFilter timeFilter, ZoneId zoneId);
 }
