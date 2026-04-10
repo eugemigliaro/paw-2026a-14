@@ -285,18 +285,6 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 				</section>
 			</main>
 		</div>
-		<script>
-			(function() {
-				var timezoneInput = document.getElementById("event-timezone");
-				if (!timezoneInput || !window.Intl || !Intl.DateTimeFormat) {
-					return;
-				}
-
-				var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-				if (timezone) {
-					timezoneInput.value = timezone;
-				}
-			})();
-		</script>
+		<script src="${pageContext.request.contextPath}/js/create-event.js"></script>
 	</body>
 </html>
