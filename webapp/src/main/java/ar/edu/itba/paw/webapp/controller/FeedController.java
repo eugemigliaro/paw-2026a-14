@@ -8,11 +8,11 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FeedPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterGroupViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterOptionViewModel;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -61,7 +61,13 @@ public class FeedController {
         final List<String> normalizedSports = normalizeSports(sports);
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        query, encodeSports(normalizedSports), time, sort, page, PAGE_SIZE, timezone);
+                        query,
+                        encodeSports(normalizedSports),
+                        time,
+                        sort,
+                        page,
+                        PAGE_SIZE,
+                        timezone);
         final ModelAndView mav = new ModelAndView("feed/index");
         mav.addObject("shell", ShellViewModelFactory.browseShell());
         final String safeSort = normalizeSort(sort);
@@ -69,8 +75,7 @@ public class FeedController {
         mav.addObject("selectedSports", normalizedSports);
         mav.addObject(
                 "feedPage",
-                buildFeedPageViewModel(
-                        query, normalizedSports, time, safeSort, timezone, result));
+                buildFeedPageViewModel(query, normalizedSports, time, safeSort, timezone, result));
         return mav;
     }
 
@@ -127,19 +132,8 @@ public class FeedController {
 
         return List.of(
                 new FilterGroupViewModel(
-                        "Categories",
+                        "Sports",
                         List.of(
-                                new FilterOptionViewModel(
-                                        "Any sport",
-                                        buildUrl(
-                                                query,
-                                                List.of(),
-                                                selectedTime,
-                                                selectedSort,
-                                                1,
-                                                timezone),
-                                        null,
-                                        selectedSports.isEmpty()),
                                 new FilterOptionViewModel(
                                         "Football",
                                         buildUrl(
@@ -187,17 +181,6 @@ public class FeedController {
                 new FilterGroupViewModel(
                         "Time",
                         List.of(
-                                new FilterOptionViewModel(
-                                        "Any time",
-                                        buildUrl(
-                                                query,
-                                                selectedSports,
-                                                "all",
-                                                selectedSort,
-                                                1,
-                                                timezone),
-                                        null,
-                                        "all".equalsIgnoreCase(selectedTime)),
                                 new FilterOptionViewModel(
                                         "Today",
                                         buildUrl(

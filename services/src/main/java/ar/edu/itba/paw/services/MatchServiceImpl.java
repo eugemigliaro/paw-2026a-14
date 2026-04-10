@@ -79,8 +79,7 @@ public class MatchServiceImpl implements MatchService {
         final var items =
                 matchDao.findPublicMatches(
                         query, sportFilters, timeFilter, sortFilter, zoneId, offset, safePageSize);
-        final int totalCount =
-                matchDao.countPublicMatches(query, sportFilters, timeFilter, zoneId);
+        final int totalCount = matchDao.countPublicMatches(query, sportFilters, timeFilter, zoneId);
 
         return new PaginatedResult<>(items, totalCount, safePage, safePageSize);
     }

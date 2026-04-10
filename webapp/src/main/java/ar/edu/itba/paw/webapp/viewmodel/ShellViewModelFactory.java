@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.NavItemViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.NavItemViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.ShellViewModel;
 import java.util.List;
 
 public final class ShellViewModelFactory {

@@ -111,13 +111,7 @@ public class MatchServiceImplTest {
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null,
-                        "football,tennis,invalid,football",
-                        null,
-                        null,
-                        1,
-                        12,
-                        "UTC");
+                        null, "football,tennis,invalid,football", null, null, 1, 12, "UTC");
 
         Assertions.assertEquals(2, result.getItems().size());
         Assertions.assertEquals(2, result.getTotalCount());

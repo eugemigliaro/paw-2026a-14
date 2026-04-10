@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
-class PawUiRouteTest {
+class WebRouteTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-10T18:00:00Z");
 
@@ -234,7 +234,88 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
                 .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attributeExists("feedPage"));
+                .andExpect(model().attributeExists("feedPage"))
+                .andExpect(
+                        model().attribute(
+                                        "feedPage",
+                                        Matchers.hasProperty(
+                                                "filterGroups",
+                                                Matchers.contains(
+                                                        Matchers.hasProperty(
+                                                                "title",
+                                                                Matchers.equalTo("Sports")),
+                                                        Matchers.hasProperty(
+                                                                "title",
+                                                                Matchers.equalTo("Time"))))));
+    }
+
+    @Test
+    void getFeedRouteOmitsAnySportAndAnyTimeOptions() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        model().attribute(
+                                        "feedPage",
+                                        Matchers.hasProperty(
+                                                "filterGroups",
+                                                Matchers.contains(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "title",
+                                                                        Matchers.equalTo("Sports")),
+                                                                Matchers.hasProperty(
+                                                                        "options",
+                                                                        Matchers.contains(
+                                                                                Matchers
+                                                                                        .hasProperty(
+                                                                                                "label",
+                                                                                                Matchers
+                                                                                                        .equalTo(
+                                                                                                                "Football")),
+                                                                                Matchers
+                                                                                        .hasProperty(
+                                                                                                "label",
+                                                                                                Matchers
+                                                                                                        .equalTo(
+                                                                                                                "Tennis")),
+                                                                                Matchers
+                                                                                        .hasProperty(
+                                                                                                "label",
+                                                                                                Matchers
+                                                                                                        .equalTo(
+                                                                                                                "Basketball")),
+                                                                                Matchers
+                                                                                        .hasProperty(
+                                                                                                "label",
+                                                                                                Matchers
+                                                                                                        .equalTo(
+                                                                                                                "Padel"))))),
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "title",
+                                                                        Matchers.equalTo("Time")),
+                                                                Matchers.hasProperty(
+                                                                        "options",
+                                                                        Matchers.contains(
+                                                                                Matchers
+                                                                                        .hasProperty(
+                                                                                                "label",
+                                                                                                Matchers
+                                                                                                        .equalTo(
+                                                                                                                "Today")),
+                                                                                Matchers
+                                                                                        .hasProperty(
+                                                                                                "label",
+                                                                                                Matchers
+                                                                                                        .equalTo(
+                                                                                                                "Tomorrow")),
+                                                                                Matchers
+                                                                                        .hasProperty(
+                                                                                                "label",
+                                                                                                Matchers
+                                                                                                        .equalTo(
+                                                                                                                "This week")))))))));
     }
 
     @Test
@@ -242,7 +323,9 @@ class PawUiRouteTest {
         mockMvc.perform(get("/").param("sport", "football", "tennis"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(model().attribute("selectedSports", Matchers.contains("football", "tennis")));
+                .andExpect(
+                        model().attribute(
+                                        "selectedSports", Matchers.contains("football", "tennis")));
     }
 
     @Test
