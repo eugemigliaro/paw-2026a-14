@@ -17,7 +17,7 @@
 			<h1 class="page-heading__title"><c:out value="${title}" /></h1>
 			<p class="page-heading__description"><c:out value="${message}" /></p>
 			<div class="verification-actions">
-				<ui:button href="${pageContext.request.contextPath}${backHref}" label="Browse events" />
+				<ui:button href="${pageContext.request.contextPath}${backHref}" label="Browse matches" />
 			</div>
 		</section>
 	</main>

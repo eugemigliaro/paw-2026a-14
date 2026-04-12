@@ -130,7 +130,7 @@ public class ActionVerificationServiceImplTest {
                 actionVerificationService.confirm("raw-token");
 
         Assertions.assertEquals(5L, result.getUserId());
-        Assertions.assertEquals("/events/10?reservation=confirmed", result.getRedirectUrl());
+        Assertions.assertEquals("/matches/10?reservation=confirmed", result.getRedirectUrl());
     }
 
     @Test
@@ -274,7 +274,7 @@ public class ActionVerificationServiceImplTest {
 
         // Assert
         Assertions.assertEquals(5L, result.getUserId());
-        Assertions.assertEquals("/events/55", result.getRedirectUrl());
+        Assertions.assertEquals("/matches/55", result.getRedirectUrl());
     }
 
     @Test

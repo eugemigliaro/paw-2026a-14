@@ -95,9 +95,9 @@ public class FeedController {
         return new FeedPageViewModel(
                 "",
                 "Find your next game.",
-                "Discover local sports events, join communities, and get active with "
+                "Discover local sports matches, join communities, and get active with "
                         + "Match Point.",
-                "What sports event are you looking for?",
+                "What sports match are you looking for?",
                 "Find Matches",
                 List.of(),
                 buildFilterGroups(query, normalizedSports, normalizedTime, selectedSort, timezone),
@@ -148,8 +148,15 @@ public class FeedController {
         final int startPage = Math.max(2, Math.min(currentPage - 1, totalPages - 3));
         final int endPage = Math.min(totalPages - 1, Math.max(currentPage + 1, 4));
 
-        items.add(pageItem(
-                1, query, selectedSports, selectedTime, selectedSort, timezone, currentPage));
+        items.add(
+                pageItem(
+                        1,
+                        query,
+                        selectedSports,
+                        selectedTime,
+                        selectedSort,
+                        timezone,
+                        currentPage));
 
         if (startPage > 2) {
             items.add(new PaginationItemViewModel("...", null, false, true));
@@ -303,7 +310,7 @@ public class FeedController {
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
-                "/events/" + match.getId(),
+                "/matches/" + match.getId(),
                 match.getSport().getDisplayName(),
                 match.getTitle(),
                 match.getAddress(),

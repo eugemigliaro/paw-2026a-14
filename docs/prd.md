@@ -12,19 +12,20 @@
 ## 1. Product Overview
 
 ### 1.1 Summary
-Event Community Platform is a web application designed to help people discover, join, and organize in-person events more easily. The core problem it addresses is that many people struggle to regularly find activities, sports groups, classes, tournaments, or similar events unless they discover them by chance. The focus is on sporting events. 
+Event Community Platform is a web application designed to 
+help people discover, join, and organize in-person matches more easily. The core problem it addresses is that many people struggle to regularly find activities, sports groups, classes, tournaments, or similar matches unless they discover them by chance. The focus is on sporting matches. 
 
 The platform supports two modes within the same account:
-- **User mode**, focused on discovering and joining events
-- **Host mode**, focused on creating and managing events
+- **User mode**, focused on discovering and joining matches
+- **Host mode**, focused on creating and managing matches
 
 A single person can act as both a participant and a host, similar to the role-switching model used in platforms like Airbnb.
 
 ### 1.2 Core Value Proposition
 The platform makes it easier for people to:
-- Discover relevant events in one place
+- Discover relevant matches in one place
 - Join activities and communities without relying on chance
-- Organize and publish events for others
+- Organize and publish matches for others
 - Build trust and reputation through reviews
 
 ### 1.3 Product Positioning
@@ -34,30 +35,30 @@ The product should feel social, community-oriented, and approachable rather than
 
 ## 2. Problem Statement
 
-Today, finding events, activity groups, classes, or tournaments is fragmented and inconsistent. People often depend on chance, word of mouth, social media, or scattered groups to find opportunities to participate.
+Today, finding matches, activity groups, classes, or tournaments is fragmented and inconsistent. People often depend on chance, word of mouth, social media, or scattered groups to find opportunities to participate.
 
 This creates friction for users who want to:
 - Meet new people
 - Find sports groups or activities
 - Join classes, workshops, or tournaments
-- Discover events that match their interests
+- Discover matches that match their interests
 
-At the same time, people who organize events lack a simple, centralized way to publish and manage them for a broader audience.
+At the same time, people who organize matches lack a simple, centralized way to publish and manage them for a broader audience.
 
 ---
 
 ## 3. Product Goals
 
 ### 3.1 Goals for the MVP
-- Enable users to discover in-person events through a centralized web platform
-- Enable users to reserve a spot in events quickly and easily
-- Enable hosts to create and delete events 
+- Enable users to discover in-person matches through a centralized web platform
+- Enable users to reserve a spot in matches quickly and easily
+- Enable hosts to create and delete matches 
 - Support a dual-role experience where the same account can act as both user and host
 The MVP will not involve a proper login, only mail validations
 
 ### 3.2 Non-Goals for the MVP
 The following are intentionally out of scope for the MVP:
-- Enable hosts to edit events
+- Enable hosts to edit matches
 - Interactive maps
 - Personalized recommendations
 - Reviews
@@ -74,18 +75,18 @@ The following are intentionally out of scope for the MVP:
 
 ### 4.1 General Participants
 People who want to:
-- Find events that interest them
+- Find matches that interest them
 - Join sports, classes, workshops, tournaments, and social activities
-- Explore events by category or search terms
+- Explore matches by category or search terms
 - Reserve a spot and manage their upcoming participation
 
 ### 4.2 Hosts
 People who want to:
-- Publish events
+- Publish matches
 - Share event details with potential attendees
 - Manage their event listings
 - See confirmed attendees
-- Receive reviews after events
+- Receive reviews after matches
 
 ### 4.3 Audience Scope
 The platform is intended for an **open community**, not a closed university-only or invite-only audience.
@@ -104,8 +105,8 @@ Switching between modes is **manual** and clearly visible in the interface, simi
 ### 5.2 User Mode
 In User mode, the person can:
 - Browse event feed
-- Search events by free text
-- Filter events
+- Search matches by free text
+- Filter matches
 - View event details
 - Reserve a spot in an event
 - Cancel their reservation
@@ -115,9 +116,9 @@ In User mode, the person can:
 
 ### 5.3 Host Mode
 In Host mode, the person can:
-- Create events
-- Edit and delete published events
-- View hosted events
+- Create matches
+- Edit and delete published matches
+- View hosted matches
 - View confirmed attendees for each event
 - Manage event information
 - Receive reviews associated with their host profile 
@@ -133,7 +134,7 @@ In Host mode, the person can:
 ### 6.3 Modality Rules
 For the current scope:
 - Events are **in-person only**
-- Virtual events are out of scope
+- Virtual matches are out of scope
 
 ### 6.4 Pricing Rules
 - Events may be **free** or **paid**
@@ -145,10 +146,10 @@ For the current scope:
 ## 7. Key Product Experience
 
 ### 7.1 Discovery Experience
-The main landing experience for users is a **feed of events**, not a map.
+The main landing experience for users is a **feed of matches**, not a map.
 
 Users should be able to:
-- Browse a feed of available events
+- Browse a feed of available matches
 - Search by free text
 - Filter by relevant criteria
 - Sort results using different ordering methods
@@ -207,13 +208,13 @@ At minimum, the event lifecycle should support:
 
 ## 9. Repeating Events
 
-The product must support events with **multiple dates**.
+The product must support matches with **multiple dates**.
 
 The preferred model is:
 - A single event concept
 - Multiple scheduled dates/occurrences associated with that event
 
-This means the system should not conceptually treat repeating events as entirely unrelated cloned events, even if implementation details later simplify the model.
+This means the system should not conceptually treat repeating matches as entirely unrelated cloned matches, even if implementation details later simplify the model.
 
 This requirement matters for:
 - Event display
@@ -232,7 +233,7 @@ This requirement matters for:
 ### 10.2 Reservation Behavior
 - Reservation is **not instant**
 - Users must confirm their inscription via mail
-- Host can kick out players form events
+- Host can kick out players form matches
 - A user can reserve **only once** per event
 - If the event has started already, reservation is blocked automatically
 - If the event reaches its capacity, no more reservations are allowed
@@ -262,7 +263,7 @@ Suggested visible profile information:
 - Basic public identity information
 
 This public profile may later be expanded with:
-- Hosted events
+- Hosted matches
 - Reviews received as a host
 - Reputation indicators
 
@@ -281,7 +282,7 @@ In User mode, users should have access to a **My Events** section containing:
 - Upcoming Events
 - Past Events
 
-Hosted events do **not** belong inside this screen, because hosted-event management belongs to Host mode.
+Hosted matches do **not** belong inside this screen, because hosted-event management belongs to Host mode.
 
 ---
 
@@ -292,7 +293,7 @@ In Host mode, the interface and available actions should change meaningfully.
 The host-facing experience should allow:
 - Create event
 - Edit event
-- View hosted events
+- View hosted matches
 - View confirmed attendees per event
 - Manage event details
 
@@ -334,7 +335,7 @@ The system must allow users to:
 The system must allow users to:
 - View the event feed
 - Search by free text
-- Filter events by date and category
+- Filter matches by date and category
 - Sort event results
 - View event details
 
@@ -349,7 +350,7 @@ The system must allow hosts to:
 - Switch into Host mode
 - Create an event
 - Edit an existing published event
-- See their hosted events
+- See their hosted matches
 - See confirmed attendees for each hosted event
 
 ### 15.5 Public Profiles
@@ -384,7 +385,7 @@ The MVP excludes:
 - Chat
 - Waitlists
 - Reporting/moderation systems
-- Virtual events
+- Virtual matches
 - Check-in flow
 
 ---
@@ -402,8 +403,8 @@ The MVP excludes:
 - Reservation closes once the event has started
 - Cancelling a reservation releases the spot automatically
 - Hosts can reject participants
-- Hosts can reserve their own events
-- Repeating events are modeled as one event with multiple dates
+- Hosts can reserve their own matches
+- Repeating matches are modeled as one event with multiple dates
 - Reviews are tied to hosts and limited to one per user per attended event
 
 ---

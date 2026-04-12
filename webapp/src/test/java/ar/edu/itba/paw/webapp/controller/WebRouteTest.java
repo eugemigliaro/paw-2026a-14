@@ -27,7 +27,9 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.hamcrest.Matchers;
@@ -172,7 +174,7 @@ class WebRouteTest {
                                 "player@test.com",
                                 Instant.parse("2026-04-06T18:00:00Z"),
                                 "Confirm reservation",
-                                "/events/42?reservation=confirmed",
+                                "/matches/42?reservation=confirmed",
                                 List.of(new VerificationPreviewDetail("Venue", "Downtown Club")));
                     }
 
@@ -183,7 +185,7 @@ class WebRouteTest {
                                     VerificationFailureReason.NOT_FOUND, "Missing link");
                         }
                         return new VerificationConfirmationResult(
-                                9L, "/events/42?reservation=confirmed", "done");
+                                9L, "/matches/42?reservation=confirmed", "done");
                     }
                 };
 
@@ -220,7 +222,7 @@ class WebRouteTest {
                                 new HostController(
                                         actionVerificationService,
                                         imageService,
-                                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC)),
+                                        Clock.systemDefaultZone()),
                                 new ErrorPageController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)
@@ -330,9 +332,9 @@ class WebRouteTest {
 
     @Test
     void getRealEventDetailsRouteRendersEventPage() throws Exception {
-        mockMvc.perform(get("/events/42"))
+        mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("events/detail"))
+                .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("reservationRequestPath"))
                 .andExpect(
                         model().attribute(
@@ -348,7 +350,7 @@ class WebRouteTest {
 
     @Test
     void postReservationRequestRendersCheckEmailPage() throws Exception {
-        mockMvc.perform(post("/events/42/reservations").param("email", "player@test.com"))
+        mockMvc.perform(post("/matches/42/reservations").param("email", "player@test.com"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/check-email"))
                 .andExpect(model().attributeExists("title"))
@@ -367,12 +369,13 @@ class WebRouteTest {
     void postVerificationConfirmRedirectsToEvent() throws Exception {
         mockMvc.perform(post("/verifications/abc123/confirm"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/events/42?reservation=confirmed"));
+                .andExpect(redirectedUrl("/matches/42?reservation=confirmed"));
     }
 
     @Test
     void getRemovedMockEventRouteReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/events/sunrise-padel-championship")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/matches/sunrise-padel-championship"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -399,13 +402,17 @@ class WebRouteTest {
     @Test
     void postHostPublishCreatesAndRedirects() throws Exception {
         mockMvc.perform(
-                        post("/host/events/new")
+                        post("/host/matches/new")
                                 .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2026-04-11")
+                                .param(
+                                        "eventDate",
+                                        LocalDate.now(ZoneId.systemDefault())
+                                                .plusDays(1)
+                                                .toString())
                                 .param("eventTime", "18:00")
                                 .param("endTime", "20:00")
                                 .param("timezone", "UTC")
@@ -420,60 +427,70 @@ class WebRouteTest {
     @Test
     void postHostPublishWithPastDateShowsValidationError() throws Exception {
         mockMvc.perform(
-                        post("/host/events/new")
+                        post("/host/matches/new")
                                 .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2020-04-10")
+                                .param(
+                                        "eventDate",
+                                        LocalDate.now(ZoneId.systemDefault())
+                                                .minusDays(1)
+                                                .toString())
                                 .param("eventTime", "18:00")
                                 .param("endTime", "20:00")
                                 .param("timezone", "UTC")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/create-event"))
+                .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "eventDate"));
     }
 
     @Test
     void postHostPublishWithPastTimeTodayShowsValidationError() throws Exception {
         mockMvc.perform(
-                        post("/host/events/new")
+                        post("/host/matches/new")
                                 .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2026-04-10")
-                                .param("eventTime", "17:00")
+                                .param(
+                                        "eventDate",
+                                        LocalDate.now(ZoneId.systemDefault()).toString())
+                                .param("eventTime", LocalTime.MIDNIGHT.toString())
                                 .param("endTime", "19:00")
                                 .param("timezone", "UTC")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/create-event"))
+                .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "eventTime"));
     }
 
     @Test
     void postHostPublishWithEndTimeBeforeStartTimeShowsValidationError() throws Exception {
         mockMvc.perform(
-                        post("/host/events/new")
+                        post("/host/matches/new")
                                 .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2026-04-11")
+                                .param(
+                                        "eventDate",
+                                        LocalDate.now(ZoneId.systemDefault())
+                                                .plusDays(1)
+                                                .toString())
                                 .param("eventTime", "18:00")
                                 .param("endTime", "17:30")
                                 .param("timezone", "UTC")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/create-event"))
+                .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
     }
 }

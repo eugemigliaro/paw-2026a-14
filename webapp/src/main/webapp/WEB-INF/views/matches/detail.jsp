@@ -298,7 +298,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 						<a
 							class="section-link"
 							href="${pageContext.request.contextPath}/"
-							>View all events</a
+							>View all matches</a
 						>
 					</div>
 

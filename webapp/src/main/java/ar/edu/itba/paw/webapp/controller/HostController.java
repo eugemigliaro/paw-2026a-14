@@ -44,15 +44,15 @@ public class HostController {
         return new CreateEventForm();
     }
 
-    @GetMapping("/host/events/new")
+    @GetMapping("/host/matches/new")
     public ModelAndView showCreateEvent() {
-        final ModelAndView mav = new ModelAndView("host/create-event");
+        final ModelAndView mav = new ModelAndView("host/create-match");
         mav.addObject("shell", ShellViewModelFactory.hostShell());
         mav.addObject("createEventForm", createEventForm());
         return mav;
     }
 
-    @PostMapping("/host/events/new")
+    @PostMapping("/host/matches/new")
     public ModelAndView publishEvent(
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult) {
@@ -123,7 +123,7 @@ public class HostController {
                     "summary",
                     "We sent a one-time confirmation link to "
                             + requestResult.getEmail()
-                            + " so you can publish your event.");
+                            + " so you can publish your match.");
             mav.addObject(
                     "expiresAtLabel",
                     java.time.format.DateTimeFormatter.ofLocalizedDateTime(
@@ -131,9 +131,9 @@ public class HostController {
                                     java.time.format.FormatStyle.SHORT)
                             .withLocale(java.util.Locale.US)
                             .format(requestResult.getExpiresAt().atZone(ZoneId.systemDefault())));
-            mav.addObject("backHref", "/host/events/new");
-            mav.addObject("actionLabel", "Back to create event");
-            mav.addObject("eyebrow", "Event publication requested");
+            mav.addObject("backHref", "/host/matches/new");
+            mav.addObject("actionLabel", "Back to create match");
+            mav.addObject("eyebrow", "Match publication requested");
             return mav;
         } catch (final VerificationFailureException exception) {
             return hostFormView(createEventForm, exception.getMessage());
@@ -141,7 +141,7 @@ public class HostController {
     }
 
     private ModelAndView hostFormView(final CreateEventForm form, final String formError) {
-        final ModelAndView mav = new ModelAndView("host/create-event");
+        final ModelAndView mav = new ModelAndView("host/create-match");
         mav.addObject("shell", ShellViewModelFactory.hostShell());
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);

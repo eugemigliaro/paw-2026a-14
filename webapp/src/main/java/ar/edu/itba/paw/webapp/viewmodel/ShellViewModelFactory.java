@@ -13,7 +13,7 @@ public final class ShellViewModelFactory {
     public static ShellViewModel browseShell() {
         return new ShellViewModel(
                 "Match Point",
-                new NavItemViewModel("Switch to Hosting", "/host/events/new", false),
+                new NavItemViewModel("Switch to Hosting", "/host/matches/new", false),
                 List.of());
     }
 

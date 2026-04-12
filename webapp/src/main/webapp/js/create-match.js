@@ -1,5 +1,5 @@
 (function() {
-	var timezoneInput = document.getElementById("event-timezone");
+	var timezoneInput = document.getElementById("match-timezone");
 	if (!timezoneInput || !window.Intl || !Intl.DateTimeFormat) {
 		return;
 	}

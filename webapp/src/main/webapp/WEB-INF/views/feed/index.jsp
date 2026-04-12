@@ -13,7 +13,7 @@
 			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
 			<main class="page-shell page-shell--feed">
-				<aside class="feed-sidebar" aria-label="Event filters">
+				<aside class="feed-sidebar" aria-label="Match filters">
 					<div class="panel filter-rail">
 						<div class="filter-rail__header">
 							<h2 class="filter-rail__main-title">Filters</h2>
@@ -56,7 +56,7 @@
 							<p class="hero-panel__description"><c:out value="${feedPage.description}" /></p>
 						</section>
 
-						<section class="search-panel" aria-label="Search events">
+						<section class="search-panel" aria-label="Search matches">
 							<form:form
 								method="get"
 								action="${pageContext.request.contextPath}/"
@@ -82,7 +82,7 @@
 							</form:form>
 						</section>
 
-						<form method="get" action="${pageContext.request.contextPath}/" class="sort-panel" aria-label="Sort events">
+						<form method="get" action="${pageContext.request.contextPath}/" class="sort-panel" aria-label="Sort matches">
 							<input type="hidden" name="q" value="<c:out value='${param.q}' />" />
 							<c:forEach var="selectedSport" items="${selectedSports}">
 								<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
@@ -108,7 +108,7 @@
 					<section>
 						<div class="section-head section-head--feed-list">
 							<div>
-								<h2 class="section-head__title section-head__title--feed-list">All events</h2>
+								<h2 class="section-head__title section-head__title--feed-list">All matches</h2>
 							</div>
 						</div>
 

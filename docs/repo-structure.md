@@ -105,13 +105,13 @@ Supporting contract modules sit between layers:
   - `GET /` -> `FeedController` -> `MatchService` -> `MatchJdbcDao` -> `WEB-INF/views/feed/index.jsp`
 
 - Event detail:
-  - `GET /events/{id}` -> `EventController` -> `MatchService` / `UserService` -> `WEB-INF/views/events/detail.jsp`
+  - `GET /matches/{id}` -> `EventController` -> `MatchService` / `UserService` -> `WEB-INF/views/matches/detail.jsp`
 
 - Reservation request:
-  - `POST /events/{id}/reservations` -> `EventController` -> `ActionVerificationService`
+  - `POST /matches/{id}/reservations` -> `EventController` -> `ActionVerificationService`
 
 - Host event creation:
-  - `GET|POST /host/events/new` -> `HostController` -> `ActionVerificationService`
+  - `GET|POST /host/matches/new` -> `HostController` -> `ActionVerificationService`
 
 - Email confirmation:
   - `GET|POST /verifications/{token}` -> `VerificationController` -> `ActionVerificationServiceImpl`

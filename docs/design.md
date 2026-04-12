@@ -2,11 +2,11 @@
 
 ## 1. Overview
 
-This design system defines the visual and interaction language for the sports events platform shown in the current mocks. The product should feel **premium, social, clean, and active**. It is not meant to look like a loud fitness app or a generic marketplace. It should feel closer to a modern sports club: calm, trustworthy, organized, and slightly aspirational.
+This design system defines the visual and interaction language for the sports matches/tournaments platform shown in the current mocks. The product should feel **premium, social, clean, and active**. It is not meant to look like a loud fitness app or a generic marketplace. It should feel closer to a modern sports club: calm, trustworthy, organized, and slightly aspirational.
 
 The UI should communicate three things at all times:
 
-1. **Discoverability** — users should quickly understand what events exist, when they happen, and whether they can join.
+1. **Discoverability** — users should quickly understand what matches/tournaments exist, when they happen, and whether they can join.
 2. **Confidence** — the product should feel reliable enough for payments, reservations, host management, and event logistics.
 3. **Community** — the interface should quietly reinforce that these are real people, real venues, and recurring activities.
 
@@ -24,7 +24,7 @@ Key characteristics:
 - Refined emerald-driven palette
 - Soft neutral backgrounds
 - Clear card-based information architecture
-- Strong hero imagery for events and venues
+- Strong hero imagery for matches and venues
 - Minimal visual noise
 - Friendly but not playful typography
 - Light social proof details that never overpower primary actions
@@ -674,7 +674,7 @@ This is the discovery hub.
 ### Priorities
 1. search
 2. filters
-3. trending or recommended events
+3. trending or recommended matches
 4. card scanning
 5. easy join action
 

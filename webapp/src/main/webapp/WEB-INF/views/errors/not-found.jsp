@@ -25,12 +25,12 @@
 
 				<div class="error-hero__actions">
 					<ui:button
-						label="Browse events"
+						label="Browse matches"
 						href="${pageContext.request.contextPath}/"
 						size="lg" />
 					<ui:button
 						label="Host an event"
-						href="${pageContext.request.contextPath}/host/events/new"
+						href="${pageContext.request.contextPath}/host/matches/new"
 						variant="secondary"
 						size="lg" />
 				</div>

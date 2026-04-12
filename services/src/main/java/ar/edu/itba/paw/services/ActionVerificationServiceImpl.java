@@ -250,7 +250,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
         return new VerificationConfirmationResult(
                 userId,
-                "/events/" + match.getId() + "?reservation=confirmed",
+                "/matches/" + match.getId() + "?reservation=confirmed",
                 "Your reservation is now confirmed.");
     }
 
@@ -286,7 +286,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 request.getId(), EmailActionStatus.COMPLETED, user.getId(), Instant.now(clock));
 
         return new VerificationConfirmationResult(
-                user.getId(), "/events/" + createdMatch.getId(), "Your event is now published.");
+                user.getId(), "/matches/" + createdMatch.getId(), "Your match is now published.");
     }
 
     private EmailActionRequest getRequiredPendingRequest(
@@ -331,7 +331,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 email,
                 expiresAt,
                 "Confirm reservation",
-                "/events/" + match.getId() + "?reservation=confirmed",
+                "/matches/" + match.getId() + "?reservation=confirmed",
                 List.of(
                         new VerificationPreviewDetail("Sport", match.getSport().getDisplayName()),
                         new VerificationPreviewDetail("Venue", match.getAddress()),
@@ -432,12 +432,12 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 new VerificationPreviewDetail("Capacity", String.valueOf(payload.getMaxPlayers())));
 
         return new VerificationPreview(
-                "Confirm your event publication",
-                "Use this one-time confirmation to publish your event.",
+                "Confirm your match publication",
+                "Use this one-time confirmation to publish your match.",
                 email,
                 expiresAt,
-                "Confirm event publication",
-                "/host/events/new",
+                "Confirm match publication",
+                "/host/matches/new",
                 details);
     }
 
