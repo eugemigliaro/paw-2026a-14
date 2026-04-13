@@ -283,17 +283,27 @@ public class FeedController {
                         List.of(
                                 new FilterOptionViewModel(
                                         "Today",
-                                        buildUrl(query, filters.withTime("today"), 1),
+                                        buildUrl(
+                                                query,
+                                                filters.withTime(toggleTime(selectedTime, "today")),
+                                                1),
                                         null,
                                         "today".equalsIgnoreCase(selectedTime)),
                                 new FilterOptionViewModel(
                                         "Tomorrow",
-                                        buildUrl(query, filters.withTime("tomorrow"), 1),
+                                        buildUrl(
+                                                query,
+                                                filters.withTime(
+                                                        toggleTime(selectedTime, "tomorrow")),
+                                                1),
                                         null,
                                         "tomorrow".equalsIgnoreCase(selectedTime)),
                                 new FilterOptionViewModel(
                                         "This week",
-                                        buildUrl(query, filters.withTime("week"), 1),
+                                        buildUrl(
+                                                query,
+                                                filters.withTime(toggleTime(selectedTime, "week")),
+                                                1),
                                         null,
                                         "week".equalsIgnoreCase(selectedTime)))));
     }
@@ -488,6 +498,10 @@ public class FeedController {
         }
 
         return List.copyOf(toggledSports);
+    }
+
+    private static String toggleTime(final String selectedTime, final String timeToToggle) {
+        return timeToToggle.equalsIgnoreCase(selectedTime) ? "all" : timeToToggle;
     }
 
     private static String formatPriceValue(final BigDecimal price) {

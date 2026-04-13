@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -21,6 +23,9 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FeedPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterGroupViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterOptionViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -393,6 +398,44 @@ class WebRouteTest {
     }
 
     @Test
+    void getFeedRouteBuildsToggleHrefForSelectedSport() throws Exception {
+        mockMvc.perform(get("/").param("sport", "padel"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        result -> {
+                            final FeedPageViewModel feedPage =
+                                    (FeedPageViewModel)
+                                            result.getModelAndView().getModel().get("feedPage");
+                            final FilterOptionViewModel padelOption =
+                                    findFilterOption(feedPage, "Sports", "Padel");
+
+                            assertEquals(
+                                    "/?q=&time=all&sort=soonest&page=1", padelOption.getHref());
+                            assertTrue(padelOption.isActive());
+                        });
+    }
+
+    @Test
+    void getFeedRouteBuildsToggleHrefForSelectedTime() throws Exception {
+        mockMvc.perform(get("/").param("time", "today"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        result -> {
+                            final FeedPageViewModel feedPage =
+                                    (FeedPageViewModel)
+                                            result.getModelAndView().getModel().get("feedPage");
+                            final FilterOptionViewModel todayOption =
+                                    findFilterOption(feedPage, "Time", "Today");
+
+                            assertEquals(
+                                    "/?q=&time=all&sort=soonest&page=1", todayOption.getHref());
+                            assertTrue(todayOption.isActive());
+                        });
+    }
+
+    @Test
     void getFeedRoutePreservesPriceFilters() throws Exception {
         mockMvc.perform(get("/").param("minPrice", "10").param("maxPrice", "25"))
                 .andExpect(status().isOk())
@@ -571,5 +614,28 @@ class WebRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    private static FilterOptionViewModel findFilterOption(
+            final FeedPageViewModel feedPage, final String groupTitle, final String optionLabel) {
+        return findFilterGroup(feedPage, groupTitle).getOptions().stream()
+                .filter(option -> optionLabel.equals(option.getLabel()))
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new AssertionError(
+                                        "Expected option '%s' in group '%s'"
+                                                .formatted(optionLabel, groupTitle)));
+    }
+
+    private static FilterGroupViewModel findFilterGroup(
+            final FeedPageViewModel feedPage, final String groupTitle) {
+        return feedPage.getFilterGroups().stream()
+                .filter(group -> groupTitle.equals(group.getTitle()))
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new AssertionError(
+                                        "Expected filter group '%s'".formatted(groupTitle)));
     }
 }

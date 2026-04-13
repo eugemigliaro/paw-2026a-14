@@ -16,7 +16,9 @@
 				<aside class="feed-sidebar" aria-label="Match filters">
 					<div class="panel filter-rail">
 						<div class="filter-rail__header">
-							<h2 class="filter-rail__main-title">Filters</h2>
+							<div class="filter-rail__heading">
+								<h2 class="filter-rail__main-title">Filters</h2>
+							</div>
 							<c:url var="clearFiltersHref" value="/">
 								<c:param name="q" value="${param.q}" />
 								<c:param name="sort" value="${selectedSort}" />
@@ -24,27 +26,32 @@
 							<ui:button
 								label="Clear all"
 								href="${clearFiltersHref}"
-								variant="ghost"
+								variant="primary"
 								size="sm"
 								className="filter-rail__clear" />
 						</div>
 						<c:forEach var="group" items="${feedPage.filterGroups}">
 							<section class="filter-rail__group">
-								<h2 class="filter-rail__title"><c:out value="${group.title}" /></h2>
-									<div class="filter-rail__options">
-										<c:forEach var="option" items="${group.options}">
-											<ui:chip
-												label="${option.label}"
-												href="${pageContext.request.contextPath}${option.href}"
-												active="${option.active}"
-												tone="default"
-												className="filter-rail__chip" />
-										</c:forEach>
+								<div class="filter-rail__group-header">
+									<h2 class="filter-rail__title"><c:out value="${group.title}" /></h2>
+								</div>
+								<div class="filter-rail__options">
+									<c:forEach var="option" items="${group.options}">
+										<ui:chip
+											label="${option.label}"
+											href="${pageContext.request.contextPath}${option.href}"
+											active="${option.active}"
+											tone="default"
+											className="filter-rail__chip" />
+									</c:forEach>
 								</div>
 							</section>
 						</c:forEach>
 						<section class="filter-rail__group">
-							<h2 class="filter-rail__title">Price</h2>
+							<div class="filter-rail__group-header">
+								<h2 class="filter-rail__title">Price</h2>
+								<p class="filter-rail__caption">Per player</p>
+							</div>
 							<form
 								method="get"
 								action="${pageContext.request.contextPath}/"
