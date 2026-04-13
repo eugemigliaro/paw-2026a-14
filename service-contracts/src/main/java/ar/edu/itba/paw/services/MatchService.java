@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +23,17 @@ public interface MatchService {
             int page,
             int pageSize,
             String timezone);
+
+    default PaginatedResult<Match> searchPublicMatches(
+            String query,
+            String sport,
+            String time,
+            String sort,
+            int page,
+            int pageSize,
+            String timezone,
+            BigDecimal minPrice,
+            BigDecimal maxPrice) {
+        return searchPublicMatches(query, sport, time, sort, page, pageSize, timezone);
+    }
 }

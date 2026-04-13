@@ -104,6 +104,69 @@ justify-content: space-between;
 width: 100%;
 }
 
+.filter-rail__form {
+display: grid;
+gap: 1.15rem;
+margin-top: 0.95rem;
+}
+
+.filter-rail__field-group {
+display: grid;
+gap: 0.95rem;
+}
+
+.filter-rail__field-row {
+display: grid;
+align-items: start;
+gap: 0.95rem;
+grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.filter-rail__field {
+display: grid;
+gap: 0.5rem;
+margin: 0;
+}
+
+.filter-rail__price-field {
+gap: 0.45rem;
+}
+
+.filter-rail__price-input-wrap {
+align-items: center;
+display: grid;
+gap: 0.45rem;
+grid-template-columns: auto minmax(0, 1fr);
+}
+
+.filter-rail__price-prefix {
+color: #6b7d78;
+font-size: 0.95rem;
+font-weight: 700;
+pointer-events: none;
+}
+
+.filter-rail__field .field__control {
+width: 100%;
+margin-bottom: 0;
+}
+
+.filter-rail__price-input {
+appearance: textfield;
+-moz-appearance: textfield;
+}
+
+.filter-rail__price-input::-webkit-inner-spin-button,
+.filter-rail__price-input::-webkit-outer-spin-button {
+-webkit-appearance: none;
+margin: 0;
+}
+
+.filter-rail__submit {
+margin-top: 0.35rem;
+margin-bottom: 0.25rem;
+}
+
 .filter-rail__option {
 align-items: center;
 appearance: none;
@@ -418,6 +481,10 @@ padding: 0 0.2rem;
 
 @media (max-width: 760px) {
 .search-panel__row {
+	grid-template-columns: 1fr;
+}
+
+.filter-rail__field-row {
 	grid-template-columns: 1fr;
 }
 

@@ -331,6 +331,23 @@ class WebRouteTest {
     }
 
     @Test
+    void getFeedRoutePreservesPriceFilters() throws Exception {
+        mockMvc.perform(get("/").param("minPrice", "10").param("maxPrice", "25"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        model().attribute(
+                                        "selectedMinPrice",
+                                        Matchers.comparesEqualTo(new BigDecimal("10"))))
+                .andExpect(model().attribute("selectedMinPriceValue", "10"))
+                .andExpect(
+                        model().attribute(
+                                        "selectedMaxPrice",
+                                        Matchers.comparesEqualTo(new BigDecimal("25"))))
+                .andExpect(model().attribute("selectedMaxPriceValue", "25"));
+    }
+
+    @Test
     void getRealEventDetailsRouteRendersEventPage() throws Exception {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())

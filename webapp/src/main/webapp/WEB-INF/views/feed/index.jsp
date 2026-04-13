@@ -43,6 +43,62 @@
 								</div>
 							</section>
 						</c:forEach>
+						<section class="filter-rail__group">
+							<h2 class="filter-rail__title">Price</h2>
+							<form
+								method="get"
+								action="${pageContext.request.contextPath}/"
+								class="filter-rail__form">
+								<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
+								<c:forEach var="selectedSport" items="${selectedSports}">
+									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
+								</c:forEach>
+								<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
+								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
+								<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" />
+								<div class="filter-rail__field-group">
+									<div class="filter-rail__field-row">
+										<div class="field filter-rail__field filter-rail__price-field">
+											<label class="field__label" for="min-price">From</label>
+											<div class="filter-rail__price-input-wrap">
+												<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
+												<input
+													id="min-price"
+													name="minPrice"
+													type="number"
+													min="0"
+													step="0.01"
+													inputmode="decimal"
+													class="field__control filter-rail__price-input"
+													value="<c:out value='${selectedMinPriceValue}' />"
+													placeholder="0" />
+											</div>
+										</div>
+										<div class="field filter-rail__field filter-rail__price-field">
+											<label class="field__label" for="max-price">To</label>
+											<div class="filter-rail__price-input-wrap">
+												<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
+												<input
+													id="max-price"
+													name="maxPrice"
+													type="number"
+													min="0"
+													step="0.01"
+													inputmode="decimal"
+													class="field__control filter-rail__price-input"
+													value="<c:out value='${selectedMaxPriceValue}' />"
+													placeholder="12" />
+											</div>
+										</div>
+									</div>
+								</div>
+								<ui:button
+									label="Apply price filters"
+									type="submit"
+									fullWidth="${true}"
+									className="filter-rail__submit" />
+							</form>
+						</section>
 					</div>
 				</aside>
 
@@ -65,9 +121,11 @@
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 								</c:forEach>
-								<input type="hidden" name="time" value="<c:out value='${param.time}' />" />
+								<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-								<input type="hidden" name="tz" value="<c:out value='${param.tz}' />" />
+								<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" />
+								<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
+								<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 								<div class="search-panel__row">
 									<div class="search-panel__input">
 										<span class="search-panel__icon" aria-hidden="true"></span>
@@ -83,12 +141,14 @@
 						</section>
 
 						<form method="get" action="${pageContext.request.contextPath}/" class="sort-panel" aria-label="Sort matches">
-							<input type="hidden" name="q" value="<c:out value='${param.q}' />" />
+							<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
 							<c:forEach var="selectedSport" items="${selectedSports}">
 								<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 							</c:forEach>
-							<input type="hidden" name="time" value="<c:out value='${param.time}' />" />
-							<input type="hidden" name="tz" value="<c:out value='${param.tz}' />" />
+							<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
+							<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" />
+							<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
+							<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 							<input type="hidden" name="page" value="1" />
 							<label class="field sort-panel__field" for="sort-select">
 								<span class="field__label">Sort by</span>

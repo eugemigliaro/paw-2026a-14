@@ -67,6 +67,8 @@ public class MatchJdbcDaoTest {
                         null,
                         List.of(Sport.TENNIS),
                         EventTimeFilter.WEEK,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
@@ -97,6 +99,8 @@ public class MatchJdbcDaoTest {
                         "football",
                         List.of(),
                         EventTimeFilter.WEEK,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
@@ -123,6 +127,8 @@ public class MatchJdbcDaoTest {
                         null,
                         List.of(Sport.PADEL),
                         EventTimeFilter.WEEK,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
@@ -143,6 +149,8 @@ public class MatchJdbcDaoTest {
                         null,
                         List.of(),
                         EventTimeFilter.WEEK,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
@@ -163,6 +171,8 @@ public class MatchJdbcDaoTest {
                         null,
                         List.of(),
                         EventTimeFilter.WEEK,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
@@ -172,6 +182,8 @@ public class MatchJdbcDaoTest {
                         null,
                         List.of(),
                         EventTimeFilter.WEEK,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         2,
@@ -182,7 +194,7 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(
                 3,
                 matchDao.countPublicMatches(
-                        null, List.of(), EventTimeFilter.WEEK, ZoneId.systemDefault()));
+                        null, List.of(), EventTimeFilter.WEEK, null, null, ZoneId.systemDefault()));
     }
 
     @Test
@@ -207,6 +219,8 @@ public class MatchJdbcDaoTest {
                         null,
                         List.of(),
                         EventTimeFilter.ALL,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
@@ -240,6 +254,8 @@ public class MatchJdbcDaoTest {
                         null,
                         List.of(Sport.FOOTBALL, Sport.PADEL),
                         EventTimeFilter.WEEK,
+                        null,
+                        null,
                         MatchSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
@@ -276,6 +292,50 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(created.getId(), found.getId());
         Assertions.assertEquals("Padel Morning", found.getTitle());
         Assertions.assertEquals(4, found.getAvailableSpots());
+    }
+
+    @Test
+    public void testFindPublicEventsByPriceRange() {
+        insertMatch(
+                "Budget Match",
+                "Free friendly session",
+                "football",
+                10,
+                0,
+                ZonedDateTime.now().plusDays(1),
+                BigDecimal.ZERO);
+        insertMatch(
+                "Premium Match",
+                "Club booking included",
+                "football",
+                10,
+                0,
+                ZonedDateTime.now().plusDays(1),
+                new BigDecimal("25"));
+
+        final List<Match> result =
+                matchDao.findPublicMatches(
+                        null,
+                        List.of(),
+                        EventTimeFilter.WEEK,
+                        new BigDecimal("20"),
+                        new BigDecimal("30"),
+                        MatchSort.SOONEST,
+                        ZoneId.systemDefault(),
+                        0,
+                        20);
+
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals("Premium Match", result.get(0).getTitle());
+        Assertions.assertEquals(
+                1,
+                matchDao.countPublicMatches(
+                        null,
+                        List.of(),
+                        EventTimeFilter.WEEK,
+                        new BigDecimal("20"),
+                        new BigDecimal("30"),
+                        ZoneId.systemDefault()));
     }
 
     @Test
@@ -317,6 +377,18 @@ public class MatchJdbcDaoTest {
             final int maxPlayers,
             final int joinedPlayers,
             final ZonedDateTime startsAt) {
+        insertMatch(
+                title, description, sport, maxPlayers, joinedPlayers, startsAt, BigDecimal.ZERO);
+    }
+
+    private void insertMatch(
+            final String title,
+            final String description,
+            final String sport,
+            final int maxPlayers,
+            final int joinedPlayers,
+            final ZonedDateTime startsAt,
+            final BigDecimal pricePerPlayer) {
         final Match created =
                 matchDao.createMatch(
                         hostUserId,
@@ -326,7 +398,7 @@ public class MatchJdbcDaoTest {
                         startsAt.toInstant(),
                         null,
                         maxPlayers,
-                        BigDecimal.ZERO,
+                        pricePerPlayer,
                         Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
                         "public",
                         "open",

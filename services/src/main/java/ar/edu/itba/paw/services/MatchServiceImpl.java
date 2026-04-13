@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -67,6 +68,20 @@ public class MatchServiceImpl implements MatchService {
             final int page,
             final int pageSize,
             final String timezone) {
+        return searchPublicMatches(query, sport, time, sort, page, pageSize, timezone, null, null);
+    }
+
+    @Override
+    public PaginatedResult<Match> searchPublicMatches(
+            final String query,
+            final String sport,
+            final String time,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
         final int safePage = page > 0 ? page : 1;
         final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
         final int offset = (safePage - 1) * safePageSize;
@@ -78,8 +93,18 @@ public class MatchServiceImpl implements MatchService {
 
         final var items =
                 matchDao.findPublicMatches(
-                        query, sportFilters, timeFilter, sortFilter, zoneId, offset, safePageSize);
-        final int totalCount = matchDao.countPublicMatches(query, sportFilters, timeFilter, zoneId);
+                        query,
+                        sportFilters,
+                        timeFilter,
+                        minPrice,
+                        maxPrice,
+                        sortFilter,
+                        zoneId,
+                        offset,
+                        safePageSize);
+        final int totalCount =
+                matchDao.countPublicMatches(
+                        query, sportFilters, timeFilter, minPrice, maxPrice, zoneId);
 
         return new PaginatedResult<>(items, totalCount, safePage, safePageSize);
     }
