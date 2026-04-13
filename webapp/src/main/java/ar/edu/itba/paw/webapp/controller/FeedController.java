@@ -162,7 +162,16 @@ public class FeedController {
     }
 
     private static boolean matchesFilters(final Match match, final FeedFilters filters) {
-        return matchesPriceRange(match, filters.minPrice(), filters.maxPrice());
+        return matchesSports(match, filters.selectedSports())
+                && matchesPriceRange(match, filters.minPrice(), filters.maxPrice());
+    }
+
+    private static boolean matchesSports(final Match match, final List<String> selectedSports) {
+        if (selectedSports == null || selectedSports.isEmpty()) {
+            return true;
+        }
+
+        return selectedSports.contains(match.getSport().getDbValue());
     }
 
     private static boolean matchesPriceRange(
@@ -393,11 +402,18 @@ public class FeedController {
         }
 
         final LinkedHashSet<String> normalizedSports = new LinkedHashSet<>();
-        for (final String sport : sports) {
-            if (sport == null || sport.isBlank()) {
+        for (final String sportValue : sports) {
+            if (sportValue == null || sportValue.isBlank()) {
                 continue;
             }
-            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(normalizedSports::add);
+            for (final String sport : sportValue.split(",")) {
+                if (sport == null || sport.isBlank()) {
+                    continue;
+                }
+                Sport.fromDbValue(sport.trim())
+                        .map(Sport::getDbValue)
+                        .ifPresent(normalizedSports::add);
+            }
         }
 
         return List.copyOf(normalizedSports);
@@ -513,7 +529,7 @@ public class FeedController {
         }
 
         private boolean hasExtraFilters() {
-            return minPrice != null || maxPrice != null;
+            return minPrice != null || maxPrice != null || selectedSports.size() > 1;
         }
     }
 }

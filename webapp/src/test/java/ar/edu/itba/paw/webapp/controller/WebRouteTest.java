@@ -72,6 +72,38 @@ class WebRouteTest {
                         "open",
                         2,
                         null);
+        final Match footballMatch =
+                new Match(
+                        43L,
+                        Sport.FOOTBALL,
+                        8L,
+                        "North Arena",
+                        "Afterwork Football",
+                        "Fast 5v5 session",
+                        Instant.parse("2026-04-07T19:00:00Z"),
+                        Instant.parse("2026-04-07T20:30:00Z"),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "open",
+                        4,
+                        null);
+        final Match tennisMatch =
+                new Match(
+                        44L,
+                        Sport.TENNIS,
+                        9L,
+                        "River Club",
+                        "Sunset Tennis",
+                        "Singles and doubles rotation",
+                        Instant.parse("2026-04-08T18:00:00Z"),
+                        Instant.parse("2026-04-08T20:00:00Z"),
+                        6,
+                        BigDecimal.valueOf(12),
+                        "public",
+                        "open",
+                        2,
+                        null);
 
         final MatchService matchService =
                 new MatchService() {
@@ -118,7 +150,8 @@ class WebRouteTest {
                             final int page,
                             final int pageSize,
                             final String timezone) {
-                        return new PaginatedResult<>(List.of(realMatch), 1, 1, 12);
+                        return new PaginatedResult<>(
+                                List.of(realMatch, footballMatch, tennisMatch), 3, 1, 12);
                     }
                 };
 
@@ -328,6 +361,35 @@ class WebRouteTest {
                 .andExpect(
                         model().attribute(
                                         "selectedSports", Matchers.contains("football", "tennis")));
+    }
+
+    @Test
+    void getFeedRoutePreservesCommaSeparatedSelectedSports() throws Exception {
+        mockMvc.perform(get("/").param("sport", "football,tennis"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        model().attribute(
+                                        "selectedSports", Matchers.contains("football", "tennis")));
+    }
+
+    @Test
+    void getFeedRouteFiltersFeaturedEventsWhenMultipleSportsAreSelected() throws Exception {
+        mockMvc.perform(get("/").param("sport", "football", "tennis"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        model().attribute(
+                                        "feedPage",
+                                        Matchers.hasProperty(
+                                                "featuredEvents",
+                                                Matchers.contains(
+                                                        Matchers.hasProperty(
+                                                                "sport",
+                                                                Matchers.equalTo("Football")),
+                                                        Matchers.hasProperty(
+                                                                "sport",
+                                                                Matchers.equalTo("Tennis"))))));
     }
 
     @Test
