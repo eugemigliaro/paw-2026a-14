@@ -60,7 +60,7 @@ public class HostController {
                 && !bindingResult.hasFieldErrors("eventTime")
                 && !isScheduledInFuture(createEventForm)) {
             bindingResult.rejectValue(
-                    "eventTime", "eventTime.past", "Event date and time cannot be in the past");
+                    "eventTime", "eventTime.past", "Match date and time cannot be in the past");
         }
         if (!bindingResult.hasFieldErrors("eventDate")
                 && !bindingResult.hasFieldErrors("eventTime")
