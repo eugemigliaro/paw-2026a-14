@@ -50,7 +50,7 @@ Build only what belongs to the MVP for this product.
 
 In scope:
 
-- in-person sports matches/torunaments
+- in-person sports matches/tournaments
 - event discovery/feed flows
 - event detail pages
 - reserve a spot
