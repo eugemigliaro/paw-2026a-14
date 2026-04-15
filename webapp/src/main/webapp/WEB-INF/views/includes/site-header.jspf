@@ -1,5 +1,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="primaryNavAria" code="nav.primary" />
 <header class="site-header">
   <div class="site-header__inner">
     <a class="site-header__brand" href="${pageContext.request.contextPath}/">
@@ -7,7 +9,7 @@
     </a>
 
     <c:if test="${not empty shell.primaryNav}">
-      <nav class="site-header__nav" aria-label="Primary">
+      <nav class="site-header__nav" aria-label="${primaryNavAria}">
         <c:forEach var="navItem" items="${shell.primaryNav}">
           <c:choose>
             <c:when test="${not empty navItem.href}">

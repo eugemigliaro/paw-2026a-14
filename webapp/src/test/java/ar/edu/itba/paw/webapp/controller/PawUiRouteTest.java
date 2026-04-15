@@ -27,12 +27,17 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
+import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 class PawUiRouteTest {
@@ -44,6 +49,7 @@ class PawUiRouteTest {
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
+        final MessageSource messageSource = messageSource();
 
         final Match realMatch =
                 new Match(
@@ -205,13 +211,20 @@ class PawUiRouteTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new FeedController(matchService),
+                                new FeedController(matchService, messageSource),
                                 new EventController(
-                                        matchService, userService, actionVerificationService),
-                                new HostController(actionVerificationService, imageService),
-                                new ErrorPageController(),
-                                new VerificationController(actionVerificationService))
+                                        matchService,
+                                        userService,
+                                        actionVerificationService,
+                                        messageSource),
+                                new HostController(
+                                        actionVerificationService, imageService, messageSource),
+                                new ErrorPageController(messageSource),
+                                new VerificationController(
+                                        actionVerificationService, messageSource))
                         .setViewResolvers(viewResolver)
+                        .setLocaleResolver(localeResolver())
+                        .addInterceptors(localeChangeInterceptor())
                         .build();
     }
 
@@ -222,6 +235,41 @@ class PawUiRouteTest {
                 .andExpect(view().name("feed/index"))
                 .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attributeExists("feedPage"));
+    }
+
+    @Test
+    void getFeedRouteWithSpanishLocaleLocalizesShellAndCards() throws Exception {
+        mockMvc.perform(get("/").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        model().attribute(
+                                        "shell",
+                                        Matchers.hasProperty(
+                                                "hostAction",
+                                                Matchers.hasProperty(
+                                                        "label",
+                                                        Matchers.is("Cambiar a Organizador")))))
+                .andExpect(
+                        model().attribute(
+                                        "feedPage",
+                                        Matchers.hasProperty(
+                                                "title",
+                                                Matchers.is(
+                                                        "Encontr\u00e1 tu pr\u00f3ximo partido."))))
+                .andExpect(
+                        model().attribute(
+                                        "feedPage",
+                                        Matchers.hasProperty(
+                                                "featuredEvents",
+                                                Matchers.contains(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "sport",
+                                                                        Matchers.is("P\u00e1del")),
+                                                                Matchers.hasProperty(
+                                                                        "priceLabel",
+                                                                        Matchers.is("$10")))))));
     }
 
     @Test
@@ -309,5 +357,50 @@ class PawUiRouteTest {
                 .andExpect(view().name("verification/check-email"))
                 .andExpect(model().attributeExists("title"))
                 .andExpect(model().attributeExists("summary"));
+    }
+
+    @Test
+    void postHostPublishWithSpanishLocaleLocalizesConfirmationCopyAndDate() throws Exception {
+        mockMvc.perform(
+                        post("/host/events/new")
+                                .param("lang", "es")
+                                .param("email", "host@test.com")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2026-04-10")
+                                .param("eventTime", "18:00")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification/check-email"))
+                .andExpect(model().attribute("title", "Revis\u00e1 tu email"))
+                .andExpect(model().attribute("eyebrow", "Publicaci\u00f3n de evento solicitada"))
+                .andExpect(model().attribute("actionLabel", "Volver a crear evento"))
+                .andExpect(
+                        model().attribute(
+                                        "expiresAtLabel",
+                                        Matchers.containsStringIgnoringCase("abr")));
+    }
+
+    private static MessageSource messageSource() {
+        final ReloadableResourceBundleMessageSource messageSource =
+                new ReloadableResourceBundleMessageSource();
+        messageSource.setBasename("classpath:i18n/messages");
+        messageSource.setDefaultEncoding("UTF-8");
+        return messageSource;
+    }
+
+    private static SessionLocaleResolver localeResolver() {
+        final SessionLocaleResolver localeResolver = new SessionLocaleResolver();
+        localeResolver.setDefaultLocale(Locale.ENGLISH);
+        return localeResolver;
+    }
+
+    private static LocaleChangeInterceptor localeChangeInterceptor() {
+        final LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
+        localeChangeInterceptor.setParamName("lang");
+        return localeChangeInterceptor;
     }
 }
