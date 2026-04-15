@@ -171,6 +171,22 @@ Do not introduce React, Next.js, Vue, Tailwind, Vite, or a client-rendered archi
 
 The current `HelloWorldController` and demo pages are scaffolding. It is fine to replace or extend them toward real MVP flows, but preserve useful shared components unless the task says otherwise.
 
+### Internationalization
+
+This repository already ships with English and Spanish UI copy. Treat internationalization as an existing product requirement, not as optional polish.
+
+Rules:
+
+- do not hardcode new user-facing copy in controllers, services, JSPs, mail templates, or validation messages when that copy can come from the message bundles
+- add every new user-facing string to both `webapp/src/main/resources/i18n/messages.properties` and `webapp/src/main/resources/i18n/messages_es.properties`
+- keep controllers and services locale-aware when they prepare user-visible labels, verification messages, preview data, or generated links
+- do not use fixed locales such as `Locale.US` for user-facing date/time formatting; use the active request locale instead
+- preserve locale across flows that leave the current page, especially verification links, redirects, and mail-driven entry points
+- keep document metadata locale-aware, including `<html lang>` and relevant accessibility labels
+- when changing a localized flow, add or update tests that exercise at least one non-default locale path, not only English
+
+If a change adds visible UI or email copy and only updates one locale, call that out as incomplete before coding.
+
 ## 9. Design Guidance
 
 Use `./docs/design.md` as direction, not as permission to overbuild the frontend.
