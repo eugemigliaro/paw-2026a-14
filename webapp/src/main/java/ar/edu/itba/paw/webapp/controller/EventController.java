@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -39,26 +40,21 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class EventController {
 
-    private static final DateTimeFormatter SCHEDULE_FORMATTER =
-            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                    .withLocale(Locale.US);
-    private static final DateTimeFormatter DATE_FORMATTER =
-            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.US);
-    private static final DateTimeFormatter TIME_FORMATTER =
-            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.US);
-
     private final MatchService matchService;
     private final UserService userService;
     private final ActionVerificationService actionVerificationService;
+    private final MessageSource messageSource;
 
     @Autowired
     public EventController(
             final MatchService matchService,
             final UserService userService,
-            final ActionVerificationService actionVerificationService) {
+            final ActionVerificationService actionVerificationService,
+            final MessageSource messageSource) {
         this.matchService = matchService;
         this.userService = userService;
         this.actionVerificationService = actionVerificationService;
+        this.messageSource = messageSource;
     }
 
     @ModelAttribute("reservationRequestForm")
@@ -69,9 +65,10 @@ public class EventController {
     @GetMapping("/events/{eventId}")
     public ModelAndView showEventDetails(
             @PathVariable("eventId") final String eventId,
-            @RequestParam(value = "reservation", required = false) final String reservationStatus) {
+            @RequestParam(value = "reservation", required = false) final String reservationStatus,
+            final Locale locale) {
         return showRealEventDetails(
-                parseEventIdOrThrowNotFound(eventId), reservationStatus, null, null);
+                parseEventIdOrThrowNotFound(eventId), reservationStatus, null, null, locale);
     }
 
     @PostMapping("/events/{eventId}/reservations")
@@ -79,16 +76,18 @@ public class EventController {
             @PathVariable("eventId") final String eventId,
             @Valid @ModelAttribute("reservationRequestForm")
                     final ReservationRequestForm reservationRequestForm,
-            final BindingResult bindingResult) {
+            final BindingResult bindingResult,
+            final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
         if (bindingResult.hasErrors()) {
             return showRealEventDetails(
                     matchId,
                     null,
                     bindingResult.getFieldError("email") == null
-                            ? "Enter a valid email address."
+                            ? messageSource.getMessage("form.email.invalid", null, locale)
                             : bindingResult.getFieldError("email").getDefaultMessage(),
-                    reservationRequestForm);
+                    reservationRequestForm,
+                    locale);
         }
 
         try {
@@ -100,24 +99,24 @@ public class EventController {
                             .findPublicMatchById(matchId)
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
             final ModelAndView mav = new ModelAndView("verification/check-email");
-            mav.addObject("shell", ShellViewModelFactory.browseShell());
-            mav.addObject("title", "Check your email");
+            mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+            mav.addObject(
+                    "title", messageSource.getMessage("verification.checkEmail", null, locale));
             mav.addObject(
                     "summary",
-                    "We sent a one-time confirmation link to "
-                            + requestResult.getEmail()
-                            + " so you can reserve your spot in "
-                            + match.getTitle()
-                            + ".");
+                    messageSource.getMessage(
+                            "verification.reservation.summary",
+                            new Object[] {requestResult.getEmail(), match.getTitle()},
+                            locale));
             mav.addObject(
                     "expiresAtLabel",
-                    SCHEDULE_FORMATTER.format(
-                            requestResult.getExpiresAt().atZone(ZoneId.systemDefault())));
+                    scheduleFormatter(locale)
+                            .format(requestResult.getExpiresAt().atZone(ZoneId.systemDefault())));
             mav.addObject("backHref", "/events/" + matchId);
             return mav;
         } catch (final VerificationFailureException exception) {
             return showRealEventDetails(
-                    matchId, null, exception.getMessage(), reservationRequestForm);
+                    matchId, null, exception.getMessage(), reservationRequestForm, locale);
         }
     }
 
@@ -125,15 +124,16 @@ public class EventController {
             final Long eventId,
             final String reservationStatus,
             final String reservationError,
-            final ReservationRequestForm reservationRequestForm) {
+            final ReservationRequestForm reservationRequestForm,
+            final Locale locale) {
         final Match match =
                 matchService
                         .findPublicMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("events/detail");
-        mav.addObject("shell", ShellViewModelFactory.browseShell());
-        mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants));
+        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
         mav.addObject("reservationEnabled", match.getAvailableSpots() > 0);
         mav.addObject("reservationRequestPath", "/events/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
@@ -145,30 +145,34 @@ public class EventController {
     }
 
     private EventDetailPageViewModel buildRealEventPage(
-            final Match match, final List<User> confirmedParticipants) {
+            final Match match, final List<User> confirmedParticipants, final Locale locale) {
         return new EventDetailPageViewModel(
-                toCard(match),
+                toCard(match, locale),
                 null,
                 null,
                 userService
                         .findById(match.getHostUserId())
-                        .map(user -> user.getUsername())
-                        .orElse("Host #" + match.getHostUserId()),
+                        .map(User::getUsername)
+                        .orElse(
+                                messageSource.getMessage(
+                                        "event.detail.unknownHost",
+                                        new Object[] {match.getHostUserId()},
+                                        locale)),
                 toParticipantViewModels(confirmedParticipants),
-                buildParticipantCountLabel(confirmedParticipants.size()),
-                "No one has joined yet. Be the first confirmed player.",
-                buildAboutParagraphs(match),
-                toPriceLabel(match.getPricePerPlayer()),
-                buildBookingDetails(match),
-                buildAvailabilityLabel(match),
-                "Reserve a spot",
-                loadNearbyEvents(match.getId()));
+                buildParticipantCountLabel(confirmedParticipants.size(), locale),
+                messageSource.getMessage("event.detail.noPlayersHint", null, locale),
+                buildAboutParagraphs(match, locale),
+                toPriceLabel(match.getPricePerPlayer(), locale),
+                buildBookingDetails(match, locale),
+                buildAvailabilityLabel(match, locale),
+                messageSource.getMessage("event.booking.cta", null, locale),
+                loadNearbyEvents(match.getId(), locale));
     }
 
-    private List<String> buildAboutParagraphs(final Match match) {
+    private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
         final String description =
                 match.getDescription() == null || match.getDescription().isBlank()
-                        ? "A community sports event hosted through Match Point."
+                        ? messageSource.getMessage("event.detail.defaultDescription", null, locale)
                         : match.getDescription();
         return List.of(normalizeDescriptionLineBreaks(description));
     }
@@ -183,21 +187,29 @@ public class EventController {
                 .strip();
     }
 
-    private List<BookingDetailViewModel> buildBookingDetails(final Match match) {
+    private List<BookingDetailViewModel> buildBookingDetails(
+            final Match match, final Locale locale) {
         return List.of(
                 new BookingDetailViewModel(
-                        "Date",
-                        DATE_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault()))),
+                        messageSource.getMessage("event.booking.date", null, locale),
+                        dateFormatter(locale)
+                                .format(match.getStartsAt().atZone(ZoneId.systemDefault()))),
                 new BookingDetailViewModel(
-                        "Time",
-                        TIME_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault()))
+                        messageSource.getMessage("event.booking.time", null, locale),
+                        timeFormatter(locale)
+                                        .format(match.getStartsAt().atZone(ZoneId.systemDefault()))
                                 + (match.getEndsAt() == null
                                         ? ""
                                         : " - "
-                                                + TIME_FORMATTER.format(
-                                                        match.getEndsAt()
-                                                                .atZone(ZoneId.systemDefault())))),
-                new BookingDetailViewModel("Venue", match.getAddress()));
+                                                + timeFormatter(locale)
+                                                        .format(
+                                                                match.getEndsAt()
+                                                                        .atZone(
+                                                                                ZoneId
+                                                                                        .systemDefault())))),
+                new BookingDetailViewModel(
+                        messageSource.getMessage("event.booking.venue", null, locale),
+                        match.getAddress()));
     }
 
     private List<ParticipantViewModel> toParticipantViewModels(
@@ -211,46 +223,81 @@ public class EventController {
                 .toList();
     }
 
-    private List<EventCardViewModel> loadNearbyEvents(final Long currentMatchId) {
+    private List<EventCardViewModel> loadNearbyEvents(
+            final Long currentMatchId, final Locale locale) {
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches("", null, "all", "soonest", 1, 4, null);
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)
-                .map(this::toCard)
+                .map(match -> toCard(match, locale))
                 .toList();
     }
 
-    private EventCardViewModel toCard(final Match match) {
+    private EventCardViewModel toCard(final Match match, final Locale locale) {
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
                 "/events/" + match.getId(),
-                match.getSport().getDisplayName(),
+                toSportLabel(match.getSport(), locale),
                 match.getTitle(),
                 match.getAddress(),
-                SCHEDULE_FORMATTER.format(match.getStartsAt().atZone(ZoneId.systemDefault())),
-                toPriceLabel(match.getPricePerPlayer()),
-                buildAvailabilityLabel(match),
+                scheduleFormatter(locale)
+                        .format(match.getStartsAt().atZone(ZoneId.systemDefault())),
+                toPriceLabel(match.getPricePerPlayer(), locale),
+                buildAvailabilityLabel(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }
 
-    private static String buildAvailabilityLabel(final Match match) {
-        return match.getAvailableSpots() + " of " + match.getMaxPlayers() + " spots left";
+    private String buildAvailabilityLabel(final Match match, final Locale locale) {
+        return messageSource.getMessage(
+                "event.availability",
+                new Object[] {match.getAvailableSpots(), match.getMaxPlayers()},
+                locale);
     }
 
-    private static String buildParticipantCountLabel(final int participantCount) {
+    private String buildParticipantCountLabel(final int participantCount, final Locale locale) {
         return participantCount == 1
-                ? "1 confirmed player"
-                : participantCount + " confirmed players";
+                ? messageSource.getMessage("event.participants.one", null, locale)
+                : messageSource.getMessage(
+                        "event.participants.many", new Object[] {participantCount}, locale);
     }
 
-    private static String toPriceLabel(final BigDecimal pricePerPlayer) {
+    private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
         if (pricePerPlayer == null) {
-            return "Price TBD";
+            return messageSource.getMessage("price.tbd", null, locale);
         }
-        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0 ? "Free" : "$" + pricePerPlayer;
+        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
+                ? messageSource.getMessage("price.free", null, locale)
+                : messageSource.getMessage("price.amount", new Object[] {pricePerPlayer}, locale);
+    }
+
+    private String toSportLabel(final Sport sport, final Locale locale) {
+        return messageSource.getMessage(
+                "sport." + sport.getDbValue(),
+                null,
+                sport.getDisplayName(),
+                resolvedLocale(locale));
+    }
+
+    private static DateTimeFormatter scheduleFormatter(final Locale locale) {
+        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+                .withLocale(resolvedLocale(locale));
+    }
+
+    private static DateTimeFormatter dateFormatter(final Locale locale) {
+        return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+                .withLocale(resolvedLocale(locale));
+    }
+
+    private static DateTimeFormatter timeFormatter(final Locale locale) {
+        return DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                .withLocale(resolvedLocale(locale));
+    }
+
+    private static Locale resolvedLocale(final Locale locale) {
+        return locale == null ? Locale.ENGLISH : locale;
     }
 
     private static String avatarLabelForUsername(final String username) {
