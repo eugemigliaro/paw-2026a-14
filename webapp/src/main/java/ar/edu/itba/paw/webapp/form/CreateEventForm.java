@@ -34,8 +34,8 @@ public class CreateEventForm {
     @NotBlank(message = "Sport is required")
     private String sport = "padel";
 
-    @NotNull(message = "Event date is required")
-    @FutureOrPresent(message = "Event date cannot be in the past")
+    @NotNull(message = "Match date is required")
+    @FutureOrPresent(message = "Match date cannot be in the past")
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate eventDate = LocalDate.now().plusDays(1);
 

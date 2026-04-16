@@ -233,7 +233,7 @@ This requirement matters for:
 ### 10.2 Reservation Behavior
 - Reservation is **not instant**
 - Users must confirm their inscription via mail
-- Host can kick out players form matches
+- Host can kick out players from matches
 - A user can reserve **only once** per event
 - If the event has started already, reservation is blocked automatically
 - If the event reaches its capacity, no more reservations are allowed

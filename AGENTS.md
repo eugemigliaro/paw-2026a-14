@@ -50,7 +50,7 @@ Build only what belongs to the MVP for this product.
 
 In scope:
 
-- in-person sports matches/torunaments
+- in-person sports matches/tournaments
 - event discovery/feed flows
 - event detail pages
 - reserve a spot
@@ -84,7 +84,7 @@ Out of scope for the MVP unless the user explicitly asks otherwise:
 Important product rules:
 
 - one person can act as both participant and host
-- matches/torunaments are in-person only
+- matches/tournaments are in-person only
 - each event belongs to exactly one category
 - the platform does not process payments
 - search is free-text
