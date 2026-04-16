@@ -14,13 +14,18 @@ import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
+import ar.edu.itba.paw.services.mail.VerificationMailTemplateData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -134,7 +139,7 @@ public class ActionVerificationServiceImplTest {
                 actionVerificationService.confirm("raw-token");
 
         Assertions.assertEquals(5L, result.getUserId());
-        Assertions.assertEquals("/events/10?reservation=confirmed", result.getRedirectUrl());
+        Assertions.assertEquals("/matches/10?reservation=confirmed", result.getRedirectUrl());
     }
 
     @Test
@@ -166,20 +171,24 @@ public class ActionVerificationServiceImplTest {
 
     @Test
     public void testRequestMatchCreationCreatesPendingRequestAndSendsMail() {
+        final Instant startsAt = FIXED_NOW.plusSeconds(7200);
+        final Instant endsAt = FIXED_NOW.plusSeconds(10800);
         final CreateMatchRequest createRequest =
                 new CreateMatchRequest(
                         null,
                         "Club Address",
                         "Host Event",
                         "Description",
-                        FIXED_NOW.plusSeconds(7200),
-                        null,
+                        startsAt,
+                        endsAt,
                         10,
                         BigDecimal.ZERO,
                         Sport.PADEL,
                         "public",
                         "open",
                         null);
+        final AtomicReference<VerificationMailTemplateData> capturedTemplateData =
+                new AtomicReference<>();
 
         Mockito.when(mvpIdentityService.findExistingByEmail("host@test.com"))
                 .thenReturn(Optional.empty());
@@ -205,12 +214,29 @@ public class ActionVerificationServiceImplTest {
                                 FIXED_NOW,
                                 FIXED_NOW));
         Mockito.when(templateRenderer.renderReservationConfirmation(ArgumentMatchers.any()))
-                .thenReturn(new MailContent("subject", "<p>html</p>", "text"));
+                .thenAnswer(
+                        invocation -> {
+                            capturedTemplateData.set(invocation.getArgument(0));
+                            return new MailContent("subject", "<p>html</p>", "text");
+                        });
 
         final VerificationRequestResult result =
                 actionVerificationService.requestMatchCreation(createRequest, "host@test.com");
 
         Assertions.assertEquals("host@test.com", result.getEmail());
+        Assertions.assertNotNull(capturedTemplateData.get());
+        Assertions.assertTrue(
+                capturedTemplateData.get().getDetails().stream()
+                        .anyMatch(
+                                detail ->
+                                        "End time".equals(detail.getLabel())
+                                                && DateTimeFormatter.ofLocalizedTime(
+                                                                FormatStyle.SHORT)
+                                                        .withLocale(Locale.ENGLISH)
+                                                        .format(
+                                                                endsAt.atZone(
+                                                                        ZoneId.systemDefault()))
+                                                        .equals(detail.getValue())));
     }
 
     @Test
@@ -279,7 +305,64 @@ public class ActionVerificationServiceImplTest {
 
         // Assert
         Assertions.assertEquals(5L, result.getUserId());
-        Assertions.assertEquals("/events/55", result.getRedirectUrl());
+        Assertions.assertEquals("/matches/55", result.getRedirectUrl());
+    }
+
+    @Test
+    public void testConfirmMatchCreationPreservesEndTimeWhenPresent() {
+        final long startsAtEpochMillis = 1775858400000L;
+        final long endsAtEpochMillis = 1775865600000L;
+        final EmailActionRequest request =
+                new EmailActionRequest(
+                        31L,
+                        EmailActionType.MATCH_CREATION,
+                        "host@test.com",
+                        null,
+                        "token-hash",
+                        "{\"hostUserId\":null,\"address\":\"Club Address\",\"title\":\"Host Event\",\"description\":\"Description\",\"startsAtEpochMillis\":"
+                                + startsAtEpochMillis
+                                + ",\"endsAtEpochMillis\":"
+                                + endsAtEpochMillis
+                                + ",\"maxPlayers\":10,\"pricePerPlayer\":0,\"sport\":\"padel\",\"visibility\":\"public\",\"status\":\"open\"}",
+                        EmailActionStatus.PENDING,
+                        FIXED_NOW.plusSeconds(24 * 3600L),
+                        null,
+                        FIXED_NOW,
+                        FIXED_NOW);
+        final User user = new User(5L, "host@test.com", "host-player");
+        final AtomicReference<CreateMatchRequest> capturedRequest = new AtomicReference<>();
+
+        Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
+                .thenReturn(Optional.of(request));
+        Mockito.when(mvpIdentityService.resolveOrCreateByEmail("host@test.com")).thenReturn(user);
+        Mockito.when(matchService.createMatch(ArgumentMatchers.any(CreateMatchRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            final CreateMatchRequest createRequest = invocation.getArgument(0);
+                            capturedRequest.set(createRequest);
+                            return new Match(
+                                    55L,
+                                    createRequest.getSport(),
+                                    createRequest.getHostUserId(),
+                                    createRequest.getAddress(),
+                                    createRequest.getTitle(),
+                                    createRequest.getDescription(),
+                                    createRequest.getStartsAt(),
+                                    createRequest.getEndsAt(),
+                                    createRequest.getMaxPlayers(),
+                                    createRequest.getPricePerPlayer(),
+                                    createRequest.getVisibility(),
+                                    createRequest.getStatus(),
+                                    0,
+                                    createRequest.getBannerImageId());
+                        });
+
+        final VerificationConfirmationResult result =
+                actionVerificationService.confirm("raw-token");
+
+        Assertions.assertEquals(5L, result.getUserId());
+        Assertions.assertEquals(
+                Instant.ofEpochMilli(endsAtEpochMillis), capturedRequest.get().getEndsAt());
     }
 
     @Test
@@ -371,6 +454,7 @@ public class ActionVerificationServiceImplTest {
         messageSource.addMessage("verification.preview.detail.venue", Locale.ENGLISH, "Venue");
         messageSource.addMessage(
                 "verification.preview.detail.schedule", Locale.ENGLISH, "Schedule");
+        messageSource.addMessage("verification.preview.detail.endTime", Locale.ENGLISH, "End time");
         messageSource.addMessage("verification.preview.detail.price", Locale.ENGLISH, "Price");
         messageSource.addMessage(
                 "verification.preview.detail.capacity", Locale.ENGLISH, "Capacity");
@@ -454,6 +538,7 @@ public class ActionVerificationServiceImplTest {
         messageSource.addMessage("verification.preview.detail.title", spanish, "Título");
         messageSource.addMessage("verification.preview.detail.venue", spanish, "Lugar");
         messageSource.addMessage("verification.preview.detail.schedule", spanish, "Horario");
+        messageSource.addMessage("verification.preview.detail.endTime", spanish, "Hora de fin");
         messageSource.addMessage("verification.preview.detail.price", spanish, "Precio");
         messageSource.addMessage("verification.preview.detail.capacity", spanish, "Capacidad");
         messageSource.addMessage(

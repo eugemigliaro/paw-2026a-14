@@ -33,17 +33,24 @@
 					<spring:message var="sportTennis" code="sport.tennis" />
 					<spring:message var="sportBasketball" code="sport.basketball" />
 					<spring:message var="publishLabel" code="host.form.submit" />
+					<c:url var="createMatchAction" value="/host/matches/new" />
 
 					<form:form
 						method="post"
-						action="${pageContext.request.contextPath}/host/events/new"
+						action="${createMatchAction}"
 						modelAttribute="createEventForm"
 						enctype="multipart/form-data"
-						id="create-event-form"
+						id="create-match-form"
 						data-submit-guard="true"
 						data-submit-loading-label="${publishingLabel}"
 						cssClass="create-form"
 					>
+						<input
+							type="hidden"
+							name="timezone"
+							id="match-timezone"
+							value="<c:out value='${createEventForm.timezone}' />"
+							data-browser-timezone-field="true" />
 						<c:if test="${not empty formError}">
 							<p class="field__error">
 								<c:out value="${formError}" />
@@ -55,11 +62,11 @@
 								<spring:message code="host.section.basics.subtitle" />
 							</h2>
 							<div class="create-stack">
-								<label class="field" for="event-email">
+								<label class="field" for="match-email">
 									<span class="field__label"><spring:message code="host.form.email" /></span>
 									<form:input
 										path="email"
-										id="event-email"
+										id="match-email"
 										type="email"
 										cssClass="field__control"
 										required="required"
@@ -72,13 +79,13 @@
 									/>
 								</label>
 
-								<label class="field" for="event-title">
+								<label class="field" for="match-title">
 									<span class="field__label"
 										><spring:message code="host.form.title" /></span
 									>
 									<form:input
 										path="title"
-										id="event-title"
+										id="match-title"
 										cssClass="field__control"
 										required="required"
 										placeholder="${titlePlaceholder}"
@@ -90,12 +97,12 @@
 									/>
 								</label>
 
-								<label class="field" for="event-sport">
+								<label class="field" for="match-sport">
 									<span class="field__label"><spring:message code="host.form.category" /></span>
 									<span class="field__select-wrap">
 										<form:select
 											path="sport"
-											id="event-sport"
+											id="match-sport"
 											cssClass="field__control field__control--select"
 										>
 											<form:option value="padel" label="${sportPadel}" />
@@ -111,13 +118,13 @@
 									/>
 								</label>
 
-								<label class="field" for="event-description">
+								<label class="field" for="match-description">
 									<span class="field__label"
 										><spring:message code="host.form.description" /></span
 									>
 									<form:textarea
 										path="description"
-										id="event-description"
+										id="match-description"
 										cssClass="field__control field__control--textarea"
 										placeholder="${descPlaceholder}"
 									/>
@@ -135,12 +142,12 @@
 							<h2 class="form-card__title">
 								<spring:message code="host.section.logistics.subtitle" />
 							</h2>
-							<div class="form-card__grid">
-								<label class="field" for="event-address">
+							<div class="create-stack">
+								<label class="field" for="match-address">
 									<span class="field__label"><spring:message code="host.form.location" /></span>
 									<form:input
 										path="address"
-										id="event-address"
+										id="match-address"
 										cssClass="field__control"
 										required="required"
 										placeholder="${locationPlaceholder}"
@@ -152,11 +159,11 @@
 									/>
 								</label>
 
-								<label class="field" for="event-date">
+								<label class="field" for="match-date">
 									<span class="field__label"><spring:message code="host.form.date" /></span>
 									<form:input
 										path="eventDate"
-										id="event-date"
+										id="match-date"
 										type="date"
 										cssClass="field__control"
 									/>
@@ -167,16 +174,31 @@
 									/>
 								</label>
 
-								<label class="field" for="event-time">
+								<label class="field" for="match-time">
 									<span class="field__label"><spring:message code="host.form.startTime" /></span>
 									<form:input
 										path="eventTime"
-										id="event-time"
+										id="match-time"
 										type="time"
 										cssClass="field__control"
 									/>
 									<form:errors
 										path="eventTime"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
+
+								<label class="field" for="match-end-time">
+									<span class="field__label"><spring:message code="host.form.endTime" /></span>
+									<form:input
+										path="endTime"
+										id="match-end-time"
+										type="time"
+										cssClass="field__control"
+									/>
+									<form:errors
+										path="endTime"
 										cssClass="field__error"
 										element="span"
 									/>
@@ -190,11 +212,11 @@
 								<spring:message code="host.section.capacity.subtitle" />
 							</h2>
 							<div class="form-card__grid form-card__grid--three">
-								<label class="field" for="event-capacity">
+								<label class="field" for="match-capacity">
 									<span class="field__label"><spring:message code="host.form.capacity" /></span>
 									<form:input
 										path="maxPlayers"
-										id="event-capacity"
+										id="match-capacity"
 										type="number"
 										min="1"
 										cssClass="field__control"
@@ -206,13 +228,13 @@
 									/>
 								</label>
 
-								<label class="field" for="event-price">
+								<label class="field" for="match-price">
 									<span class="field__label"
 										><spring:message code="host.form.pricePerPlayer" /></span
 									>
 									<form:input
 										path="pricePerPlayer"
-										id="event-price"
+										id="match-price"
 										type="number"
 										min="0"
 										step="0.01"
@@ -234,11 +256,11 @@
 							<h2 class="form-card__title">
 								<spring:message code="host.section.banner.subtitle" />
 							</h2>
-							<label class="field" for="event-banner-image">
+							<label class="field" for="match-banner-image">
 								<span class="field__label"><spring:message code="host.form.bannerImage" /></span>
 								<form:input
 									path="bannerImage"
-									id="event-banner-image"
+									id="match-banner-image"
 									type="file"
 									accept="image/png,image/jpeg,image/webp,image/gif"
 									cssClass="field__control upload-card__file-input"
@@ -262,7 +284,7 @@
 							<ui:button
 								label="${publishLabel}"
 								type="submit"
-								id="publish-event-button"
+								id="publish-match-button"
 								size="lg"
 								fullWidth="${true}"
 								className="create-layout__submit"

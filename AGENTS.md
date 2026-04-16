@@ -28,6 +28,8 @@ This repository is currently a Maven multi-module Java project with these module
 - `persistence-contracts`
 - `models`
 
+For a compact repository map focused on codebase orientation, see `./docs/repo-structure.md`.
+
 The implemented stack today is:
 
 - Java 21
@@ -48,7 +50,7 @@ Build only what belongs to the MVP for this product.
 
 In scope:
 
-- in-person sports events
+- in-person sports matches/tournaments
 - event discovery/feed flows
 - event detail pages
 - reserve a spot
@@ -82,7 +84,7 @@ Out of scope for the MVP unless the user explicitly asks otherwise:
 Important product rules:
 
 - one person can act as both participant and host
-- events are in-person only
+- matches/tournaments are in-person only
 - each event belongs to exactly one category
 - the platform does not process payments
 - search is free-text

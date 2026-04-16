@@ -33,8 +33,7 @@ public class MatchJdbcDao implements MatchDao {
                     + " ON mp.match_id = m.id"
                     + " AND mp.status IN ('joined', 'checked_in') ";
 
-    private static final String BASE_GROUP_BY =
-            " GROUP BY m.id" + " HAVING MAX(m.max_players) > COUNT(mp.id) ";
+    private static final String BASE_GROUP_BY = " GROUP BY m.id";
 
     private static final RowMapper<Match> MATCH_ROW_MAPPER =
             (ResultSet rs, int rowNum) -> {
@@ -147,8 +146,10 @@ public class MatchJdbcDao implements MatchDao {
     @Override
     public List<Match> findPublicMatches(
             final String query,
-            final Sport sport,
+            final List<Sport> sports,
             final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
             final MatchSort sort,
             final ZoneId zoneId,
             final int offset,
@@ -158,8 +159,9 @@ public class MatchJdbcDao implements MatchDao {
 
         sql.append("SELECT m.*, COUNT(mp.id) AS joined_players");
         sql.append(BASE_FROM);
-        appendFilters(sql, params, query, sport, timeFilter, zoneId);
+        appendFilters(sql, params, query, sports, timeFilter, zoneId, minPrice, maxPrice);
         sql.append(BASE_GROUP_BY);
+        appendOpenSpotsConstraint(sql);
         appendSort(sql, sort);
         sql.append(" LIMIT ? OFFSET ?");
         params.add(limit);
@@ -171,8 +173,10 @@ public class MatchJdbcDao implements MatchDao {
     @Override
     public int countPublicMatches(
             final String query,
-            final Sport sport,
+            final List<Sport> sports,
             final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
             final ZoneId zoneId) {
         final StringBuilder sql = new StringBuilder();
         final List<Object> params = new ArrayList<>();
@@ -180,8 +184,9 @@ public class MatchJdbcDao implements MatchDao {
         sql.append("SELECT COUNT(*) FROM (");
         sql.append("SELECT m.id");
         sql.append(BASE_FROM);
-        appendFilters(sql, params, query, sport, timeFilter, zoneId);
+        appendFilters(sql, params, query, sports, timeFilter, zoneId, minPrice, maxPrice);
         sql.append(BASE_GROUP_BY);
+        appendOpenSpotsConstraint(sql);
         sql.append(") filtered_matches");
 
         return jdbcTemplate.queryForObject(sql.toString(), Integer.class, params.toArray());
@@ -191,9 +196,11 @@ public class MatchJdbcDao implements MatchDao {
             final StringBuilder sql,
             final List<Object> params,
             final String query,
-            final Sport sport,
+            final List<Sport> sports,
             final EventTimeFilter timeFilter,
-            final ZoneId zoneId) {
+            final ZoneId zoneId,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
         sql.append(" WHERE m.visibility = 'public' AND m.status = 'open'");
 
         if (query != null && !query.trim().isEmpty()) {
@@ -205,9 +212,16 @@ public class MatchJdbcDao implements MatchDao {
             params.add(queryPattern);
         }
 
-        if (sport != null) {
-            sql.append(" AND CAST(m.sport AS VARCHAR(30)) = ?");
-            params.add(sport.getDbValue());
+        if (sports != null && !sports.isEmpty()) {
+            sql.append(" AND CAST(m.sport AS VARCHAR(30)) IN (");
+            for (int i = 0; i < sports.size(); i++) {
+                if (i > 0) {
+                    sql.append(", ");
+                }
+                sql.append("?");
+                params.add(sports.get(i).getDbValue());
+            }
+            sql.append(")");
         }
 
         if (timeFilter != null) {
@@ -222,6 +236,20 @@ public class MatchJdbcDao implements MatchDao {
                 params.add(Timestamp.from(timeRange.end()));
             }
         }
+
+        if (minPrice != null) {
+            sql.append(" AND m.price_per_player >= ?");
+            params.add(minPrice);
+        }
+
+        if (maxPrice != null) {
+            sql.append(" AND m.price_per_player <= ?");
+            params.add(maxPrice);
+        }
+    }
+
+    private static void appendOpenSpotsConstraint(final StringBuilder sql) {
+        sql.append(" HAVING MAX(m.max_players) - COUNT(mp.id) >= 1");
     }
 
     private static void appendSort(final StringBuilder sql, final MatchSort sort) {

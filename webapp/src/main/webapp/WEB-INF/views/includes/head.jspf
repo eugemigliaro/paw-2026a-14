@@ -7,13 +7,25 @@
 <link
   href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
   rel="stylesheet" />
-<link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/favicon.png?v=20260330" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/components.css" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/base.css" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/event-cards.css" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/feed.css" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/event-detail.css" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/host-create.css" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/verification.css" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/errors.css" />
-<script defer src="${pageContext.request.contextPath}/js/form-submit-guard.js"></script>
+<c:url var="faviconHref" value="/assets/favicon.png?v=20260330" />
+<c:url var="cssComponentsHref" value="/css/components.css" />
+<c:url var="cssBaseHref" value="/css/base.css" />
+<c:url var="cssEventCardsHref" value="/css/event-cards.css" />
+<c:url var="cssFeedHref" value="/css/feed.css?v=20260410" />
+<c:url var="cssEventDetailHref" value="/css/event-detail.css" />
+<c:url var="cssHostCreateHref" value="/css/host-create.css" />
+<c:url var="cssVerificationHref" value="/css/verification.css" />
+<c:url var="cssErrorsHref" value="/css/errors.css" />
+<c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
+<c:url var="timezoneFieldHref" value="/js/timezone-field.js" />
+<link rel="icon" type="image/png" href="${faviconHref}" />
+<link rel="stylesheet" href="${cssComponentsHref}" />
+<link rel="stylesheet" href="${cssBaseHref}" />
+<link rel="stylesheet" href="${cssEventCardsHref}" />
+<link rel="stylesheet" href="${cssFeedHref}" />
+<link rel="stylesheet" href="${cssEventDetailHref}" />
+<link rel="stylesheet" href="${cssHostCreateHref}" />
+<link rel="stylesheet" href="${cssVerificationHref}" />
+<link rel="stylesheet" href="${cssErrorsHref}" />
+<script defer src="${formSubmitGuardHref}"></script>
+<script defer src="${timezoneFieldHref}"></script>

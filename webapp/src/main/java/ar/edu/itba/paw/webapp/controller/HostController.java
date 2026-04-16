@@ -10,6 +10,7 @@ import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -30,15 +31,18 @@ public class HostController {
 
     private final ActionVerificationService actionVerificationService;
     private final ImageService imageService;
+    private final Clock clock;
     private final MessageSource messageSource;
 
     @Autowired
     public HostController(
             final ActionVerificationService actionVerificationService,
             final ImageService imageService,
+            final Clock clock,
             final MessageSource messageSource) {
         this.actionVerificationService = actionVerificationService;
         this.imageService = imageService;
+        this.clock = clock;
         this.messageSource = messageSource;
     }
 
@@ -47,29 +51,49 @@ public class HostController {
         return new CreateEventForm();
     }
 
-    @GetMapping("/host/events/new")
+    @GetMapping("/host/matches/new")
     public ModelAndView showCreateEvent(final Locale locale) {
-        final ModelAndView mav = new ModelAndView("host/create-event");
+        final ModelAndView mav = new ModelAndView("host/create-match");
         mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
         mav.addObject("createEventForm", createEventForm());
         return mav;
     }
 
-    @PostMapping("/host/events/new")
+    @PostMapping("/host/matches/new")
     public ModelAndView publishEvent(
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
             final Locale locale) {
+        if (!bindingResult.hasFieldErrors("eventDate")
+                && !bindingResult.hasFieldErrors("eventTime")
+                && !isScheduledInFuture(createEventForm)) {
+            bindingResult.rejectValue(
+                    "eventTime", "eventTime.past", "Match date and time cannot be in the past");
+        }
+        if (!bindingResult.hasFieldErrors("eventDate")
+                && !bindingResult.hasFieldErrors("eventTime")
+                && !bindingResult.hasFieldErrors("endTime")
+                && !isEndTimeAfterStartTime(createEventForm)) {
+            bindingResult.rejectValue(
+                    "endTime", "endTime.beforeStart", "End time must be after start time");
+        }
+
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale);
         }
 
         final Instant startsAt =
-                createEventForm
-                        .getEventDate()
-                        .atTime(createEventForm.getEventTime())
-                        .atZone(ZoneId.systemDefault())
-                        .toInstant();
+                toInstant(
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getTimezone());
+        final Instant endsAt =
+                createEventForm.getEndTime() == null
+                        ? null
+                        : toInstant(
+                                createEventForm.getEventDate(),
+                                createEventForm.getEndTime(),
+                                createEventForm.getTimezone());
 
         final Long bannerImageId;
         try {
@@ -90,7 +114,7 @@ public class HostController {
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
                         startsAt,
-                        null,
+                        endsAt,
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
@@ -116,7 +140,7 @@ public class HostController {
                     "expiresAtLabel",
                     expiryFormatter(locale)
                             .format(requestResult.getExpiresAt().atZone(ZoneId.systemDefault())));
-            mav.addObject("backHref", "/host/events/new");
+            mav.addObject("backHref", "/host/matches/new");
             mav.addObject(
                     "actionLabel", messageSource.getMessage("host.backToCreate", null, locale));
             mav.addObject(
@@ -129,7 +153,7 @@ public class HostController {
 
     private ModelAndView hostFormView(
             final CreateEventForm form, final String formError, final Locale locale) {
-        final ModelAndView mav = new ModelAndView("host/create-event");
+        final ModelAndView mav = new ModelAndView("host/create-match");
         mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
@@ -151,6 +175,43 @@ public class HostController {
                     form.getBannerImage().getContentType(),
                     form.getBannerImage().getSize(),
                     inputStream);
+        }
+    }
+
+    private boolean isScheduledInFuture(final CreateEventForm form) {
+        final Instant startsAt =
+                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
+        return startsAt.isAfter(Instant.now(clock));
+    }
+
+    private boolean isEndTimeAfterStartTime(final CreateEventForm form) {
+        if (form.getEndTime() == null) {
+            return true;
+        }
+
+        final Instant startsAt =
+                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
+        final Instant endsAt =
+                toInstant(form.getEventDate(), form.getEndTime(), form.getTimezone());
+        return endsAt.isAfter(startsAt);
+    }
+
+    private static Instant toInstant(
+            final java.time.LocalDate eventDate,
+            final java.time.LocalTime eventTime,
+            final String timezone) {
+        return eventDate.atTime(eventTime).atZone(resolveZoneId(timezone)).toInstant();
+    }
+
+    private static ZoneId resolveZoneId(final String timezone) {
+        if (timezone == null || timezone.isBlank()) {
+            return ZoneId.systemDefault();
+        }
+
+        try {
+            return ZoneId.of(timezone);
+        } catch (final Exception ignored) {
+            return ZoneId.systemDefault();
         }
     }
 }

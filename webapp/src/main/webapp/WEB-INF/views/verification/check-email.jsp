@@ -23,8 +23,9 @@
 			</p>
 			<div class="verification-actions">
 				<spring:message var="defaultBack" code="common.back" />
+				<c:url var="backUrl" value="${backHref}" />
 				<ui:button
-					href="${pageContext.request.contextPath}${backHref}"
+					href="${backUrl}"
 					label="${empty actionLabel ? defaultBack : actionLabel}" />
 			</div>
 		</section>

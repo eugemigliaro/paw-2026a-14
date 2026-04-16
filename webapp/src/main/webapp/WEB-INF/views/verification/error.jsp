@@ -19,7 +19,8 @@
 			<p class="page-heading__description"><c:out value="${message}" /></p>
 			<div class="verification-actions">
 				<spring:message var="browseEventsLabel" code="common.browseEvents" />
-				<ui:button href="${pageContext.request.contextPath}${backHref}" label="${browseEventsLabel}" />
+				<c:url var="backUrl" value="${backHref}" />
+				<ui:button href="${backUrl}" label="${browseEventsLabel}" />
 			</div>
 		</section>
 	</main>

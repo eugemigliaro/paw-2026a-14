@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -266,7 +267,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
         return new VerificationConfirmationResult(
                 userId,
-                "/events/" + match.getId() + "?reservation=confirmed",
+                "/matches/" + match.getId() + "?reservation=confirmed",
                 message("verification.message.reservationConfirmed", locale));
     }
 
@@ -304,7 +305,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
         return new VerificationConfirmationResult(
                 user.getId(),
-                "/events/" + createdMatch.getId(),
+                "/matches/" + createdMatch.getId(),
                 message("verification.message.eventPublished", locale));
     }
 
@@ -354,7 +355,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 email,
                 expiresAt,
                 message("verification.preview.reservation.confirm", locale),
-                "/events/" + match.getId() + "?reservation=confirmed",
+                "/matches/" + match.getId() + "?reservation=confirmed",
                 List.of(
                         new VerificationPreviewDetail(
                                 message("verification.preview.detail.sport", locale),
@@ -454,34 +455,47 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
             final String email,
             final Instant expiresAt,
             final Locale locale) {
+        final List<VerificationPreviewDetail> details = new ArrayList<>();
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.sport", locale),
+                        toSportLabel(payload.getSport(), locale)));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.title", locale),
+                        safeValue(payload.getTitle())));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.venue", locale),
+                        safeValue(payload.getAddress())));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.schedule", locale),
+                        formatSchedule(
+                                Instant.ofEpochMilli(payload.getStartsAtEpochMillis()), locale)));
+        if (payload.getEndsAtEpochMillis() != null) {
+            details.add(
+                    new VerificationPreviewDetail(
+                            message("verification.preview.detail.endTime", locale),
+                            formatEndTime(payload.getEndsAtEpochMillis(), locale)));
+        }
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.price", locale),
+                        toPriceLabel(payload.getPricePerPlayer(), locale)));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.capacity", locale),
+                        String.valueOf(payload.getMaxPlayers())));
+
         return new VerificationPreview(
                 message("verification.preview.creation.title", locale),
                 message("verification.preview.creation.summary", locale),
                 email,
                 expiresAt,
                 message("verification.preview.creation.confirm", locale),
-                "/host/events/new",
-                List.of(
-                        new VerificationPreviewDetail(
-                                message("verification.preview.detail.sport", locale),
-                                toSportLabel(payload.getSport(), locale)),
-                        new VerificationPreviewDetail(
-                                message("verification.preview.detail.title", locale),
-                                safeValue(payload.getTitle())),
-                        new VerificationPreviewDetail(
-                                message("verification.preview.detail.venue", locale),
-                                safeValue(payload.getAddress())),
-                        new VerificationPreviewDetail(
-                                message("verification.preview.detail.schedule", locale),
-                                formatSchedule(
-                                        Instant.ofEpochMilli(payload.getStartsAtEpochMillis()),
-                                        locale)),
-                        new VerificationPreviewDetail(
-                                message("verification.preview.detail.price", locale),
-                                toPriceLabel(payload.getPricePerPlayer(), locale)),
-                        new VerificationPreviewDetail(
-                                message("verification.preview.detail.capacity", locale),
-                                String.valueOf(payload.getMaxPlayers()))));
+                "/host/matches/new",
+                details);
     }
 
     private static String safeValue(final String value) {
@@ -525,6 +539,12 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
                 .withLocale(resolvedLocale(locale))
                 .format(startsAt.atZone(ZoneId.systemDefault()));
+    }
+
+    private String formatEndTime(final long endsAtEpochMillis, final Locale locale) {
+        return DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                .withLocale(resolvedLocale(locale))
+                .format(Instant.ofEpochMilli(endsAtEpochMillis).atZone(ZoneId.systemDefault()));
     }
 
     private Locale currentLocale() {

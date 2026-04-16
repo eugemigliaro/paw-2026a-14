@@ -32,7 +32,8 @@
 
 			<p class="muted-copy"><spring:message code="verification.expiresOnShort" arguments="${expiresAtLabel}" /></p>
 
-			<form method="post" action="${pageContext.request.contextPath}${confirmPath}">
+			<c:url var="confirmAction" value="${confirmPath}" />
+			<form method="post" action="${confirmAction}">
 				<ui:button label="${preview.confirmLabel}" type="submit" fullWidth="${true}" />
 			</form>
 		</section>

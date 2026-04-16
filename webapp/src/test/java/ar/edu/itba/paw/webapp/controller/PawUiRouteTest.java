@@ -25,10 +25,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +45,10 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 class PawUiRouteTest {
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
+
     private MockMvc mockMvc;
+    private AtomicReference<String> lastSportsFilter;
 
     @BeforeEach
     void setUp() {
@@ -50,6 +56,7 @@ class PawUiRouteTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
         final MessageSource messageSource = messageSource();
+        lastSportsFilter = new AtomicReference<>();
 
         final Match realMatch =
                 new Match(
@@ -66,6 +73,22 @@ class PawUiRouteTest {
                         "public",
                         "open",
                         2,
+                        null);
+        final Match footballMatch =
+                new Match(
+                        43L,
+                        Sport.FOOTBALL,
+                        8L,
+                        "North Arena",
+                        "Afterwork Football",
+                        "Fast 5v5",
+                        Instant.parse("2026-04-07T19:00:00Z"),
+                        Instant.parse("2026-04-07T20:30:00Z"),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "open",
+                        4,
                         null);
 
         final MatchService matchService =
@@ -112,8 +135,12 @@ class PawUiRouteTest {
                             final String sort,
                             final int page,
                             final int pageSize,
-                            final String timezone) {
-                        return new PaginatedResult<>(List.of(realMatch), 1, 1, 12);
+                            final String timezone,
+                            final java.math.BigDecimal minPrice,
+                            final java.math.BigDecimal maxPrice) {
+                        lastSportsFilter.set(sport);
+                        return new PaginatedResult<>(
+                                List.of(realMatch, footballMatch), 2, 1, pageSize);
                     }
                 };
 
@@ -169,7 +196,7 @@ class PawUiRouteTest {
                                 "player@test.com",
                                 Instant.parse("2026-04-06T18:00:00Z"),
                                 "Confirm reservation",
-                                "/events/42?reservation=confirmed",
+                                "/matches/42?reservation=confirmed",
                                 List.of(new VerificationPreviewDetail("Venue", "Downtown Club")));
                     }
 
@@ -180,7 +207,7 @@ class PawUiRouteTest {
                                     VerificationFailureReason.NOT_FOUND, "Missing link");
                         }
                         return new VerificationConfirmationResult(
-                                9L, "/events/42?reservation=confirmed", "done");
+                                9L, "/matches/42?reservation=confirmed", "done");
                     }
                 };
 
@@ -209,6 +236,8 @@ class PawUiRouteTest {
                     }
                 };
 
+        final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
+
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new FeedController(matchService, messageSource),
@@ -218,7 +247,10 @@ class PawUiRouteTest {
                                         actionVerificationService,
                                         messageSource),
                                 new HostController(
-                                        actionVerificationService, imageService, messageSource),
+                                        actionVerificationService,
+                                        imageService,
+                                        fixedClock,
+                                        messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(
                                         actionVerificationService, messageSource))
@@ -256,27 +288,51 @@ class PawUiRouteTest {
                                         Matchers.hasProperty(
                                                 "title",
                                                 Matchers.is(
-                                                        "Encontr\u00e1 tu pr\u00f3ximo partido."))))
-                .andExpect(
-                        model().attribute(
-                                        "feedPage",
-                                        Matchers.hasProperty(
-                                                "featuredEvents",
-                                                Matchers.contains(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "sport",
-                                                                        Matchers.is("P\u00e1del")),
-                                                                Matchers.hasProperty(
-                                                                        "priceLabel",
-                                                                        Matchers.is("$10")))))));
+                                                        "Encontr\u00e1 tu pr\u00f3ximo partido."))));
     }
 
     @Test
-    void getRealEventDetailsRouteRendersEventPage() throws Exception {
-        mockMvc.perform(get("/events/42"))
+    void getFeedRouteWithRepeatedSportParamsPassesCommaSeparatedToService() throws Exception {
+        mockMvc.perform(get("/").param("sport", "padel").param("sport", "football"))
+                .andExpect(status().isOk());
+
+        assert lastSportsFilter.get() != null
+                : "expected MatchService to be called with a non-null sport filter";
+        assert lastSportsFilter.get().contains("padel")
+                        && lastSportsFilter.get().contains("football")
+                : "expected sport filter to include both selected sports, was "
+                        + lastSportsFilter.get();
+    }
+
+    @Test
+    void getFeedRouteWithCommaSeparatedSportParamAcceptsMultipleSports() throws Exception {
+        mockMvc.perform(get("/").param("sport", "padel,tennis"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("events/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "selectedSports",
+                                        Matchers.containsInAnyOrder("padel", "tennis")));
+    }
+
+    @Test
+    void getFeedRouteWithMinAndMaxPricePropagatesToModel() throws Exception {
+        mockMvc.perform(get("/").param("minPrice", "5").param("maxPrice", "25"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "selectedMinPrice",
+                                        Matchers.comparesEqualTo(new BigDecimal("5"))))
+                .andExpect(
+                        model().attribute(
+                                        "selectedMaxPrice",
+                                        Matchers.comparesEqualTo(new BigDecimal("25"))));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteRendersMatchPage() throws Exception {
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("reservationRequestPath"))
                 .andExpect(
                         model().attribute(
@@ -292,7 +348,7 @@ class PawUiRouteTest {
 
     @Test
     void postReservationRequestRendersCheckEmailPage() throws Exception {
-        mockMvc.perform(post("/events/42/reservations").param("email", "player@test.com"))
+        mockMvc.perform(post("/matches/42/reservations").param("email", "player@test.com"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/check-email"))
                 .andExpect(model().attributeExists("title"))
@@ -308,15 +364,16 @@ class PawUiRouteTest {
     }
 
     @Test
-    void postVerificationConfirmRedirectsToEvent() throws Exception {
+    void postVerificationConfirmRedirectsToMatch() throws Exception {
         mockMvc.perform(post("/verifications/abc123/confirm"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/events/42?reservation=confirmed"));
+                .andExpect(redirectedUrl("/matches/42?reservation=confirmed"));
     }
 
     @Test
-    void getRemovedMockEventRouteReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/events/sunrise-padel-championship")).andExpect(status().isNotFound());
+    void getRemovedMockMatchRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/matches/sunrise-padel-championship"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -343,7 +400,7 @@ class PawUiRouteTest {
     @Test
     void postHostPublishCreatesAndRedirects() throws Exception {
         mockMvc.perform(
-                        post("/host/events/new")
+                        post("/host/matches/new")
                                 .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
@@ -362,7 +419,7 @@ class PawUiRouteTest {
     @Test
     void postHostPublishWithSpanishLocaleLocalizesConfirmationCopyAndDate() throws Exception {
         mockMvc.perform(
-                        post("/host/events/new")
+                        post("/host/matches/new")
                                 .param("lang", "es")
                                 .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
@@ -382,6 +439,25 @@ class PawUiRouteTest {
                         model().attribute(
                                         "expiresAtLabel",
                                         Matchers.containsStringIgnoringCase("abr")));
+    }
+
+    @Test
+    void postHostPublishWithEndTimeBeforeStartTimeRerendersFormWithError() throws Exception {
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("email", "host@test.com")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2026-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endTime", "17:00")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
     }
 
     private static MessageSource messageSource() {

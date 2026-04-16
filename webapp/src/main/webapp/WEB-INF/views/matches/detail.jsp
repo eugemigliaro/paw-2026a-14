@@ -19,9 +19,10 @@
 					class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
 				>
 					<c:if test="${not empty eventPage.event.bannerImageUrl}">
+						<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
 						<img
 							class="event-hero__image"
-							src="${pageContext.request.contextPath}${eventPage.event.bannerImageUrl}"
+							src="${eventHeroBannerSrc}"
 							alt=""
 							loading="eager"
 							decoding="async"
@@ -260,9 +261,10 @@
 							<spring:message var="joiningLabel" code="event.booking.joining" />
 							<spring:message var="emailLabel" code="form.email.label" />
 							<spring:message var="emailPlaceholder" code="form.email.placeholder" />
+							<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
 							<form
 								method="post"
-								action="${pageContext.request.contextPath}${reservationRequestPath}"
+								action="${reservationRequestAction}"
 								data-submit-guard="true"
 								data-submit-loading-label="${joiningLabel}"
 								class="booking-panel__request-form"
@@ -301,9 +303,10 @@
 								<spring:message code="event.nearby.title" />
 							</h2>
 						</div>
+						<c:url var="nearbyViewAllHref" value="/" />
 						<a
 							class="section-link"
-							href="${pageContext.request.contextPath}/"
+							href="${nearbyViewAllHref}"
 							><spring:message code="event.nearby.viewAll" /></a
 						>
 					</div>
@@ -313,8 +316,9 @@
 							var="event"
 							items="${eventPage.nearbyEvents}"
 						>
+							<c:url var="nearbyCardHref" value="${event.href}" />
 							<ui:card
-								href="${pageContext.request.contextPath}${event.href}"
+								href="${nearbyCardHref}"
 								className="event-card"
 								ariaLabel="${event.title}"
 							>
@@ -324,9 +328,10 @@
 									<c:if
 										test="${not empty event.bannerImageUrl}"
 									>
+										<c:url var="nearbyBannerSrc" value="${event.bannerImageUrl}" />
 										<img
 											class="event-card__image"
-											src="${pageContext.request.contextPath}${event.bannerImageUrl}"
+											src="${nearbyBannerSrc}"
 											alt=""
 											loading="lazy"
 											decoding="async"

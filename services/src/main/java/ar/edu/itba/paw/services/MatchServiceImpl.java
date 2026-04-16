@@ -8,7 +8,9 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import java.math.BigDecimal;
 import java.time.ZoneId;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -65,29 +67,50 @@ public class MatchServiceImpl implements MatchService {
             final String sort,
             final int page,
             final int pageSize,
-            final String timezone) {
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
         final int safePage = page > 0 ? page : 1;
         final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
         final int offset = (safePage - 1) * safePageSize;
 
-        final Sport sportFilter = parseSport(sport);
+        final List<Sport> sportFilters = parseSports(sport);
         final EventTimeFilter timeFilter = parseTimeFilter(time);
         final MatchSort sortFilter = parseSort(sort);
         final ZoneId zoneId = parseZone(timezone);
 
         final var items =
                 matchDao.findPublicMatches(
-                        query, sportFilter, timeFilter, sortFilter, zoneId, offset, safePageSize);
-        final int totalCount = matchDao.countPublicMatches(query, sportFilter, timeFilter, zoneId);
+                        query,
+                        sportFilters,
+                        timeFilter,
+                        minPrice,
+                        maxPrice,
+                        sortFilter,
+                        zoneId,
+                        offset,
+                        safePageSize);
+        final int totalCount =
+                matchDao.countPublicMatches(
+                        query, sportFilters, timeFilter, minPrice, maxPrice, zoneId);
 
         return new PaginatedResult<>(items, totalCount, safePage, safePageSize);
     }
 
-    private static Sport parseSport(final String rawSport) {
-        if (rawSport == null || rawSport.isBlank()) {
-            return null;
+    private static List<Sport> parseSports(final String rawSports) {
+        if (rawSports == null || rawSports.isBlank()) {
+            return List.of();
         }
-        return Sport.fromDbValue(rawSport).orElse(null);
+
+        final LinkedHashSet<Sport> sports = new LinkedHashSet<>();
+        for (final String rawSport : rawSports.split(",")) {
+            if (rawSport == null || rawSport.isBlank()) {
+                continue;
+            }
+            Sport.fromDbValue(rawSport.trim()).ifPresent(sports::add);
+        }
+
+        return List.copyOf(sports);
     }
 
     private static EventTimeFilter parseTimeFilter(final String rawTime) {

@@ -17,7 +17,7 @@ public final class ShellViewModelFactory {
                 ms.getMessage("app.brand", null, locale),
                 new NavItemViewModel(
                         ms.getMessage("nav.switchToHosting", null, locale),
-                        "/host/events/new",
+                        "/host/matches/new",
                         false),
                 List.of());
     }

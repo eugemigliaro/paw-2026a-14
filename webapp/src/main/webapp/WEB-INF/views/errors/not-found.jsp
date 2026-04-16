@@ -26,13 +26,15 @@
 				<div class="error-hero__actions">
 					<spring:message var="browseLabel" code="common.browseEvents" />
 					<spring:message var="hostLabel" code="common.hostEvent" />
+					<c:url var="browseHref" value="/" />
+					<c:url var="hostHref" value="/host/matches/new" />
 					<ui:button
 						label="${browseLabel}"
-						href="${pageContext.request.contextPath}/"
+						href="${browseHref}"
 						size="lg" />
 					<ui:button
 						label="${hostLabel}"
-						href="${pageContext.request.contextPath}/host/events/new"
+						href="${hostHref}"
 						variant="secondary"
 						size="lg" />
 				</div>

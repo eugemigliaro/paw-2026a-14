@@ -2,9 +2,10 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="primaryNavAria" code="nav.primary" />
+<c:url var="siteHeaderBrandHref" value="/" />
 <header class="site-header">
   <div class="site-header__inner">
-    <a class="site-header__brand" href="${pageContext.request.contextPath}/">
+    <a class="site-header__brand" href="${siteHeaderBrandHref}">
       <span class="site-header__brand-text"><c:out value="${shell.brandLabel}" /></span>
     </a>
 
@@ -13,8 +14,9 @@
         <c:forEach var="navItem" items="${shell.primaryNav}">
           <c:choose>
             <c:when test="${not empty navItem.href}">
+              <c:url var="navItemHref" value="${navItem.href}" />
               <a
-                href="${pageContext.request.contextPath}${navItem.href}"
+                href="${navItemHref}"
                 class="site-header__nav-link ${navItem.active ? 'site-header__nav-link--active' : ''}">
                 <c:out value="${navItem.label}" />
               </a>
@@ -29,9 +31,10 @@
 
     <div class="site-header__actions">
       <c:if test="${not empty shell.hostAction}">
+        <c:url var="hostActionHref" value="${shell.hostAction.href}" />
         <ui:button
           label="${shell.hostAction.label}"
-          href="${pageContext.request.contextPath}${shell.hostAction.href}"
+          href="${hostActionHref}"
           variant="primary"
           size="md"
           className="site-header__host-button" />

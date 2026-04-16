@@ -62,7 +62,7 @@ public class EventController {
         return new ReservationRequestForm();
     }
 
-    @GetMapping("/events/{eventId}")
+    @GetMapping("/matches/{eventId}")
     public ModelAndView showEventDetails(
             @PathVariable("eventId") final String eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
@@ -71,7 +71,7 @@ public class EventController {
                 parseEventIdOrThrowNotFound(eventId), reservationStatus, null, null, locale);
     }
 
-    @PostMapping("/events/{eventId}/reservations")
+    @PostMapping("/matches/{eventId}/reservations")
     public ModelAndView requestReservation(
             @PathVariable("eventId") final String eventId,
             @Valid @ModelAttribute("reservationRequestForm")
@@ -112,7 +112,7 @@ public class EventController {
                     "expiresAtLabel",
                     scheduleFormatter(locale)
                             .format(requestResult.getExpiresAt().atZone(ZoneId.systemDefault())));
-            mav.addObject("backHref", "/events/" + matchId);
+            mav.addObject("backHref", "/matches/" + matchId);
             return mav;
         } catch (final VerificationFailureException exception) {
             return showRealEventDetails(
@@ -131,11 +131,11 @@ public class EventController {
                         .findPublicMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
-        final ModelAndView mav = new ModelAndView("events/detail");
+        final ModelAndView mav = new ModelAndView("matches/detail");
         mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
         mav.addObject("reservationEnabled", match.getAvailableSpots() > 0);
-        mav.addObject("reservationRequestPath", "/events/" + eventId + "/reservations");
+        mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
         if (reservationRequestForm != null) {
@@ -166,7 +166,7 @@ public class EventController {
                 buildBookingDetails(match, locale),
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
-                loadNearbyEvents(match.getId(), locale));
+                loadNearbyMatches(match.getId(), locale));
     }
 
     private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
@@ -223,7 +223,7 @@ public class EventController {
                 .toList();
     }
 
-    private List<EventCardViewModel> loadNearbyEvents(
+    private List<EventCardViewModel> loadNearbyMatches(
             final Long currentMatchId, final Locale locale) {
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches("", null, "all", "soonest", 1, 4, null);
@@ -237,7 +237,7 @@ public class EventController {
     private EventCardViewModel toCard(final Match match, final Locale locale) {
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
-                "/events/" + match.getId(),
+                "/matches/" + match.getId(),
                 toSportLabel(match.getSport(), locale),
                 match.getTitle(),
                 match.getAddress(),
