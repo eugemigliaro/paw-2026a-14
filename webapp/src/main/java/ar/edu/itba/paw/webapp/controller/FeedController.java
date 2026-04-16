@@ -14,6 +14,8 @@ import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.WebViewModels.PaginationItemViewModel;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -116,6 +118,12 @@ public class FeedController {
                     filters.timezone());
         }
 
+        final PaginatedResult<Match> extendedSearchResult =
+                trySearchPublicMatchesWithExtendedFilters(query, encodedSports, filters, safePage);
+        if (extendedSearchResult != null) {
+            return extendedSearchResult;
+        }
+
         final PaginatedResult<Match> firstPage =
                 matchService.searchPublicMatches(
                         query,
@@ -150,6 +158,58 @@ public class FeedController {
                 filteredMatches.size(),
                 safePage,
                 PAGE_SIZE);
+    }
+
+    @SuppressWarnings("unchecked")
+    private PaginatedResult<Match> trySearchPublicMatchesWithExtendedFilters(
+            final String query,
+            final String encodedSports,
+            final FeedFilters filters,
+            final int safePage) {
+        try {
+            final Method extendedSearchMethod =
+                    matchService
+                            .getClass()
+                            .getMethod(
+                                    "searchPublicMatches",
+                                    String.class,
+                                    String.class,
+                                    String.class,
+                                    String.class,
+                                    int.class,
+                                    int.class,
+                                    String.class,
+                                    BigDecimal.class,
+                                    BigDecimal.class);
+            return (PaginatedResult<Match>)
+                    extendedSearchMethod.invoke(
+                            matchService,
+                            query,
+                            encodedSports,
+                            filters.selectedTime(),
+                            filters.selectedSort(),
+                            safePage,
+                            PAGE_SIZE,
+                            filters.timezone(),
+                            filters.minPrice(),
+                            filters.maxPrice());
+        } catch (final NoSuchMethodException exception) {
+            return null;
+        } catch (final InvocationTargetException exception) {
+            final Throwable cause = exception.getCause();
+            if (cause instanceof NoSuchMethodError || cause instanceof AbstractMethodError) {
+                return null;
+            }
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            throw new IllegalStateException("Could not execute match search", cause);
+        } catch (final IllegalAccessException exception) {
+            throw new IllegalStateException("Could not execute match search", exception);
+        }
     }
 
     private static void appendFilteredMatches(

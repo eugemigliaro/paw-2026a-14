@@ -35,8 +35,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,12 +57,8 @@ class WebRouteTest {
 
     @BeforeEach
     void setUp() {
-        final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
-        viewResolver.setPrefix("/WEB-INF/views/");
-        viewResolver.setSuffix(".jsp");
-        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-        validator.setMessageInterpolator(new ParameterMessageInterpolator());
-        validator.afterPropertiesSet();
+        final InternalResourceViewResolver viewResolver = createViewResolver();
+        final LocalValidatorFactoryBean validator = createValidator();
 
         final Match realMatch =
                 new Match(
@@ -109,6 +108,7 @@ class WebRouteTest {
                         "open",
                         2,
                         null);
+        final List<Match> feedMatches = List.of(realMatch, footballMatch, tennisMatch);
 
         final MatchService matchService =
                 new MatchService() {
@@ -155,8 +155,23 @@ class WebRouteTest {
                             final int page,
                             final int pageSize,
                             final String timezone) {
-                        return new PaginatedResult<>(
-                                List.of(realMatch, footballMatch, tennisMatch), 3, 1, 12);
+                        return searchPublicMatches(
+                                query, sport, time, sort, page, pageSize, timezone, null, null);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> searchPublicMatches(
+                            final String query,
+                            final String sport,
+                            final String time,
+                            final String sort,
+                            final int page,
+                            final int pageSize,
+                            final String timezone,
+                            final BigDecimal minPrice,
+                            final BigDecimal maxPrice) {
+                        return filterFeedMatchesForRouteTests(
+                                feedMatches, sport, page, pageSize, minPrice, maxPrice);
                     }
                 };
 
@@ -453,6 +468,184 @@ class WebRouteTest {
     }
 
     @Test
+    void getFeedRouteForwardsPriceFiltersToExtendedSearchOverload() throws Exception {
+        final AtomicReference<String> capturedSport = new AtomicReference<>();
+        final AtomicReference<BigDecimal> capturedMinPrice = new AtomicReference<>();
+        final AtomicReference<BigDecimal> capturedMaxPrice = new AtomicReference<>();
+        final MatchService capturingMatchService =
+                new MatchService() {
+                    @Override
+                    public Match createMatch(
+                            final ar.edu.itba.paw.services.CreateMatchRequest request) {
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public Optional<Match> findPublicMatchById(final Long matchId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public List<User> findConfirmedParticipants(final Long matchId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> searchPublicMatches(
+                            final String query,
+                            final String sport,
+                            final String time,
+                            final String sort,
+                            final int page,
+                            final int pageSize,
+                            final String timezone) {
+                        throw new AssertionError(
+                                "Expected controller to use the extended overload");
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> searchPublicMatches(
+                            final String query,
+                            final String sport,
+                            final String time,
+                            final String sort,
+                            final int page,
+                            final int pageSize,
+                            final String timezone,
+                            final BigDecimal minPrice,
+                            final BigDecimal maxPrice) {
+                        capturedSport.set(sport);
+                        capturedMinPrice.set(minPrice);
+                        capturedMaxPrice.set(maxPrice);
+                        return new PaginatedResult<>(List.of(), 0, 1, 12);
+                    }
+                };
+        final MockMvc feedOnlyMockMvc = createFeedMockMvc(capturingMatchService);
+
+        feedOnlyMockMvc
+                .perform(get("/").param("sport", "football", "tennis").param("minPrice", "10"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"));
+
+        assertEquals("football,tennis", capturedSport.get());
+        assertEquals(0, new BigDecimal("10").compareTo(capturedMinPrice.get()));
+        assertEquals(null, capturedMaxPrice.get());
+    }
+
+    @Test
+    void getFeedRouteFallsBackWhenExtendedSearchOverloadIsUnavailableAtRuntime() throws Exception {
+        final Match cheapFootball =
+                new Match(
+                        51L,
+                        Sport.FOOTBALL,
+                        7L,
+                        "North Arena",
+                        "Budget Football",
+                        "Fast match",
+                        Instant.parse("2026-04-11T18:00:00Z"),
+                        Instant.parse("2026-04-11T19:00:00Z"),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "open",
+                        4,
+                        null);
+        final Match premiumPadel =
+                new Match(
+                        52L,
+                        Sport.PADEL,
+                        8L,
+                        "Downtown Club",
+                        "Premium Padel",
+                        "Competitive game",
+                        Instant.parse("2026-04-11T20:00:00Z"),
+                        Instant.parse("2026-04-11T21:30:00Z"),
+                        8,
+                        new BigDecimal("20"),
+                        "public",
+                        "open",
+                        2,
+                        null);
+        final Match premiumTennis =
+                new Match(
+                        53L,
+                        Sport.TENNIS,
+                        9L,
+                        "River Club",
+                        "Premium Tennis",
+                        "Evening session",
+                        Instant.parse("2026-04-11T22:00:00Z"),
+                        Instant.parse("2026-04-11T23:30:00Z"),
+                        6,
+                        new BigDecimal("12"),
+                        "public",
+                        "open",
+                        2,
+                        null);
+        final MatchService fallbackMatchService =
+                new MatchService() {
+                    @Override
+                    public Match createMatch(
+                            final ar.edu.itba.paw.services.CreateMatchRequest request) {
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public Optional<Match> findPublicMatchById(final Long matchId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public List<User> findConfirmedParticipants(final Long matchId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> searchPublicMatches(
+                            final String query,
+                            final String sport,
+                            final String time,
+                            final String sort,
+                            final int page,
+                            final int pageSize,
+                            final String timezone) {
+                        return new PaginatedResult<>(
+                                List.of(cheapFootball, premiumPadel, premiumTennis), 3, 1, 12);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> searchPublicMatches(
+                            final String query,
+                            final String sport,
+                            final String time,
+                            final String sort,
+                            final int page,
+                            final int pageSize,
+                            final String timezone,
+                            final BigDecimal minPrice,
+                            final BigDecimal maxPrice) {
+                        throw new NoSuchMethodError(
+                                "Simulated stale runtime MatchService contract");
+                    }
+                };
+        final MockMvc feedOnlyMockMvc = createFeedMockMvc(fallbackMatchService);
+
+        feedOnlyMockMvc
+                .perform(get("/").param("sport", "football", "tennis").param("minPrice", "10"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        model().attribute(
+                                        "feedPage",
+                                        Matchers.hasProperty(
+                                                "featuredEvents",
+                                                Matchers.contains(
+                                                        Matchers.hasProperty(
+                                                                "sport",
+                                                                Matchers.equalTo("Tennis"))))));
+    }
+
+    @Test
     void getRealEventDetailsRouteRendersEventPage() throws Exception {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
@@ -637,5 +830,89 @@ class WebRouteTest {
                         () ->
                                 new AssertionError(
                                         "Expected filter group '%s'".formatted(groupTitle)));
+    }
+
+    private static MockMvc createFeedMockMvc(final MatchService matchService) {
+        return MockMvcBuilders.standaloneSetup(new FeedController(matchService))
+                .setViewResolvers(createViewResolver())
+                .setValidator(createValidator())
+                .build();
+    }
+
+    private static InternalResourceViewResolver createViewResolver() {
+        final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+        viewResolver.setPrefix("/WEB-INF/views/");
+        viewResolver.setSuffix(".jsp");
+        return viewResolver;
+    }
+
+    private static LocalValidatorFactoryBean createValidator() {
+        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.setMessageInterpolator(new ParameterMessageInterpolator());
+        validator.afterPropertiesSet();
+        return validator;
+    }
+
+    private static PaginatedResult<Match> filterFeedMatchesForRouteTests(
+            final List<Match> matches,
+            final String sport,
+            final int page,
+            final int pageSize,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        final List<String> sports = parseSportFilters(sport);
+        final List<Match> filteredMatches =
+                matches.stream()
+                        .filter(
+                                match ->
+                                        sports.isEmpty()
+                                                || sports.contains(match.getSport().getDbValue()))
+                        .filter(match -> matchesPrice(match, minPrice, maxPrice))
+                        .toList();
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : 12;
+        final int fromIndex = Math.min((safePage - 1) * safePageSize, filteredMatches.size());
+        final int toIndex = Math.min(fromIndex + safePageSize, filteredMatches.size());
+
+        return new PaginatedResult<>(
+                filteredMatches.subList(fromIndex, toIndex),
+                filteredMatches.size(),
+                safePage,
+                safePageSize);
+    }
+
+    private static List<String> parseSportFilters(final String sport) {
+        if (sport == null || sport.isBlank()) {
+            return List.of();
+        }
+
+        final LinkedHashSet<String> parsedSports = new LinkedHashSet<>();
+        for (final String rawSport : sport.split(",")) {
+            if (rawSport == null || rawSport.isBlank()) {
+                continue;
+            }
+            Sport.fromDbValue(rawSport.trim().toLowerCase(Locale.ROOT))
+                    .map(Sport::getDbValue)
+                    .ifPresent(parsedSports::add);
+        }
+
+        return List.copyOf(parsedSports);
+    }
+
+    private static boolean matchesPrice(
+            final Match match, final BigDecimal minPrice, final BigDecimal maxPrice) {
+        if (minPrice == null && maxPrice == null) {
+            return true;
+        }
+
+        if (match.getPricePerPlayer() == null) {
+            return false;
+        }
+
+        if (minPrice != null && match.getPricePerPlayer().compareTo(minPrice) < 0) {
+            return false;
+        }
+
+        return maxPrice == null || match.getPricePerPlayer().compareTo(maxPrice) <= 0;
     }
 }
