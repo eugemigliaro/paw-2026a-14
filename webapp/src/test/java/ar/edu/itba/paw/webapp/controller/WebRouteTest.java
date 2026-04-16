@@ -32,7 +32,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.LinkedHashSet;
@@ -52,6 +51,7 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 class WebRouteTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-10T18:00:00Z");
+    private static final ZoneId TEST_ZONE = ZoneId.of("UTC");
 
     private MockMvc mockMvc;
 
@@ -275,7 +275,7 @@ class WebRouteTest {
                                 new HostController(
                                         actionVerificationService,
                                         imageService,
-                                        Clock.systemDefaultZone()),
+                                        Clock.fixed(FIXED_NOW, TEST_ZONE)),
                                 new ErrorPageController(),
                                 new VerificationController(actionVerificationService))
                         .setViewResolvers(viewResolver)
@@ -725,7 +725,9 @@ class WebRouteTest {
                                 .param("sport", "padel")
                                 .param(
                                         "eventDate",
-                                        LocalDate.now(ZoneId.systemDefault())
+                                        FIXED_NOW
+                                                .atZone(TEST_ZONE)
+                                                .toLocalDate()
                                                 .plusDays(1)
                                                 .toString())
                                 .param("eventTime", "18:00")
@@ -750,7 +752,9 @@ class WebRouteTest {
                                 .param("sport", "padel")
                                 .param(
                                         "eventDate",
-                                        LocalDate.now(ZoneId.systemDefault())
+                                        FIXED_NOW
+                                                .atZone(TEST_ZONE)
+                                                .toLocalDate()
                                                 .minusDays(1)
                                                 .toString())
                                 .param("eventTime", "18:00")
@@ -774,7 +778,7 @@ class WebRouteTest {
                                 .param("sport", "padel")
                                 .param(
                                         "eventDate",
-                                        LocalDate.now(ZoneId.systemDefault()).toString())
+                                        FIXED_NOW.atZone(TEST_ZONE).toLocalDate().toString())
                                 .param("eventTime", LocalTime.MIDNIGHT.toString())
                                 .param("endTime", "19:00")
                                 .param("timezone", "UTC")
@@ -796,7 +800,9 @@ class WebRouteTest {
                                 .param("sport", "padel")
                                 .param(
                                         "eventDate",
-                                        LocalDate.now(ZoneId.systemDefault())
+                                        FIXED_NOW
+                                                .atZone(TEST_ZONE)
+                                                .toLocalDate()
                                                 .plusDays(1)
                                                 .toString())
                                 .param("eventTime", "18:00")
@@ -849,6 +855,9 @@ class WebRouteTest {
     private static LocalValidatorFactoryBean createValidator() {
         final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.setMessageInterpolator(new ParameterMessageInterpolator());
+        validator.setConfigurationInitializer(
+                configuration ->
+                        configuration.clockProvider(() -> Clock.fixed(FIXED_NOW, TEST_ZONE)));
         validator.afterPropertiesSet();
         return validator;
     }
@@ -871,13 +880,16 @@ class WebRouteTest {
                         .toList();
         final int safePage = page > 0 ? page : 1;
         final int safePageSize = pageSize > 0 ? pageSize : 12;
-        final int fromIndex = Math.min((safePage - 1) * safePageSize, filteredMatches.size());
+        final int totalPages =
+                Math.max(1, (filteredMatches.size() + safePageSize - 1) / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int fromIndex = Math.min((clampedPage - 1) * safePageSize, filteredMatches.size());
         final int toIndex = Math.min(fromIndex + safePageSize, filteredMatches.size());
 
         return new PaginatedResult<>(
                 filteredMatches.subList(fromIndex, toIndex),
                 filteredMatches.size(),
-                safePage,
+                clampedPage,
                 safePageSize);
     }
 
