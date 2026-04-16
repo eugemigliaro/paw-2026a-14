@@ -150,13 +150,16 @@ public class FeedController {
             appendFilteredMatches(filteredMatches, nextPage.getItems(), filters);
         }
 
-        final int fromIndex = Math.min((safePage - 1) * PAGE_SIZE, filteredMatches.size());
+        final int totalFilteredPages =
+                Math.max(1, (filteredMatches.size() + PAGE_SIZE - 1) / PAGE_SIZE);
+        final int clampedPage = Math.min(safePage, totalFilteredPages);
+        final int fromIndex = Math.min((clampedPage - 1) * PAGE_SIZE, filteredMatches.size());
         final int toIndex = Math.min(fromIndex + PAGE_SIZE, filteredMatches.size());
 
         return new PaginatedResult<>(
                 List.copyOf(filteredMatches.subList(fromIndex, toIndex)),
                 filteredMatches.size(),
-                safePage,
+                clampedPage,
                 PAGE_SIZE);
     }
 
