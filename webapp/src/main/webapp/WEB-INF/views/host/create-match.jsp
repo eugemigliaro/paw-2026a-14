@@ -1,10 +1,21 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %> <%@
-taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %> <%@ taglib
-prefix="form" uri="http://www.springframework.org/tags/form" %> <%@ taglib
-prefix="ui" tagdir="/WEB-INF/tags" %>
-<c:set var="pageTitle" value="Match Point | Host Mode" />
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.hostMode" />
+<spring:message var="publishingLabel" code="host.form.submitting" />
+<spring:message var="emailPlaceholder" code="host.form.email.placeholder" />
+<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
+<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
+<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
+<spring:message var="sportPadel" code="sport.padel" />
+<spring:message var="sportFootball" code="sport.football" />
+<spring:message var="sportTennis" code="sport.tennis" />
+<spring:message var="sportBasketball" code="sport.basketball" />
+<spring:message var="publishLabel" code="host.form.submit" />
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 	<head>
 		<%@ include file="/WEB-INF/views/includes/head.jspf" %>
 	</head>
@@ -15,11 +26,10 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 			<main class="page-shell">
 				<section class="create-layout__main">
 					<header class="page-heading">
-						<p class="eyebrow">Hosting</p>
-						<h1 class="page-heading__title">Create your match</h1>
+						<p class="eyebrow"><spring:message code="host.eyebrow" /></p>
+						<h1 class="page-heading__title"><spring:message code="host.title" /></h1>
 						<p class="page-heading__description">
-							Share the sport, location, schedule, and details players need
-							before they reserve a spot.
+							<spring:message code="host.description" />
 						</p>
 					</header>
 
@@ -30,256 +40,194 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 						enctype="multipart/form-data"
 						id="create-match-form"
 						data-submit-guard="true"
-						data-submit-loading-label="Publishing..."
-						cssClass="create-form"
-					>
+						data-submit-loading-label="${publishingLabel}"
+						cssClass="create-form">
 						<form:hidden path="timezone" id="match-timezone" />
 						<c:if test="${not empty formError}">
 							<p class="field__error">
 								<c:out value="${formError}" />
 							</p>
 						</c:if>
+
 						<article class="panel form-card">
-							<span class="detail-label">01 - The Basics</span>
+							<span class="detail-label"><spring:message code="host.section.basics" /></span>
 							<h2 class="form-card__title">
-								Give the match a clear point of view
+								<spring:message code="host.section.basics.subtitle" />
 							</h2>
 							<div class="create-stack">
 								<label class="field" for="match-email">
-									<span class="field__label">Your email</span>
+									<span class="field__label"><spring:message code="host.form.email" /></span>
 									<form:input
 										path="email"
 										id="match-email"
 										type="email"
 										cssClass="field__control"
 										required="required"
-										placeholder="you@example.com"
-									/>
-									<form:errors
-										path="email"
-										cssClass="field__error"
-										element="span"
-									/>
+										placeholder="${emailPlaceholder}" />
+									<form:errors path="email" cssClass="field__error" element="span" />
 								</label>
 
 								<label class="field" for="match-title">
-									<span class="field__label"
-										>Match title</span
-									>
+									<span class="field__label"><spring:message code="host.form.title" /></span>
 									<form:input
 										path="title"
 										id="match-title"
 										cssClass="field__control"
 										required="required"
-										placeholder="Saturday Morning Padel Championship"
-									/>
-									<form:errors
-										path="title"
-										cssClass="field__error"
-										element="span"
-									/>
+										placeholder="${titlePlaceholder}" />
+									<form:errors path="title" cssClass="field__error" element="span" />
 								</label>
 
 								<label class="field" for="match-sport">
-									<span class="field__label">Category</span>
+									<span class="field__label"><spring:message code="host.form.category" /></span>
 									<span class="field__select-wrap">
 										<form:select
 											path="sport"
 											id="match-sport"
-											cssClass="field__control field__control--select"
-										>
-											<form:option value="padel"
-												>Padel</form:option
-											>
-											<form:option value="football"
-												>Football</form:option
-											>
-											<form:option value="tennis"
-												>Tennis</form:option
-											>
-											<form:option value="basketball"
-												>Basketball</form:option
-											>
+											cssClass="field__control field__control--select">
+											<form:option value="padel" label="${sportPadel}" />
+											<form:option value="football" label="${sportFootball}" />
+											<form:option value="tennis" label="${sportTennis}" />
+											<form:option value="basketball" label="${sportBasketball}" />
 										</form:select>
 									</span>
-									<form:errors
-										path="sport"
-										cssClass="field__error"
-										element="span"
-									/>
+									<form:errors path="sport" cssClass="field__error" element="span" />
 								</label>
 
 								<label class="field" for="match-description">
-									<span class="field__label"
-										>Description</span
-									>
+									<span class="field__label"><spring:message code="host.form.description" /></span>
 									<form:textarea
 										path="description"
 										id="match-description"
 										cssClass="field__control field__control--textarea"
-										placeholder="Tell participants what to expect from the format, venue, and vibe."
-									/>
+										placeholder="${descPlaceholder}" />
 									<form:errors
 										path="description"
 										cssClass="field__error"
-										element="span"
-									/>
+										element="span" />
 								</label>
 							</div>
 						</article>
 
 						<article class="panel form-card">
-							<span class="detail-label">02 - Logistics</span>
+							<span class="detail-label"><spring:message code="host.section.logistics" /></span>
 							<h2 class="form-card__title">
-								Set the venue and time
+								<spring:message code="host.section.logistics.subtitle" />
 							</h2>
-							<div class="create-stack">
+							<div class="form-card__grid">
 								<label class="field" for="match-address">
-									<span class="field__label">Location</span>
+									<span class="field__label"><spring:message code="host.form.location" /></span>
 									<form:input
 										path="address"
 										id="match-address"
 										cssClass="field__control"
 										required="required"
-										placeholder="Enter venue address"
-									/>
-									<form:errors
-										path="address"
-										cssClass="field__error"
-										element="span"
-									/>
+										placeholder="${locationPlaceholder}" />
+									<form:errors path="address" cssClass="field__error" element="span" />
 								</label>
 
 								<label class="field" for="match-date">
-									<span class="field__label">Date</span>
+									<span class="field__label"><spring:message code="host.form.date" /></span>
 									<form:input
 										path="eventDate"
 										id="match-date"
 										type="date"
-										cssClass="field__control"
-									/>
-									<form:errors
-										path="eventDate"
-										cssClass="field__error"
-										element="span"
-									/>
+										cssClass="field__control" />
+									<form:errors path="eventDate" cssClass="field__error" element="span" />
 								</label>
 
 								<label class="field" for="match-time">
-									<span class="field__label">Start time</span>
+									<span class="field__label"><spring:message code="host.form.startTime" /></span>
 									<form:input
 										path="eventTime"
 										id="match-time"
 										type="time"
-										cssClass="field__control"
-									/>
-									<form:errors
-										path="eventTime"
-										cssClass="field__error"
-										element="span"
-									/>
+										cssClass="field__control" />
+									<form:errors path="eventTime" cssClass="field__error" element="span" />
 								</label>
 
 								<label class="field" for="match-end-time">
-									<span class="field__label">End time</span>
+									<span class="field__label"><spring:message code="host.form.endTime" /></span>
 									<form:input
 										path="endTime"
 										id="match-end-time"
 										type="time"
-										cssClass="field__control"
-									/>
-									<form:errors
-										path="endTime"
-										cssClass="field__error"
-										element="span"
-									/>
+										cssClass="field__control" />
+									<form:errors path="endTime" cssClass="field__error" element="span" />
 								</label>
 							</div>
 						</article>
 
 						<article class="panel form-card">
-							<span class="detail-label">03 - Capacity</span>
+							<span class="detail-label"><spring:message code="host.section.capacity" /></span>
 							<h2 class="form-card__title">
-								Control who joins and match price
+								<spring:message code="host.section.capacity.subtitle" />
 							</h2>
 							<div class="form-card__grid form-card__grid--three">
 								<label class="field" for="match-capacity">
-									<span class="field__label">Capacity</span>
+									<span class="field__label"><spring:message code="host.form.capacity" /></span>
 									<form:input
 										path="maxPlayers"
 										id="match-capacity"
 										type="number"
 										min="1"
-										cssClass="field__control"
-									/>
-									<form:errors
-										path="maxPlayers"
-										cssClass="field__error"
-										element="span"
-									/>
+										cssClass="field__control" />
+									<form:errors path="maxPlayers" cssClass="field__error" element="span" />
 								</label>
 
 								<label class="field" for="match-price">
-									<span class="field__label"
-										>Price per player</span
-									>
+									<span class="field__label"><spring:message code="host.form.pricePerPlayer" /></span>
 									<form:input
 										path="pricePerPlayer"
 										id="match-price"
 										type="number"
 										min="0"
 										step="0.01"
-										cssClass="field__control"
-									/>
+										cssClass="field__control" />
 									<form:errors
 										path="pricePerPlayer"
 										cssClass="field__error"
-										element="span"
-									/>
+										element="span" />
 								</label>
 							</div>
 						</article>
 
 						<article class="panel upload-card">
-							<span class="detail-label"
-								>04 - Banner (optional)</span
-							>
+							<span class="detail-label"><spring:message code="host.section.banner" /></span>
 							<h2 class="form-card__title">
-								Add a cover image for feed and match detail
+								<spring:message code="host.section.banner.subtitle" />
 							</h2>
 							<label class="field" for="match-banner-image">
-								<span class="field__label">Banner image</span>
+								<span class="field__label"><spring:message code="host.form.bannerImage" /></span>
 								<form:input
 									path="bannerImage"
 									id="match-banner-image"
 									type="file"
 									accept="image/png,image/jpeg,image/webp,image/gif"
-									cssClass="field__control upload-card__file-input"
-								/>
-								<span class="field__hint"
-									>Accepted formats: JPG, PNG, WEBP, GIF. Max size 5 MB.</span
-								>
+									cssClass="field__control upload-card__file-input" />
+								<span class="field__hint"><spring:message code="host.form.bannerImage.hint" /></span>
 							</label>
 							<div class="upload-card__guidance" role="note">
-								<p class="upload-card__guidance-title">Upload cover photo</p>
-								<p class="upload-card__guidance-copy">
-									Recommended size: 1600 x 900 px
+								<p class="upload-card__guidance-title">
+									<spring:message code="host.form.bannerImage.guidanceTitle" />
 								</p>
 								<p class="upload-card__guidance-copy">
-									The banner appears on the feed and match detail page.
+									<spring:message code="host.form.bannerImage.guidanceSize" />
+								</p>
+								<p class="upload-card__guidance-copy">
+									<spring:message code="host.form.bannerImage.guidanceCopy" />
 								</p>
 							</div>
 						</article>
 
 						<div class="create-layout__actions">
 							<ui:button
-								label="Publish Match"
+								label="${publishLabel}"
 								type="submit"
 								id="publish-match-button"
 								size="lg"
 								fullWidth="${true}"
-								className="create-layout__submit"
-							/>
+								className="create-layout__submit" />
 						</div>
 					</form:form>
 				</section>

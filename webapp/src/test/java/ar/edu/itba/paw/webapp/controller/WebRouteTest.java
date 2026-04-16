@@ -43,6 +43,8 @@ import org.hamcrest.Matchers;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -59,6 +61,7 @@ class WebRouteTest {
     void setUp() {
         final InternalResourceViewResolver viewResolver = createViewResolver();
         final LocalValidatorFactoryBean validator = createValidator();
+        final MessageSource messageSource = messageSource();
 
         final Match realMatch =
                 new Match(
@@ -269,15 +272,20 @@ class WebRouteTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new FeedController(matchService),
+                                new FeedController(matchService, messageSource),
                                 new EventController(
-                                        matchService, userService, actionVerificationService),
+                                        matchService,
+                                        userService,
+                                        actionVerificationService,
+                                        messageSource),
                                 new HostController(
                                         actionVerificationService,
                                         imageService,
+                                        messageSource,
                                         Clock.fixed(FIXED_NOW, TEST_ZONE)),
-                                new ErrorPageController(),
-                                new VerificationController(actionVerificationService))
+                                new ErrorPageController(messageSource),
+                                new VerificationController(
+                                        actionVerificationService, messageSource))
                         .setViewResolvers(viewResolver)
                         .setValidator(validator)
                         .build();
@@ -839,10 +847,18 @@ class WebRouteTest {
     }
 
     private static MockMvc createFeedMockMvc(final MatchService matchService) {
-        return MockMvcBuilders.standaloneSetup(new FeedController(matchService))
+        return MockMvcBuilders.standaloneSetup(new FeedController(matchService, messageSource()))
                 .setViewResolvers(createViewResolver())
                 .setValidator(createValidator())
                 .build();
+    }
+
+    private static MessageSource messageSource() {
+        final ReloadableResourceBundleMessageSource messageSource =
+                new ReloadableResourceBundleMessageSource();
+        messageSource.setBasename("classpath:i18n/messages");
+        messageSource.setDefaultEncoding("UTF-8");
+        return messageSource;
     }
 
     private static InternalResourceViewResolver createViewResolver() {

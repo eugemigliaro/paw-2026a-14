@@ -1,9 +1,10 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
-<c:set var="pageTitle" value="Match Point | 404" />
-<!DOCTYPE html>
-<html lang="en">
+	<spring:message var="pageTitle" code="page.title.404" />
+	<!DOCTYPE html>
+	<html lang="${pageContext.response.locale.language}">
 <head>
 	<%@ include file="/WEB-INF/views/includes/head.jspf" %>
 </head>
@@ -14,22 +15,23 @@
 	<main class="page-shell error-shell">
 		<section class="error-hero">
 			<div class="error-hero__copy">
-				<p class="eyebrow">Route missing</p>
+				<p class="eyebrow"><spring:message code="error.404.eyebrow" /></p>
 				<header class="page-heading">
-					<h1 class="page-heading__title">Page not found.</h1>
+					<h1 class="page-heading__title"><spring:message code="error.404.title" /></h1>
 					<p class="page-heading__description">
-						The link you opened does not point to an active Match Point page.
-						Go back to event discovery or switch into host mode to keep moving.
+						<spring:message code="error.404.description" />
 					</p>
 				</header>
 
 				<div class="error-hero__actions">
+					<spring:message var="browseLabel" code="common.browseEvents" />
+					<spring:message var="hostLabel" code="common.hostEvent" />
 					<ui:button
-						label="Browse matches"
+						label="${browseLabel}"
 						href="${pageContext.request.contextPath}/"
 						size="lg" />
 					<ui:button
-						label="Host an event"
+						label="${hostLabel}"
 						href="${pageContext.request.contextPath}/host/matches/new"
 						variant="secondary"
 						size="lg" />
