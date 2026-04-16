@@ -178,6 +178,41 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testSearchPublicMatchesClampsOutOfRangePageToLastAvailablePage() {
+        final Match match = createTestMatch(4L, "Last Page Match", "padel");
+        Mockito.when(
+                        matchDao.countPublicMatches(
+                                null,
+                                List.of(Sport.PADEL),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                ZoneId.of("UTC")))
+                .thenReturn(13);
+        Mockito.when(
+                        matchDao.findPublicMatches(
+                                null,
+                                List.of(Sport.PADEL),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
+                                12,
+                                12))
+                .thenReturn(List.of(match));
+
+        final PaginatedResult<Match> result =
+                matchService.searchPublicMatches(
+                        null, "padel", null, null, 99, 12, "UTC", null, null);
+
+        Assertions.assertEquals(2, result.getPage());
+        Assertions.assertEquals(2, result.getTotalPages());
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals("Last Page Match", result.getItems().get(0).getTitle());
+    }
+
+    @Test
     public void testCreateMatchDelegates() {
         final Instant now = Instant.now();
         final Match expectedMatch = createTestMatch(1L, "Test Match", "football");

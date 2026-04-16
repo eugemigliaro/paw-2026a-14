@@ -72,13 +72,18 @@ public class MatchServiceImpl implements MatchService {
             final BigDecimal maxPrice) {
         final int safePage = page > 0 ? page : 1;
         final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
-        final int offset = (safePage - 1) * safePageSize;
 
         final List<Sport> sportFilters = parseSports(sport);
         final EventTimeFilter timeFilter = parseTimeFilter(time);
         final MatchSort sortFilter = parseSort(sort);
         final ZoneId zoneId = parseZone(timezone);
 
+        final int totalCount =
+                matchDao.countPublicMatches(
+                        query, sportFilters, timeFilter, minPrice, maxPrice, zoneId);
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int offset = (clampedPage - 1) * safePageSize;
         final var items =
                 matchDao.findPublicMatches(
                         query,
@@ -90,11 +95,8 @@ public class MatchServiceImpl implements MatchService {
                         zoneId,
                         offset,
                         safePageSize);
-        final int totalCount =
-                matchDao.countPublicMatches(
-                        query, sportFilters, timeFilter, minPrice, maxPrice, zoneId);
 
-        return new PaginatedResult<>(items, totalCount, safePage, safePageSize);
+        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
     }
 
     private static List<Sport> parseSports(final String rawSports) {
