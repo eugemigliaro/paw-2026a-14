@@ -1,24 +1,28 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %> <%@
-taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %> <%@ taglib
-prefix="ui" tagdir="/WEB-INF/tags" %>
-<c:set var="pageTitle" value="Match Point | ${eventPage.event.title}" />
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.eventDetail" arguments="${eventPage.event.title}" />
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 	<head>
 		<%@ include file="/WEB-INF/views/includes/head.jspf" %>
 	</head>
 	<body>
 		<div class="app-shell">
 			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
+			<spring:message var="eventSummaryAria" code="event.detail.summaryAria" />
+			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 
 			<main class="page-shell page-shell--detail">
 				<section
 					class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
 				>
 					<c:if test="${not empty eventPage.event.bannerImageUrl}">
+						<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
 						<img
 							class="event-hero__image"
-							src="${pageContext.request.contextPath}${eventPage.event.bannerImageUrl}"
+							src="${eventHeroBannerSrc}"
 							alt=""
 							loading="eager"
 							decoding="async"
@@ -45,29 +49,29 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 						</div>
 						<ul
 							class="event-hero__status-list"
-							aria-label="Event summary"
+							aria-label="${eventSummaryAria}"
 						>
 							<li class="event-hero__status-item">
-								<span class="detail-label">When</span>
+								<span class="detail-label"><spring:message code="event.detail.when" /></span>
 								<strong
 									><c:out value="${eventPage.event.schedule}"
 								/></strong>
 							</li>
 							<li class="event-hero__status-item">
-								<span class="detail-label">Where</span>
+								<span class="detail-label"><spring:message code="event.detail.where" /></span>
 								<strong
 									><c:out value="${eventPage.event.venue}"
 								/></strong>
 							</li>
 							<li class="event-hero__status-item">
-								<span class="detail-label">Group</span>
+								<span class="detail-label"><spring:message code="event.detail.group" /></span>
 								<strong
 									><c:out
 										value="${eventPage.participantCountLabel}"
 								/></strong>
 							</li>
 							<li class="event-hero__status-item">
-								<span class="detail-label">Entry</span>
+								<span class="detail-label"><spring:message code="event.detail.entry" /></span>
 								<strong
 									><c:out value="${eventPage.bookingPrice}"
 								/></strong>
@@ -85,7 +89,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 									aria-hidden="true"
 								></div>
 								<div class="host-card__copy">
-									<span class="detail-label">Hosted by</span>
+									<span class="detail-label"><spring:message code="event.detail.hostedBy" /></span>
 									<strong class="host-card__name"
 										><c:out value="${eventPage.hostLabel}"
 									/></strong>
@@ -101,12 +105,12 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 								class="section-head section-head--detail-compact"
 							>
 								<div>
-									<span class="detail-label">Roster</span>
+									<span class="detail-label"><spring:message code="event.detail.roster" /></span>
 									<h2
 										id="participant-section-title"
 										class="detail-section__title"
 									>
-										Who's joining
+										<spring:message code="event.detail.whosJoining" />
 									</h2>
 								</div>
 								<span class="detail-section__meta"
@@ -121,7 +125,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 										<p
 											class="participant-empty-state__title"
 										>
-											No confirmed players yet
+											<spring:message code="event.detail.noPlayers" />
 										</p>
 										<p
 											class="participant-empty-state__copy"
@@ -135,7 +139,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 								<c:otherwise>
 									<ul
 										class="participant-list"
-										aria-label="Confirmed participants"
+										aria-label="${participantsAria}"
 									>
 										<c:forEach
 											var="participant"
@@ -172,12 +176,12 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 								class="section-head section-head--detail-compact"
 							>
 								<div>
-									<span class="detail-label">Overview</span>
+									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
 									<h2
 										id="about-event-title"
 										class="detail-section__title"
 									>
-										About this event
+										<spring:message code="event.detail.aboutEvent" />
 									</h2>
 								</div>
 							</div>
@@ -197,7 +201,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 							<div class="booking-panel__header">
 								<div class="booking-panel__header-copy">
 									<span class="detail-label"
-										>Reserve this spot</span
+										><spring:message code="event.booking.reserveSpot" /></span
 									>
 									<h2 class="booking-panel__title">
 										<c:out
@@ -211,7 +215,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 								<p
 									class="booking-panel__notice booking-panel__notice--success"
 								>
-									Your reservation is confirmed.
+									<spring:message code="event.booking.confirmed" />
 								</p>
 							</c:if>
 							<c:if test="${not empty reservationError}">
@@ -225,7 +229,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 							<div class="booking-panel__availability">
 								<div>
 									<span class="detail-label"
-										>Availability</span
+										><spring:message code="event.booking.availability" /></span
 									>
 									<strong
 										><c:out
@@ -254,19 +258,23 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 								</c:forEach>
 							</dl>
 
+							<spring:message var="joiningLabel" code="event.booking.joining" />
+							<spring:message var="emailLabel" code="form.email.label" />
+							<spring:message var="emailPlaceholder" code="form.email.placeholder" />
+							<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
 							<form
 								method="post"
-								action="${pageContext.request.contextPath}${reservationRequestPath}"
+								action="${reservationRequestAction}"
 								data-submit-guard="true"
-								data-submit-loading-label="Joining..."
+								data-submit-loading-label="${joiningLabel}"
 								class="booking-panel__request-form"
 							>
 								<ui:textInput
-									label="Email"
+									label="${emailLabel}"
 									name="email"
 									type="email"
 									value="${reservationRequestForm.email}"
-									placeholder="you@example.com"
+									placeholder="${emailPlaceholder}"
 									required="${true}"
 									autocomplete="email"
 								/>
@@ -279,8 +287,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 							</form>
 
 							<p class="booking-panel__note">
-								We send a one-time confirmation link to
-								finish the reservation.
+								<spring:message code="event.booking.note" />
 							</p>
 						</article>
 					</aside>
@@ -289,16 +296,18 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 				<section class="detail-recommendations">
 					<div class="section-head">
 						<div>
+							<span class="detail-label"><spring:message code="event.nearby.label" /></span>
 							<h2
 								class="section-head__title section-head__title--detail"
 							>
-								You may also like
+								<spring:message code="event.nearby.title" />
 							</h2>
 						</div>
+						<c:url var="nearbyViewAllHref" value="/" />
 						<a
 							class="section-link"
-							href="${pageContext.request.contextPath}/"
-							>View all matches</a
+							href="${nearbyViewAllHref}"
+							><spring:message code="event.nearby.viewAll" /></a
 						>
 					</div>
 
@@ -307,8 +316,9 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 							var="event"
 							items="${eventPage.nearbyEvents}"
 						>
+							<c:url var="nearbyCardHref" value="${event.href}" />
 							<ui:card
-								href="${pageContext.request.contextPath}${event.href}"
+								href="${nearbyCardHref}"
 								className="event-card"
 								ariaLabel="${event.title}"
 							>
@@ -318,9 +328,10 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 									<c:if
 										test="${not empty event.bannerImageUrl}"
 									>
+										<c:url var="nearbyBannerSrc" value="${event.bannerImageUrl}" />
 										<img
 											class="event-card__image"
-											src="${pageContext.request.contextPath}${event.bannerImageUrl}"
+											src="${nearbyBannerSrc}"
 											alt=""
 											loading="lazy"
 											decoding="async"
@@ -352,7 +363,7 @@ prefix="ui" tagdir="/WEB-INF/tags" %>
 											><c:out
 												value="${event.priceLabel}"
 											/>
-											/ person</strong
+											<spring:message code="event.pricePerPerson" /></strong
 										>
 										<span class="event-card__spots"
 											><c:out value="${event.badge}"

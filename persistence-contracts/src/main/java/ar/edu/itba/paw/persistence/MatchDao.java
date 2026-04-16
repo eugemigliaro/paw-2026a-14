@@ -34,34 +34,18 @@ public interface MatchDao {
             String query,
             List<Sport> sports,
             EventTimeFilter timeFilter,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             MatchSort sort,
             ZoneId zoneId,
             int offset,
             int limit);
 
-    default List<Match> findPublicMatches(
-            String query,
-            List<Sport> sports,
-            EventTimeFilter timeFilter,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            MatchSort sort,
-            ZoneId zoneId,
-            int offset,
-            int limit) {
-        return findPublicMatches(query, sports, timeFilter, sort, zoneId, offset, limit);
-    }
-
     int countPublicMatches(
-            String query, List<Sport> sports, EventTimeFilter timeFilter, ZoneId zoneId);
-
-    default int countPublicMatches(
             String query,
             List<Sport> sports,
             EventTimeFilter timeFilter,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            ZoneId zoneId) {
-        return countPublicMatches(query, sports, timeFilter, zoneId);
-    }
+            ZoneId zoneId);
 }

@@ -1,21 +1,21 @@
 Match Point
-One-time verification
+[[${mailEyebrow}]]
 
 [[${title}]]
 
 [[${summary}]]
 
-Requested for: [[${recipientEmail}]]
+[[${requestedForLabel}]]: [[${recipientEmail}]]
 
 [# th:if="${details != null and !details.isEmpty()}"]
-Details:
+[[${detailsLabel}]]:
 [# th:each="detail : ${details}"]
 - [[${detail.label}]]: [[${detail.value}]]
 [/]
 [/]
 
-Review and confirm action:
+[[${confirmActionLabel}]]:
 [[${confirmationUrl}]]
 
-This link expires at [[${expiresAtLabel}]].
-If you did not request this action, you can ignore this email.
+[[${expiresAtText}]]
+[[${ignoreNotice}]]

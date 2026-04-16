@@ -34,17 +34,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ActionVerificationServiceImpl implements ActionVerificationService {
-
-    private static final DateTimeFormatter MATCH_SCHEDULE_FORMATTER =
-            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                    .withLocale(Locale.US);
-    private static final DateTimeFormatter MATCH_END_TIME_FORMATTER =
-            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.US);
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -56,6 +52,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     private final MailProperties mailProperties;
     private final MailDispatchService mailDispatchService;
     private final ThymeleafMailTemplateRenderer templateRenderer;
+    private final MessageSource messageSource;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -69,6 +66,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
             final MailProperties mailProperties,
             final MailDispatchService mailDispatchService,
             final ThymeleafMailTemplateRenderer templateRenderer,
+            final MessageSource messageSource,
             final ObjectMapper objectMapper,
             final Clock clock) {
         this.emailActionRequestDao = emailActionRequestDao;
@@ -79,6 +77,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         this.mailProperties = mailProperties;
         this.mailDispatchService = mailDispatchService;
         this.templateRenderer = templateRenderer;
+        this.messageSource = messageSource;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -86,6 +85,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     @Override
     public VerificationRequestResult requestMatchReservation(
             final Long matchId, final String email) {
+        final Locale locale = currentLocale();
         final String normalizedEmail = normalizeEmail(email);
         final Match match =
                 matchDao.findPublicMatchById(matchId)
@@ -93,11 +93,14 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 () ->
                                         new VerificationFailureException(
                                                 VerificationFailureReason.INVALID_ACTION,
-                                                "This event is no longer available for reservations."));
+                                                message(
+                                                        "verification.message.reservationUnavailable",
+                                                        locale)));
 
         if (match.getAvailableSpots() <= 0) {
             throw new VerificationFailureException(
-                    VerificationFailureReason.INVALID_ACTION, "This event is already full.");
+                    VerificationFailureReason.INVALID_ACTION,
+                    message("verification.message.eventFull", locale));
         }
 
         final Optional<User> existingUser = mvpIdentityService.findExistingByEmail(normalizedEmail);
@@ -106,7 +109,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                         matchId, existingUser.get().getId())) {
             throw new VerificationFailureException(
                     VerificationFailureReason.INVALID_ACTION,
-                    "This email already has a confirmed reservation for the event.");
+                    message("verification.message.alreadyReserved", locale));
         }
 
         final Instant expiresAt =
@@ -124,8 +127,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 expiresAt);
 
         final VerificationPreview preview =
-                buildReservationPreview(match, normalizedEmail, expiresAt);
-        final String confirmationUrl = buildConfirmationUrl(rawToken);
+                buildReservationPreview(match, normalizedEmail, expiresAt, locale);
+        final String confirmationUrl = buildConfirmationUrl(rawToken, locale);
         final MailContent mailContent =
                 templateRenderer.renderReservationConfirmation(
                         new VerificationMailTemplateData(
@@ -134,7 +137,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 normalizedEmail,
                                 confirmationUrl,
                                 expiresAt,
-                                preview.getDetails()));
+                                preview.getDetails(),
+                                locale));
         mailDispatchService.dispatch(normalizedEmail, mailContent);
 
         return new VerificationRequestResult(normalizedEmail, expiresAt);
@@ -143,6 +147,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
     @Override
     public VerificationRequestResult requestMatchCreation(
             final CreateMatchRequest request, final String email) {
+        final Locale locale = currentLocale();
         final String normalizedEmail = normalizeEmail(email);
         final Instant expiresAt =
                 Instant.now(clock).plusSeconds(mailProperties.getVerificationTtlHours() * 3600L);
@@ -181,8 +186,11 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
         final VerificationPreview preview =
                 buildMatchCreationPreview(
-                        deserializeMatchCreationPayload(payloadJson), normalizedEmail, expiresAt);
-        final String confirmationUrl = buildConfirmationUrl(rawToken);
+                        deserializeMatchCreationPayload(payloadJson),
+                        normalizedEmail,
+                        expiresAt,
+                        locale);
+        final String confirmationUrl = buildConfirmationUrl(rawToken, locale);
         final MailContent mailContent =
                 templateRenderer.renderReservationConfirmation(
                         new VerificationMailTemplateData(
@@ -191,7 +199,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 normalizedEmail,
                                 confirmationUrl,
                                 expiresAt,
-                                preview.getDetails()));
+                                preview.getDetails(),
+                                locale));
         mailDispatchService.dispatch(normalizedEmail, mailContent);
 
         return new VerificationRequestResult(normalizedEmail, expiresAt);
@@ -199,11 +208,13 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
     @Override
     public VerificationPreview getPreview(final String rawToken) {
-        final EmailActionRequest request = getRequiredPendingRequest(rawToken, false);
+        final Locale locale = currentLocale();
+        final EmailActionRequest request = getRequiredPendingRequest(rawToken, false, locale);
         if (request.getActionType() == EmailActionType.MATCH_CREATION) {
             final MatchCreationPayload payload =
                     deserializeMatchCreationPayload(request.getPayloadJson());
-            return buildMatchCreationPreview(payload, request.getEmail(), request.getExpiresAt());
+            return buildMatchCreationPreview(
+                    payload, request.getEmail(), request.getExpiresAt(), locale);
         }
 
         final MatchReservationPayload payload = deserializePayload(request.getPayloadJson());
@@ -214,16 +225,19 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                         invalidateRequest(
                                                 request,
                                                 request.getUserId(),
-                                                "This event is no longer available for reservation."));
-        return buildReservationPreview(match, request.getEmail(), request.getExpiresAt());
+                                                message(
+                                                        "verification.message.reservationUnavailable",
+                                                        locale)));
+        return buildReservationPreview(match, request.getEmail(), request.getExpiresAt(), locale);
     }
 
     @Override
     @Transactional
     public VerificationConfirmationResult confirm(final String rawToken) {
-        final EmailActionRequest request = getRequiredPendingRequest(rawToken, true);
+        final Locale locale = currentLocale();
+        final EmailActionRequest request = getRequiredPendingRequest(rawToken, true, locale);
         if (request.getActionType() == EmailActionType.MATCH_CREATION) {
-            return confirmMatchCreation(request);
+            return confirmMatchCreation(request, locale);
         }
 
         final MatchReservationPayload payload = deserializePayload(request.getPayloadJson());
@@ -234,7 +248,9 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                         invalidateRequest(
                                                 request,
                                                 request.getUserId(),
-                                                "This event is no longer available for reservation."));
+                                                message(
+                                                        "verification.message.reservationUnavailable",
+                                                        locale)));
 
         final User user = mvpIdentityService.resolveOrCreateByEmail(request.getEmail());
         final Long userId = user.getId();
@@ -242,7 +258,8 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         try {
             matchReservationService.reserveSpot(match.getId(), userId);
         } catch (final MatchReservationException exception) {
-            throw invalidateRequest(request, userId, exception.getMessage());
+            throw invalidateRequest(
+                    request, userId, reservationErrorMessage(exception.getCode(), locale));
         }
 
         emailActionRequestDao.updateStatus(
@@ -251,10 +268,11 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         return new VerificationConfirmationResult(
                 userId,
                 "/matches/" + match.getId() + "?reservation=confirmed",
-                "Your reservation is now confirmed.");
+                message("verification.message.reservationConfirmed", locale));
     }
 
-    private VerificationConfirmationResult confirmMatchCreation(final EmailActionRequest request) {
+    private VerificationConfirmationResult confirmMatchCreation(
+            final EmailActionRequest request, final Locale locale) {
         final MatchCreationPayload payload =
                 deserializeMatchCreationPayload(request.getPayloadJson());
         final User user = mvpIdentityService.resolveOrCreateByEmail(request.getEmail());
@@ -286,11 +304,13 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                 request.getId(), EmailActionStatus.COMPLETED, user.getId(), Instant.now(clock));
 
         return new VerificationConfirmationResult(
-                user.getId(), "/matches/" + createdMatch.getId(), "Your match is now published.");
+                user.getId(),
+                "/matches/" + createdMatch.getId(),
+                message("verification.message.eventPublished", locale));
     }
 
     private EmailActionRequest getRequiredPendingRequest(
-            final String rawToken, final boolean forUpdate) {
+            final String rawToken, final boolean forUpdate, final Locale locale) {
         final String tokenHash = hashToken(rawToken);
         final EmailActionRequest request =
                 (forUpdate
@@ -300,13 +320,13 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                                 () ->
                                         new VerificationFailureException(
                                                 VerificationFailureReason.NOT_FOUND,
-                                                "That verification link is invalid or no longer exists."));
+                                                message("verification.message.notFound", locale)));
 
         if (request.getStatus() == EmailActionStatus.COMPLETED
                 || request.getStatus() == EmailActionStatus.FAILED) {
             throw new VerificationFailureException(
                     VerificationFailureReason.ALREADY_USED,
-                    "That verification link was already used.");
+                    message("verification.message.alreadyUsed", locale));
         }
 
         if (request.getStatus() == EmailActionStatus.EXPIRED
@@ -317,36 +337,48 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
                     request.getUserId(),
                     Instant.now(clock));
             throw new VerificationFailureException(
-                    VerificationFailureReason.EXPIRED, "That verification link has expired.");
+                    VerificationFailureReason.EXPIRED,
+                    message("verification.message.expired", locale));
         }
 
         return request;
     }
 
     private VerificationPreview buildReservationPreview(
-            final Match match, final String email, final Instant expiresAt) {
+            final Match match, final String email, final Instant expiresAt, final Locale locale) {
         return new VerificationPreview(
-                "Confirm your reservation for " + match.getTitle(),
-                "Use this one-time confirmation to reserve your spot in the event.",
+                message(
+                        "verification.preview.reservation.title",
+                        new Object[] {match.getTitle()},
+                        locale),
+                message("verification.preview.reservation.summary", locale),
                 email,
                 expiresAt,
-                "Confirm reservation",
+                message("verification.preview.reservation.confirm", locale),
                 "/matches/" + match.getId() + "?reservation=confirmed",
                 List.of(
-                        new VerificationPreviewDetail("Sport", match.getSport().getDisplayName()),
-                        new VerificationPreviewDetail("Venue", match.getAddress()),
                         new VerificationPreviewDetail(
-                                "Schedule",
-                                MATCH_SCHEDULE_FORMATTER.format(
-                                        match.getStartsAt().atZone(ZoneId.systemDefault()))),
+                                message("verification.preview.detail.sport", locale),
+                                toSportLabel(match.getSport(), locale)),
                         new VerificationPreviewDetail(
-                                "Price", toPriceLabel(match.getPricePerPlayer())),
+                                message("verification.preview.detail.venue", locale),
+                                match.getAddress()),
                         new VerificationPreviewDetail(
-                                "Spots left", String.valueOf(match.getAvailableSpots()))));
+                                message("verification.preview.detail.schedule", locale),
+                                formatSchedule(match.getStartsAt(), locale)),
+                        new VerificationPreviewDetail(
+                                message("verification.preview.detail.price", locale),
+                                toPriceLabel(match.getPricePerPlayer(), locale)),
+                        new VerificationPreviewDetail(
+                                message("verification.preview.detail.spotsLeft", locale),
+                                String.valueOf(match.getAvailableSpots()))));
     }
 
-    private String buildConfirmationUrl(final String rawToken) {
-        return stripTrailingSlash(mailProperties.getBaseUrl()) + "/verifications/" + rawToken;
+    private String buildConfirmationUrl(final String rawToken, final Locale locale) {
+        final String baseUrl =
+                stripTrailingSlash(mailProperties.getBaseUrl()) + "/verifications/" + rawToken;
+        final String languageTag = resolvedLocale(locale).getLanguage();
+        return languageTag.isBlank() ? baseUrl : baseUrl + "?lang=" + languageTag;
     }
 
     private static String stripTrailingSlash(final String value) {
@@ -409,34 +441,59 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         }
     }
 
-    private static String toPriceLabel(final BigDecimal pricePerPlayer) {
+    private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
         if (pricePerPlayer == null) {
-            return "Price TBD";
+            return message("price.tbd", locale);
         }
-        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0 ? "Free" : "$" + pricePerPlayer;
+        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
+                ? message("price.free", locale)
+                : message("price.amount", new Object[] {pricePerPlayer}, locale);
     }
 
     private VerificationPreview buildMatchCreationPreview(
-            final MatchCreationPayload payload, final String email, final Instant expiresAt) {
+            final MatchCreationPayload payload,
+            final String email,
+            final Instant expiresAt,
+            final Locale locale) {
         final List<VerificationPreviewDetail> details = new ArrayList<>();
-        details.add(new VerificationPreviewDetail("Sport", prettySport(payload.getSport())));
-        details.add(new VerificationPreviewDetail("Title", safeValue(payload.getTitle())));
-        details.add(new VerificationPreviewDetail("Venue", safeValue(payload.getAddress())));
-        details.add(new VerificationPreviewDetail("Schedule", formatStartSchedule(payload)));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.sport", locale),
+                        toSportLabel(payload.getSport(), locale)));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.title", locale),
+                        safeValue(payload.getTitle())));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.venue", locale),
+                        safeValue(payload.getAddress())));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.schedule", locale),
+                        formatSchedule(
+                                Instant.ofEpochMilli(payload.getStartsAtEpochMillis()), locale)));
         if (payload.getEndsAtEpochMillis() != null) {
-            details.add(new VerificationPreviewDetail("End time", formatEndTime(payload)));
+            details.add(
+                    new VerificationPreviewDetail(
+                            message("verification.preview.detail.endTime", locale),
+                            formatEndTime(payload.getEndsAtEpochMillis(), locale)));
         }
         details.add(
-                new VerificationPreviewDetail("Price", toPriceLabel(payload.getPricePerPlayer())));
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.price", locale),
+                        toPriceLabel(payload.getPricePerPlayer(), locale)));
         details.add(
-                new VerificationPreviewDetail("Capacity", String.valueOf(payload.getMaxPlayers())));
+                new VerificationPreviewDetail(
+                        message("verification.preview.detail.capacity", locale),
+                        String.valueOf(payload.getMaxPlayers())));
 
         return new VerificationPreview(
-                "Confirm your match publication",
-                "Use this one-time confirmation to publish your match.",
+                message("verification.preview.creation.title", locale),
+                message("verification.preview.creation.summary", locale),
                 email,
                 expiresAt,
-                "Confirm match publication",
+                message("verification.preview.creation.confirm", locale),
                 "/host/matches/new",
                 details);
     }
@@ -445,22 +502,72 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         return value == null || value.isBlank() ? "-" : value;
     }
 
-    private static String prettySport(final String sport) {
+    private String toSportLabel(final Sport sport, final Locale locale) {
+        return message(
+                "sport." + sport.getDbValue(),
+                null,
+                resolvedLocale(locale),
+                sport.getDisplayName());
+    }
+
+    private String toSportLabel(final String sport, final Locale locale) {
         if (sport == null || sport.isBlank()) {
-            return "Padel";
+            return toSportLabel(Sport.PADEL, locale);
         }
-        return Sport.fromDbValue(sport).map(Sport::getDisplayName).orElse("Padel");
+        return Sport.fromDbValue(sport)
+                .map(value -> toSportLabel(value, locale))
+                .orElse(toSportLabel(Sport.PADEL, locale));
     }
 
-    private static String formatStartSchedule(final MatchCreationPayload payload) {
-        final ZoneId zoneId = ZoneId.systemDefault();
-        return MATCH_SCHEDULE_FORMATTER.format(
-                Instant.ofEpochMilli(payload.getStartsAtEpochMillis()).atZone(zoneId));
+    private String reservationErrorMessage(final String code, final Locale locale) {
+        switch (code) {
+            case "closed":
+                return message("reservation.error.closed", locale);
+            case "started":
+                return message("reservation.error.started", locale);
+            case "already_joined":
+                return message("reservation.error.alreadyJoined", locale);
+            case "full":
+                return message("reservation.error.fullBeforeConfirm", locale);
+            case "not_found":
+            default:
+                return message("reservation.error.notFound", locale);
+        }
     }
 
-    private static String formatEndTime(final MatchCreationPayload payload) {
-        return MATCH_END_TIME_FORMATTER.format(
-                Instant.ofEpochMilli(payload.getEndsAtEpochMillis())
-                        .atZone(ZoneId.systemDefault()));
+    private String formatSchedule(final Instant startsAt, final Locale locale) {
+        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+                .withLocale(resolvedLocale(locale))
+                .format(startsAt.atZone(ZoneId.systemDefault()));
+    }
+
+    private String formatEndTime(final long endsAtEpochMillis, final Locale locale) {
+        return DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                .withLocale(resolvedLocale(locale))
+                .format(Instant.ofEpochMilli(endsAtEpochMillis).atZone(ZoneId.systemDefault()));
+    }
+
+    private Locale currentLocale() {
+        return resolvedLocale(LocaleContextHolder.getLocale());
+    }
+
+    private static Locale resolvedLocale(final Locale locale) {
+        return locale == null ? Locale.ENGLISH : locale;
+    }
+
+    private String message(final String code, final Locale locale) {
+        return message(code, null, locale);
+    }
+
+    private String message(final String code, final Object[] args, final Locale locale) {
+        return message(code, args, resolvedLocale(locale), code);
+    }
+
+    private String message(
+            final String code,
+            final Object[] args,
+            final Locale locale,
+            final String defaultMessage) {
+        return messageSource.getMessage(code, args, defaultMessage, locale);
     }
 }

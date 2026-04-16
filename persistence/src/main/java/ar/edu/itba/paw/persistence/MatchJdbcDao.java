@@ -148,19 +148,6 @@ public class MatchJdbcDao implements MatchDao {
             final String query,
             final List<Sport> sports,
             final EventTimeFilter timeFilter,
-            final MatchSort sort,
-            final ZoneId zoneId,
-            final int offset,
-            final int limit) {
-        return findPublicMatches(
-                query, sports, timeFilter, null, null, sort, zoneId, offset, limit);
-    }
-
-    @Override
-    public List<Match> findPublicMatches(
-            final String query,
-            final List<Sport> sports,
-            final EventTimeFilter timeFilter,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final MatchSort sort,
@@ -181,15 +168,6 @@ public class MatchJdbcDao implements MatchDao {
         params.add(offset);
 
         return jdbcTemplate.query(sql.toString(), MATCH_ROW_MAPPER, params.toArray());
-    }
-
-    @Override
-    public int countPublicMatches(
-            final String query,
-            final List<Sport> sports,
-            final EventTimeFilter timeFilter,
-            final ZoneId zoneId) {
-        return countPublicMatches(query, sports, timeFilter, null, null, zoneId);
     }
 
     @Override

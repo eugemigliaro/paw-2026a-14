@@ -26,6 +26,7 @@ import java.time.format.FormatStyle;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,13 +35,14 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.StaticMessageSource;
 
 @ExtendWith(MockitoExtension.class)
 public class ActionVerificationServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T18:00:00Z");
-    private static final DateTimeFormatter END_TIME_FORMATTER =
-            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.US);
 
     @Mock private EmailActionRequestDao emailActionRequestDao;
     @Mock private MatchDao matchDao;
@@ -54,6 +56,7 @@ public class ActionVerificationServiceImplTest {
 
     @BeforeEach
     public void setUp() {
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
         actionVerificationService =
                 new ActionVerificationServiceImpl(
                         emailActionRequestDao,
@@ -74,8 +77,14 @@ public class ActionVerificationServiceImplTest {
                                 24),
                         mailDispatchService,
                         templateRenderer,
+                        messageSource(),
                         new ObjectMapper(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+    }
+
+    @AfterEach
+    public void tearDown() {
+        LocaleContextHolder.resetLocaleContext();
     }
 
     @Test
@@ -221,11 +230,33 @@ public class ActionVerificationServiceImplTest {
                         .anyMatch(
                                 detail ->
                                         "End time".equals(detail.getLabel())
-                                                && END_TIME_FORMATTER
+                                                && DateTimeFormatter.ofLocalizedTime(
+                                                                FormatStyle.SHORT)
+                                                        .withLocale(Locale.ENGLISH)
                                                         .format(
                                                                 endsAt.atZone(
                                                                         ZoneId.systemDefault()))
                                                         .equals(detail.getValue())));
+    }
+
+    @Test
+    public void testGetPreviewUsesSpanishLocaleForReservationContent() {
+        final EmailActionRequest request = pendingRequest("{\"matchId\":10}");
+        final Match match = createMatch(10L, "Morning Padel", 0);
+        LocaleContextHolder.setLocale(new Locale("es"));
+
+        Mockito.when(emailActionRequestDao.findByTokenHash(ArgumentMatchers.anyString()))
+                .thenReturn(Optional.of(request));
+        Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
+
+        final VerificationPreview preview = actionVerificationService.getPreview("raw-token");
+
+        Assertions.assertEquals("Confirm\u00e1 tu reserva para Morning Padel", preview.getTitle());
+        Assertions.assertEquals("Confirmar reserva", preview.getConfirmLabel());
+        Assertions.assertEquals("Deporte", preview.getDetails().get(0).getLabel());
+        Assertions.assertEquals("P\u00e1del", preview.getDetails().get(0).getValue());
+        Assertions.assertTrue(
+                preview.getDetails().get(2).getValue().toLowerCase(Locale.ROOT).contains("abr"));
     }
 
     @Test
@@ -390,5 +421,176 @@ public class ActionVerificationServiceImplTest {
                 null,
                 FIXED_NOW.minusSeconds(60),
                 FIXED_NOW.minusSeconds(60));
+    }
+
+    private static MessageSource messageSource() {
+        final StaticMessageSource messageSource = new StaticMessageSource();
+        messageSource.setUseCodeAsDefaultMessage(true);
+
+        messageSource.addMessage(
+                "verification.preview.reservation.title",
+                Locale.ENGLISH,
+                "Confirm your reservation for {0}");
+        messageSource.addMessage(
+                "verification.preview.reservation.summary",
+                Locale.ENGLISH,
+                "Use this one-time confirmation to reserve your spot in the event.");
+        messageSource.addMessage(
+                "verification.preview.reservation.confirm", Locale.ENGLISH, "Confirm reservation");
+        messageSource.addMessage(
+                "verification.preview.creation.title",
+                Locale.ENGLISH,
+                "Confirm your event publication");
+        messageSource.addMessage(
+                "verification.preview.creation.summary",
+                Locale.ENGLISH,
+                "Use this one-time confirmation to publish your event.");
+        messageSource.addMessage(
+                "verification.preview.creation.confirm",
+                Locale.ENGLISH,
+                "Confirm event publication");
+        messageSource.addMessage("verification.preview.detail.sport", Locale.ENGLISH, "Sport");
+        messageSource.addMessage("verification.preview.detail.title", Locale.ENGLISH, "Title");
+        messageSource.addMessage("verification.preview.detail.venue", Locale.ENGLISH, "Venue");
+        messageSource.addMessage(
+                "verification.preview.detail.schedule", Locale.ENGLISH, "Schedule");
+        messageSource.addMessage("verification.preview.detail.endTime", Locale.ENGLISH, "End time");
+        messageSource.addMessage("verification.preview.detail.price", Locale.ENGLISH, "Price");
+        messageSource.addMessage(
+                "verification.preview.detail.capacity", Locale.ENGLISH, "Capacity");
+        messageSource.addMessage(
+                "verification.preview.detail.spotsLeft", Locale.ENGLISH, "Spots left");
+        messageSource.addMessage("sport.padel", Locale.ENGLISH, "Padel");
+        messageSource.addMessage("price.free", Locale.ENGLISH, "Free");
+        messageSource.addMessage("price.tbd", Locale.ENGLISH, "Price TBD");
+        messageSource.addMessage("price.amount", Locale.ENGLISH, "${0}");
+        messageSource.addMessage(
+                "verification.message.reservationUnavailable",
+                Locale.ENGLISH,
+                "This event is no longer available for reservation.");
+        messageSource.addMessage(
+                "verification.message.eventFull", Locale.ENGLISH, "This event is already full.");
+        messageSource.addMessage(
+                "verification.message.alreadyReserved",
+                Locale.ENGLISH,
+                "This email already has a confirmed reservation for the event.");
+        messageSource.addMessage(
+                "verification.message.notFound",
+                Locale.ENGLISH,
+                "That verification link is invalid or no longer exists.");
+        messageSource.addMessage(
+                "verification.message.alreadyUsed",
+                Locale.ENGLISH,
+                "That verification link was already used.");
+        messageSource.addMessage(
+                "verification.message.expired",
+                Locale.ENGLISH,
+                "That verification link has expired.");
+        messageSource.addMessage(
+                "verification.message.reservationConfirmed",
+                Locale.ENGLISH,
+                "Your reservation is now confirmed.");
+        messageSource.addMessage(
+                "verification.message.eventPublished",
+                Locale.ENGLISH,
+                "Your event is now published.");
+        messageSource.addMessage(
+                "reservation.error.notFound",
+                Locale.ENGLISH,
+                "This event is no longer available for reservation.");
+        messageSource.addMessage(
+                "reservation.error.closed",
+                Locale.ENGLISH,
+                "Reservations for this event are closed.");
+        messageSource.addMessage(
+                "reservation.error.started", Locale.ENGLISH, "This event has already started.");
+        messageSource.addMessage(
+                "reservation.error.alreadyJoined",
+                Locale.ENGLISH,
+                "This email already has a confirmed reservation for the event.");
+        messageSource.addMessage(
+                "reservation.error.fullBeforeConfirm",
+                Locale.ENGLISH,
+                "The event filled up before the reservation could be confirmed.");
+
+        final Locale spanish = new Locale("es");
+        messageSource.addMessage(
+                "verification.preview.reservation.title",
+                spanish,
+                "Confirm\u00e1 tu reserva para {0}");
+        messageSource.addMessage(
+                "verification.preview.reservation.summary",
+                spanish,
+                "Usá esta confirmación única para reservar tu lugar en el evento.");
+        messageSource.addMessage(
+                "verification.preview.reservation.confirm", spanish, "Confirmar reserva");
+        messageSource.addMessage(
+                "verification.preview.creation.title",
+                spanish,
+                "Confirmá la publicación de tu evento");
+        messageSource.addMessage(
+                "verification.preview.creation.summary",
+                spanish,
+                "Usá esta confirmación única para publicar tu evento.");
+        messageSource.addMessage(
+                "verification.preview.creation.confirm", spanish, "Confirmar publicación");
+        messageSource.addMessage("verification.preview.detail.sport", spanish, "Deporte");
+        messageSource.addMessage("verification.preview.detail.title", spanish, "Título");
+        messageSource.addMessage("verification.preview.detail.venue", spanish, "Lugar");
+        messageSource.addMessage("verification.preview.detail.schedule", spanish, "Horario");
+        messageSource.addMessage("verification.preview.detail.endTime", spanish, "Hora de fin");
+        messageSource.addMessage("verification.preview.detail.price", spanish, "Precio");
+        messageSource.addMessage("verification.preview.detail.capacity", spanish, "Capacidad");
+        messageSource.addMessage(
+                "verification.preview.detail.spotsLeft", spanish, "Lugares disponibles");
+        messageSource.addMessage("sport.padel", spanish, "P\u00e1del");
+        messageSource.addMessage("price.free", spanish, "Gratis");
+        messageSource.addMessage("price.tbd", spanish, "Precio a confirmar");
+        messageSource.addMessage("price.amount", spanish, "${0}");
+        messageSource.addMessage(
+                "verification.message.reservationUnavailable",
+                spanish,
+                "Este evento ya no está disponible para reserva.");
+        messageSource.addMessage(
+                "verification.message.eventFull", spanish, "Este evento ya está completo.");
+        messageSource.addMessage(
+                "verification.message.alreadyReserved",
+                spanish,
+                "Este email ya tiene una reserva confirmada para el evento.");
+        messageSource.addMessage(
+                "verification.message.notFound",
+                spanish,
+                "Ese enlace de verificación es inválido o ya no existe.");
+        messageSource.addMessage(
+                "verification.message.alreadyUsed",
+                spanish,
+                "Ese enlace de verificación ya fue usado.");
+        messageSource.addMessage(
+                "verification.message.expired", spanish, "Ese enlace de verificación expiró.");
+        messageSource.addMessage(
+                "verification.message.reservationConfirmed",
+                spanish,
+                "Tu reserva ahora está confirmada.");
+        messageSource.addMessage(
+                "verification.message.eventPublished", spanish, "Tu evento ahora está publicado.");
+        messageSource.addMessage(
+                "reservation.error.notFound",
+                spanish,
+                "Este evento ya no está disponible para reserva.");
+        messageSource.addMessage(
+                "reservation.error.closed",
+                spanish,
+                "Las reservas para este evento están cerradas.");
+        messageSource.addMessage("reservation.error.started", spanish, "Este evento ya empezó.");
+        messageSource.addMessage(
+                "reservation.error.alreadyJoined",
+                spanish,
+                "Este email ya tiene una reserva confirmada para el evento.");
+        messageSource.addMessage(
+                "reservation.error.fullBeforeConfirm",
+                spanish,
+                "El evento se llenó antes de que pudiera confirmarse la reserva.");
+
+        return messageSource;
     }
 }

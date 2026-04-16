@@ -1,30 +1,36 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
-<c:set var="pageTitle" value="Match Point | Explore" />
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<%@ include file="/WEB-INF/views/includes/head.jspf" %>
-	</head>
-	<body>
-		<div class="app-shell">
-			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
+	<spring:message var="pageTitle" code="page.title.explore" />
+	<!DOCTYPE html>
+	<html lang="${pageContext.response.locale.language}">
+		<head>
+			<%@ include file="/WEB-INF/views/includes/head.jspf" %>
+		</head>
+		<body>
+			<div class="app-shell">
+				<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
-			<main class="page-shell page-shell--feed">
-				<aside class="feed-sidebar" aria-label="Match filters">
+				<spring:message var="filtersAriaLabel" code="feed.aria.filters" />
+				<spring:message var="searchAriaLabel" code="feed.aria.search" />
+				<spring:message var="sortAriaLabel" code="feed.aria.sort" />
+				<c:url var="feedFormAction" value="/" />
+				<main class="page-shell page-shell--feed">
+					<aside class="feed-sidebar" aria-label="${filtersAriaLabel}">
 					<div class="panel filter-rail">
 						<div class="filter-rail__header">
 							<div class="filter-rail__heading">
-								<h2 class="filter-rail__main-title">Filters</h2>
+								<h2 class="filter-rail__main-title"><spring:message code="filter.title" /></h2>
 							</div>
 							<c:url var="clearFiltersHref" value="/">
 								<c:param name="q" value="${param.q}" />
 								<c:param name="sort" value="${selectedSort}" />
 							</c:url>
+							<spring:message var="clearAllLabel" code="filter.clearAll" />
 							<ui:button
-								label="Clear all"
+								label="${clearAllLabel}"
 								href="${clearFiltersHref}"
 								variant="primary"
 								size="sm"
@@ -37,9 +43,10 @@
 								</div>
 								<div class="filter-rail__options">
 									<c:forEach var="option" items="${group.options}">
+										<c:url var="optionHref" value="${option.href}" />
 										<ui:chip
 											label="${option.label}"
-											href="${pageContext.request.contextPath}${option.href}"
+											href="${optionHref}"
 											active="${option.active}"
 											tone="default"
 											className="filter-rail__chip" />
@@ -49,12 +56,12 @@
 						</c:forEach>
 						<section class="filter-rail__group">
 							<div class="filter-rail__group-header">
-								<h2 class="filter-rail__title">Price</h2>
-								<p class="filter-rail__caption">Per player</p>
+								<h2 class="filter-rail__title"><spring:message code="filter.price" /></h2>
+								<p class="filter-rail__caption"><spring:message code="filter.price.perPlayer" /></p>
 							</div>
 							<form
 								method="get"
-								action="${pageContext.request.contextPath}/"
+								action="${feedFormAction}"
 								class="filter-rail__form">
 								<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
 								<c:forEach var="selectedSport" items="${selectedSports}">
@@ -62,11 +69,15 @@
 								</c:forEach>
 								<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-								<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" />
+								<input
+									type="hidden"
+									name="tz"
+									value="<c:out value='${selectedTimezone}' />"
+									data-browser-timezone-field="true" />
 								<div class="filter-rail__field-group">
 									<div class="filter-rail__field-row">
 										<div class="field filter-rail__field filter-rail__price-field">
-											<label class="field__label" for="min-price">From</label>
+											<label class="field__label" for="min-price"><spring:message code="filter.price.from" /></label>
 											<div class="filter-rail__price-input-wrap">
 												<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
 												<input
@@ -82,7 +93,7 @@
 											</div>
 										</div>
 										<div class="field filter-rail__field filter-rail__price-field">
-											<label class="field__label" for="max-price">To</label>
+											<label class="field__label" for="max-price"><spring:message code="filter.price.to" /></label>
 											<div class="filter-rail__price-input-wrap">
 												<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
 												<input
@@ -99,8 +110,9 @@
 										</div>
 									</div>
 								</div>
+								<spring:message var="applyPriceLabel" code="filter.price.apply" />
 								<ui:button
-									label="Apply price filters"
+									label="${applyPriceLabel}"
 									type="submit"
 									fullWidth="${true}"
 									className="filter-rail__submit" />
@@ -119,10 +131,10 @@
 							<p class="hero-panel__description"><c:out value="${feedPage.description}" /></p>
 						</section>
 
-						<section class="search-panel" aria-label="Search matches">
+						<section class="search-panel" aria-label="${searchAriaLabel}">
 							<form:form
 								method="get"
-								action="${pageContext.request.contextPath}/"
+								action="${feedFormAction}"
 								modelAttribute="feedSearchForm"
 								cssClass="search-panel__form">
 								<c:forEach var="selectedSport" items="${selectedSports}">
@@ -130,7 +142,11 @@
 								</c:forEach>
 								<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-								<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" />
+								<input
+									type="hidden"
+									name="tz"
+									value="<c:out value='${selectedTimezone}' />"
+									data-browser-timezone-field="true" />
 								<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 								<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 								<div class="search-panel__row">
@@ -147,26 +163,30 @@
 							</form:form>
 						</section>
 
-						<form method="get" action="${pageContext.request.contextPath}/" class="sort-panel" aria-label="Sort matches">
+						<form method="get" action="${feedFormAction}" class="sort-panel" aria-label="${sortAriaLabel}">
 							<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
 							<c:forEach var="selectedSport" items="${selectedSports}">
 								<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 							</c:forEach>
 							<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
-							<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" />
+							<input
+								type="hidden"
+								name="tz"
+								value="<c:out value='${selectedTimezone}' />"
+								data-browser-timezone-field="true" />
 							<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 							<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 							<input type="hidden" name="page" value="1" />
 							<label class="field sort-panel__field" for="sort-select">
-								<span class="field__label">Sort by</span>
+								<span class="field__label"><spring:message code="feed.sortBy" /></span>
 								<select
 									id="sort-select"
 									name="sort"
 									class="field__control field__control--select sort-panel__select"
 									onchange="this.form.submit()">
-									<option value="soonest" ${selectedSort == 'soonest' ? 'selected="selected"' : ''}>Soonest</option>
-									<option value="price" ${selectedSort == 'price' ? 'selected="selected"' : ''}>Price: Low to high</option>
-									<option value="spots" ${selectedSort == 'spots' ? 'selected="selected"' : ''}>Most spots left</option>
+									<option value="soonest" ${selectedSort == 'soonest' ? 'selected="selected"' : ''}><spring:message code="feed.sort.soonest" /></option>
+									<option value="price" ${selectedSort == 'price' ? 'selected="selected"' : ''}><spring:message code="feed.sort.price" /></option>
+									<option value="spots" ${selectedSort == 'spots' ? 'selected="selected"' : ''}><spring:message code="feed.sort.spots" /></option>
 								</select>
 							</label>
 						</form>
@@ -175,7 +195,8 @@
 					<section>
 						<div class="section-head section-head--feed-list">
 							<div>
-								<h2 class="section-head__title section-head__title--feed-list">All matches</h2>
+								<h2 class="section-head__title section-head__title--feed-list"><spring:message code="feed.trending.title" /></h2>
+								<p class="section-head__meta"><spring:message code="feed.trending.subtitle" /></p>
 							</div>
 						</div>
 
@@ -188,9 +209,10 @@
 									ariaLabel="${event.title}">
 									<div class="event-card__media ${event.mediaClass}">
 										<c:if test="${not empty event.bannerImageUrl}">
+											<c:url var="eventBannerSrc" value="${event.bannerImageUrl}" />
 											<img
 												class="event-card__image"
-												src="${pageContext.request.contextPath}${event.bannerImageUrl}"
+												src="${eventBannerSrc}"
 												alt=""
 												loading="lazy"
 												decoding="async" />
@@ -217,18 +239,21 @@
 						</div>
 
 						<c:if test="${feedPage.totalPages > 1}">
+							<spring:message var="previousLabel" code="pagination.previous" />
+							<spring:message var="nextLabel" code="pagination.next" />
 							<section class="feed-pagination" aria-label="Pagination">
 								<nav class="feed-pagination__nav" aria-label="Feed pages">
 									<c:choose>
 										<c:when test="${not empty feedPage.previousPageHref}">
+											<c:url var="feedPrevHref" value="${feedPage.previousPageHref}" />
 											<a
 												class="feed-pagination__control"
-												href="${pageContext.request.contextPath}${feedPage.previousPageHref}">
-												Previous
+												href="${feedPrevHref}">
+												${previousLabel}
 											</a>
 										</c:when>
 										<c:otherwise>
-											<span class="feed-pagination__control feed-pagination__control--disabled">Previous</span>
+											<span class="feed-pagination__control feed-pagination__control--disabled">${previousLabel}</span>
 										</c:otherwise>
 									</c:choose>
 
@@ -242,9 +267,10 @@
 													<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">${item.label}</span>
 												</c:when>
 												<c:otherwise>
+													<c:url var="feedPageItemHref" value="${item.href}" />
 													<a
 														class="feed-pagination__page"
-														href="${pageContext.request.contextPath}${item.href}">
+														href="${feedPageItemHref}">
 														${item.label}
 													</a>
 												</c:otherwise>
@@ -254,14 +280,15 @@
 
 									<c:choose>
 										<c:when test="${not empty feedPage.nextPageHref}">
+											<c:url var="feedNextHref" value="${feedPage.nextPageHref}" />
 											<a
 												class="feed-pagination__control"
-												href="${pageContext.request.contextPath}${feedPage.nextPageHref}">
-												Next
+												href="${feedNextHref}">
+												${nextLabel}
 											</a>
 										</c:when>
 										<c:otherwise>
-											<span class="feed-pagination__control feed-pagination__control--disabled">Next</span>
+											<span class="feed-pagination__control feed-pagination__control--disabled">${nextLabel}</span>
 										</c:otherwise>
 									</c:choose>
 								</nav>

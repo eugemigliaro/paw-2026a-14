@@ -22,7 +22,9 @@ public interface MatchService {
             String sort,
             int page,
             int pageSize,
-            String timezone);
+            String timezone,
+            BigDecimal minPrice,
+            BigDecimal maxPrice);
 
     default PaginatedResult<Match> searchPublicMatches(
             String query,
@@ -31,9 +33,7 @@ public interface MatchService {
             String sort,
             int page,
             int pageSize,
-            String timezone,
-            BigDecimal minPrice,
-            BigDecimal maxPrice) {
-        return searchPublicMatches(query, sport, time, sort, page, pageSize, timezone);
+            String timezone) {
+        return searchPublicMatches(query, sport, time, sort, page, pageSize, timezone, null, null);
     }
 }

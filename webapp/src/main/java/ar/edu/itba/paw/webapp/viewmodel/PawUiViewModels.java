@@ -2,9 +2,9 @@ package ar.edu.itba.paw.webapp.viewmodel;
 
 import java.util.List;
 
-public final class WebViewModels {
+public final class PawUiViewModels {
 
-    private WebViewModels() {
+    private PawUiViewModels() {
         // Utility holder for immutable UI-only view models.
     }
 

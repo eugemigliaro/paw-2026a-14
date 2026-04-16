@@ -1,9 +1,10 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
-<c:set var="pageTitle" value="Match Point | Check Email" />
-<!DOCTYPE html>
-<html lang="en">
+	<spring:message var="pageTitle" code="page.title.checkEmail" />
+	<!DOCTYPE html>
+	<html lang="${pageContext.response.locale.language}">
 <head>
 	<%@ include file="/WEB-INF/views/includes/head.jspf" %>
 </head>
@@ -13,16 +14,19 @@
 
 	<main class="page-shell verification-shell">
 		<section class="panel verification-panel">
-			<p class="eyebrow"><c:out value="${empty eyebrow ? 'Action requested' : eyebrow}" /></p>
+			<spring:message var="defaultEyebrow" code="verification.actionRequested" />
+			<p class="eyebrow"><c:out value="${empty eyebrow ? defaultEyebrow : eyebrow}" /></p>
 			<h1 class="page-heading__title"><c:out value="${title}" /></h1>
 			<p class="page-heading__description"><c:out value="${summary}" /></p>
 			<p class="muted-copy">
-				The confirmation link expires on <c:out value="${expiresAtLabel}" />.
+				<spring:message code="verification.expiresOn" arguments="${expiresAtLabel}" />
 			</p>
 			<div class="verification-actions">
+				<spring:message var="defaultBack" code="common.back" />
+				<c:url var="backUrl" value="${backHref}" />
 				<ui:button
-					href="${pageContext.request.contextPath}${backHref}"
-					label="${empty actionLabel ? 'Back' : actionLabel}" />
+					href="${backUrl}"
+					label="${empty actionLabel ? defaultBack : actionLabel}" />
 			</div>
 		</section>
 	</main>

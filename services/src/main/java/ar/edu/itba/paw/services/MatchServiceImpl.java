@@ -67,18 +67,6 @@ public class MatchServiceImpl implements MatchService {
             final String sort,
             final int page,
             final int pageSize,
-            final String timezone) {
-        return searchPublicMatches(query, sport, time, sort, page, pageSize, timezone, null, null);
-    }
-
-    @Override
-    public PaginatedResult<Match> searchPublicMatches(
-            final String query,
-            final String sport,
-            final String time,
-            final String sort,
-            final int page,
-            final int pageSize,
             final String timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
