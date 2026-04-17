@@ -568,10 +568,10 @@ public class MatchServiceImplTest {
 
         final MatchCancellationException exception =
                 Assertions.assertThrows(
-                        MatchCancellationException.class,
-                        () -> matchService.cancelMatch(21L, 1L));
+                        MatchCancellationException.class, () -> matchService.cancelMatch(21L, 1L));
 
-        Assertions.assertEquals(MatchCancellationFailureReason.MATCH_NOT_FOUND, exception.getReason());
+        Assertions.assertEquals(
+                MatchCancellationFailureReason.MATCH_NOT_FOUND, exception.getReason());
         Assertions.assertEquals("match.cancel.error.notFound", exception.getMessage());
     }
 
@@ -582,8 +582,7 @@ public class MatchServiceImplTest {
 
         final MatchCancellationException exception =
                 Assertions.assertThrows(
-                        MatchCancellationException.class,
-                        () -> matchService.cancelMatch(22L, 99L));
+                        MatchCancellationException.class, () -> matchService.cancelMatch(22L, 99L));
 
         Assertions.assertEquals(MatchCancellationFailureReason.FORBIDDEN, exception.getReason());
         Assertions.assertEquals("match.cancel.error.forbidden", exception.getMessage());

@@ -1,8 +1,8 @@
-- implementar endpoints en el controller
 - implementar notificar a las personas que un evento se cancelo o edito
 
 --- cuando ya este el login
 
+- implementar endpoints en el controller
 - hacer las pantallas para editar
 - hacer lo de que el evento tenga visibilidad y join policy
 - set event visibility and tags
