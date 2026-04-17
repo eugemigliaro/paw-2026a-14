@@ -14,8 +14,8 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
-import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
@@ -26,6 +26,8 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import ar.edu.itba.paw.services.exceptions.MatchReservationException;
+import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -38,11 +40,16 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
@@ -55,14 +62,23 @@ class PawUiRouteTest {
 
     private MockMvc mockMvc;
     private AtomicReference<String> lastSportsFilter;
+    private AtomicReference<Long> lastReservedMatchId;
+    private AtomicReference<Long> lastReservedUserId;
+    private AtomicReference<MatchReservationException> reservationFailure;
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.clearContext();
+
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
         final MessageSource messageSource = messageSource();
+
         lastSportsFilter = new AtomicReference<>();
+        lastReservedMatchId = new AtomicReference<>();
+        lastReservedUserId = new AtomicReference<>();
+        reservationFailure = new AtomicReference<>();
 
         final Match realMatch =
                 new Match(
@@ -142,11 +158,30 @@ class PawUiRouteTest {
                             final int page,
                             final int pageSize,
                             final String timezone,
-                            final java.math.BigDecimal minPrice,
-                            final java.math.BigDecimal maxPrice) {
+                            final BigDecimal minPrice,
+                            final BigDecimal maxPrice) {
                         lastSportsFilter.set(sport);
                         return new PaginatedResult<>(
                                 List.of(realMatch, footballMatch), 2, 1, pageSize);
+                    }
+                };
+
+        final MatchReservationService matchReservationService =
+                new MatchReservationService() {
+                    @Override
+                    public boolean hasActiveReservation(final Long matchId, final Long userId) {
+                        return false;
+                    }
+
+                    @Override
+                    public void reserveSpot(final Long matchId, final Long userId) {
+                        final MatchReservationException failure = reservationFailure.get();
+                        if (failure != null) {
+                            throw failure;
+                        }
+
+                        lastReservedMatchId.set(matchId);
+                        lastReservedUserId.set(userId);
                     }
                 };
 
@@ -173,50 +208,6 @@ class PawUiRouteTest {
                     }
                 };
 
-        final ActionVerificationService actionVerificationService =
-                new ActionVerificationService() {
-                    @Override
-                    public VerificationRequestResult requestMatchReservation(
-                            final Long matchId, final String email) {
-                        return new VerificationRequestResult(
-                                email, Instant.parse("2026-04-06T18:00:00Z"));
-                    }
-
-                    @Override
-                    public VerificationRequestResult requestMatchCreation(
-                            final ar.edu.itba.paw.services.CreateMatchRequest request,
-                            final String email) {
-                        return new VerificationRequestResult(
-                                email, Instant.parse("2026-04-06T18:00:00Z"));
-                    }
-
-                    @Override
-                    public VerificationPreview getPreview(final String rawToken) {
-                        if ("invalid".equals(rawToken)) {
-                            throw new VerificationFailureException(
-                                    VerificationFailureReason.NOT_FOUND, "Missing link");
-                        }
-                        return new VerificationPreview(
-                                "Confirm reservation",
-                                "Finish the reservation.",
-                                "player@test.com",
-                                Instant.parse("2026-04-06T18:00:00Z"),
-                                "Confirm reservation",
-                                "/matches/42?reservation=confirmed",
-                                List.of(new VerificationPreviewDetail("Venue", "Downtown Club")));
-                    }
-
-                    @Override
-                    public VerificationConfirmationResult confirm(final String rawToken) {
-                        if ("invalid".equals(rawToken)) {
-                            throw new VerificationFailureException(
-                                    VerificationFailureReason.NOT_FOUND, "Missing link");
-                        }
-                        return new VerificationConfirmationResult(
-                                9L, "/matches/42?reservation=confirmed", "done");
-                    }
-                };
-
         final AccountAuthService accountAuthService =
                 new AccountAuthService() {
                     @Override
@@ -234,15 +225,32 @@ class PawUiRouteTest {
 
                     @Override
                     public VerificationPreview getVerificationPreview(final String rawToken) {
-                        throw new VerificationFailureException(
-                                VerificationFailureReason.NOT_FOUND, "Missing link");
+                        if ("invalid".equals(rawToken)) {
+                            throw new VerificationFailureException(
+                                    VerificationFailureReason.NOT_FOUND, "Missing link");
+                        }
+
+                        return new VerificationPreview(
+                                "Verify your Match Point account",
+                                "Confirm your email address to activate the account.",
+                                "player@test.com",
+                                Instant.parse("2026-04-06T18:00:00Z"),
+                                "Verify account",
+                                "/login?verified=1",
+                                List.of(
+                                        new VerificationPreviewDetail(
+                                                "Username", "player-account")));
                     }
 
                     @Override
                     public VerificationConfirmationResult confirmVerification(
                             final String rawToken) {
-                        throw new VerificationFailureException(
-                                VerificationFailureReason.NOT_FOUND, "Missing link");
+                        if ("invalid".equals(rawToken)) {
+                            throw new VerificationFailureException(
+                                    VerificationFailureReason.NOT_FOUND, "Missing link");
+                        }
+
+                        return new VerificationConfirmationResult(9L, "/login?verified=1", "done");
                     }
 
                     @Override
@@ -309,24 +317,23 @@ class PawUiRouteTest {
                                 new FeedController(matchService, messageSource),
                                 new EventController(
                                         matchService,
+                                        matchReservationService,
                                         userService,
-                                        actionVerificationService,
                                         messageSource),
                                 new HostController(
-                                        actionVerificationService,
-                                        imageService,
-                                        fixedClock,
-                                        messageSource),
+                                        matchService, imageService, fixedClock, messageSource),
                                 new ErrorPageController(messageSource),
-                                new VerificationController(
-                                        accountAuthService,
-                                        actionVerificationService,
-                                        messageSource))
+                                new VerificationController(accountAuthService, messageSource))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .setConversionService(new DefaultFormattingConversionService())
                         .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -361,12 +368,9 @@ class PawUiRouteTest {
         mockMvc.perform(get("/").param("sport", "padel").param("sport", "football"))
                 .andExpect(status().isOk());
 
-        assert lastSportsFilter.get() != null
-                : "expected MatchService to be called with a non-null sport filter";
-        assert lastSportsFilter.get().contains("padel")
-                        && lastSportsFilter.get().contains("football")
-                : "expected sport filter to include both selected sports, was "
-                        + lastSportsFilter.get();
+        Assertions.assertNotNull(lastSportsFilter.get());
+        Assertions.assertTrue(lastSportsFilter.get().contains("padel"));
+        Assertions.assertTrue(lastSportsFilter.get().contains("football"));
     }
 
     @Test
@@ -394,11 +398,12 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getRealMatchDetailsRouteRendersMatchPage() throws Exception {
+    void getRealMatchDetailsRouteRendersMatchPageForAnonymousUsers() throws Exception {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("reservationRequestPath"))
+                .andExpect(model().attribute("reservationRequiresLogin", true))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -412,12 +417,45 @@ class PawUiRouteTest {
     }
 
     @Test
-    void postReservationRequestRendersCheckEmailPage() throws Exception {
-        mockMvc.perform(post("/matches/42/reservations").param("email", "player@test.com"))
+    void getRealMatchDetailsRouteForAuthenticatedUsersEnablesDirectReservation() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("verification/check-email"))
-                .andExpect(model().attributeExists("title"))
-                .andExpect(model().attributeExists("summary"));
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("reservationRequiresLogin", false));
+    }
+
+    @Test
+    void postReservationRequestWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/matches/42/reservations")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postReservationRequestAsAuthenticatedUserRedirectsToConfirmedEvent() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/42/reservations"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42?reservation=confirmed"));
+
+        Assertions.assertEquals(42L, lastReservedMatchId.get());
+        Assertions.assertEquals(9L, lastReservedUserId.get());
+    }
+
+    @Test
+    void postReservationRequestWithSpanishLocaleLocalizesReservationErrors() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        reservationFailure.set(new MatchReservationException("already_joined", "Already reserved"));
+
+        mockMvc.perform(post("/matches/42/reservations").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("reservationRequiresLogin", false))
+                .andExpect(
+                        model().attribute(
+                                        "reservationError",
+                                        "Tu cuenta ya tiene una reserva confirmada para este evento."));
     }
 
     @Test
@@ -429,10 +467,10 @@ class PawUiRouteTest {
     }
 
     @Test
-    void postVerificationConfirmRedirectsToMatch() throws Exception {
+    void postVerificationConfirmRedirectsToLogin() throws Exception {
         mockMvc.perform(post("/verifications/abc123/confirm"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?reservation=confirmed"));
+                .andExpect(redirectedUrl("/login?verified=1"));
     }
 
     @Test
@@ -463,10 +501,9 @@ class PawUiRouteTest {
     }
 
     @Test
-    void postHostPublishCreatesAndRedirects() throws Exception {
+    void postHostPublishWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(
                         post("/host/matches/new")
-                                .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -475,18 +512,15 @@ class PawUiRouteTest {
                                 .param("eventTime", "18:00")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("verification/check-email"))
-                .andExpect(model().attributeExists("title"))
-                .andExpect(model().attributeExists("summary"));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void postHostPublishWithSpanishLocaleLocalizesConfirmationCopyAndDate() throws Exception {
+    void postHostPublishCreatesAndRedirectsForAuthenticatedUsers() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
         mockMvc.perform(
                         post("/host/matches/new")
-                                .param("lang", "es")
-                                .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -495,22 +529,16 @@ class PawUiRouteTest {
                                 .param("eventTime", "18:00")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("verification/check-email"))
-                .andExpect(model().attribute("title", "Revis\u00e1 tu email"))
-                .andExpect(model().attribute("eyebrow", "Publicaci\u00f3n de evento solicitada"))
-                .andExpect(model().attribute("actionLabel", "Volver a crear evento"))
-                .andExpect(
-                        model().attribute(
-                                        "expiresAtLabel",
-                                        Matchers.containsStringIgnoringCase("abr")));
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
     }
 
     @Test
     void postHostPublishWithEndTimeBeforeStartTimeRerendersFormWithError() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
         mockMvc.perform(
                         post("/host/matches/new")
-                                .param("email", "host@test.com")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -523,6 +551,17 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    private void authenticateUser(final Long userId, final String email, final String username) {
+        final AuthenticatedUserPrincipal principal =
+                new AuthenticatedUserPrincipal(
+                        new UserAccount(
+                                userId, email, username, "{bcrypt}hash", UserRole.USER, FIXED_NOW));
+        final UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private static MessageSource messageSource() {

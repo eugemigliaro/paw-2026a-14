@@ -5,6 +5,7 @@ import ar.edu.itba.paw.webapp.security.AccountAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.LoginFailureHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,9 +36,14 @@ public class SecurityConfig {
                                                 "/register/resend-verification",
                                                 "/forgot-password",
                                                 "/password-reset/**",
-                                                "/verifications/**",
-                                                "/matches/**")
+                                                "/verifications/**")
                                         .permitAll()
+                                        .antMatchers(HttpMethod.GET, "/matches/**")
+                                        .permitAll()
+                                        .antMatchers(HttpMethod.POST, "/matches/*/reservations")
+                                        .hasAnyRole("USER", "ADMIN_MOD")
+                                        .antMatchers("/host/**")
+                                        .hasAnyRole("USER", "ADMIN_MOD")
                                         .anyRequest()
                                         .permitAll())
                 .formLogin(

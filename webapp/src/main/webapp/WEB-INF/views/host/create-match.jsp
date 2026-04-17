@@ -24,7 +24,6 @@
 					</header>
 
 					<spring:message var="publishingLabel" code="host.form.submitting" />
-					<spring:message var="emailPlaceholder" code="host.form.email.placeholder" />
 					<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
 					<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
 					<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
@@ -63,23 +62,6 @@
 								<spring:message code="host.section.basics.subtitle" />
 							</h2>
 							<div class="create-stack">
-								<label class="field" for="match-email">
-									<span class="field__label"><spring:message code="host.form.email" /></span>
-									<form:input
-										path="email"
-										id="match-email"
-										type="email"
-										cssClass="field__control"
-										required="required"
-										placeholder="${emailPlaceholder}"
-									/>
-									<form:errors
-										path="email"
-										cssClass="field__error"
-										element="span"
-									/>
-								</label>
-
 								<label class="field" for="match-title">
 									<span class="field__label"
 										><spring:message code="host.form.title" /></span

@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import javax.validation.constraints.DecimalMin;
-import javax.validation.constraints.Email;
 import javax.validation.constraints.FutureOrPresent;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -14,11 +13,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
 public class CreateEventForm {
-
-    @NotBlank(message = "Email is required")
-    @Email(message = "Enter a valid email address")
-    @Size(max = 255, message = "Email cannot exceed 255 characters")
-    private String email = "";
 
     @NotBlank(message = "Event title is required")
     @Size(max = 150, message = "Event title cannot exceed 150 characters")
@@ -57,14 +51,6 @@ public class CreateEventForm {
     private String timezone = "";
 
     private MultipartFile bannerImage;
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(final String email) {
-        this.email = email;
-    }
 
     public String getTitle() {
         return title;

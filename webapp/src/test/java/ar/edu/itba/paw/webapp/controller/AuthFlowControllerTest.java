@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import ar.edu.itba.paw.services.AccountAuthService;
-import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
@@ -26,6 +25,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -40,6 +40,7 @@ class AuthFlowControllerTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.clearContext();
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
@@ -47,17 +48,12 @@ class AuthFlowControllerTest {
         final LocalValidatorFactoryBean validator = validator(messageSource);
 
         accountAuthService = Mockito.mock(AccountAuthService.class);
-        final ActionVerificationService actionVerificationService =
-                Mockito.mock(ActionVerificationService.class);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new AuthController(accountAuthService, messageSource),
                                 new PasswordResetController(accountAuthService, messageSource),
-                                new VerificationController(
-                                        accountAuthService,
-                                        actionVerificationService,
-                                        messageSource))
+                                new VerificationController(accountAuthService, messageSource))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())

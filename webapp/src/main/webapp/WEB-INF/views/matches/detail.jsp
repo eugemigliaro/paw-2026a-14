@@ -259,37 +259,57 @@
 							</dl>
 
 							<spring:message var="joiningLabel" code="event.booking.joining" />
-							<spring:message var="emailLabel" code="form.email.label" />
-							<spring:message var="emailPlaceholder" code="form.email.placeholder" />
-							<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
-							<form
-								method="post"
-								action="${reservationRequestAction}"
-								data-submit-guard="true"
-								data-submit-loading-label="${joiningLabel}"
-								class="booking-panel__request-form"
-							>
-								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-								<ui:textInput
-									label="${emailLabel}"
-									name="email"
-									type="email"
-									value="${reservationRequestForm.email}"
-									placeholder="${emailPlaceholder}"
-									required="${true}"
-									autocomplete="email"
-								/>
-								<ui:button
-									label="${eventPage.ctaLabel}"
-									type="submit"
-									fullWidth="${true}"
-									disabled="${not reservationEnabled}"
-								/>
-							</form>
+							<c:choose>
+								<c:when test="${reservationRequiresLogin}">
+									<c:choose>
+										<c:when test="${reservationEnabled}">
+											<spring:message var="signInToReserveLabel" code="event.booking.signIn" />
+											<c:url var="loginToReserveHref" value="/login" />
+											<ui:button
+												label="${signInToReserveLabel}"
+												href="${loginToReserveHref}"
+												fullWidth="${true}"
+											/>
+											<p class="booking-panel__note">
+												<spring:message code="event.booking.signInNote" />
+											</p>
+										</c:when>
+										<c:otherwise>
+											<ui:button
+												label="${eventPage.ctaLabel}"
+												type="button"
+												fullWidth="${true}"
+												disabled="${true}"
+											/>
+											<p class="booking-panel__note">
+												<spring:message code="event.booking.note" />
+											</p>
+										</c:otherwise>
+									</c:choose>
+								</c:when>
+								<c:otherwise>
+									<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
+									<form
+										method="post"
+										action="${reservationRequestAction}"
+										data-submit-guard="true"
+										data-submit-loading-label="${joiningLabel}"
+										class="booking-panel__request-form"
+									>
+										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+										<ui:button
+											label="${eventPage.ctaLabel}"
+											type="submit"
+											fullWidth="${true}"
+											disabled="${not reservationEnabled}"
+										/>
+									</form>
 
-							<p class="booking-panel__note">
-								<spring:message code="event.booking.note" />
-							</p>
+									<p class="booking-panel__note">
+										<spring:message code="event.booking.note" />
+									</p>
+								</c:otherwise>
+							</c:choose>
 						</article>
 					</aside>
 				</section>
