@@ -473,7 +473,8 @@ public class MatchServiceImplTest {
                         0,
                         null);
         Mockito.when(matchDao.findById(12L))
-                .thenReturn(Optional.of(existingMatch), Optional.of(updatedMatch));
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(updatedMatch));
         Mockito.when(matchParticipantDao.findConfirmedParticipants(12L)).thenReturn(List.of());
         Mockito.when(
                         matchDao.updateMatch(
