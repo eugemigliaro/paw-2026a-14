@@ -2,9 +2,9 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
-import ar.edu.itba.paw.services.VerificationFailureException;
 import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
+import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;

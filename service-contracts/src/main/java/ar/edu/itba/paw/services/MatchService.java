@@ -15,6 +15,8 @@ public interface MatchService {
 
     List<User> findConfirmedParticipants(Long matchId);
 
+    Match updateMatch(Long matchId, Long actingUserId, UpdateMatchRequest request);
+
     PaginatedResult<Match> searchPublicMatches(
             String query,
             String sport,

@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
+import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;

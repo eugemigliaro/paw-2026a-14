@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -119,6 +120,23 @@ public class MatchJdbcDao implements MatchDao {
                 status,
                 0,
                 bannerImageId);
+    }
+
+    @Override
+    public Match updateMatch(
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            String visibility,
+            String status,
+            Long bannerImageId) {
+        // TODO Auto-generated method stub
+        return null;
     }
 
     @Override

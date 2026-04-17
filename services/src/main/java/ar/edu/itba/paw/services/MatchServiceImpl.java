@@ -50,6 +50,12 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    public Match updateMatch(Long matchId, Long actingUserId, UpdateMatchRequest request) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
         return matchDao.findPublicMatchById(matchId);
     }

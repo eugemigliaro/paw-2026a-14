@@ -26,6 +26,19 @@ public interface MatchDao {
             String status,
             Long bannerImageId);
 
+    Match updateMatch(
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            String visibility,
+            String status,
+            Long bannerImageId);
+
     Optional<Match> findById(Long matchId);
 
     Optional<Match> findPublicMatchById(Long matchId);
