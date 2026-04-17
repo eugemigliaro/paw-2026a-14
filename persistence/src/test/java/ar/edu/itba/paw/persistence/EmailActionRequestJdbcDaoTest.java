@@ -80,4 +80,38 @@ public class EmailActionRequestJdbcDaoTest {
         Assertions.assertEquals(1L, updated.getUserId());
         Assertions.assertEquals(consumedAt, updated.getConsumedAt());
     }
+
+    @Test
+    public void testExpirePendingByEmailAndActionTypeOnlyTouchesMatchingRequests() {
+        final EmailActionRequest verificationRequest =
+                emailActionRequestDao.create(
+                        EmailActionType.ACCOUNT_VERIFICATION,
+                        "player@test.com",
+                        1L,
+                        "verification-token-hash",
+                        "{}",
+                        Instant.parse("2026-04-06T20:15:00Z"));
+        emailActionRequestDao.create(
+                EmailActionType.PASSWORD_RESET,
+                "player@test.com",
+                1L,
+                "password-reset-token-hash",
+                "{}",
+                Instant.parse("2026-04-06T20:15:00Z"));
+
+        final Instant consumedAt = Instant.parse("2026-04-05T20:15:00Z");
+        emailActionRequestDao.expirePendingByEmailAndActionType(
+                EmailActionType.ACCOUNT_VERIFICATION, "player@test.com", consumedAt);
+
+        final EmailActionRequest expiredRequest =
+                emailActionRequestDao.findByTokenHash("verification-token-hash").orElseThrow();
+        final EmailActionRequest untouchedRequest =
+                emailActionRequestDao.findByTokenHash("password-reset-token-hash").orElseThrow();
+
+        Assertions.assertEquals(verificationRequest.getId(), expiredRequest.getId());
+        Assertions.assertEquals(EmailActionStatus.EXPIRED, expiredRequest.getStatus());
+        Assertions.assertEquals(consumedAt, expiredRequest.getConsumedAt());
+        Assertions.assertEquals(EmailActionStatus.PENDING, untouchedRequest.getStatus());
+        Assertions.assertNull(untouchedRequest.getConsumedAt());
+    }
 }

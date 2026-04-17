@@ -21,4 +21,7 @@ public interface EmailActionRequestDao {
     Optional<EmailActionRequest> findByTokenHashForUpdate(String tokenHash);
 
     void updateStatus(Long id, EmailActionStatus status, Long userId, Instant consumedAt);
+
+    void expirePendingByEmailAndActionType(
+            EmailActionType actionType, String email, Instant consumedAt);
 }

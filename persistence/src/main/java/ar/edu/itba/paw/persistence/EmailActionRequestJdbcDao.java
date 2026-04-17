@@ -128,6 +128,21 @@ public class EmailActionRequestJdbcDao implements EmailActionRequestDao {
                 id);
     }
 
+    @Override
+    public void expirePendingByEmailAndActionType(
+            final EmailActionType actionType, final String email, final Instant consumedAt) {
+        jdbcTemplate.update(
+                "UPDATE email_action_requests"
+                        + " SET status = ?, consumed_at = ?, updated_at = ?"
+                        + " WHERE action_type = ? AND email = ? AND status = ?",
+                new SqlParameterValue(Types.OTHER, EmailActionStatus.EXPIRED.getDbValue()),
+                Timestamp.from(consumedAt),
+                Timestamp.from(consumedAt),
+                new SqlParameterValue(Types.OTHER, actionType.getDbValue()),
+                email,
+                new SqlParameterValue(Types.OTHER, EmailActionStatus.PENDING.getDbValue()));
+    }
+
     private static Instant toInstant(final Timestamp timestamp) {
         return timestamp == null ? null : timestamp.toInstant();
     }
