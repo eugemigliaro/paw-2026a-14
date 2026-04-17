@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -559,6 +560,89 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals(MatchUpdateFailureReason.FORBIDDEN, exception.getReason());
         Assertions.assertEquals("match.update.error.forbidden", exception.getMessage());
+    }
+
+    @Test
+    public void testCancelMatchRejectsMissingMatch() {
+        Mockito.when(matchDao.findById(21L)).thenReturn(Optional.empty());
+
+        final MatchCancellationException exception =
+                Assertions.assertThrows(
+                        MatchCancellationException.class,
+                        () -> matchService.cancelMatch(21L, 1L));
+
+        Assertions.assertEquals(MatchCancellationFailureReason.MATCH_NOT_FOUND, exception.getReason());
+        Assertions.assertEquals("match.cancel.error.notFound", exception.getMessage());
+    }
+
+    @Test
+    public void testCancelMatchRejectsNonOwner() {
+        final Match existingMatch = createTestMatch(22L, "Test Match", "football");
+        Mockito.when(matchDao.findById(22L)).thenReturn(Optional.of(existingMatch));
+
+        final MatchCancellationException exception =
+                Assertions.assertThrows(
+                        MatchCancellationException.class,
+                        () -> matchService.cancelMatch(22L, 99L));
+
+        Assertions.assertEquals(MatchCancellationFailureReason.FORBIDDEN, exception.getReason());
+        Assertions.assertEquals("match.cancel.error.forbidden", exception.getMessage());
+    }
+
+    @Test
+    public void testCancelMatchPersistsAndReturnsCancelledMatch() {
+        final Match existingMatch = createTestMatch(23L, "Test Match", "football");
+        final Match cancelledMatch =
+                new Match(
+                        23L,
+                        Sport.FOOTBALL,
+                        1L,
+                        "Test Address",
+                        "Test Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        null,
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "cancelled",
+                        0,
+                        null);
+        Mockito.when(matchDao.findById(23L))
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(cancelledMatch));
+        Mockito.when(matchDao.cancelMatch(23L, 1L)).thenReturn(true);
+
+        final Match result = matchService.cancelMatch(23L, 1L);
+
+        Assertions.assertEquals("cancelled", result.getStatus());
+        Assertions.assertEquals(23L, result.getId());
+    }
+
+    @Test
+    public void testCancelMatchReturnsExistingMatchWhenAlreadyCancelled() {
+        final Match existingMatch =
+                new Match(
+                        24L,
+                        Sport.FOOTBALL,
+                        1L,
+                        "Test Address",
+                        "Test Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        null,
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "cancelled",
+                        0,
+                        null);
+        Mockito.when(matchDao.findById(24L)).thenReturn(Optional.of(existingMatch));
+
+        final Match result = matchService.cancelMatch(24L, 1L);
+
+        Assertions.assertEquals("cancelled", result.getStatus());
+        Assertions.assertEquals(24L, result.getId());
     }
 
     @Test

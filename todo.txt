@@ -1,4 +1,5 @@
-- implementar servicio para cancelar
+- implementar endpoints en el controller
+- implementar notificar a las personas que un evento se cancelo o edito
 
 --- cuando ya este el login
 

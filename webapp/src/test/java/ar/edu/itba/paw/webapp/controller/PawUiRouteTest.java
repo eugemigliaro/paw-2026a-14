@@ -119,6 +119,17 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public Optional<Match> findMatchById(final Long matchId) {
+                        if (matchId == 42L) {
+                            return Optional.of(realMatch);
+                        }
+                        if (matchId == 43L) {
+                            return Optional.of(footballMatch);
+                        }
+                        return Optional.empty();
+                    }
+
+                    @Override
                     public List<User> findConfirmedParticipants(final Long matchId) {
                         return matchId == 42L
                                 ? List.of(
@@ -147,6 +158,25 @@ class PawUiRouteTest {
                                 request.getStatus(),
                                 0,
                                 request.getBannerImageId());
+                    }
+
+                    @Override
+                    public Match cancelMatch(final Long matchId, final Long actingUserId) {
+                        return new Match(
+                                matchId,
+                                Sport.PADEL,
+                                actingUserId,
+                                "Downtown Club",
+                                "Cancelled Match",
+                                "Cancelled Description",
+                                Instant.parse("2026-04-06T10:00:00Z"),
+                                Instant.parse("2026-04-06T12:00:00Z"),
+                                8,
+                                BigDecimal.TEN,
+                                "public",
+                                "cancelled",
+                                2,
+                                null);
                     }
 
                     @Override

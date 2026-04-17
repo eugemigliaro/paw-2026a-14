@@ -41,6 +41,8 @@ public interface MatchDao {
             String status,
             Long bannerImageId);
 
+    boolean cancelMatch(Long matchId, Long hostUserId);
+
     Optional<Match> findById(Long matchId);
 
     Optional<Match> findPublicMatchById(Long matchId);

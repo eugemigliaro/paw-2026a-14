@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.Sport;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -458,6 +459,101 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Original Title", found.getTitle());
         Assertions.assertEquals(Sport.FOOTBALL, found.getSport());
         Assertions.assertEquals(8, found.getMaxPlayers());
+    }
+
+    @Test
+    public void testCancelMatchCancelsOwnedMatch() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), hostUserId);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertTrue(cancelled);
+        Assertions.assertEquals("cancelled", found.getStatus());
+    }
+
+    @Test
+    public void testCancelMatchRejectsWrongHostUserId() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, created_at, updated_at)"
+                        + " VALUES (2, 'other-host', 'other-host@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), 2L);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertFalse(cancelled);
+        Assertions.assertEquals("open", found.getStatus());
+    }
+
+    @Test
+    public void testCancelMatchUpdatesTimestamp() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        jdbcTemplate.update(
+                "UPDATE matches SET updated_at = TIMESTAMPADD(SECOND, -5, updated_at) WHERE id = ?",
+                created.getId());
+
+        final Timestamp beforeCancel =
+                jdbcTemplate.queryForObject(
+                        "SELECT updated_at FROM matches WHERE id = ?",
+                        Timestamp.class,
+                        created.getId());
+
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), hostUserId);
+
+        final Timestamp afterUpdate =
+                jdbcTemplate.queryForObject(
+                        "SELECT updated_at FROM matches WHERE id = ?",
+                        Timestamp.class,
+                        created.getId());
+
+        Assertions.assertTrue(cancelled);
+        Assertions.assertNotNull(beforeCancel);
+        Assertions.assertNotNull(afterUpdate);
+        Assertions.assertTrue(afterUpdate.after(beforeCancel));
     }
 
     private void insertMatch(

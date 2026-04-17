@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -128,6 +129,41 @@ public class MatchServiceImpl implements MatchService {
                                 new MatchUpdateException(
                                         MatchUpdateFailureReason.MATCH_NOT_FOUND,
                                         message("match.update.error.notFound")));
+    }
+
+    @Override
+    public Match cancelMatch(final Long matchId, final Long actingUserId) {
+        final Match match =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchCancellationException(
+                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                message("match.cancel.error.notFound")));
+
+        if (!match.getHostUserId().equals(actingUserId)) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        if ("cancelled".equals(match.getStatus())) {
+            return match;
+        }
+
+        final boolean updated = matchDao.cancelMatch(matchId, actingUserId);
+        if (!updated) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        return matchDao.findById(matchId)
+                .orElseThrow(
+                        () ->
+                                new MatchCancellationException(
+                                        MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                        message("match.cancel.error.notFound")));
     }
 
     @Override

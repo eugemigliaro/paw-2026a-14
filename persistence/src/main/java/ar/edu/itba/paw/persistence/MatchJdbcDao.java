@@ -163,6 +163,19 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
+    public boolean cancelMatch(final Long matchId, final Long hostUserId) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ? AND host_user_id = ?",
+                        matchId,
+                        hostUserId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
     public Optional<Match> findById(final Long matchId) {
         final String sql =
                 "SELECT m.*, COUNT(mp.id) AS joined_players"
