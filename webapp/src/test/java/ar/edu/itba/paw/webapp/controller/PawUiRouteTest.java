@@ -11,9 +11,14 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PasswordResetPreview;
+import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureException;
@@ -37,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
@@ -211,6 +217,66 @@ class PawUiRouteTest {
                     }
                 };
 
+        final AccountAuthService accountAuthService =
+                new AccountAuthService() {
+                    @Override
+                    public VerificationRequestResult register(
+                            final RegisterAccountRequest request) {
+                        return new VerificationRequestResult(
+                                request.getEmail(), Instant.parse("2026-04-06T18:00:00Z"));
+                    }
+
+                    @Override
+                    public Optional<VerificationRequestResult> resendVerification(
+                            final String email) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public VerificationPreview getVerificationPreview(final String rawToken) {
+                        throw new VerificationFailureException(
+                                VerificationFailureReason.NOT_FOUND, "Missing link");
+                    }
+
+                    @Override
+                    public VerificationConfirmationResult confirmVerification(
+                            final String rawToken) {
+                        throw new VerificationFailureException(
+                                VerificationFailureReason.NOT_FOUND, "Missing link");
+                    }
+
+                    @Override
+                    public Optional<VerificationRequestResult> requestPasswordReset(
+                            final String email) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public PasswordResetPreview getPasswordResetPreview(final String rawToken) {
+                        return new PasswordResetPreview(
+                                "player@test.com", Instant.parse("2026-04-06T18:00:00Z"));
+                    }
+
+                    @Override
+                    public VerificationConfirmationResult resetPassword(
+                            final String rawToken, final String newPassword) {
+                        return new VerificationConfirmationResult(
+                                9L, "/login?reset=1", "Password reset");
+                    }
+
+                    @Override
+                    public Optional<UserAccount> findAccountByEmail(final String email) {
+                        return Optional.of(
+                                new UserAccount(
+                                        9L,
+                                        email,
+                                        "host-player",
+                                        "{bcrypt}hash",
+                                        UserRole.USER,
+                                        FIXED_NOW));
+                    }
+                };
+
         final ImageService imageService =
                 new ImageService() {
                     @Override
@@ -253,10 +319,13 @@ class PawUiRouteTest {
                                         messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(
-                                        actionVerificationService, messageSource))
+                                        accountAuthService,
+                                        actionVerificationService,
+                                        messageSource))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
+                        .setConversionService(new DefaultFormattingConversionService())
                         .build();
     }
 
@@ -277,11 +346,7 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "shell",
-                                        Matchers.hasProperty(
-                                                "hostAction",
-                                                Matchers.hasProperty(
-                                                        "label",
-                                                        Matchers.is("Cambiar a Organizador")))))
+                                        Matchers.hasProperty("hostAction", Matchers.nullValue())))
                 .andExpect(
                         model().attribute(
                                         "feedPage",
@@ -406,7 +471,7 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2026-04-10")
+                                .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
@@ -426,7 +491,7 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2026-04-10")
+                                .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
@@ -450,7 +515,7 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
-                                .param("eventDate", "2026-04-10")
+                                .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endTime", "17:00")
                                 .param("maxPlayers", "8")

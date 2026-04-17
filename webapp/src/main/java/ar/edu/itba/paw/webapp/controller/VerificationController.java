@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureException;
@@ -21,13 +22,16 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class VerificationController {
 
+    private final AccountAuthService accountAuthService;
     private final ActionVerificationService actionVerificationService;
     private final MessageSource messageSource;
 
     @Autowired
     public VerificationController(
+            final AccountAuthService accountAuthService,
             final ActionVerificationService actionVerificationService,
             final MessageSource messageSource) {
+        this.accountAuthService = accountAuthService;
         this.actionVerificationService = actionVerificationService;
         this.messageSource = messageSource;
     }
@@ -36,7 +40,7 @@ public class VerificationController {
     public ModelAndView showVerification(
             @PathVariable("token") final String token, final Locale locale) {
         try {
-            final VerificationPreview preview = actionVerificationService.getPreview(token);
+            final VerificationPreview preview = loadPreview(token);
             final ModelAndView mav = new ModelAndView("verification/confirm");
             mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
             mav.addObject("preview", preview);
@@ -54,11 +58,39 @@ public class VerificationController {
     @PostMapping("/verifications/{token}/confirm")
     public ModelAndView confirm(@PathVariable("token") final String token, final Locale locale) {
         try {
-            final VerificationConfirmationResult result = actionVerificationService.confirm(token);
+            final VerificationConfirmationResult result = confirmToken(token);
             return new ModelAndView("redirect:" + result.getRedirectUrl());
         } catch (final VerificationFailureException exception) {
             return buildErrorView(exception, locale);
         }
+    }
+
+    private VerificationPreview loadPreview(final String token) {
+        try {
+            return accountAuthService.getVerificationPreview(token);
+        } catch (final VerificationFailureException exception) {
+            if (shouldFallbackToLegacyVerification(exception)) {
+                return actionVerificationService.getPreview(token);
+            }
+            throw exception;
+        }
+    }
+
+    private VerificationConfirmationResult confirmToken(final String token) {
+        try {
+            return accountAuthService.confirmVerification(token);
+        } catch (final VerificationFailureException exception) {
+            if (shouldFallbackToLegacyVerification(exception)) {
+                return actionVerificationService.confirm(token);
+            }
+            throw exception;
+        }
+    }
+
+    private static boolean shouldFallbackToLegacyVerification(
+            final VerificationFailureException exception) {
+        return exception.getReason() == VerificationFailureReason.NOT_FOUND
+                || exception.getReason() == VerificationFailureReason.INVALID_ACTION;
     }
 
     private ModelAndView buildErrorView(

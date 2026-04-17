@@ -269,6 +269,7 @@
 								data-submit-loading-label="${joiningLabel}"
 								class="booking-panel__request-form"
 							>
+								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 								<ui:textInput
 									label="${emailLabel}"
 									name="email"

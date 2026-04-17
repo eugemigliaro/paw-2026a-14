@@ -45,6 +45,7 @@
 						data-submit-loading-label="${publishingLabel}"
 						cssClass="create-form"
 					>
+						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<input
 							type="hidden"
 							name="timezone"

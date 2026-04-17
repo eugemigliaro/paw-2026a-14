@@ -34,6 +34,7 @@
 
 			<c:url var="confirmAction" value="${confirmPath}" />
 			<form method="post" action="${confirmAction}">
+				<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 				<ui:button label="${preview.confirmLabel}" type="submit" fullWidth="${true}" />
 			</form>
 		</section>
