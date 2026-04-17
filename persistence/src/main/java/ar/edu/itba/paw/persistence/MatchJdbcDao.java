@@ -123,20 +123,43 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
-    public Match updateMatch(
-            String address,
-            String title,
-            String description,
-            Instant startsAt,
-            Instant endsAt,
-            int maxPlayers,
-            BigDecimal pricePerPlayer,
-            Sport sport,
-            String visibility,
-            String status,
-            Long bannerImageId) {
-        // TODO Auto-generated method stub
-        return null;
+    public boolean updateMatch(
+            final Long matchId,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String status,
+            final Long bannerImageId) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET address = ?, title = ?, description = ?, starts_at = ?,"
+                                + " ends_at = ?, max_players = ?, price_per_player = ?, sport = ?,"
+                                + " visibility = ?, status = ?, banner_image_id = ?,"
+                                + " updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ? AND host_user_id = ?",
+                        address,
+                        title,
+                        description,
+                        Timestamp.from(startsAt),
+                        endsAt == null ? null : Timestamp.from(endsAt),
+                        maxPlayers,
+                        pricePerPlayer,
+                        new SqlParameterValue(Types.OTHER, sport.getDbValue()),
+                        new SqlParameterValue(Types.OTHER, visibility),
+                        new SqlParameterValue(Types.OTHER, status),
+                        bannerImageId,
+                        matchId,
+                        hostUserId);
+
+        return updatedRows > 0;
     }
 
     @Override

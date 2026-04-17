@@ -370,6 +370,96 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(1, found.getJoinedPlayers());
     }
 
+    @Test
+    public void testUpdateMatchUpdatesOwnedMatch() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        final boolean updated =
+                matchDao.updateMatch(
+                        created.getId(),
+                        hostUserId,
+                        "Updated Address",
+                        "Updated Title",
+                        "Updated Description",
+                        ZonedDateTime.now().plusDays(2).toInstant(),
+                        ZonedDateTime.now().plusDays(2).plusHours(2).toInstant(),
+                        10,
+                        new BigDecimal("15"),
+                        Sport.TENNIS,
+                        "public",
+                        "open",
+                        null);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertTrue(updated);
+        Assertions.assertEquals("Updated Address", found.getAddress());
+        Assertions.assertEquals("Updated Title", found.getTitle());
+        Assertions.assertEquals("Updated Description", found.getDescription());
+        Assertions.assertEquals(Sport.TENNIS, found.getSport());
+        Assertions.assertEquals(10, found.getMaxPlayers());
+        Assertions.assertEquals(new BigDecimal("15.00"), found.getPricePerPlayer());
+    }
+
+    @Test
+    public void testUpdateMatchRejectsWrongHostUserId() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, created_at, updated_at)"
+                        + " VALUES (2, 'other-host', 'other-host@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+
+        final boolean updated =
+                matchDao.updateMatch(
+                        created.getId(),
+                        2L,
+                        "Updated Address",
+                        "Updated Title",
+                        "Updated Description",
+                        ZonedDateTime.now().plusDays(2).toInstant(),
+                        ZonedDateTime.now().plusDays(2).plusHours(2).toInstant(),
+                        10,
+                        new BigDecimal("15"),
+                        Sport.TENNIS,
+                        "public",
+                        "open",
+                        null);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertFalse(updated);
+        Assertions.assertEquals("Original Address", found.getAddress());
+        Assertions.assertEquals("Original Title", found.getTitle());
+        Assertions.assertEquals(Sport.FOOTBALL, found.getSport());
+        Assertions.assertEquals(8, found.getMaxPlayers());
+    }
+
     private void insertMatch(
             final String title,
             final String description,

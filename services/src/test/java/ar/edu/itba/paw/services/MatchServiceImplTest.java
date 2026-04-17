@@ -368,6 +368,67 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateMatchPersistsAndReturnsUpdatedMatch() {
+        final Match existingMatch = createTestMatch(12L, "Old Title", "football");
+        final Match updatedMatch =
+                new Match(
+                        12L,
+                        Sport.TENNIS,
+                        1L,
+                        "Updated Address",
+                        "Updated Title",
+                        "Updated Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        12,
+                        BigDecimal.ONE,
+                        "public",
+                        "open",
+                        0,
+                        null);
+        Mockito.when(matchDao.findById(12L))
+                .thenReturn(Optional.of(existingMatch), Optional.of(updatedMatch));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(12L)).thenReturn(List.of());
+        Mockito.when(
+                        matchDao.updateMatch(
+                                12L,
+                                1L,
+                                "Updated Address",
+                                "Updated Title",
+                                "Updated Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                12,
+                                BigDecimal.ONE,
+                                Sport.TENNIS,
+                                "public",
+                                "open",
+                                null))
+                .thenReturn(true);
+
+        final Match result =
+                matchService.updateMatch(
+                        12L,
+                        1L,
+                        new UpdateMatchRequest(
+                                "Updated Address",
+                                "Updated Title",
+                                "Updated Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                12,
+                                BigDecimal.ONE,
+                                Sport.TENNIS,
+                                "public",
+                                "open",
+                                null));
+
+        Assertions.assertEquals("Updated Title", result.getTitle());
+        Assertions.assertEquals(Sport.TENNIS, result.getSport());
+        Assertions.assertEquals("Updated Address", result.getAddress());
+    }
+
+    @Test
     public void testFindPublicMatchByIdDelegates() {
         final Match expectedMatch = createTestMatch(8L, "Late Football", "football");
         Mockito.when(matchDao.findPublicMatchById(8L)).thenReturn(Optional.of(expectedMatch));

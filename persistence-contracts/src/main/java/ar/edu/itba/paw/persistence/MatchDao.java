@@ -26,7 +26,9 @@ public interface MatchDao {
             String status,
             Long bannerImageId);
 
-    Match updateMatch(
+    boolean updateMatch(
+            Long matchId,
+            Long hostUserId,
             String address,
             String title,
             String description,

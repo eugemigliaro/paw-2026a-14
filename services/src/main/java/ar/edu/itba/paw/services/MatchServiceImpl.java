@@ -101,7 +101,33 @@ public class MatchServiceImpl implements MatchService {
                     message("match.update.error.capacityBelowConfirmed"));
         }
 
-        return null;
+        final boolean updated =
+                matchDao.updateMatch(
+                        matchId,
+                        actingUserId,
+                        request.getAddress(),
+                        request.getTitle(),
+                        request.getDescription(),
+                        request.getStartsAt(),
+                        request.getEndsAt(),
+                        request.getMaxPlayers(),
+                        request.getPricePerPlayer(),
+                        request.getSport(),
+                        request.getVisibility(),
+                        request.getStatus(),
+                        request.getBannerImageId());
+
+        if (!updated) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+        }
+
+        return matchDao.findById(matchId)
+                .orElseThrow(
+                        () ->
+                                new MatchUpdateException(
+                                        MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                        message("match.update.error.notFound")));
     }
 
     @Override
