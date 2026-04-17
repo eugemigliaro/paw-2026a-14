@@ -1,11 +1,13 @@
 # Product Requirements Document (PRD)
 ## Event Community Platform (Placeholder Name)
 
-**Document version:** 1.0  
-**Status:** Draft  
+**Document version:** 1.1  
+**Status:** Active  
 **Product type:** Web application  
 **Primary audience:** Product/design/development teams and AI coding assistants  
 **Language:** English  
+
+**Current scope note:** The repository is no longer limited to the MVP. References to the MVP below are kept as historical phase context and should not be used to block full-scope work such as authentication, authorization, reviews, or moderation.
 
 ---
 
@@ -49,15 +51,16 @@ At the same time, people who organize matches lack a simple, centralized way to 
 
 ## 3. Product Goals
 
-### 3.1 Goals for the MVP
+### 3.1 Goals for the Current Product Phase
 - Enable users to discover in-person matches through a centralized web platform
 - Enable users to reserve a spot in matches quickly and easily
-- Enable hosts to create and delete matches 
+- Enable hosts to create, edit, and delete matches
 - Support a dual-role experience where the same account can act as both user and host
-The MVP will not involve a proper login, only mail validations
+- Support account registration plus login/logout with email and password
+- Support role-based access with a regular user level and an elevated admin/mod level
 
-### 3.2 Non-Goals for the MVP
-The following are intentionally out of scope for the MVP:
+### 3.2 Historical MVP Non-Goals
+The following were intentionally out of scope for the initial MVP, but they are no longer automatic blockers for current work:
 - Enable hosts to edit matches
 - Interactive maps
 - Personalized recommendations
@@ -122,6 +125,18 @@ In Host mode, the person can:
 - View confirmed attendees for each event
 - Manage event information
 - Receive reviews associated with their host profile 
+
+### 5.4 Authorization Levels
+User mode and Host mode are product experiences within the same account. They are not the same thing as security roles.
+
+The authorization model should support at least:
+- **Regular user**, who can manage their own profile, reservations, and hosted content
+- **Admin/mod**, an elevated role with near-full platform access used to satisfy role-based-access requirements and moderation needs
+
+The elevated admin/mod role can:
+- Edit or delete any event
+- Intervene in moderation/reporting flows
+- Access management screens that are not limited to a single event owner
 
 ---
 
@@ -304,7 +319,7 @@ This is not just a visual mode toggle; it implies different workflows and availa
 ## 14. Reviews
 
 ### 14.1 Review Scope
-Reviews are planned for the broader product, but **not included in the MVP**.
+Reviews are part of the broader product scope and may be implemented when prioritized.
 
 ### 14.2 Review Rules
 When reviews are implemented:
@@ -319,7 +334,7 @@ When reviews are implemented:
 - Host replies are out of scope
 
 ### 14.3 Moderation
-Review moderation/reporting is currently out of scope.
+Review moderation/reporting is part of the broader product scope and should be handled through the elevated admin/mod role.
 
 ---
 
@@ -330,6 +345,7 @@ The system must allow users to:
 - Register an account
 - Log in with email and password
 - Log out
+- Access protected features according to their authorization level
 
 ### 15.2 User Discovery
 The system must allow users to:
@@ -356,9 +372,17 @@ The system must allow hosts to:
 ### 15.5 Public Profiles
 The system must allow viewing basic public user profiles.
 
+### 15.6 Administration And Moderation
+The system must support an elevated admin/mod role that can:
+- Edit or delete any event
+- Access platform-level management actions that are not limited to the event owner
+- Handle moderation/reporting workflows when those flows are implemented
+
 ---
 
-## 16. MVP Definition
+## 16. Historical MVP Baseline
+
+This section describes the original MVP boundary for reference only. It is not the current delivery ceiling for the repository.
 
 ### 16.1 Included in MVP
 The MVP includes:

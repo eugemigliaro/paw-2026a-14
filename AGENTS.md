@@ -4,7 +4,7 @@
 
 This file guides AI coding agents working on this repository.
 
-The goal is to implement the MVP only. Keep decisions tied to the current codebase and the first sprint scope, not the full semester roadmap.
+The repository is no longer restricted to the MVP. Work may now target the broader semester scope described in the PRD, but changes should still be incremental, grounded in the current codebase, and limited to the slice the user actually requested.
 
 ## 2. Sources of Truth
 
@@ -44,41 +44,34 @@ The implemented stack today is:
 
 Formatting is handled with Spotless from the root Maven build.
 
-## 4. MVP Scope
+## 4. Product Scope
 
-Build only what belongs to the MVP for this product.
+The repository is now allowed to implement the broader product scope, not only the MVP.
 
-In scope:
+In scope when requested or required by the current phase:
 
 - in-person sports matches/tournaments
 - event discovery/feed flows
 - event detail pages
 - reserve a spot
 - cancel a reservation
-- basic public profiles
+- public profiles
 - host event creation
+- host event editing
 - host event deletion
-- hosted-event management needed for the MVP
-- attendee visibility needed for the MVP
-- explicit user/host flow switching if that flow is being built
+- hosted-event management
+- attendee visibility
+- explicit user/host flow switching
+- account registration, login, and logout
+- role-based authorization
+- reviews
+- moderation / reporting
 
-Out of scope for the MVP unless the user explicitly asks otherwise:
+Still out of scope unless the user explicitly asks otherwise:
 
-- login/logout
-- full authentication or authorization
-- Spring Security
 - Hibernate / JPA
 - Jersey / JAX-RS
-- reviews
-- interactive maps
-- personalized recommendations
-- chat
-- notifications
-- waitlists
-- moderation / reporting
-- check-in / attendance validation
 - platform payments
-- host verification
 - a SPA frontend or frontend framework migration
 
 Important product rules:
@@ -92,30 +85,27 @@ Important product rules:
 - cancelling a reservation releases the spot
 - a user can reserve their own event
 
-If a requested change conflicts with this MVP scope, call it out before coding.
+Moving beyond the MVP does not mean implementing the whole roadmap at once. Build the smallest coherent slice that satisfies the current request, and call out product-rule conflicts before coding.
 
-## 5. Authentication Workarounds For The MVP
+## 5. Authentication And Authorization
 
-Proper login is not part of this sprint.
-
-The chosen MVP workaround is a simple mail-validation placeholder flow.
+Real authentication and authorization are now allowed.
 
 Rules:
 
-- do not build real login/logout flows
-- do not introduce Spring Security yet
-- do not add role systems, permission frameworks, or password-auth flows
-- when a feature needs identity, route it through the mail-validation placeholder flow
-- keep temporary identity logic isolated behind a small helper, service, or clearly marked controller-level seam
-- implement the workaround so it can be replaced cleanly in sprint 2
+- Spring Security is the default framework for login, logout, and access control work
+- prefer server-rendered, session-backed authentication that fits the current Spring MVC + JSP stack unless the task explicitly asks for something else
+- use email/password as the baseline identity flow unless the user explicitly requests additional providers
+- manual user/host mode switching remains a product UX concept; it is not a substitute for security roles
+- support two authorization levels unless the task explicitly asks for a different model:
+  - regular authenticated user
+  - elevated admin/mod role with near-full platform access
+- the elevated admin/mod role can intervene across ownership boundaries, including editing or deleting any event and handling moderation/reporting flows
+- regular users should only manage their own profile, reservations, and hosted content unless an explicit business rule expands access
+- keep authentication and authorization logic centralized in Spring Security configuration, dedicated policy helpers, or services instead of scattering ownership rules through JSPs
+- when changing access control, add or update tests for both allowed and denied paths
 
-Meaning in practice:
-
-- email can be used as the temporary identity anchor for MVP flows
-- any verification step should stay simple and clearly marked as temporary
-- do not spread ad hoc identity assumptions throughout controllers, services, and JSPs
-
-Do not partially implement real authentication now. Keep the placeholder narrow and replaceable.
+The existing mail-validation placeholder flow should be treated as legacy MVP infrastructure. Reuse or migrate it only when it helps a requested transition, not as a reason to avoid proper auth.
 
 ## 6. Architecture Rules
 
@@ -154,7 +144,7 @@ Do not introduce:
 - Hibernate mappings
 - Spring Data repositories
 
-Those may matter later, but they are not part of the MVP implementation now.
+Those may matter later, but they are not part of the current default implementation path.
 
 ## 8. Web And View Rules
 
@@ -171,7 +161,7 @@ Rules:
 
 Do not introduce React, Next.js, Vue, Tailwind, Vite, or a client-rendered architecture.
 
-The current `HelloWorldController` and demo pages are scaffolding. It is fine to replace or extend them toward real MVP flows, but preserve useful shared components unless the task says otherwise.
+The current `HelloWorldController` and demo pages are scaffolding. It is fine to replace or extend them toward real product flows, but preserve useful shared components unless the task says otherwise.
 
 ### Internationalization
 
@@ -193,14 +183,14 @@ If a change adds visible UI or email copy and only updates one locale, call that
 
 Use `./docs/design.md` as direction, not as permission to overbuild the frontend.
 
-For MVP work:
+For product work:
 
 - aim for clean, structured, calm UI
 - prefer readable layouts over flashy interactions
 - keep the premium sports/community tone
 - use existing reusable components before inventing one-off markup
 
-Avoid spending implementation time on design-system expansion that does not directly support MVP screens.
+Avoid spending implementation time on design-system expansion that does not directly support the requested screens.
 
 ## 10. Testing Rules
 
@@ -215,6 +205,7 @@ Expectations:
 
 - add service tests when business rules change
 - add DAO tests when queries or inserts change
+- add controller or integration tests when login, role checks, or protected-route behavior changes
 - keep tests deterministic
 - prefer one scenario per test
 - do not use `Mockito.verify()` in unit tests
@@ -228,10 +219,11 @@ If formatting is needed, use the existing Spotless setup rather than ad hoc form
 
 ## 11. Deferred Technology Notes
 
-The following technologies are future concerns and should be kept in mind, but not implemented now unless the user explicitly asks for them:
+Spring Security is now an allowed part of the stack for authentication and authorization work.
 
-- Spring Security
+The following technologies are still future concerns and should be kept in mind, but not implemented now unless the user explicitly asks for them:
+
 - Hibernate / JPA
 - Jersey / JAX-RS
 
-Code written for the MVP should not make those future additions harder, but it also should not partially implement them ahead of time.
+Code written for the current product phase should not make those future additions harder, but it also should not partially implement them ahead of time.
