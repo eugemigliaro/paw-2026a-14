@@ -107,14 +107,23 @@ Supporting contract modules sit between layers:
 - Event detail:
   - `GET /matches/{id}` -> `EventController` -> `MatchService` / `UserService` -> `WEB-INF/views/matches/detail.jsp`
 
+- Account access:
+  - `GET|POST /login` -> Spring Security / `AuthController`
+  - `GET|POST /register` -> `AuthController` -> `AccountAuthService`
+  - `POST /register/resend-verification` -> `AuthController` -> `AccountAuthService`
+  - `GET /forgot-password` and `POST /forgot-password` -> `AuthController` -> `AccountAuthService`
+
+- Account verification:
+  - `GET|POST /verifications/{token}` -> `VerificationController` -> `AccountAuthService`
+
+- Password reset:
+  - `GET|POST /password-reset/{token}` -> `PasswordResetController` -> `AccountAuthService`
+
 - Reservation request:
-  - `POST /matches/{id}/reservations` -> `EventController` -> `ActionVerificationService`
+  - `POST /matches/{id}/reservations` -> `EventController` -> `MatchReservationService`
 
 - Host event creation:
-  - `GET|POST /host/matches/new` -> `HostController` -> `ActionVerificationService`
-
-- Email confirmation:
-  - `GET|POST /verifications/{token}` -> `VerificationController` -> `ActionVerificationServiceImpl`
+  - `GET|POST /host/matches/new` -> `HostController` -> `MatchService` / `ImageService`
 
 - Image serving:
   - `GET /images/{id}` -> `ImageController` -> `ImageService` -> `ImageJdbcDao`
@@ -125,9 +134,11 @@ The code that is most active today is centered on:
 
 - public event feed/discovery
 - event detail pages
-- reserve-a-spot flow
-- host event creation
-- one-time email verification
+- email/password login and registration
+- email verification after registration
+- password reset by mail link
+- authenticated reserve-a-spot flow
+- authenticated host event creation
 - attendee visibility on event detail pages
 - optional banner image upload and delivery
 
