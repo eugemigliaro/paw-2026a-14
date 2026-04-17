@@ -370,6 +370,117 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(1, found.getJoinedPlayers());
     }
 
+    @Test
+    public void testFindHostedMatchesReturnsAllStatusesOrderedByDateDesc() {
+        insertMatchWithStatus(
+                "Host Draft", "draft", ZonedDateTime.now().plusDays(2), hostUserId, "private");
+        insertMatchWithStatus(
+                "Host Completed",
+                "completed",
+                ZonedDateTime.now().plusDays(1),
+                hostUserId,
+                "public");
+        insertMatchWithStatus(
+                "Host Open", "open", ZonedDateTime.now().plusDays(3), hostUserId, "public");
+
+        final List<Match> matches = matchDao.findHostedMatches(hostUserId, List.of(), 0, 20);
+
+        Assertions.assertEquals(3, matches.size());
+        Assertions.assertEquals("Host Open", matches.get(0).getTitle());
+        Assertions.assertEquals("Host Draft", matches.get(1).getTitle());
+        Assertions.assertEquals("Host Completed", matches.get(2).getTitle());
+        Assertions.assertEquals(3, matchDao.countHostedMatches(hostUserId, List.of()));
+    }
+
+    @Test
+    public void testFindHostedMatchesFiltersFinishedStatuses() {
+        insertMatchWithStatus(
+                "Host Completed",
+                "completed",
+                ZonedDateTime.now().minusDays(2),
+                hostUserId,
+                "public");
+        insertMatchWithStatus(
+                "Host Cancelled",
+                "cancelled",
+                ZonedDateTime.now().minusDays(1),
+                hostUserId,
+                "public");
+        insertMatchWithStatus(
+                "Host Open", "open", ZonedDateTime.now().plusDays(1), hostUserId, "public");
+
+        final List<Match> finished =
+                matchDao.findHostedMatches(hostUserId, List.of("completed", "cancelled"), 0, 20);
+
+        Assertions.assertEquals(2, finished.size());
+        Assertions.assertTrue(
+                finished.stream()
+                        .allMatch(
+                                match ->
+                                        "completed".equals(match.getStatus())
+                                                || "cancelled".equals(match.getStatus())));
+        Assertions.assertEquals(
+                2, matchDao.countHostedMatches(hostUserId, List.of("completed", "cancelled")));
+    }
+
+    @Test
+    public void testFindUpcomingJoinedMatchesIncludesCancelledEvents() {
+        final long playerId = createUser("joined-player", "joined-player@test.com");
+        final Match openMatch =
+                insertMatchWithStatus(
+                        "Open Future",
+                        "open",
+                        ZonedDateTime.now().plusDays(2),
+                        hostUserId,
+                        "public");
+        final Match cancelledMatch =
+                insertMatchWithStatus(
+                        "Cancelled Future",
+                        "cancelled",
+                        ZonedDateTime.now().plusDays(3),
+                        hostUserId,
+                        "public");
+        joinMatch(openMatch.getId(), playerId, "joined");
+        joinMatch(cancelledMatch.getId(), playerId, "joined");
+
+        final List<Match> upcoming = matchDao.findUpcomingJoinedMatches(playerId, 0, 20);
+
+        Assertions.assertEquals(2, upcoming.size());
+        Assertions.assertTrue(
+                upcoming.stream().anyMatch(match -> "cancelled".equals(match.getStatus())));
+        Assertions.assertEquals(2, matchDao.countUpcomingJoinedMatches(playerId));
+    }
+
+    @Test
+    public void testFindPastJoinedMatchesReturnsOnlyPastInDescendingOrder() {
+        final long playerId = createUser("past-player", "past-player@test.com");
+        final Match olderPast =
+                insertMatchWithStatus(
+                        "Older Past",
+                        "completed",
+                        ZonedDateTime.now().minusDays(4),
+                        hostUserId,
+                        "public");
+        final Match newerPast =
+                insertMatchWithStatus(
+                        "Newer Past",
+                        "open",
+                        ZonedDateTime.now().minusDays(2),
+                        hostUserId,
+                        "public");
+        insertMatchWithStatus(
+                "Future Open", "open", ZonedDateTime.now().plusDays(2), hostUserId, "public");
+        joinMatch(olderPast.getId(), playerId, "checked_in");
+        joinMatch(newerPast.getId(), playerId, "joined");
+
+        final List<Match> past = matchDao.findPastJoinedMatches(playerId, 0, 20);
+
+        Assertions.assertEquals(2, past.size());
+        Assertions.assertEquals("Newer Past", past.get(0).getTitle());
+        Assertions.assertEquals("Older Past", past.get(1).getTitle());
+        Assertions.assertEquals(2, matchDao.countPastJoinedMatches(playerId));
+    }
+
     private void insertMatch(
             final String title,
             final String description,
@@ -418,5 +529,44 @@ public class MatchJdbcDaoTest {
                     matchId,
                     userId);
         }
+    }
+
+    private Match insertMatchWithStatus(
+            final String title,
+            final String status,
+            final ZonedDateTime startsAt,
+            final long hostId,
+            final String visibility) {
+        return matchDao.createMatch(
+                hostId,
+                "Test Address",
+                title,
+                "Description",
+                startsAt.toInstant(),
+                null,
+                10,
+                BigDecimal.ZERO,
+                Sport.FOOTBALL,
+                visibility,
+                status,
+                null);
+    }
+
+    private long createUser(final String username, final String email) {
+        final long userId = System.nanoTime();
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                userId,
+                username,
+                email);
+        return userId;
+    }
+
+    private void joinMatch(final long matchId, final long userId, final String status) {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                matchId,
+                userId,
+                status);
     }
 }

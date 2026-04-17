@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -190,6 +191,106 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(") filtered_matches");
 
         return jdbcTemplate.queryForObject(sql.toString(), Integer.class, params.toArray());
+    }
+
+    @Override
+    public List<Match> findHostedMatches(
+            final Long hostUserId, final List<String> statuses, final int offset, final int limit) {
+        final StringBuilder sql = new StringBuilder();
+        final List<Object> params = new ArrayList<>();
+
+        sql.append("SELECT m.*, COUNT(mp.id) AS joined_players");
+        sql.append(BASE_FROM);
+        sql.append(" WHERE m.host_user_id = ?");
+        params.add(hostUserId);
+        appendStatusFilter(sql, params, statuses);
+        sql.append(BASE_GROUP_BY);
+        sql.append(" ORDER BY m.starts_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        return jdbcTemplate.query(sql.toString(), MATCH_ROW_MAPPER, params.toArray());
+    }
+
+    @Override
+    public int countHostedMatches(final Long hostUserId, final List<String> statuses) {
+        final StringBuilder sql = new StringBuilder();
+        final List<Object> params = new ArrayList<>();
+
+        sql.append("SELECT COUNT(*) FROM matches m WHERE m.host_user_id = ?");
+        params.add(hostUserId);
+        appendStatusFilter(sql, params, statuses);
+
+        return jdbcTemplate.queryForObject(sql.toString(), Integer.class, params.toArray());
+    }
+
+    @Override
+    public List<Match> findPastJoinedMatches(final Long userId, final int offset, final int limit) {
+        return findJoinedMatches(userId, false, offset, limit);
+    }
+
+    @Override
+    public int countPastJoinedMatches(final Long userId) {
+        return countJoinedMatches(userId, false);
+    }
+
+    @Override
+    public List<Match> findUpcomingJoinedMatches(
+            final Long userId, final int offset, final int limit) {
+        return findJoinedMatches(userId, true, offset, limit);
+    }
+
+    @Override
+    public int countUpcomingJoinedMatches(final Long userId) {
+        return countJoinedMatches(userId, true);
+    }
+
+    private List<Match> findJoinedMatches(
+            final Long userId, final boolean upcoming, final int offset, final int limit) {
+        final StringBuilder sql = new StringBuilder();
+
+        sql.append("SELECT m.*, COUNT(mp.id) AS joined_players");
+        sql.append(BASE_FROM);
+        sql.append(
+                " INNER JOIN match_participants me"
+                        + " ON me.match_id = m.id"
+                        + " AND me.user_id = ?"
+                        + " AND me.status IN ('joined', 'checked_in')");
+        sql.append(" WHERE m.starts_at ");
+        sql.append(upcoming ? ">= CURRENT_TIMESTAMP" : "< CURRENT_TIMESTAMP");
+        sql.append(BASE_GROUP_BY);
+        sql.append(" ORDER BY m.starts_at ");
+        sql.append(upcoming ? "ASC" : "DESC");
+        sql.append(" LIMIT ? OFFSET ?");
+
+        return jdbcTemplate.query(sql.toString(), MATCH_ROW_MAPPER, userId, limit, offset);
+    }
+
+    private int countJoinedMatches(final Long userId, final boolean upcoming) {
+        final StringBuilder sql = new StringBuilder();
+
+        sql.append("SELECT COUNT(*) FROM matches m");
+        sql.append(
+                " INNER JOIN match_participants me"
+                        + " ON me.match_id = m.id"
+                        + " AND me.user_id = ?"
+                        + " AND me.status IN ('joined', 'checked_in')");
+        sql.append(" WHERE m.starts_at ");
+        sql.append(upcoming ? ">= CURRENT_TIMESTAMP" : "< CURRENT_TIMESTAMP");
+
+        return jdbcTemplate.queryForObject(sql.toString(), Integer.class, userId);
+    }
+
+    private static void appendStatusFilter(
+            final StringBuilder sql, final List<Object> params, final List<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return;
+        }
+
+        sql.append(" AND CAST(m.status AS VARCHAR(30)) IN (");
+        sql.append(statuses.stream().map(status -> "?").collect(Collectors.joining(", ")));
+        sql.append(")");
+        params.addAll(statuses);
     }
 
     private static void appendFilters(

@@ -14,6 +14,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.MvpIdentityService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureException;
@@ -90,6 +91,38 @@ class PawUiRouteTest {
                         "open",
                         4,
                         null);
+        final Match completedMatch =
+                new Match(
+                        44L,
+                        Sport.BASKETBALL,
+                        7L,
+                        "South Sports Center",
+                        "Weekend Basketball",
+                        "Completed tournament",
+                        Instant.parse("2026-04-03T19:00:00Z"),
+                        Instant.parse("2026-04-03T21:00:00Z"),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "completed",
+                        10,
+                        null);
+        final Match cancelledFutureMatch =
+                new Match(
+                        45L,
+                        Sport.TENNIS,
+                        7L,
+                        "City Tennis Club",
+                        "Sunday Tennis",
+                        "Cancelled due to weather",
+                        Instant.parse("2026-04-08T12:00:00Z"),
+                        Instant.parse("2026-04-08T14:00:00Z"),
+                        6,
+                        BigDecimal.TEN,
+                        "public",
+                        "cancelled",
+                        2,
+                        null);
 
         final MatchService matchService =
                 new MatchService() {
@@ -125,6 +158,32 @@ class PawUiRouteTest {
                                         new User(2L, "first@test.com", "first-player"),
                                         new User(3L, "second@test.com", "second-player"))
                                 : List.of();
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> findHostedMatches(
+                            final Long hostUserId, final int page, final int pageSize) {
+                        return new PaginatedResult<>(
+                                List.of(realMatch, footballMatch, completedMatch), 3, 1, pageSize);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> findFinishedHostedMatches(
+                            final Long hostUserId, final int page, final int pageSize) {
+                        return new PaginatedResult<>(List.of(completedMatch), 1, 1, pageSize);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> findPastJoinedMatches(
+                            final Long userId, final int page, final int pageSize) {
+                        return new PaginatedResult<>(List.of(completedMatch), 1, 1, pageSize);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> findUpcomingJoinedMatches(
+                            final Long userId, final int page, final int pageSize) {
+                        return new PaginatedResult<>(
+                                List.of(realMatch, cancelledFutureMatch), 2, 1, pageSize);
                     }
 
                     @Override
@@ -238,6 +297,19 @@ class PawUiRouteTest {
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
 
+        final MvpIdentityService mvpIdentityService =
+                new MvpIdentityService() {
+                    @Override
+                    public Optional<User> findExistingByEmail(final String email) {
+                        return Optional.of(new User(7L, email, "host-player"));
+                    }
+
+                    @Override
+                    public User resolveOrCreateByEmail(final String email) {
+                        return new User(7L, email, "host-player");
+                    }
+                };
+
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new FeedController(matchService, messageSource),
@@ -251,6 +323,8 @@ class PawUiRouteTest {
                                         imageService,
                                         fixedClock,
                                         messageSource),
+                                new MatchDashboardController(
+                                        matchService, mvpIdentityService, messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(
                                         actionVerificationService, messageSource))
@@ -458,6 +532,51 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    @Test
+    void getHostAllMatchesRouteRendersDashboardPage() throws Exception {
+        mockMvc.perform(get("/host/matches").param("email", "host@test.com").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/all-matches"))
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attributeExists("listTitle"));
+    }
+
+    @Test
+    void getHostFinishedMatchesRouteRendersFinishedPage() throws Exception {
+        mockMvc.perform(
+                        get("/host/matches/finished")
+                                .param("email", "host@test.com")
+                                .locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/finished-matches"))
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attributeExists("listTitle"));
+    }
+
+    @Test
+    void getPlayerPastMatchesRouteRendersPastPage() throws Exception {
+        mockMvc.perform(get("/player/matches/past").param("email", "player@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("player/past-matches"))
+                .andExpect(model().attributeExists("events"));
+    }
+
+    @Test
+    void getPlayerUpcomingMatchesRouteRendersUpcomingPage() throws Exception {
+        mockMvc.perform(get("/player/matches/upcoming").param("email", "player@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("player/upcoming-matches"))
+                .andExpect(model().attributeExists("events"));
+    }
+
+    @Test
+    void getHostAllMatchesRouteWithSpanishLocaleLocalizesHeader() throws Exception {
+        mockMvc.perform(get("/host/matches").param("email", "host@test.com").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/all-matches"))
+                .andExpect(model().attribute("listTitle", "Panel de eventos organizados"));
     }
 
     private static MessageSource messageSource() {

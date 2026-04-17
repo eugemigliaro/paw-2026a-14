@@ -1,0 +1,41 @@
+.page-shell--matches-list {
+	max-width: min(1160px, 100% - 3rem);
+	margin: 0 auto;
+	padding: 2.25rem 0 3rem;
+}
+
+.matches-list-panel {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.section-head--matches-list {
+	background: var(--surface);
+	border: 1px solid var(--border-color);
+	border-radius: 18px;
+	padding: 1.25rem 1.5rem;
+}
+
+.section-head__title--matches-list {
+	margin: 0;
+}
+
+.matches-empty-state {
+	padding: 2rem;
+	border-radius: 18px;
+	border: 1px dashed var(--border-strong);
+	background: var(--surface-soft);
+	color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+	.page-shell--matches-list {
+		max-width: min(1160px, 100% - 1.5rem);
+		padding-top: 1.25rem;
+	}
+
+	.section-head--matches-list,
+	.matches-empty-state {
+		padding: 1rem;
+	}
+}

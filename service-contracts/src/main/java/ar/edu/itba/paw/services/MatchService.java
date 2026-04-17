@@ -15,6 +15,14 @@ public interface MatchService {
 
     List<User> findConfirmedParticipants(Long matchId);
 
+    PaginatedResult<Match> findHostedMatches(Long hostUserId, int page, int pageSize);
+
+    PaginatedResult<Match> findFinishedHostedMatches(Long hostUserId, int page, int pageSize);
+
+    PaginatedResult<Match> findPastJoinedMatches(Long userId, int page, int pageSize);
+
+    PaginatedResult<Match> findUpcomingJoinedMatches(Long userId, int page, int pageSize);
+
     PaginatedResult<Match> searchPublicMatches(
             String query,
             String sport,

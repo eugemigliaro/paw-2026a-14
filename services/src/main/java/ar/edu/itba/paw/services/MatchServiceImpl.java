@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 public class MatchServiceImpl implements MatchService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int DEFAULT_DASHBOARD_PAGE_SIZE = 10;
+    private static final List<String> FINISHED_STATUSES = List.of("completed", "cancelled");
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
@@ -57,6 +59,55 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public List<User> findConfirmedParticipants(final Long matchId) {
         return matchParticipantDao.findConfirmedParticipants(matchId);
+    }
+
+    @Override
+    public PaginatedResult<Match> findHostedMatches(
+            final Long hostUserId, final int page, final int pageSize) {
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_DASHBOARD_PAGE_SIZE,
+                safePageSize -> matchDao.countHostedMatches(hostUserId, List.of()),
+                (offset, safePageSize) ->
+                        matchDao.findHostedMatches(hostUserId, List.of(), offset, safePageSize));
+    }
+
+    @Override
+    public PaginatedResult<Match> findFinishedHostedMatches(
+            final Long hostUserId, final int page, final int pageSize) {
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_DASHBOARD_PAGE_SIZE,
+                safePageSize -> matchDao.countHostedMatches(hostUserId, FINISHED_STATUSES),
+                (offset, safePageSize) ->
+                        matchDao.findHostedMatches(
+                                hostUserId, FINISHED_STATUSES, offset, safePageSize));
+    }
+
+    @Override
+    public PaginatedResult<Match> findPastJoinedMatches(
+            final Long userId, final int page, final int pageSize) {
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_DASHBOARD_PAGE_SIZE,
+                safePageSize -> matchDao.countPastJoinedMatches(userId),
+                (offset, safePageSize) ->
+                        matchDao.findPastJoinedMatches(userId, offset, safePageSize));
+    }
+
+    @Override
+    public PaginatedResult<Match> findUpcomingJoinedMatches(
+            final Long userId, final int page, final int pageSize) {
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_DASHBOARD_PAGE_SIZE,
+                safePageSize -> matchDao.countUpcomingJoinedMatches(userId),
+                (offset, safePageSize) ->
+                        matchDao.findUpcomingJoinedMatches(userId, offset, safePageSize));
     }
 
     @Override
@@ -151,5 +202,33 @@ public class MatchServiceImpl implements MatchService {
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
         }
+    }
+
+    private PaginatedResult<Match> paginate(
+            final int page,
+            final int pageSize,
+            final int defaultPageSize,
+            final CountSupplier countSupplier,
+            final SliceSupplier sliceSupplier) {
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : defaultPageSize;
+
+        final int totalCount = countSupplier.count(safePageSize);
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int offset = (clampedPage - 1) * safePageSize;
+        final List<Match> items = sliceSupplier.items(offset, safePageSize);
+
+        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface CountSupplier {
+        int count(int safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface SliceSupplier {
+        List<Match> items(int offset, int safePageSize);
     }
 }

@@ -48,4 +48,16 @@ public interface MatchDao {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             ZoneId zoneId);
+
+    List<Match> findHostedMatches(Long hostUserId, List<String> statuses, int offset, int limit);
+
+    int countHostedMatches(Long hostUserId, List<String> statuses);
+
+    List<Match> findPastJoinedMatches(Long userId, int offset, int limit);
+
+    int countPastJoinedMatches(Long userId);
+
+    List<Match> findUpcomingJoinedMatches(Long userId, int offset, int limit);
+
+    int countUpcomingJoinedMatches(Long userId);
 }
