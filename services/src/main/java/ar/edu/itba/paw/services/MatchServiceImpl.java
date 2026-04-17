@@ -8,13 +8,18 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,16 +29,29 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final MessageSource messageSource;
+    private final Clock clock;
 
     @Autowired
     public MatchServiceImpl(
-            final MatchDao matchDao, final MatchParticipantDao matchParticipantDao) {
+            final MatchDao matchDao,
+            final MatchParticipantDao matchParticipantDao,
+            final MessageSource messageSource,
+            final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
+        this.messageSource = messageSource;
+        this.clock = clock;
     }
 
     @Override
     public Match createMatch(final CreateMatchRequest request) {
+        validateScheduleOrThrow(
+                request.getStartsAt(),
+                request.getEndsAt(),
+                new IllegalArgumentException(message("match.schedule.error.startsAtPast")),
+                new IllegalArgumentException(message("match.schedule.error.endBeforeStart")));
+
         return matchDao.createMatch(
                 request.getHostUserId(),
                 request.getAddress(),
@@ -50,8 +68,39 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public Match updateMatch(Long matchId, Long actingUserId, UpdateMatchRequest request) {
-        // TODO Auto-generated method stub
+    public Match updateMatch(
+            final Long matchId, final Long actingUserId, final UpdateMatchRequest request) {
+        final Match match =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
+
+        if (!match.getHostUserId().equals(actingUserId)) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+        }
+
+        validateScheduleOrThrow(
+                request.getStartsAt(),
+                request.getEndsAt(),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.startsAtPast")),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.endBeforeStart")));
+
+        final int confirmedParticipants =
+                matchParticipantDao.findConfirmedParticipants(matchId).size();
+        if (request.getMaxPlayers() < confirmedParticipants) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                    message("match.update.error.capacityBelowConfirmed"));
+        }
+
         return null;
     }
 
@@ -156,6 +205,25 @@ public class MatchServiceImpl implements MatchService {
             return ZoneId.of(timezone);
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
+        }
+    }
+
+    private String message(final String code) {
+        final Locale locale = LocaleContextHolder.getLocale();
+        return messageSource.getMessage(code, null, code, locale);
+    }
+
+    private void validateScheduleOrThrow(
+            final Instant startsAt,
+            final Instant endsAt,
+            final RuntimeException startsAtException,
+            final RuntimeException endsAtException) {
+        if (startsAt != null && !startsAt.isAfter(Instant.now(clock))) {
+            throw startsAtException;
+        }
+
+        if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
+            throw endsAtException;
         }
     }
 }
