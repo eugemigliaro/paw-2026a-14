@@ -57,7 +57,7 @@ public class ThymeleafMailTemplateRendererTest {
                                 List.of(
                                         new VerificationPreviewDetail("Deporte", "Pádel"),
                                         new VerificationPreviewDetail("Precio", "$10")),
-                                new Locale("es")));
+                                Locale.of("es")));
 
         Assertions.assertTrue(content.getHtmlBody().contains("Verificación única"));
         Assertions.assertTrue(content.getHtmlBody().contains("Solicitado para"));
@@ -98,27 +98,27 @@ public class ThymeleafMailTemplateRendererTest {
         messageSource.addMessage(
                 "mail.verification.eyebrow", Locale.ENGLISH, "One-time verification");
         messageSource.addMessage(
-                "mail.verification.eyebrow", new Locale("es"), "Verificación única");
+                "mail.verification.eyebrow", Locale.of("es"), "Verificación única");
         messageSource.addMessage("mail.verification.requestedFor", Locale.ENGLISH, "Requested for");
         messageSource.addMessage(
-                "mail.verification.requestedFor", new Locale("es"), "Solicitado para");
+                "mail.verification.requestedFor", Locale.of("es"), "Solicitado para");
         messageSource.addMessage("mail.verification.details", Locale.ENGLISH, "Details");
-        messageSource.addMessage("mail.verification.details", new Locale("es"), "Detalles");
+        messageSource.addMessage("mail.verification.details", Locale.of("es"), "Detalles");
         messageSource.addMessage(
                 "mail.verification.confirmAction", Locale.ENGLISH, "Review and confirm action");
         messageSource.addMessage(
-                "mail.verification.confirmAction", new Locale("es"), "Revisar y confirmar acción");
+                "mail.verification.confirmAction", Locale.of("es"), "Revisar y confirmar acción");
         messageSource.addMessage(
                 "mail.verification.expiresAt", Locale.ENGLISH, "This link expires at {0}.");
         messageSource.addMessage(
-                "mail.verification.expiresAt", new Locale("es"), "Este enlace expira el {0}.");
+                "mail.verification.expiresAt", Locale.of("es"), "Este enlace expira el {0}.");
         messageSource.addMessage(
                 "mail.verification.ignore",
                 Locale.ENGLISH,
                 "If you did not request this action, you can ignore this email.");
         messageSource.addMessage(
                 "mail.verification.ignore",
-                new Locale("es"),
+                Locale.of("es"),
                 "Si no solicitaste esta acción, podés ignorar este email.");
         return messageSource;
     }

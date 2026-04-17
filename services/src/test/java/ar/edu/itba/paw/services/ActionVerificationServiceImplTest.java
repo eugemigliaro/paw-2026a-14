@@ -243,7 +243,7 @@ public class ActionVerificationServiceImplTest {
     public void testGetPreviewUsesSpanishLocaleForReservationContent() {
         final EmailActionRequest request = pendingRequest("{\"matchId\":10}");
         final Match match = createMatch(10L, "Morning Padel", 0);
-        LocaleContextHolder.setLocale(new Locale("es"));
+        LocaleContextHolder.setLocale(Locale.of("es"));
 
         Mockito.when(emailActionRequestDao.findByTokenHash(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
@@ -513,7 +513,7 @@ public class ActionVerificationServiceImplTest {
                 Locale.ENGLISH,
                 "The event filled up before the reservation could be confirmed.");
 
-        final Locale spanish = new Locale("es");
+        final Locale spanish = Locale.of("es");
         messageSource.addMessage(
                 "verification.preview.reservation.title",
                 spanish,
