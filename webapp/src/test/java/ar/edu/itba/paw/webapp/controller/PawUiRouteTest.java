@@ -128,6 +128,28 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public Match updateMatch(
+                            final Long matchId,
+                            final Long actingUserId,
+                            final ar.edu.itba.paw.services.UpdateMatchRequest request) {
+                        return new Match(
+                                matchId,
+                                request.getSport(),
+                                actingUserId,
+                                request.getAddress(),
+                                request.getTitle(),
+                                request.getDescription(),
+                                request.getStartsAt(),
+                                request.getEndsAt(),
+                                request.getMaxPlayers(),
+                                request.getPricePerPlayer(),
+                                request.getVisibility(),
+                                request.getStatus(),
+                                0,
+                                request.getBannerImageId());
+                    }
+
+                    @Override
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
                             final String sport,
