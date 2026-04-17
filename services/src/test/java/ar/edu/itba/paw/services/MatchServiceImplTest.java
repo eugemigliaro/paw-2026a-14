@@ -303,6 +303,92 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateMatchRejectsMissingMatch() {
+        Mockito.when(matchDao.findById(13L)).thenReturn(Optional.empty());
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        13L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Test Match",
+                                                "Test Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                10,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                "public",
+                                                "open",
+                                                null)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.MATCH_NOT_FOUND, exception.getReason());
+        Assertions.assertEquals("match.update.error.notFound", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateMatchRejectsNonOwner() {
+        final Match existingMatch = createTestMatch(14L, "Test Match", "football");
+        Mockito.when(matchDao.findById(14L)).thenReturn(Optional.of(existingMatch));
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        14L,
+                                        99L,
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Test Match",
+                                                "Test Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                10,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                "public",
+                                                "open",
+                                                null)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.FORBIDDEN, exception.getReason());
+        Assertions.assertEquals("match.update.error.forbidden", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateMatchRejectsPastStartTime() {
+        final Match existingMatch = createTestMatch(15L, "Test Match", "football");
+        Mockito.when(matchDao.findById(15L)).thenReturn(Optional.of(existingMatch));
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        15L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Test Match",
+                                                "Test Description",
+                                                FIXED_NOW,
+                                                FIXED_NOW.plusSeconds(3600),
+                                                10,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                "public",
+                                                "open",
+                                                null)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.INVALID_SCHEDULE, exception.getReason());
+        Assertions.assertEquals("match.schedule.error.startsAtPast", exception.getMessage());
+    }
+
+    @Test
     public void testUpdateMatchRejectsEndTimeBeforeStartTime() {
         final Match existingMatch = createTestMatch(10L, "Test Match", "football");
         Mockito.when(matchDao.findById(10L)).thenReturn(Optional.of(existingMatch));
@@ -429,6 +515,52 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateMatchRejectsWhenOwnedUpdateTouchesNoRows() {
+        final Match existingMatch = createTestMatch(16L, "Old Title", "football");
+        Mockito.when(matchDao.findById(16L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(16L)).thenReturn(List.of());
+        Mockito.when(
+                        matchDao.updateMatch(
+                                16L,
+                                1L,
+                                "Updated Address",
+                                "Updated Title",
+                                "Updated Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                12,
+                                BigDecimal.ONE,
+                                Sport.TENNIS,
+                                "public",
+                                "open",
+                                null))
+                .thenReturn(false);
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        16L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Updated Address",
+                                                "Updated Title",
+                                                "Updated Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                12,
+                                                BigDecimal.ONE,
+                                                Sport.TENNIS,
+                                                "public",
+                                                "open",
+                                                null)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.FORBIDDEN, exception.getReason());
+        Assertions.assertEquals("match.update.error.forbidden", exception.getMessage());
+    }
+
+    @Test
     public void testFindPublicMatchByIdDelegates() {
         final Match expectedMatch = createTestMatch(8L, "Late Football", "football");
         Mockito.when(matchDao.findPublicMatchById(8L)).thenReturn(Optional.of(expectedMatch));
@@ -437,6 +569,17 @@ public class MatchServiceImplTest {
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals("Late Football", result.get().getTitle());
+    }
+
+    @Test
+    public void testFindMatchByIdDelegates() {
+        final Match expectedMatch = createTestMatch(9L, "Private Football", "football");
+        Mockito.when(matchDao.findById(9L)).thenReturn(Optional.of(expectedMatch));
+
+        final Optional<Match> result = matchService.findMatchById(9L);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("Private Football", result.get().getTitle());
     }
 
     @Test

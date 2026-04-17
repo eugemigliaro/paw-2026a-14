@@ -1,0 +1,7 @@
+- implementar servicio para cancelar
+
+--- cuando ya este el login
+
+- hacer las pantallas para editar
+- hacer lo de que el evento tenga visibilidad y join policy
+- set event visibility and tags

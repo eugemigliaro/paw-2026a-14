@@ -11,6 +11,8 @@ public interface MatchService {
 
     Match createMatch(CreateMatchRequest request);
 
+    Optional<Match> findMatchById(Long matchId);
+
     Optional<Match> findPublicMatchById(Long matchId);
 
     List<User> findConfirmedParticipants(Long matchId);

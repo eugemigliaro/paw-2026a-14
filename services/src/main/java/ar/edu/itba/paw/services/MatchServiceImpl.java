@@ -131,6 +131,11 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    public Optional<Match> findMatchById(final Long matchId) {
+        return matchDao.findById(matchId);
+    }
+
+    @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
         return matchDao.findPublicMatchById(matchId);
     }
