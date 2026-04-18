@@ -1,46 +1,46 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Sport;
-import ar.edu.itba.paw.services.ActionVerificationService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
+import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 
 @Controller
 public class HostController {
 
-    private final ActionVerificationService actionVerificationService;
+    private final MatchService matchService;
     private final ImageService imageService;
     private final Clock clock;
     private final MessageSource messageSource;
 
     @Autowired
     public HostController(
-            final ActionVerificationService actionVerificationService,
+            final MatchService matchService,
             final ImageService imageService,
             final Clock clock,
             final MessageSource messageSource) {
-        this.actionVerificationService = actionVerificationService;
+        this.matchService = matchService;
         this.imageService = imageService;
         this.clock = clock;
         this.messageSource = messageSource;
@@ -64,6 +64,9 @@ public class HostController {
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
             final Locale locale) {
+        final AuthenticatedUserPrincipal currentUser =
+                CurrentAuthenticatedUser.get()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         if (!bindingResult.hasFieldErrors("eventDate")
                 && !bindingResult.hasFieldErrors("eventTime")
                 && !isScheduledInFuture(createEventForm)) {
@@ -86,14 +89,14 @@ public class HostController {
                 toInstant(
                         createEventForm.getEventDate(),
                         createEventForm.getEventTime(),
-                        createEventForm.getTimezone());
+                        createEventForm.getTz());
         final Instant endsAt =
                 createEventForm.getEndTime() == null
                         ? null
                         : toInstant(
                                 createEventForm.getEventDate(),
                                 createEventForm.getEndTime(),
-                                createEventForm.getTimezone());
+                                createEventForm.getTz());
 
         final Long bannerImageId;
         try {
@@ -109,7 +112,7 @@ public class HostController {
 
         final CreateMatchRequest request =
                 new CreateMatchRequest(
-                        null,
+                        currentUser.getUserId(),
                         createEventForm.getAddress(),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
@@ -122,33 +125,7 @@ public class HostController {
                         "open",
                         bannerImageId);
 
-        try {
-            final VerificationRequestResult requestResult =
-                    actionVerificationService.requestMatchCreation(
-                            request, createEventForm.getEmail());
-            final ModelAndView mav = new ModelAndView("verification/check-email");
-            mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
-            mav.addObject(
-                    "title", messageSource.getMessage("verification.checkEmail", null, locale));
-            mav.addObject(
-                    "summary",
-                    messageSource.getMessage(
-                            "verification.publication.summary",
-                            new Object[] {requestResult.getEmail()},
-                            locale));
-            mav.addObject(
-                    "expiresAtLabel",
-                    expiryFormatter(locale)
-                            .format(requestResult.getExpiresAt().atZone(ZoneId.systemDefault())));
-            mav.addObject("backHref", "/host/matches/new");
-            mav.addObject(
-                    "actionLabel", messageSource.getMessage("host.backToCreate", null, locale));
-            mav.addObject(
-                    "eyebrow", messageSource.getMessage("host.publicationRequested", null, locale));
-            return mav;
-        } catch (final VerificationFailureException exception) {
-            return hostFormView(createEventForm, exception.getMessage(), locale);
-        }
+        return new ModelAndView("redirect:/matches/" + matchService.createMatch(request).getId());
     }
 
     private ModelAndView hostFormView(
@@ -158,11 +135,6 @@ public class HostController {
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         return mav;
-    }
-
-    private static DateTimeFormatter expiryFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                .withLocale(locale == null ? Locale.ENGLISH : locale);
     }
 
     private Long storeBannerIfPresent(final CreateEventForm form) throws IOException {
@@ -179,8 +151,7 @@ public class HostController {
     }
 
     private boolean isScheduledInFuture(final CreateEventForm form) {
-        final Instant startsAt =
-                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
+        final Instant startsAt = toInstant(form.getEventDate(), form.getEventTime(), form.getTz());
         return startsAt.isAfter(Instant.now(clock));
     }
 
@@ -189,10 +160,8 @@ public class HostController {
             return true;
         }
 
-        final Instant startsAt =
-                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
-        final Instant endsAt =
-                toInstant(form.getEventDate(), form.getEndTime(), form.getTimezone());
+        final Instant startsAt = toInstant(form.getEventDate(), form.getEventTime(), form.getTz());
+        final Instant endsAt = toInstant(form.getEventDate(), form.getEndTime(), form.getTz());
         return endsAt.isAfter(startsAt);
     }
 

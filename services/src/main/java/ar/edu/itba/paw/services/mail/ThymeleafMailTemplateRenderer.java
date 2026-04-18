@@ -27,6 +27,10 @@ public class ThymeleafMailTemplateRenderer {
 
     public MailContent renderReservationConfirmation(
             final VerificationMailTemplateData templateData) {
+        return renderActionMail(templateData);
+    }
+
+    public MailContent renderActionMail(final VerificationMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
         final Context context = new Context(locale);
         context.setVariable("title", templateData.getTitle());

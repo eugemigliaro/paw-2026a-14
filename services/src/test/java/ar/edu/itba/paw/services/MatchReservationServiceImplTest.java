@@ -37,7 +37,7 @@ public class MatchReservationServiceImplTest {
 
     @Test
     public void testReserveSpotSucceedsForOpenUpcomingMatch() {
-        Mockito.when(matchDao.findById(10L))
+        Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
                                 createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
@@ -49,7 +49,7 @@ public class MatchReservationServiceImplTest {
 
     @Test
     public void testReserveSpotRejectsDuplicateReservation() {
-        Mockito.when(matchDao.findById(10L))
+        Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
                                 createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
@@ -65,7 +65,7 @@ public class MatchReservationServiceImplTest {
 
     @Test
     public void testReserveSpotRejectsFullMatchBeforeInsert() {
-        Mockito.when(matchDao.findById(10L))
+        Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
                                 createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 4)));
@@ -81,7 +81,7 @@ public class MatchReservationServiceImplTest {
 
     @Test
     public void testReserveSpotRejectsStartedMatch() {
-        Mockito.when(matchDao.findById(10L))
+        Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
                                 createMatch("public", "open", FIXED_NOW.minusSeconds(60), 4, 1)));
@@ -96,7 +96,7 @@ public class MatchReservationServiceImplTest {
 
     @Test
     public void testReserveSpotRejectsMissingMatch() {
-        Mockito.when(matchDao.findById(10L)).thenReturn(Optional.empty());
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.empty());
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -111,7 +111,7 @@ public class MatchReservationServiceImplTest {
         final Match initialMatch = createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 3);
         final Match fullMatch = createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 4);
 
-        Mockito.when(matchDao.findById(10L))
+        Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(Optional.of(initialMatch))
                 .thenReturn(Optional.of(fullMatch));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L))

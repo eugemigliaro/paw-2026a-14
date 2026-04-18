@@ -24,7 +24,7 @@ public class ErrorPageController {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ModelAndView showNotFoundPage(final Locale locale) {
         final ModelAndView mav = new ModelAndView("errors/not-found");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         return mav;
     }
 }

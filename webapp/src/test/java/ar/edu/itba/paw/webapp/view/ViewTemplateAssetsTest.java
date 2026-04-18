@@ -16,6 +16,7 @@ class ViewTemplateAssetsTest {
         final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
 
         assertTrue(head.contains("/js/timezone-field.js"));
+        assertTrue(head.contains("/css/auth.css"));
     }
 
     @Test
@@ -39,6 +40,11 @@ class ViewTemplateAssetsTest {
 
         assertTrue(Files.exists(scriptPath));
         assertTrue(Files.readString(scriptPath).contains("data-browser-timezone-field"));
+    }
+
+    @Test
+    void authCssExists() {
+        assertTrue(Files.exists(Path.of("src/main/webapp/css/auth.css")));
     }
 
     private static String read(final String relativePath) throws IOException {

@@ -3,6 +3,9 @@
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="primaryNavAria" code="nav.primary" />
 <c:url var="siteHeaderBrandHref" value="/" />
+<c:url var="loginHref" value="/login" />
+<c:url var="registerHref" value="/register" />
+<c:url var="logoutAction" value="/logout" />
 <header class="site-header">
   <div class="site-header__inner">
     <a class="site-header__brand" href="${siteHeaderBrandHref}">
@@ -30,6 +33,32 @@
     </c:if>
 
     <div class="site-header__actions">
+      <c:choose>
+        <c:when test="${pageContext.request.userPrincipal ne null}">
+          <spring:message var="signedInAsLabel" code="nav.signedInAs" />
+          <spring:message var="logoutLabel" code="nav.logout" />
+          <div class="site-header__auth">
+            <div class="site-header__user">
+              <span class="site-header__user-label">${signedInAsLabel}</span>
+              <strong class="site-header__user-name">
+                <c:out value="${pageContext.request.userPrincipal.name}" />
+              </strong>
+            </div>
+            <form method="post" action="${logoutAction}" class="site-header__logout-form">
+              <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+              <ui:button label="${logoutLabel}" type="submit" variant="secondary" size="sm" />
+            </form>
+          </div>
+        </c:when>
+        <c:otherwise>
+          <spring:message var="loginLabel" code="nav.login" />
+          <spring:message var="registerLabel" code="nav.register" />
+          <div class="site-header__auth">
+            <a class="site-header__auth-link" href="${loginHref}">${loginLabel}</a>
+            <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
+          </div>
+        </c:otherwise>
+      </c:choose>
       <c:if test="${not empty shell.hostAction}">
         <c:url var="hostActionHref" value="${shell.hostAction.href}" />
         <ui:button

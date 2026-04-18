@@ -1,5 +1,6 @@
 <%@ tag body-content="empty" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ attribute name="label" required="true" rtexprvalue="true" %>
 <%@ attribute name="name" required="true" rtexprvalue="true" %>
 <%@ attribute name="id" required="false" rtexprvalue="true" %>
@@ -25,6 +26,13 @@
 
 <c:set var="resolvedId" value="${empty id ? name : id}" />
 <c:set var="resolvedType" value="${empty type ? 'text' : type}" />
+<c:set var="escapedValue" value="${fn:escapeXml(value)}" />
+<c:set var="escapedPlaceholder" value="${fn:escapeXml(placeholder)}" />
+<c:set var="escapedTitle" value="${fn:escapeXml(title)}" />
+<c:set var="escapedAriaLabel" value="${fn:escapeXml(ariaLabel)}" />
+<c:set var="escapedAutocomplete" value="${fn:escapeXml(autocomplete)}" />
+<c:set var="escapedInputMode" value="${fn:escapeXml(inputMode)}" />
+<c:set var="escapedPattern" value="${fn:escapeXml(pattern)}" />
 <c:set var="classes" value="field" />
 <c:if test="${not empty className}">
   <c:set var="classes" value="${classes} ${className}" />
@@ -40,18 +48,18 @@
     name="${name}"
     type="${resolvedType}"
     class="field__control"
-    <c:if test="${not empty value}">value="${value}"</c:if>
-    <c:if test="${not empty placeholder}">placeholder="${placeholder}"</c:if>
+    <c:if test="${not empty value}">value="${escapedValue}"</c:if>
+    <c:if test="${not empty placeholder}">placeholder="${escapedPlaceholder}"</c:if>
     <c:if test="${not empty min}">min="${min}"</c:if>
     <c:if test="${not empty max}">max="${max}"</c:if>
     <c:if test="${not empty step}">step="${step}"</c:if>
-    <c:if test="${not empty title}">title="${title}"</c:if>
-    <c:if test="${not empty ariaLabel}">aria-label="${ariaLabel}"</c:if>
-    <c:if test="${not empty autocomplete}">autocomplete="${autocomplete}"</c:if>
-    <c:if test="${not empty inputMode}">inputmode="${inputMode}"</c:if>
+    <c:if test="${not empty title}">title="${escapedTitle}"</c:if>
+    <c:if test="${not empty ariaLabel}">aria-label="${escapedAriaLabel}"</c:if>
+    <c:if test="${not empty autocomplete}">autocomplete="${escapedAutocomplete}"</c:if>
+    <c:if test="${not empty inputMode}">inputmode="${escapedInputMode}"</c:if>
     <c:if test="${not empty maxLength}">maxlength="${maxLength}"</c:if>
     <c:if test="${not empty minLength}">minlength="${minLength}"</c:if>
-    <c:if test="${not empty pattern}">pattern="${pattern}"</c:if>
+    <c:if test="${not empty pattern}">pattern="${escapedPattern}"</c:if>
     <c:if test="${required}">required="required" aria-required="true"</c:if>
     <c:if test="${disabled}">disabled="disabled" aria-disabled="true"</c:if>
     <c:if test="${readonly}">readonly="readonly" aria-readonly="true"</c:if> />

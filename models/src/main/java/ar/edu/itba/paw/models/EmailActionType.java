@@ -5,7 +5,9 @@ import java.util.Optional;
 
 public enum EmailActionType {
     MATCH_RESERVATION("match_reservation"),
-    MATCH_CREATION("match_creation");
+    MATCH_CREATION("match_creation"),
+    ACCOUNT_VERIFICATION("account_verification"),
+    PASSWORD_RESET("password_reset");
 
     private final String dbValue;
 

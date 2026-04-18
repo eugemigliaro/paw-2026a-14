@@ -18,9 +18,11 @@
 			<p class="eyebrow"><c:out value="${empty eyebrow ? defaultEyebrow : eyebrow}" /></p>
 			<h1 class="page-heading__title"><c:out value="${title}" /></h1>
 			<p class="page-heading__description"><c:out value="${summary}" /></p>
-			<p class="muted-copy">
-				<spring:message code="verification.expiresOn" arguments="${expiresAtLabel}" />
-			</p>
+			<c:if test="${not empty expiresAtLabel}">
+				<p class="muted-copy">
+					<spring:message code="verification.expiresOn" arguments="${expiresAtLabel}" />
+				</p>
+			</c:if>
 			<div class="verification-actions">
 				<spring:message var="defaultBack" code="common.back" />
 				<c:url var="backUrl" value="${backHref}" />

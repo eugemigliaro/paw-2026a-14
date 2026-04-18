@@ -4,11 +4,11 @@ import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
-public class ReservationRequestForm {
+public class ForgotPasswordForm {
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Enter a valid email address")
-    @Size(max = 255, message = "Email cannot exceed 255 characters")
+    @NotBlank(message = "{ForgotPasswordForm.email.NotBlank}")
+    @Email(message = "{ForgotPasswordForm.email.Email}")
+    @Size(max = 255, message = "{ForgotPasswordForm.email.Size}")
     private String email = "";
 
     public String getEmail() {
