@@ -555,7 +555,6 @@ public class MatchJdbcDaoTest {
         Assertions.assertNotNull(beforeCancel);
         Assertions.assertNotNull(afterUpdate);
         Assertions.assertTrue(afterUpdate.after(beforeCancel));
-
     }
 
     @Test

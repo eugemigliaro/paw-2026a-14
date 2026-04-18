@@ -25,8 +25,8 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
+import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.MatchListControlsViewModel;
@@ -180,6 +180,11 @@ class PawUiRouteTest {
                             return Optional.of(footballMatch);
                         }
                         return Optional.empty();
+                    }
+
+                    @Override
+                    public Optional<Match> findPublicMatchById(final Long matchId) {
+                        return findMatchById(matchId);
                     }
 
                     @Override
