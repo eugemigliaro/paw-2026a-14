@@ -60,7 +60,7 @@ public class AuthController {
         }
 
         final ModelAndView mav = new ModelAndView("auth/login");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("loginEmail", email == null ? "" : email);
         mav.addObject("loginError", loginErrorMessage(error, locale));
         mav.addObject("showResendVerification", "verify".equalsIgnoreCase(error));
@@ -172,7 +172,7 @@ public class AuthController {
 
     private ModelAndView registerView(final RegisterForm registerForm, final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/register");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("registerForm", registerForm);
         return mav;
     }
@@ -180,7 +180,7 @@ public class AuthController {
     private ModelAndView forgotPasswordView(
             final ForgotPasswordForm forgotPasswordForm, final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/forgot-password");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("forgotPasswordForm", forgotPasswordForm);
         return mav;
     }
@@ -193,7 +193,7 @@ public class AuthController {
             final String eyebrow,
             final Instant expiresAt) {
         final ModelAndView mav = new ModelAndView("verification/check-email");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("title", messageSource.getMessage("verification.checkEmail", null, locale));
         mav.addObject("summary", summary);
         mav.addObject("backHref", backHref);

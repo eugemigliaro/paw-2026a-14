@@ -108,7 +108,7 @@ public class PasswordResetController {
             final ResetPasswordForm resetPasswordForm,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/reset-password");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("resetPath", "/password-reset/" + token);
         mav.addObject("resetPreview", preview);
         mav.addObject(

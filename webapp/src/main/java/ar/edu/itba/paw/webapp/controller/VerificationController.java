@@ -35,7 +35,7 @@ public class VerificationController {
         try {
             final VerificationPreview preview = accountAuthService.getVerificationPreview(token);
             final ModelAndView mav = new ModelAndView("verification/confirm");
-            mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+            mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
             mav.addObject("preview", preview);
             mav.addObject("confirmPath", "/verifications/" + token + "/confirm");
             mav.addObject(

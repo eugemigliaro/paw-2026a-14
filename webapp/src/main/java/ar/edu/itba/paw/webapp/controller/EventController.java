@@ -87,12 +87,12 @@ public class EventController {
             final Locale locale) {
         final Match match =
                 matchService
-                        .findPublicMatchById(eventId)
+                        .findMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
         mav.addObject("reservationEnabled", match.getAvailableSpots() > 0);
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
@@ -183,7 +183,8 @@ public class EventController {
     private List<EventCardViewModel> loadNearbyMatches(
             final Long currentMatchId, final Locale locale) {
         final PaginatedResult<Match> result =
-                matchService.searchPublicMatches("", null, "all", "soonest", 1, 4, null);
+                matchService.searchPublicMatches(
+                        "", null, "all", "soonest", 1, 4, null, null, null);
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)

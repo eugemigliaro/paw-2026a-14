@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -50,13 +52,121 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public Optional<Match> findPublicMatchById(final Long matchId) {
-        return matchDao.findPublicMatchById(matchId);
+    public Optional<Match> findMatchById(final Long matchId) {
+        return matchDao.findMatchById(matchId);
     }
 
     @Override
     public List<User> findConfirmedParticipants(final Long matchId) {
         return matchParticipantDao.findConfirmedParticipants(matchId);
+    }
+
+    @Override
+    public PaginatedResult<Match> findHostedMatches(
+            final Long hostUserId,
+            final Boolean upcoming,
+            final String query,
+            final String sport,
+            final String visibility,
+            final String status,
+            final String time,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final String sort,
+            final String timezone,
+            final int page,
+            final int pageSize) {
+        final List<Sport> sportFilters = parseSports(sport);
+        final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
+        final List<EventStatus> statusFilters = parseStatuses(status);
+        final EventTimeFilter timeFilter = parseTimeFilter(time);
+        final ZoneId zoneId = parseZone(timezone);
+
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_PAGE_SIZE,
+                safePageSize ->
+                        matchDao.countHostedMatches(
+                                hostUserId,
+                                upcoming,
+                                query,
+                                sportFilters,
+                                visibilityFilters,
+                                statusFilters,
+                                timeFilter,
+                                minPrice,
+                                maxPrice,
+                                zoneId),
+                (offset, safePageSize) ->
+                        matchDao.findHostedMatches(
+                                hostUserId,
+                                upcoming,
+                                query,
+                                sportFilters,
+                                visibilityFilters,
+                                statusFilters,
+                                timeFilter,
+                                minPrice,
+                                maxPrice,
+                                parseSort(sort),
+                                zoneId,
+                                offset,
+                                safePageSize));
+    }
+
+    @Override
+    public PaginatedResult<Match> findJoinedMatches(
+            final Long userId,
+            final Boolean upcoming,
+            final String query,
+            final String sport,
+            final String visibility,
+            final String status,
+            final String time,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final String sort,
+            final String timezone,
+            final int page,
+            final int pageSize) {
+        final List<Sport> sportFilters = parseSports(sport);
+        final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
+        final List<EventStatus> statusFilters = parseStatuses(status);
+        final EventTimeFilter timeFilter = parseTimeFilter(time);
+        final ZoneId zoneId = parseZone(timezone);
+
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_PAGE_SIZE,
+                safePageSize ->
+                        matchDao.countJoinedMatches(
+                                userId,
+                                upcoming,
+                                query,
+                                sportFilters,
+                                visibilityFilters,
+                                statusFilters,
+                                timeFilter,
+                                minPrice,
+                                maxPrice,
+                                zoneId),
+                (offset, safePageSize) ->
+                        matchDao.findJoinedMatches(
+                                userId,
+                                upcoming,
+                                query,
+                                sportFilters,
+                                visibilityFilters,
+                                statusFilters,
+                                timeFilter,
+                                minPrice,
+                                maxPrice,
+                                parseSort(sort),
+                                zoneId,
+                                offset,
+                                safePageSize));
     }
 
     @Override
@@ -70,33 +180,29 @@ public class MatchServiceImpl implements MatchService {
             final String timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
-        final int safePage = page > 0 ? page : 1;
-        final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
-
         final List<Sport> sportFilters = parseSports(sport);
         final EventTimeFilter timeFilter = parseTimeFilter(time);
         final MatchSort sortFilter = parseSort(sort);
         final ZoneId zoneId = parseZone(timezone);
 
-        final int totalCount =
-                matchDao.countPublicMatches(
-                        query, sportFilters, timeFilter, minPrice, maxPrice, zoneId);
-        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
-        final int clampedPage = Math.min(safePage, totalPages);
-        final int offset = (clampedPage - 1) * safePageSize;
-        final var items =
-                matchDao.findPublicMatches(
-                        query,
-                        sportFilters,
-                        timeFilter,
-                        minPrice,
-                        maxPrice,
-                        sortFilter,
-                        zoneId,
-                        offset,
-                        safePageSize);
-
-        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_PAGE_SIZE,
+                safePageSize ->
+                        matchDao.countPublicMatches(
+                                query, sportFilters, timeFilter, minPrice, maxPrice, zoneId),
+                (offset, safePageSize) ->
+                        matchDao.findPublicMatches(
+                                query,
+                                sportFilters,
+                                timeFilter,
+                                minPrice,
+                                maxPrice,
+                                sortFilter,
+                                zoneId,
+                                offset,
+                                safePageSize));
     }
 
     private static List<Sport> parseSports(final String rawSports) {
@@ -115,6 +221,38 @@ public class MatchServiceImpl implements MatchService {
         return List.copyOf(sports);
     }
 
+    private static List<EventStatus> parseStatuses(final String rawStatuses) {
+        if (rawStatuses == null || rawStatuses.isBlank()) {
+            return List.of();
+        }
+
+        final LinkedHashSet<EventStatus> statuses = new LinkedHashSet<>();
+        for (final String rawStatus : rawStatuses.split(",")) {
+            if (rawStatus == null || rawStatus.isBlank()) {
+                continue;
+            }
+            EventStatus.fromDbValue(rawStatus.trim()).ifPresent(statuses::add);
+        }
+
+        return List.copyOf(statuses);
+    }
+
+    private static List<EventVisibility> parseVisibility(final String rawVisibility) {
+        if (rawVisibility == null || rawVisibility.isBlank()) {
+            return List.of();
+        }
+
+        final LinkedHashSet<EventVisibility> visibility = new LinkedHashSet<>();
+        for (final String rawValue : rawVisibility.split(",")) {
+            if (rawValue == null || rawValue.isBlank()) {
+                continue;
+            }
+            EventVisibility.fromDbValue(rawValue.trim()).ifPresent(visibility::add);
+        }
+
+        return List.copyOf(visibility);
+    }
+
     private static EventTimeFilter parseTimeFilter(final String rawTime) {
         if (rawTime == null || rawTime.isBlank()) {
             return EventTimeFilter.ALL;
@@ -123,6 +261,8 @@ public class MatchServiceImpl implements MatchService {
         switch (rawTime.toLowerCase(Locale.ROOT)) {
             case "all":
                 return EventTimeFilter.ALL;
+            case "future":
+                return EventTimeFilter.FUTURE;
             case "today":
                 return EventTimeFilter.TODAY;
             case "tomorrow":
@@ -151,5 +291,33 @@ public class MatchServiceImpl implements MatchService {
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
         }
+    }
+
+    private PaginatedResult<Match> paginate(
+            final int page,
+            final int pageSize,
+            final int defaultPageSize,
+            final CountSupplier countSupplier,
+            final SliceSupplier sliceSupplier) {
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : defaultPageSize;
+
+        final int totalCount = countSupplier.count(safePageSize);
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int offset = (clampedPage - 1) * safePageSize;
+        final List<Match> items = sliceSupplier.items(offset, safePageSize);
+
+        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface CountSupplier {
+        int count(int safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface SliceSupplier {
+        List<Match> items(int offset, int safePageSize);
     }
 }

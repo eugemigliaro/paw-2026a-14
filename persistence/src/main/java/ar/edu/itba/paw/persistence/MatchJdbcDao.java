@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.Sport;
@@ -16,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,6 +29,21 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class MatchJdbcDao implements MatchDao {
+
+    private static final String DERIVED_STATUS_SQL =
+            "CASE"
+                    + " WHEN m.status = 'open'"
+                    + " AND COALESCE(m.ends_at, m.starts_at) <= CURRENT_TIMESTAMP"
+                    + " THEN 'completed'"
+                    + " ELSE CAST(m.status AS VARCHAR(30))"
+                    + " END";
+
+    private static final String MATCH_SELECT_WITH_JOINED_PLAYERS =
+            "SELECT m.id, m.sport, m.host_user_id, m.address, m.title, m.description,"
+                    + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
+                    + " m.visibility, "
+                    + DERIVED_STATUS_SQL
+                    + " AS status, m.banner_image_id, COUNT(mp.id) AS joined_players";
 
     private static final String BASE_FROM =
             " FROM matches m"
@@ -122,23 +140,9 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
-    public Optional<Match> findById(final Long matchId) {
+    public Optional<Match> findMatchById(final Long matchId) {
         final String sql =
-                "SELECT m.*, COUNT(mp.id) AS joined_players"
-                        + BASE_FROM
-                        + " WHERE m.id = ? GROUP BY m.id";
-
-        return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
-    }
-
-    @Override
-    public Optional<Match> findPublicMatchById(final Long matchId) {
-        final String sql =
-                "SELECT m.*, COUNT(mp.id) AS joined_players"
-                        + BASE_FROM
-                        + " WHERE m.id = ? AND m.visibility = 'public'"
-                        + " AND m.status = 'open' AND m.starts_at >= CURRENT_TIMESTAMP"
-                        + " GROUP BY m.id";
+                MATCH_SELECT_WITH_JOINED_PLAYERS + BASE_FROM + " WHERE m.id = ? GROUP BY m.id";
 
         return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
     }
@@ -157,9 +161,21 @@ public class MatchJdbcDao implements MatchDao {
         final StringBuilder sql = new StringBuilder();
         final List<Object> params = new ArrayList<>();
 
-        sql.append("SELECT m.*, COUNT(mp.id) AS joined_players");
+        sql.append(MATCH_SELECT_WITH_JOINED_PLAYERS);
         sql.append(BASE_FROM);
-        appendFilters(sql, params, query, sports, timeFilter, zoneId, minPrice, maxPrice);
+        sql.append(" WHERE 1=1");
+        appendFilters(
+                sql,
+                params,
+                query,
+                sports,
+                timeFilter,
+                zoneId,
+                minPrice,
+                maxPrice,
+                List.of(EventVisibility.PUBLIC),
+                List.of(EventStatus.OPEN),
+                Boolean.TRUE);
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
         appendSort(sql, sort);
@@ -184,7 +200,19 @@ public class MatchJdbcDao implements MatchDao {
         sql.append("SELECT COUNT(*) FROM (");
         sql.append("SELECT m.id");
         sql.append(BASE_FROM);
-        appendFilters(sql, params, query, sports, timeFilter, zoneId, minPrice, maxPrice);
+        sql.append(" WHERE 1=1");
+        appendFilters(
+                sql,
+                params,
+                query,
+                sports,
+                timeFilter,
+                zoneId,
+                minPrice,
+                maxPrice,
+                List.of(EventVisibility.PUBLIC),
+                List.of(EventStatus.OPEN),
+                Boolean.TRUE);
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
         sql.append(") filtered_matches");
@@ -192,64 +220,233 @@ public class MatchJdbcDao implements MatchDao {
         return jdbcTemplate.queryForObject(sql.toString(), Integer.class, params.toArray());
     }
 
-    private static void appendFilters(
-            final StringBuilder sql,
-            final List<Object> params,
+    @Override
+    public List<Match> findHostedMatches(
+            final Long hostUserId,
+            final Boolean upcoming,
             final String query,
             final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
             final EventTimeFilter timeFilter,
-            final ZoneId zoneId,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
-        sql.append(" WHERE m.visibility = 'public' AND m.status = 'open'");
+            final BigDecimal maxPrice,
+            final MatchSort sort,
+            final ZoneId zoneId,
+            final int offset,
+            final int limit) {
+        final StringBuilder sql = new StringBuilder();
+        final List<Object> params = new ArrayList<>();
 
-        if (query != null && !query.trim().isEmpty()) {
-            sql.append(
-                    " AND (LOWER(m.title) LIKE ? OR "
-                            + "LOWER(COALESCE(m.description, '')) LIKE ?)");
-            final String queryPattern = "%" + query.trim().toLowerCase() + "%";
-            params.add(queryPattern);
-            params.add(queryPattern);
-        }
+        sql.append(MATCH_SELECT_WITH_JOINED_PLAYERS);
+        sql.append(BASE_FROM);
+        sql.append(" WHERE m.host_user_id = ?");
+        params.add(hostUserId);
+        appendFilters(
+                sql,
+                params,
+                query,
+                sports,
+                timeFilter,
+                zoneId,
+                minPrice,
+                maxPrice,
+                visibility,
+                statuses,
+                upcoming);
+        sql.append(BASE_GROUP_BY);
+        appendSort(sql, sort, upcoming);
+        sql.append(" LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
 
-        if (sports != null && !sports.isEmpty()) {
-            sql.append(" AND CAST(m.sport AS VARCHAR(30)) IN (");
-            for (int i = 0; i < sports.size(); i++) {
-                if (i > 0) {
-                    sql.append(", ");
-                }
-                sql.append("?");
-                params.add(sports.get(i).getDbValue());
-            }
-            sql.append(")");
-        }
-
-        if (timeFilter != null) {
-            if (timeFilter == EventTimeFilter.ALL) {
-                final Timestamp now = Timestamp.from(ZonedDateTime.now(zoneId).toInstant());
-                sql.append(" AND m.starts_at >= ?");
-                params.add(now);
-            } else {
-                final TimeRange timeRange = buildTimeRange(timeFilter, zoneId);
-                sql.append(" AND m.starts_at >= ? AND m.starts_at < ?");
-                params.add(Timestamp.from(timeRange.start()));
-                params.add(Timestamp.from(timeRange.end()));
-            }
-        }
-
-        if (minPrice != null) {
-            sql.append(" AND m.price_per_player >= ?");
-            params.add(minPrice);
-        }
-
-        if (maxPrice != null) {
-            sql.append(" AND m.price_per_player <= ?");
-            params.add(maxPrice);
-        }
+        return jdbcTemplate.query(sql.toString(), MATCH_ROW_MAPPER, params.toArray());
     }
 
-    private static void appendOpenSpotsConstraint(final StringBuilder sql) {
-        sql.append(" HAVING MAX(m.max_players) - COUNT(mp.id) >= 1");
+    @Override
+    public int countHostedMatches(
+            final Long hostUserId,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
+        final StringBuilder sql = new StringBuilder();
+        final List<Object> params = new ArrayList<>();
+
+        sql.append("SELECT COUNT(*) FROM (");
+        sql.append("SELECT m.id");
+        sql.append(BASE_FROM);
+        sql.append(" WHERE m.host_user_id = ?");
+        params.add(hostUserId);
+        appendFilters(
+                sql,
+                params,
+                query,
+                sports,
+                timeFilter,
+                zoneId,
+                minPrice,
+                maxPrice,
+                visibility,
+                statuses,
+                upcoming);
+        sql.append(BASE_GROUP_BY);
+        sql.append(") filtered_matches");
+
+        return jdbcTemplate.queryForObject(sql.toString(), Integer.class, params.toArray());
+    }
+
+    @Override
+    public List<Match> findJoinedMatches(
+            final Long userId,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final MatchSort sort,
+            final ZoneId zoneId,
+            final int offset,
+            final int limit) {
+        final StringBuilder sql = new StringBuilder();
+        final List<Object> params = new ArrayList<>();
+
+        sql.append(MATCH_SELECT_WITH_JOINED_PLAYERS);
+        sql.append(BASE_FROM);
+        sql.append(
+                " INNER JOIN match_participants me"
+                        + " ON me.match_id = m.id"
+                        + " AND me.user_id = ?"
+                        + " AND me.status IN ('joined', 'checked_in')");
+        params.add(userId);
+        sql.append(" WHERE 1=1");
+        appendFilters(
+                sql,
+                params,
+                query,
+                sports,
+                timeFilter,
+                zoneId,
+                minPrice,
+                maxPrice,
+                visibility,
+                statuses,
+                upcoming);
+        sql.append(BASE_GROUP_BY);
+        appendSort(sql, sort, upcoming);
+        sql.append(" LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        return jdbcTemplate.query(sql.toString(), MATCH_ROW_MAPPER, params.toArray());
+    }
+
+    @Override
+    public int countJoinedMatches(
+            final Long userId,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
+        final StringBuilder sql = new StringBuilder();
+        final List<Object> params = new ArrayList<>();
+
+        sql.append("SELECT COUNT(*) FROM (");
+        sql.append("SELECT m.id");
+        sql.append(BASE_FROM);
+        sql.append(
+                " INNER JOIN match_participants me"
+                        + " ON me.match_id = m.id"
+                        + " AND me.user_id = ?"
+                        + " AND me.status IN ('joined', 'checked_in')");
+        params.add(userId);
+        sql.append(" WHERE 1=1");
+        appendFilters(
+                sql,
+                params,
+                query,
+                sports,
+                timeFilter,
+                zoneId,
+                minPrice,
+                maxPrice,
+                visibility,
+                statuses,
+                upcoming);
+        sql.append(BASE_GROUP_BY);
+        sql.append(") filtered_matches");
+
+        return jdbcTemplate.queryForObject(sql.toString(), Integer.class, params.toArray());
+    }
+
+    private static void appendStatusFilter(
+            final StringBuilder sql, final List<Object> params, final List<EventStatus> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return;
+        }
+
+        sql.append(" AND ");
+        sql.append(DERIVED_STATUS_SQL);
+        sql.append(" IN (");
+        sql.append(statuses.stream().map(status -> "?").collect(Collectors.joining(", ")));
+        sql.append(")");
+        params.addAll(statuses.stream().map(EventStatus::getValue).toList());
+    }
+
+    private static void appendVisibilityFilter(
+            final StringBuilder sql,
+            final List<Object> params,
+            final List<EventVisibility> visibility) {
+        if (visibility == null || visibility.isEmpty()) {
+            return;
+        }
+
+        sql.append(" AND CAST(m.visibility AS VARCHAR(30)) IN (");
+        sql.append(visibility.stream().map(v -> "?").collect(Collectors.joining(", ")));
+        sql.append(")");
+        params.addAll(visibility.stream().map(EventVisibility::getValue).toList());
+    }
+
+    private static void appendSearchFilter(
+            final StringBuilder sql, final List<Object> params, final String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return;
+        }
+
+        sql.append(" AND (LOWER(m.title) LIKE ? OR LOWER(COALESCE(m.description, '')) LIKE ?)");
+        final String queryPattern = "%" + query.trim().toLowerCase() + "%";
+        params.add(queryPattern);
+        params.add(queryPattern);
+    }
+
+    private static void appendSportFilter(
+            final StringBuilder sql, final List<Object> params, final List<Sport> sports) {
+        if (sports == null || sports.isEmpty()) {
+            return;
+        }
+
+        sql.append(" AND CAST(m.sport AS VARCHAR(30)) IN (");
+        for (int i = 0; i < sports.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append("?");
+            params.add(sports.get(i).getDbValue());
+        }
+        sql.append(")");
     }
 
     private static void appendSort(final StringBuilder sql, final MatchSort sort) {
@@ -268,6 +465,108 @@ public class MatchJdbcDao implements MatchDao {
                 sql.append(" ORDER BY m.starts_at ASC");
                 break;
         }
+    }
+
+    private static void appendSort(
+            final StringBuilder sql, final MatchSort sort, final Boolean upcoming) {
+        if (upcoming == null || upcoming) {
+            appendSort(sql, sort);
+            return;
+        }
+
+        final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
+        switch (safeSort) {
+            case PRICE_LOW:
+                sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at DESC");
+                break;
+            case SPOTS_DESC:
+                sql.append(
+                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, "
+                                + "m.starts_at DESC");
+                break;
+            case SOONEST:
+            default:
+                sql.append(" ORDER BY m.starts_at DESC");
+                break;
+        }
+    }
+
+    private static void appendTimeFilter(
+            final StringBuilder sql,
+            final List<Object> params,
+            final EventTimeFilter timeFilter,
+            final ZoneId zoneId,
+            final Boolean upcoming) {
+        if (timeFilter == null || timeFilter == EventTimeFilter.ALL) {
+            return;
+        }
+
+        final ZoneId safeZoneId = zoneId == null ? ZoneId.systemDefault() : zoneId;
+
+        if (timeFilter == EventTimeFilter.FUTURE) {
+            final Timestamp now = Timestamp.from(ZonedDateTime.now(safeZoneId).toInstant());
+            sql.append(" AND m.starts_at >= ?");
+            params.add(now);
+            return;
+        }
+
+        final TimeRange timeRange =
+                Boolean.FALSE.equals(upcoming)
+                        ? buildPastTimeRange(timeFilter, safeZoneId)
+                        : buildTimeRange(timeFilter, safeZoneId);
+        sql.append(" AND m.starts_at >= ? AND m.starts_at < ?");
+        params.add(Timestamp.from(timeRange.start()));
+        params.add(Timestamp.from(timeRange.end()));
+    }
+
+    private static void appendPriceFilter(
+            final StringBuilder sql,
+            final List<Object> params,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        if (minPrice != null) {
+            sql.append(" AND m.price_per_player >= ?");
+            params.add(minPrice);
+        }
+
+        if (maxPrice != null) {
+            sql.append(" AND m.price_per_player <= ?");
+            params.add(maxPrice);
+        }
+    }
+
+    private static void appendUpcomingConstraint(final StringBuilder sql, final Boolean upcoming) {
+        if (upcoming == null) {
+            return;
+        }
+
+        sql.append(" AND m.starts_at ");
+        sql.append(Boolean.TRUE.equals(upcoming) ? ">= CURRENT_TIMESTAMP" : "< CURRENT_TIMESTAMP");
+    }
+
+    private static void appendFilters(
+            final StringBuilder sql,
+            final List<Object> params,
+            final String query,
+            final List<Sport> sports,
+            final EventTimeFilter timeFilter,
+            final ZoneId zoneId,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> status,
+            final Boolean upcoming) {
+        appendStatusFilter(sql, params, status);
+        appendVisibilityFilter(sql, params, visibility);
+        appendSearchFilter(sql, params, query);
+        appendSportFilter(sql, params, sports);
+        appendTimeFilter(sql, params, timeFilter, zoneId, upcoming);
+        appendPriceFilter(sql, params, minPrice, maxPrice);
+        appendUpcomingConstraint(sql, upcoming);
+    }
+
+    private static void appendOpenSpotsConstraint(final StringBuilder sql) {
+        sql.append(" HAVING MAX(m.max_players) - COUNT(mp.id) >= 1");
     }
 
     private static TimeRange buildTimeRange(final EventTimeFilter timeFilter, final ZoneId zoneId) {
@@ -289,6 +588,26 @@ public class MatchJdbcDao implements MatchDao {
         }
         final ZonedDateTime startOfTomorrow = today.plusDays(1).atStartOfDay(zoneId);
         return new TimeRange(now.toInstant(), startOfTomorrow.toInstant());
+    }
+
+    private static TimeRange buildPastTimeRange(
+            final EventTimeFilter timeFilter, final ZoneId zoneId) {
+        final ZonedDateTime now = ZonedDateTime.now(zoneId);
+        final LocalDate today = now.toLocalDate();
+
+        if (timeFilter == EventTimeFilter.TODAY) {
+            final ZonedDateTime start = today.atStartOfDay(zoneId);
+            return new TimeRange(start.toInstant(), now.toInstant());
+        }
+
+        if (timeFilter == EventTimeFilter.TOMORROW) {
+            final ZonedDateTime start = today.minusDays(1).atStartOfDay(zoneId);
+            final ZonedDateTime end = today.atStartOfDay(zoneId);
+            return new TimeRange(start.toInstant(), end.toInstant());
+        }
+
+        final ZonedDateTime start = now.minusDays(7);
+        return new TimeRange(start.toInstant(), now.toInstant());
     }
 
     private record TimeRange(java.time.Instant start, java.time.Instant end) {}

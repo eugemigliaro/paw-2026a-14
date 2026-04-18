@@ -11,9 +11,39 @@ public interface MatchService {
 
     Match createMatch(CreateMatchRequest request);
 
-    Optional<Match> findPublicMatchById(Long matchId);
+    Optional<Match> findMatchById(Long matchId);
 
     List<User> findConfirmedParticipants(Long matchId);
+
+    PaginatedResult<Match> findHostedMatches(
+            Long hostUserId,
+            Boolean upcoming,
+            String query,
+            String sport,
+            String visibility,
+            String status,
+            String time,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort,
+            String timezone,
+            int page,
+            int pageSize);
+
+    PaginatedResult<Match> findJoinedMatches(
+            Long userId,
+            Boolean upcoming,
+            String query,
+            String sport,
+            String visibility,
+            String status,
+            String time,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort,
+            String timezone,
+            int page,
+            int pageSize);
 
     PaginatedResult<Match> searchPublicMatches(
             String query,
@@ -25,15 +55,4 @@ public interface MatchService {
             String timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice);
-
-    default PaginatedResult<Match> searchPublicMatches(
-            String query,
-            String sport,
-            String time,
-            String sort,
-            int page,
-            int pageSize,
-            String timezone) {
-        return searchPublicMatches(query, sport, time, sort, page, pageSize, timezone, null, null);
-    }
 }

@@ -1,9 +1,13 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeTime;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.MatchService;
@@ -19,7 +23,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -51,6 +54,7 @@ public class FeedController {
     public ModelAndView showFeed(
             @Valid @ModelAttribute("feedSearchForm") final FeedSearchForm feedSearchForm,
             final BindingResult bindingResult,
+            @RequestParam(value = "email", required = false) final String email,
             @RequestParam(value = "sport", required = false) final List<String> sports,
             @RequestParam(value = "time", defaultValue = "all") final String time,
             @RequestParam(value = "sort", defaultValue = "soonest") final String sort,
@@ -67,7 +71,7 @@ public class FeedController {
                 normalizeFilters(sports, time, sort, timezone, minPrice, maxPrice);
         final PaginatedResult<Match> result = searchPublicMatches(query, filters, page);
         final ModelAndView mav = new ModelAndView("feed/index");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/"));
         mav.addObject("selectedSort", filters.selectedSort());
         mav.addObject("selectedTime", filters.selectedTime());
         mav.addObject("selectedSports", filters.selectedSports());
@@ -76,7 +80,7 @@ public class FeedController {
         mav.addObject("selectedMaxPrice", filters.maxPrice());
         mav.addObject("selectedMinPriceValue", formatNullablePriceValue(filters.minPrice()));
         mav.addObject("selectedMaxPriceValue", formatNullablePriceValue(filters.maxPrice()));
-        mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale));
+        mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
         return mav;
     }
 
@@ -84,7 +88,8 @@ public class FeedController {
             final String query,
             final FeedFilters filters,
             final PaginatedResult<Match> result,
-            final Locale locale) {
+            final Locale locale,
+            final String email) {
 
         final ZoneId zoneId = parseZone(filters.timezone());
 
@@ -95,19 +100,24 @@ public class FeedController {
                 messageSource.getMessage("feed.search.placeholder", null, locale),
                 messageSource.getMessage("feed.search.button", null, locale),
                 List.of(),
-                buildFilterGroups(query, filters, locale),
+                buildFilterGroups(query, filters, locale, email),
                 result.getItems().stream().map(match -> toCard(match, zoneId, locale)).toList(),
                 result.getPage(),
                 result.getTotalPages(),
-                buildPaginationItems(query, filters, result.getPage(), result.getTotalPages()),
-                result.hasPrevious() ? buildUrl(query, filters, result.getPage() - 1) : null,
-                result.hasNext() ? buildUrl(query, filters, result.getPage() + 1) : null);
+                buildPaginationItems(
+                        query, filters, result.getPage(), result.getTotalPages(), email, locale),
+                result.hasPrevious()
+                        ? buildUrl(query, filters, result.getPage() - 1, email, locale)
+                        : null,
+                result.hasNext()
+                        ? buildUrl(query, filters, result.getPage() + 1, email, locale)
+                        : null);
     }
 
     private PaginatedResult<Match> searchPublicMatches(
             final String query, final FeedFilters filters, final int page) {
         final int safePage = page > 0 ? page : 1;
-        final String encodedSports = encodeSports(filters.selectedSports());
+        final String encodedSports = encodeCsv(filters.selectedSports());
 
         return matchService.searchPublicMatches(
                 query,
@@ -125,7 +135,9 @@ public class FeedController {
             final String query,
             final FeedFilters filters,
             final int currentPage,
-            final int totalPages) {
+            final int totalPages,
+            final String email,
+            final Locale locale) {
         if (totalPages <= 1) {
             return List.of();
         }
@@ -134,33 +146,44 @@ public class FeedController {
         final int startPage = Math.max(2, Math.min(currentPage - 1, totalPages - 3));
         final int endPage = Math.min(totalPages - 1, Math.max(currentPage + 1, 4));
 
-        items.add(pageItem(1, query, filters, currentPage));
+        items.add(pageItem(1, query, filters, currentPage, email, locale));
 
         if (startPage > 2) {
             items.add(new PaginationItemViewModel("...", null, false, true));
         }
 
         for (int page = startPage; page <= endPage; page++) {
-            items.add(pageItem(page, query, filters, currentPage));
+            items.add(pageItem(page, query, filters, currentPage, email, locale));
         }
 
         if (endPage < totalPages - 1) {
             items.add(new PaginationItemViewModel("...", null, false, true));
         }
 
-        items.add(pageItem(totalPages, query, filters, currentPage));
+        items.add(pageItem(totalPages, query, filters, currentPage, email, locale));
 
         return items;
     }
 
     private static PaginationItemViewModel pageItem(
-            final int page, final String query, final FeedFilters filters, final int currentPage) {
+            final int page,
+            final String query,
+            final FeedFilters filters,
+            final int currentPage,
+            final String email,
+            final Locale locale) {
         return new PaginationItemViewModel(
-                Integer.toString(page), buildUrl(query, filters, page), page == currentPage, false);
+                Integer.toString(page),
+                buildUrl(query, filters, page, email, locale),
+                page == currentPage,
+                false);
     }
 
     private List<FilterGroupViewModel> buildFilterGroups(
-            final String query, final FeedFilters filters, final Locale locale) {
+            final String query,
+            final FeedFilters filters,
+            final Locale locale,
+            final String email) {
         final List<String> selectedSports = filters.selectedSports();
         final String selectedTime = filters.selectedTime();
 
@@ -170,7 +193,12 @@ public class FeedController {
                         List.of(
                                 new FilterOptionViewModel(
                                         messageSource.getMessage("filter.anySport", null, locale),
-                                        buildUrl(query, filters.withSports(List.of()), 1),
+                                        buildUrl(
+                                                query,
+                                                filters.withSports(List.of()),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         selectedSports.isEmpty()),
                                 new FilterOptionViewModel(
@@ -180,7 +208,9 @@ public class FeedController {
                                                 filters.withSports(
                                                         toggleSport(
                                                                 selectedSports, Sport.FOOTBALL)),
-                                                1),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         isSportSelected(selectedSports, Sport.FOOTBALL)),
                                 new FilterOptionViewModel(
@@ -189,7 +219,9 @@ public class FeedController {
                                                 query,
                                                 filters.withSports(
                                                         toggleSport(selectedSports, Sport.TENNIS)),
-                                                1),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         isSportSelected(selectedSports, Sport.TENNIS)),
                                 new FilterOptionViewModel(
@@ -199,7 +231,9 @@ public class FeedController {
                                                 filters.withSports(
                                                         toggleSport(
                                                                 selectedSports, Sport.BASKETBALL)),
-                                                1),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         isSportSelected(selectedSports, Sport.BASKETBALL)),
                                 new FilterOptionViewModel(
@@ -208,7 +242,9 @@ public class FeedController {
                                                 query,
                                                 filters.withSports(
                                                         toggleSport(selectedSports, Sport.PADEL)),
-                                                1),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         isSportSelected(selectedSports, Sport.PADEL)))),
                 new FilterGroupViewModel(
@@ -216,7 +252,7 @@ public class FeedController {
                         List.of(
                                 new FilterOptionViewModel(
                                         messageSource.getMessage("filter.anyTime", null, locale),
-                                        buildUrl(query, filters.withTime("all"), 1),
+                                        buildUrl(query, filters.withTime("all"), 1, email, locale),
                                         null,
                                         "all".equalsIgnoreCase(selectedTime)),
                                 new FilterOptionViewModel(
@@ -224,7 +260,9 @@ public class FeedController {
                                         buildUrl(
                                                 query,
                                                 filters.withTime(toggleTime(selectedTime, "today")),
-                                                1),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         "today".equalsIgnoreCase(selectedTime)),
                                 new FilterOptionViewModel(
@@ -233,7 +271,9 @@ public class FeedController {
                                                 query,
                                                 filters.withTime(
                                                         toggleTime(selectedTime, "tomorrow")),
-                                                1),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         "tomorrow".equalsIgnoreCase(selectedTime)),
                                 new FilterOptionViewModel(
@@ -241,7 +281,9 @@ public class FeedController {
                                         buildUrl(
                                                 query,
                                                 filters.withTime(toggleTime(selectedTime, "week")),
-                                                1),
+                                                1,
+                                                email,
+                                                locale),
                                         null,
                                         "week".equalsIgnoreCase(selectedTime)))));
     }
@@ -316,13 +358,25 @@ public class FeedController {
         return locale == null ? Locale.ENGLISH : locale;
     }
 
-    private static String buildUrl(final String query, final FeedFilters filters, final int page) {
+    private static String buildUrl(
+            final String query,
+            final FeedFilters filters,
+            final int page,
+            final String email,
+            final Locale locale) {
         final UriComponentsBuilder builder =
-                UriComponentsBuilder.fromPath("/")
+                UriComponentsBuilder.fromPath("/explore")
                         .queryParam("q", query == null ? "" : query)
                         .queryParam("time", filters.selectedTime())
                         .queryParam("sort", filters.selectedSort())
                         .queryParam("page", page);
+
+        if (email != null && !email.isBlank()) {
+            builder.queryParam("email", email);
+        }
+        if (locale != null && locale.getLanguage() != null && !locale.getLanguage().isBlank()) {
+            builder.queryParam("lang", locale.getLanguage());
+        }
 
         for (final String sport : filters.selectedSports()) {
             builder.queryParam("sport", sport.toLowerCase(Locale.ROOT));
@@ -340,52 +394,14 @@ public class FeedController {
         return builder.build().encode().toUriString();
     }
 
-    private static String normalizeSort(final String sort) {
-        if (sort == null || sort.isBlank()) {
-            return MatchSort.SOONEST.getQueryValue();
-        }
-        return MatchSort.fromQueryValue(sort)
-                .map(MatchSort::getQueryValue)
-                .orElse(MatchSort.SOONEST.getQueryValue());
-    }
-
-    private static String normalizeTime(final String time) {
-        if (time == null || time.isBlank()) {
-            return "all";
-        }
-        switch (time.toLowerCase(Locale.ROOT)) {
-            case "today":
-                return "today";
-            case "tomorrow":
-                return "tomorrow";
-            case "week":
-                return "week";
-            default:
-                return "all";
-        }
-    }
-
     private static List<String> normalizeSports(final List<String> sports) {
-        if (sports == null || sports.isEmpty()) {
-            return List.of();
+        final List<String> normalized = normalizeCsvValues(sports);
+        final List<String> validSports = new ArrayList<>();
+        for (final String sport : normalized) {
+            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(validSports::add);
         }
 
-        final LinkedHashSet<String> normalizedSports = new LinkedHashSet<>();
-        for (final String sportValue : sports) {
-            if (sportValue == null || sportValue.isBlank()) {
-                continue;
-            }
-            for (final String sport : sportValue.split(",")) {
-                if (sport == null || sport.isBlank()) {
-                    continue;
-                }
-                Sport.fromDbValue(sport.trim())
-                        .map(Sport::getDbValue)
-                        .ifPresent(normalizedSports::add);
-            }
-        }
-
-        return List.copyOf(normalizedSports);
+        return List.copyOf(validSports);
     }
 
     private static FeedFilters normalizeFilters(
@@ -445,18 +461,9 @@ public class FeedController {
         return normalizeSports(selectedSports).contains(sport.getDbValue());
     }
 
-    private static String encodeSports(final List<String> sports) {
-        return String.join(",", normalizeSports(sports));
-    }
-
     private static List<String> toggleSport(
             final List<String> selectedSports, final Sport sportToToggle) {
-        final List<String> toggledSports = new ArrayList<>(normalizeSports(selectedSports));
-        if (!toggledSports.remove(sportToToggle.getDbValue())) {
-            toggledSports.add(sportToToggle.getDbValue());
-        }
-
-        return List.copyOf(toggledSports);
+        return toggleValue(normalizeSports(selectedSports), sportToToggle.getDbValue());
     }
 
     private static String toggleTime(final String selectedTime, final String timeToToggle) {
