@@ -14,20 +14,56 @@ public final class ShellViewModelFactory {
     }
 
     public static ShellViewModel browseShell(final MessageSource ms, final Locale locale) {
+        return browseShell(ms, locale, null, "/");
+    }
+
+    public static ShellViewModel browseShell(
+            final MessageSource ms,
+            final Locale locale,
+            final String email,
+            final String activePath) {
         return new ShellViewModel(
                 ms.getMessage("app.brand", null, locale),
                 new NavItemViewModel(
                         ms.getMessage("nav.switchToHosting", null, locale),
-                        "/host/matches/new",
+                        withOptionalIdentity("/host/matches", "/host/matches/new", email, locale),
                         false),
-                List.of());
+                List.of(
+                        new NavItemViewModel(
+                                ms.getMessage("nav.explore", null, locale),
+                                withLang("/", locale),
+                                "/".equals(activePath)),
+                        new NavItemViewModel(
+                                ms.getMessage("nav.player.pastEvents", null, locale),
+                                withOptionalIdentity("/player/matches/past", "/", email, locale),
+                                "/player/matches/past".equals(activePath)),
+                        new NavItemViewModel(
+                                ms.getMessage("nav.player.upcomingEvents", null, locale),
+                                withOptionalIdentity(
+                                        "/player/matches/upcoming", "/", email, locale),
+                                "/player/matches/upcoming".equals(activePath))));
     }
 
     public static ShellViewModel hostShell(final MessageSource ms, final Locale locale) {
+        return hostShell(ms, locale, null, "/host/matches/new");
+    }
+
+    public static ShellViewModel hostShell(
+            final MessageSource ms,
+            final Locale locale,
+            final String email,
+            final String activePath) {
         return new ShellViewModel(
                 ms.getMessage("app.brand", null, locale),
-                new NavItemViewModel(ms.getMessage("nav.switchToPlayer", null, locale), "/", false),
-                List.of());
+                new NavItemViewModel(
+                        ms.getMessage("nav.switchToPlayer", null, locale),
+                        withOptionalIdentity("/", "/", email, locale),
+                        false),
+                List.of(
+                        new NavItemViewModel(
+                                ms.getMessage("nav.host.createMatch", null, locale),
+                                withLang("/host/matches/new", locale),
+                                "/host/matches/new".equals(activePath))));
     }
 
     public static ShellViewModel hostDashboardShell(
@@ -39,11 +75,15 @@ public final class ShellViewModelFactory {
                 ms.getMessage("app.brand", null, locale),
                 new NavItemViewModel(
                         ms.getMessage("nav.switchToPlayer", null, locale),
-                        urlWithIdentity("/player/matches/upcoming", email, locale),
+                        withOptionalIdentity("/", "/", email, locale),
                         false),
                 List.of(
                         new NavItemViewModel(
-                                ms.getMessage("nav.host.allEvents", null, locale),
+                                ms.getMessage("nav.host.createMatch", null, locale),
+                                withLang("/host/matches/new", locale),
+                                "/host/matches/new".equals(activePath)),
+                        new NavItemViewModel(
+                                ms.getMessage("nav.host.upcomingEvents", null, locale),
                                 urlWithIdentity("/host/matches", email, locale),
                                 "/host/matches".equals(activePath)),
                         new NavItemViewModel(
@@ -61,9 +101,13 @@ public final class ShellViewModelFactory {
                 ms.getMessage("app.brand", null, locale),
                 new NavItemViewModel(
                         ms.getMessage("nav.switchToHosting", null, locale),
-                        urlWithIdentity("/host/matches", email, locale),
+                        withOptionalIdentity("/host/matches", "/host/matches/new", email, locale),
                         false),
                 List.of(
+                        new NavItemViewModel(
+                                ms.getMessage("nav.explore", null, locale),
+                                withLang("/", locale),
+                                "/".equals(activePath)),
                         new NavItemViewModel(
                                 ms.getMessage("nav.player.upcomingEvents", null, locale),
                                 urlWithIdentity("/player/matches/upcoming", email, locale),
@@ -72,6 +116,25 @@ public final class ShellViewModelFactory {
                                 ms.getMessage("nav.player.pastEvents", null, locale),
                                 urlWithIdentity("/player/matches/past", email, locale),
                                 "/player/matches/past".equals(activePath))));
+    }
+
+    private static String withOptionalIdentity(
+            final String identityPath,
+            final String fallbackPath,
+            final String email,
+            final Locale locale) {
+        if (email == null || email.isBlank()) {
+            return withLang(fallbackPath, locale);
+        }
+        return urlWithIdentity(identityPath, email, locale);
+    }
+
+    private static String withLang(final String path, final Locale locale) {
+        final UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
+        if (locale != null && locale.getLanguage() != null && !locale.getLanguage().isBlank()) {
+            builder.queryParam("lang", locale.getLanguage());
+        }
+        return builder.build().encode().toUriString();
     }
 
     private static String urlWithIdentity(

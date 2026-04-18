@@ -88,7 +88,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
         final Locale locale = currentLocale();
         final String normalizedEmail = normalizeEmail(email);
         final Match match =
-                matchDao.findPublicMatchById(matchId)
+                matchDao.findMatchById(matchId)
                         .orElseThrow(
                                 () ->
                                         new VerificationFailureException(
@@ -219,7 +219,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
         final MatchReservationPayload payload = deserializePayload(request.getPayloadJson());
         final Match match =
-                matchDao.findPublicMatchById(payload.getMatchId())
+                matchDao.findMatchById(payload.getMatchId())
                         .orElseThrow(
                                 () ->
                                         invalidateRequest(
@@ -242,7 +242,7 @@ public class ActionVerificationServiceImpl implements ActionVerificationService 
 
         final MatchReservationPayload payload = deserializePayload(request.getPayloadJson());
         final Match match =
-                matchDao.findPublicMatchById(payload.getMatchId())
+                matchDao.findMatchById(payload.getMatchId())
                         .orElseThrow(
                                 () ->
                                         invalidateRequest(

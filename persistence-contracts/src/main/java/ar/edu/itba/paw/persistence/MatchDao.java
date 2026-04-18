@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.Sport;
@@ -26,9 +28,7 @@ public interface MatchDao {
             String status,
             Long bannerImageId);
 
-    Optional<Match> findById(Long matchId);
-
-    Optional<Match> findPublicMatchById(Long matchId);
+    Optional<Match> findMatchById(Long matchId);
 
     List<Match> findPublicMatches(
             String query,
@@ -49,15 +49,57 @@ public interface MatchDao {
             BigDecimal maxPrice,
             ZoneId zoneId);
 
-    List<Match> findHostedMatches(Long hostUserId, List<String> statuses, int offset, int limit);
+    List<Match> findHostedMatches(
+            Long hostUserId,
+            Boolean upcoming,
+            String query,
+            List<Sport> sports,
+            List<EventVisibility> visibility,
+            List<EventStatus> statuses,
+            EventTimeFilter timeFilter,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            MatchSort sort,
+            ZoneId zoneId,
+            int offset,
+            int limit);
 
-    int countHostedMatches(Long hostUserId, List<String> statuses);
+    int countHostedMatches(
+            Long hostUserId,
+            Boolean upcoming,
+            String query,
+            List<Sport> sports,
+            List<EventVisibility> visibility,
+            List<EventStatus> statuses,
+            EventTimeFilter timeFilter,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            ZoneId zoneId);
 
-    List<Match> findPastJoinedMatches(Long userId, int offset, int limit);
+    List<Match> findJoinedMatches(
+            Long userId,
+            Boolean upcoming,
+            String query,
+            List<Sport> sports,
+            List<EventVisibility> visibility,
+            List<EventStatus> statuses,
+            EventTimeFilter timeFilter,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            MatchSort sort,
+            ZoneId zoneId,
+            int offset,
+            int limit);
 
-    int countPastJoinedMatches(Long userId);
-
-    List<Match> findUpcomingJoinedMatches(Long userId, int offset, int limit);
-
-    int countUpcomingJoinedMatches(Long userId);
+    int countJoinedMatches(
+            Long userId,
+            Boolean upcoming,
+            String query,
+            List<Sport> sports,
+            List<EventVisibility> visibility,
+            List<EventStatus> statuses,
+            EventTimeFilter timeFilter,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            ZoneId zoneId);
 }

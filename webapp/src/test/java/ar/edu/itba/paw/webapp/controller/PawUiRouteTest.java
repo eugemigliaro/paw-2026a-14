@@ -147,7 +147,7 @@ class PawUiRouteTest {
                     }
 
                     @Override
-                    public Optional<Match> findPublicMatchById(final Long matchId) {
+                    public Optional<Match> findMatchById(final Long matchId) {
                         return matchId == 42L ? Optional.of(realMatch) : Optional.empty();
                     }
 
@@ -162,28 +162,46 @@ class PawUiRouteTest {
 
                     @Override
                     public PaginatedResult<Match> findHostedMatches(
-                            final Long hostUserId, final int page, final int pageSize) {
-                        return new PaginatedResult<>(
-                                List.of(realMatch, footballMatch, completedMatch), 3, 1, pageSize);
+                            final Long hostUserId,
+                            final Boolean upcoming,
+                            final String query,
+                            final String sport,
+                            final String visibility,
+                            final String status,
+                            final String time,
+                            final java.math.BigDecimal minPrice,
+                            final java.math.BigDecimal maxPrice,
+                            final String sort,
+                            final String timezone,
+                            final int page,
+                            final int pageSize) {
+                        final List<Match> items =
+                                status != null && status.contains("completed")
+                                        ? List.of(completedMatch)
+                                        : List.of(realMatch);
+                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
                     }
 
                     @Override
-                    public PaginatedResult<Match> findFinishedHostedMatches(
-                            final Long hostUserId, final int page, final int pageSize) {
-                        return new PaginatedResult<>(List.of(completedMatch), 1, 1, pageSize);
-                    }
-
-                    @Override
-                    public PaginatedResult<Match> findPastJoinedMatches(
-                            final Long userId, final int page, final int pageSize) {
-                        return new PaginatedResult<>(List.of(completedMatch), 1, 1, pageSize);
-                    }
-
-                    @Override
-                    public PaginatedResult<Match> findUpcomingJoinedMatches(
-                            final Long userId, final int page, final int pageSize) {
-                        return new PaginatedResult<>(
-                                List.of(realMatch, cancelledFutureMatch), 2, 1, pageSize);
+                    public PaginatedResult<Match> findJoinedMatches(
+                            final Long userId,
+                            final Boolean upcoming,
+                            final String query,
+                            final String sport,
+                            final String visibility,
+                            final String status,
+                            final String time,
+                            final java.math.BigDecimal minPrice,
+                            final java.math.BigDecimal maxPrice,
+                            final String sort,
+                            final String timezone,
+                            final int page,
+                            final int pageSize) {
+                        final List<Match> items =
+                                Boolean.FALSE.equals(upcoming)
+                                        ? List.of(completedMatch)
+                                        : List.of(realMatch, cancelledFutureMatch);
+                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
                     }
 
                     @Override
@@ -538,7 +556,7 @@ class PawUiRouteTest {
     void getHostAllMatchesRouteRendersDashboardPage() throws Exception {
         mockMvc.perform(get("/host/matches").param("email", "host@test.com").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/all-matches"))
+                .andExpect(view().name("matches/list"))
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attributeExists("listTitle"));
     }
@@ -550,7 +568,7 @@ class PawUiRouteTest {
                                 .param("email", "host@test.com")
                                 .locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/finished-matches"))
+                .andExpect(view().name("matches/list"))
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attributeExists("listTitle"));
     }
@@ -559,7 +577,7 @@ class PawUiRouteTest {
     void getPlayerPastMatchesRouteRendersPastPage() throws Exception {
         mockMvc.perform(get("/player/matches/past").param("email", "player@test.com"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("player/past-matches"))
+                .andExpect(view().name("matches/list"))
                 .andExpect(model().attributeExists("events"));
     }
 
@@ -567,7 +585,7 @@ class PawUiRouteTest {
     void getPlayerUpcomingMatchesRouteRendersUpcomingPage() throws Exception {
         mockMvc.perform(get("/player/matches/upcoming").param("email", "player@test.com"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("player/upcoming-matches"))
+                .andExpect(view().name("matches/list"))
                 .andExpect(model().attributeExists("events"));
     }
 
@@ -575,7 +593,7 @@ class PawUiRouteTest {
     void getHostAllMatchesRouteWithSpanishLocaleLocalizesHeader() throws Exception {
         mockMvc.perform(get("/host/matches").param("email", "host@test.com").param("lang", "es"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/all-matches"))
+                .andExpect(view().name("matches/list"))
                 .andExpect(model().attribute("listTitle", "Panel de eventos organizados"));
     }
 

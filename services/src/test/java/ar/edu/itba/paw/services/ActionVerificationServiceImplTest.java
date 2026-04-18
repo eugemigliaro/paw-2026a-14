@@ -90,7 +90,7 @@ public class ActionVerificationServiceImplTest {
     @Test
     public void testRequestMatchReservationCreatesPendingRequestAndSendsMail() {
         final Match match = createMatch(10L, "Morning Padel", 0);
-        Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
         Mockito.when(mvpIdentityService.findExistingByEmail("player@test.com"))
                 .thenReturn(Optional.empty());
         Mockito.when(
@@ -132,7 +132,7 @@ public class ActionVerificationServiceImplTest {
 
         Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
-        Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
         Mockito.when(mvpIdentityService.resolveOrCreateByEmail("player@test.com")).thenReturn(user);
 
         final VerificationConfirmationResult result =
@@ -247,7 +247,7 @@ public class ActionVerificationServiceImplTest {
 
         Mockito.when(emailActionRequestDao.findByTokenHash(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
-        Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
 
         final VerificationPreview preview = actionVerificationService.getPreview("raw-token");
 
@@ -373,7 +373,7 @@ public class ActionVerificationServiceImplTest {
 
         Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
-        Mockito.when(matchDao.findPublicMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
         Mockito.when(mvpIdentityService.resolveOrCreateByEmail("player@test.com")).thenReturn(user);
         Mockito.doThrow(
                         new MatchReservationException(

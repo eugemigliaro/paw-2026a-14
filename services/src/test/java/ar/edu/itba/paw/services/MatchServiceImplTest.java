@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
@@ -254,11 +255,11 @@ public class MatchServiceImplTest {
     }
 
     @Test
-    public void testFindPublicMatchByIdDelegates() {
+    public void testFindMatchByIdDelegates() {
         final Match expectedMatch = createTestMatch(8L, "Late Football", "football");
-        Mockito.when(matchDao.findPublicMatchById(8L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(matchDao.findMatchById(8L)).thenReturn(Optional.of(expectedMatch));
 
-        final Optional<Match> result = matchService.findPublicMatchById(8L);
+        final Optional<Match> result = matchService.findMatchById(8L);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals("Late Football", result.get().getTitle());
@@ -283,18 +284,47 @@ public class MatchServiceImplTest {
     @Test
     public void testFindHostedMatchesUsesDefaultDashboardPageSize() {
         final Match hosted = createTestMatch(10L, "Host Match", "padel");
-        Mockito.when(matchDao.countHostedMatches(9L, List.of())).thenReturn(1);
-        Mockito.when(matchDao.findHostedMatches(9L, List.of(), 0, 10)).thenReturn(List.of(hosted));
+        Mockito.when(
+                        matchDao.countHostedMatches(
+                                9L,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                ZoneId.systemDefault()))
+                .thenReturn(1);
+        Mockito.when(
+                        matchDao.findHostedMatches(
+                                9L,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.systemDefault(),
+                                0,
+                                12))
+                .thenReturn(List.of(hosted));
 
-        final PaginatedResult<Match> result = matchService.findHostedMatches(9L, 1, 0);
+        final PaginatedResult<Match> result =
+                matchService.findHostedMatches(
+                        9L, null, null, null, null, null, null, null, null, null, null, 1, 0);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals(1, result.getTotalCount());
-        Assertions.assertEquals(10, result.getPageSize());
+        Assertions.assertEquals(12, result.getPageSize());
     }
 
     @Test
-    public void testFindFinishedHostedMatchesFiltersCompletedAndCancelledStatuses() {
+    public void testFindHostedMatchesParsesStatusCsv() {
         final Match completed =
                 new Match(
                         11L,
@@ -311,24 +341,105 @@ public class MatchServiceImplTest {
                         "completed",
                         4,
                         null);
-        Mockito.when(matchDao.countHostedMatches(9L, List.of("completed", "cancelled")))
+
+        Mockito.when(
+                        matchDao.countHostedMatches(
+                                9L,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(EventStatus.COMPLETED, EventStatus.CANCELLED),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                ZoneId.systemDefault()))
                 .thenReturn(1);
-        Mockito.when(matchDao.findHostedMatches(9L, List.of("completed", "cancelled"), 0, 10))
+        Mockito.when(
+                        matchDao.findHostedMatches(
+                                9L,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(EventStatus.COMPLETED, EventStatus.CANCELLED),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.systemDefault(),
+                                0,
+                                10))
                 .thenReturn(List.of(completed));
 
-        final PaginatedResult<Match> result = matchService.findFinishedHostedMatches(9L, 1, 10);
+        final PaginatedResult<Match> result =
+                matchService.findHostedMatches(
+                        9L,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "completed,cancelled,invalid,completed",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        1,
+                        10);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("completed", result.getItems().get(0).getStatus());
     }
 
     @Test
-    public void testFindPastJoinedMatchesPaginatesDescendingDataset() {
+    public void testFindJoinedMatchesPastPaginatesDescendingDataset() {
         final Match first = createTestMatch(12L, "Past Match", "football");
-        Mockito.when(matchDao.countPastJoinedMatches(4L)).thenReturn(11);
-        Mockito.when(matchDao.findPastJoinedMatches(4L, 10, 10)).thenReturn(List.of(first));
+        Mockito.when(
+                        matchDao.countJoinedMatches(
+                                4L,
+                                Boolean.FALSE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                ZoneId.systemDefault()))
+                .thenReturn(11);
+        Mockito.when(
+                        matchDao.findJoinedMatches(
+                                4L,
+                                Boolean.FALSE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.systemDefault(),
+                                10,
+                                10))
+                .thenReturn(List.of(first));
 
-        final PaginatedResult<Match> result = matchService.findPastJoinedMatches(4L, 2, 10);
+        final PaginatedResult<Match> result =
+                matchService.findJoinedMatches(
+                        4L,
+                        Boolean.FALSE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        2,
+                        10);
 
         Assertions.assertEquals(2, result.getPage());
         Assertions.assertEquals(2, result.getTotalPages());
@@ -336,12 +447,53 @@ public class MatchServiceImplTest {
     }
 
     @Test
-    public void testFindUpcomingJoinedMatchesClampsPageToLastAvailable() {
+    public void testFindJoinedMatchesUpcomingClampsPageToLastAvailable() {
         final Match first = createTestMatch(13L, "Upcoming Match", "tennis");
-        Mockito.when(matchDao.countUpcomingJoinedMatches(4L)).thenReturn(5);
-        Mockito.when(matchDao.findUpcomingJoinedMatches(4L, 0, 5)).thenReturn(List.of(first));
+        Mockito.when(
+                        matchDao.countJoinedMatches(
+                                4L,
+                                Boolean.TRUE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                ZoneId.systemDefault()))
+                .thenReturn(5);
+        Mockito.when(
+                        matchDao.findJoinedMatches(
+                                4L,
+                                Boolean.TRUE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.systemDefault(),
+                                0,
+                                5))
+                .thenReturn(List.of(first));
 
-        final PaginatedResult<Match> result = matchService.findUpcomingJoinedMatches(4L, 9, 5);
+        final PaginatedResult<Match> result =
+                matchService.findJoinedMatches(
+                        4L,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        9,
+                        5);
 
         Assertions.assertEquals(1, result.getPage());
         Assertions.assertEquals(1, result.getTotalPages());

@@ -34,7 +34,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     @Override
     public void reserveSpot(final Long matchId, final Long userId) {
         final Match match =
-                matchDao.findById(matchId)
+                matchDao.findMatchById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchReservationException(
@@ -75,7 +75,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
     private MatchReservationException buildReservationFailure(
             final Long matchId, final Long userId) {
-        final Match currentMatch = matchDao.findById(matchId).orElse(null);
+        final Match currentMatch = matchDao.findMatchById(matchId).orElse(null);
 
         if (currentMatch == null) {
             return new MatchReservationException("not_found", "The event does not exist.");
