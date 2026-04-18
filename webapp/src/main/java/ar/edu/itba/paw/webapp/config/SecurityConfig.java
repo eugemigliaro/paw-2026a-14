@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -22,29 +23,37 @@ public class SecurityConfig {
             final LoginFailureHandler loginFailureHandler)
             throws Exception {
         http.authenticationProvider(accountAuthenticationProvider)
-                .authorizeRequests(
+                .authorizeHttpRequests(
                         authorize ->
                                 authorize
-                                        .antMatchers(
-                                                "/",
-                                                "/css/**",
-                                                "/js/**",
-                                                "/assets/**",
-                                                "/errors/**",
-                                                "/login",
-                                                "/register",
-                                                "/register/resend-verification",
-                                                "/forgot-password",
-                                                "/password-reset/**",
-                                                "/verifications/**")
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher("/"),
+                                                new AntPathRequestMatcher("/css/**"),
+                                                new AntPathRequestMatcher("/js/**"),
+                                                new AntPathRequestMatcher("/assets/**"),
+                                                new AntPathRequestMatcher("/errors/**"),
+                                                new AntPathRequestMatcher("/login"),
+                                                new AntPathRequestMatcher("/register"),
+                                                new AntPathRequestMatcher(
+                                                        "/register/resend-verification"),
+                                                new AntPathRequestMatcher("/forgot-password"),
+                                                new AntPathRequestMatcher("/password-reset/**"),
+                                                new AntPathRequestMatcher("/verifications/**"))
                                         .permitAll()
-                                        .antMatchers(HttpMethod.GET, "/matches/**")
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher(
+                                                        "/matches/**", HttpMethod.GET.name()))
                                         .permitAll()
-                                        .antMatchers(HttpMethod.GET, "/images/**")
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher(
+                                                        "/images/**", HttpMethod.GET.name()))
                                         .permitAll()
-                                        .antMatchers(HttpMethod.POST, "/matches/*/reservations")
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/reservations",
+                                                        HttpMethod.POST.name()))
                                         .hasAnyRole("USER", "ADMIN_MOD")
-                                        .antMatchers("/host/**")
+                                        .requestMatchers(new AntPathRequestMatcher("/host/**"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .anyRequest()
                                         .authenticated())
