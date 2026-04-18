@@ -408,23 +408,24 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     }
 
     private void validatePassword(final String password, final Locale locale) {
-        if (password == null
-                || password.isBlank()
-                || password.length() < MIN_PASSWORD_LENGTH
-                || password.length() > MAX_PASSWORD_LENGTH) {
+        if (isPasswordLengthInvalid(password)) {
             throw new AccountRegistrationException(
                     "password_invalid", message("auth.registration.error.passwordInvalid", locale));
         }
     }
 
     private void validateResetPassword(final String password, final Locale locale) {
-        if (password == null
-                || password.isBlank()
-                || password.length() < MIN_PASSWORD_LENGTH
-                || password.length() > MAX_PASSWORD_LENGTH) {
+        if (isPasswordLengthInvalid(password)) {
             throw new PasswordResetException(
                     "password_invalid", message("auth.registration.error.passwordInvalid", locale));
         }
+    }
+
+    private static boolean isPasswordLengthInvalid(final String password) {
+        return password == null
+                || password.isBlank()
+                || password.length() < MIN_PASSWORD_LENGTH
+                || password.length() > MAX_PASSWORD_LENGTH;
     }
 
     private String message(final String code, final Locale locale) {

@@ -40,12 +40,14 @@ public class SecurityConfig {
                                         .permitAll()
                                         .antMatchers(HttpMethod.GET, "/matches/**")
                                         .permitAll()
+                                        .antMatchers(HttpMethod.GET, "/images/**")
+                                        .permitAll()
                                         .antMatchers(HttpMethod.POST, "/matches/*/reservations")
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .antMatchers("/host/**")
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .anyRequest()
-                                        .permitAll())
+                                        .authenticated())
                 .formLogin(
                         form ->
                                 form.loginPage("/login")

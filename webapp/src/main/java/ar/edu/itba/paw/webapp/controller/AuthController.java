@@ -6,19 +6,16 @@ import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordForm;
 import ar.edu.itba.paw.webapp.form.RegisterForm;
+import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Locale;
 import java.util.Optional;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,7 +55,7 @@ public class AuthController {
             @RequestParam(value = "reset", required = false) final String reset,
             @RequestParam(value = "logout", required = false) final String logout,
             final Locale locale) {
-        if (isAuthenticated()) {
+        if (CurrentAuthenticatedUser.get().isPresent()) {
             return new ModelAndView("redirect:/");
         }
 
@@ -75,7 +72,7 @@ public class AuthController {
 
     @GetMapping("/register")
     public ModelAndView showRegister(final Locale locale) {
-        if (isAuthenticated()) {
+        if (CurrentAuthenticatedUser.get().isPresent()) {
             return new ModelAndView("redirect:/");
         }
         return registerView(new RegisterForm(), locale);
@@ -146,7 +143,7 @@ public class AuthController {
 
     @GetMapping("/forgot-password")
     public ModelAndView showForgotPassword(final Locale locale) {
-        if (isAuthenticated()) {
+        if (CurrentAuthenticatedUser.get().isPresent()) {
             return new ModelAndView("redirect:/");
         }
         return forgotPasswordView(new ForgotPasswordForm(), locale);
@@ -205,7 +202,8 @@ public class AuthController {
         if (expiresAt != null) {
             mav.addObject(
                     "expiresAtLabel",
-                    expiryFormatter(locale).format(expiresAt.atZone(ZoneId.systemDefault())));
+                    VerificationViews.expiryFormatter(locale)
+                            .format(expiresAt.atZone(ZoneId.systemDefault())));
         }
         return mav;
     }
@@ -237,18 +235,5 @@ public class AuthController {
         if ("password_invalid".equals(code)) {
             bindingResult.rejectValue("password", code, exception.getMessage());
         }
-    }
-
-    private static DateTimeFormatter expiryFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                .withLocale(locale == null ? Locale.ENGLISH : locale);
-    }
-
-    private static boolean isAuthenticated() {
-        final Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null
-                && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken);
     }
 }

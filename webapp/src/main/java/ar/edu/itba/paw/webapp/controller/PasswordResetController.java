@@ -4,13 +4,11 @@ import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureException;
-import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.exceptions.PasswordResetException;
 import ar.edu.itba.paw.webapp.form.ResetPasswordForm;
+import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,7 +113,7 @@ public class PasswordResetController {
         mav.addObject("resetPreview", preview);
         mav.addObject(
                 "expiresAtLabel",
-                expiryFormatter(locale)
+                VerificationViews.expiryFormatter(locale)
                         .format(preview.getExpiresAt().atZone(ZoneId.systemDefault())));
         mav.addObject("resetPasswordForm", resetPasswordForm);
         return mav;
@@ -123,30 +121,7 @@ public class PasswordResetController {
 
     private ModelAndView buildErrorView(
             final VerificationFailureException exception, final Locale locale) {
-        final ModelAndView mav = new ModelAndView("verification/error");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
-        mav.addObject("title", titleFor(exception.getReason(), locale));
-        mav.addObject("message", exception.getMessage());
-        mav.addObject("backHref", "/forgot-password");
-        return mav;
-    }
-
-    private String titleFor(final VerificationFailureReason reason, final Locale locale) {
-        switch (reason) {
-            case EXPIRED:
-                return messageSource.getMessage("verification.error.expired", null, locale);
-            case ALREADY_USED:
-                return messageSource.getMessage("verification.error.alreadyUsed", null, locale);
-            case INVALID_ACTION:
-                return messageSource.getMessage("verification.error.invalidAction", null, locale);
-            case NOT_FOUND:
-            default:
-                return messageSource.getMessage("verification.error.notFound", null, locale);
-        }
-    }
-
-    private static DateTimeFormatter expiryFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                .withLocale(locale == null ? Locale.ENGLISH : locale);
+        return VerificationViews.buildErrorView(
+                exception, messageSource, locale, "/forgot-password");
     }
 }

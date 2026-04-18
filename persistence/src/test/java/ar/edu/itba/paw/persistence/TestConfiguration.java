@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import java.time.Clock;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.hsqldb.jdbc.JDBCDriver;
@@ -27,6 +28,11 @@ public class TestConfiguration {
     @Bean
     public PlatformTransactionManager transactionManager() {
         return new DataSourceTransactionManager(dataSource());
+    }
+
+    @Bean
+    public Clock clock() {
+        return Clock.systemUTC();
     }
 
     @Bean(initMethod = "migrate")

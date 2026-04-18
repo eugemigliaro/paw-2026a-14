@@ -3,12 +3,10 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureException;
-import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
+import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -42,7 +40,7 @@ public class VerificationController {
             mav.addObject("confirmPath", "/verifications/" + token + "/confirm");
             mav.addObject(
                     "expiresAtLabel",
-                    expiryFormatter(locale)
+                    VerificationViews.expiryFormatter(locale)
                             .format(preview.getExpiresAt().atZone(ZoneId.systemDefault())));
             return mav;
         } catch (final VerificationFailureException exception) {
@@ -63,30 +61,6 @@ public class VerificationController {
 
     private ModelAndView buildErrorView(
             final VerificationFailureException exception, final Locale locale) {
-        final ModelAndView mav = new ModelAndView("verification/error");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(messageSource, locale));
-        mav.addObject("title", titleFor(exception.getReason(), locale));
-        mav.addObject("message", exception.getMessage());
-        mav.addObject("backHref", "/");
-        return mav;
-    }
-
-    private String titleFor(final VerificationFailureReason reason, final Locale locale) {
-        switch (reason) {
-            case EXPIRED:
-                return messageSource.getMessage("verification.error.expired", null, locale);
-            case ALREADY_USED:
-                return messageSource.getMessage("verification.error.alreadyUsed", null, locale);
-            case INVALID_ACTION:
-                return messageSource.getMessage("verification.error.invalidAction", null, locale);
-            case NOT_FOUND:
-            default:
-                return messageSource.getMessage("verification.error.notFound", null, locale);
-        }
-    }
-
-    private static DateTimeFormatter expiryFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                .withLocale(locale == null ? Locale.ENGLISH : locale);
+        return VerificationViews.buildErrorView(exception, messageSource, locale, "/");
     }
 }
