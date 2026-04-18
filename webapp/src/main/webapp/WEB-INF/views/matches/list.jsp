@@ -98,9 +98,11 @@
 											<c:out value="${listControls.filterTitle}" />
 										</h2>
 									</div>
-									<c:url var="clearSearchHref" value="${listControls.searchAction}">
+									<c:url var="clearSearchHref" value="${pageContext.request.servletPath}">
 										<c:param name="q" value="${listControls.searchQuery}" />
 										<c:param name="sort" value="${selectedSort}" />
+										<c:param name="tz" value="${selectedTimezone}" />
+										<c:param name="lang" value="${pageContext.response.locale.language}" />
 									</c:url>
 									<spring:message var="clearAllLabel" code="filter.clearAll" />
 									<ui:button

@@ -24,9 +24,11 @@
 							<div class="filter-rail__heading">
 								<h2 class="filter-rail__main-title"><spring:message code="filter.title" /></h2>
 							</div>
-							<c:url var="clearFiltersHref" value="/">
-								<c:param name="q" value="${param.q}" />
+							<c:url var="clearFiltersHref" value="${feedFormAction}">
+								<c:param name="q" value="${feedSearchForm.q}" />
 								<c:param name="sort" value="${selectedSort}" />
+								<c:param name="tz" value="${selectedTimezone}" />
+								<c:param name="lang" value="${pageContext.response.locale.language}" />
 							</c:url>
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
 							<ui:button
