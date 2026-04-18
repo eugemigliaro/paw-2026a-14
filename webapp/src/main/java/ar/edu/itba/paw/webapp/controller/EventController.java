@@ -184,7 +184,7 @@ public class EventController {
             final Long currentMatchId, final Locale locale) {
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        "", null, "all", "soonest", 1, 4, null, null, null);
+                        "", null, null, null, "soonest", 1, 4, null, null, null);
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)

@@ -56,8 +56,7 @@
 						</c:forEach>
 						<section class="filter-rail__group">
 							<div class="filter-rail__group-header">
-								<h2 class="filter-rail__title"><spring:message code="filter.price" /></h2>
-								<p class="filter-rail__caption"><spring:message code="filter.price.perPlayer" /></p>
+								<h2 class="filter-rail__title"><spring:message code="filter.datePrice" /></h2>
 							</div>
 							<form
 								method="get"
@@ -67,7 +66,6 @@
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 								</c:forEach>
-								<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 								<input
 									type="hidden"
@@ -75,40 +73,61 @@
 									value="<c:out value='${selectedTimezone}' />"
 									data-browser-timezone-field="true" />
 								<div class="filter-rail__field-group">
-									<div class="filter-rail__field-row">
-										<div class="field filter-rail__field filter-rail__price-field">
-											<label class="field__label" for="min-price"><spring:message code="filter.price.from" /></label>
-											<div class="filter-rail__price-input-wrap">
-												<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
-												<input
-													id="min-price"
-													name="minPrice"
-													type="number"
-													min="0"
-													step="0.01"
-													inputmode="decimal"
-													class="field__control filter-rail__price-input"
-													value="<c:out value='${selectedMinPriceValue}' />"
-													placeholder="0" />
-											</div>
-										</div>
-										<div class="field filter-rail__field filter-rail__price-field">
-											<label class="field__label" for="max-price"><spring:message code="filter.price.to" /></label>
-											<div class="filter-rail__price-input-wrap">
-												<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
-												<input
-													id="max-price"
-													name="maxPrice"
-													type="number"
-													min="0"
-													step="0.01"
-													inputmode="decimal"
-													class="field__control filter-rail__price-input"
-													value="<c:out value='${selectedMaxPriceValue}' />"
-													placeholder="12" />
-											</div>
+									<div class="field filter-rail__field">
+										<label class="field__label" for="start-date"><spring:message code="filter.date.from" /></label>
+										<input
+											id="start-date"
+											name="startDate"
+											type="date"
+											class="field__control"
+											min="<c:out value='${selectedDateMinValue}' />"
+											value="<c:out value='${selectedStartDateValue}' />" />
+									</div>
+									<div class="field filter-rail__field">
+										<label class="field__label" for="end-date"><spring:message code="filter.date.to" /></label>
+										<input
+											id="end-date"
+											name="endDate"
+											type="date"
+											class="field__control"
+											min="<c:out value='${selectedDateMinValue}' />"
+											value="<c:out value='${selectedEndDateValue}' />" />
+									</div>
+								</div>
+								<div class="filter-rail__field-group">
+									<div class="field filter-rail__field filter-rail__price-field">
+										<label class="field__label" for="min-price"><spring:message code="filter.price.from" /></label>
+										<div class="filter-rail__price-input-wrap">
+											<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
+											<input
+												id="min-price"
+												name="minPrice"
+												type="number"
+												min="0"
+												step="0.01"
+												inputmode="decimal"
+												class="field__control filter-rail__price-input"
+												value="<c:out value='${selectedMinPriceValue}' />"
+												placeholder="0" />
 										</div>
 									</div>
+									<div class="field filter-rail__field filter-rail__price-field">
+										<label class="field__label" for="max-price"><spring:message code="filter.price.to" /></label>
+										<div class="filter-rail__price-input-wrap">
+											<span class="filter-rail__price-prefix" aria-hidden="true">$</span>
+											<input
+												id="max-price"
+												name="maxPrice"
+												type="number"
+												min="0"
+												step="0.01"
+												inputmode="decimal"
+												class="field__control filter-rail__price-input"
+												value="<c:out value='${selectedMaxPriceValue}' />"
+												placeholder="12" />
+										</div>
+									</div>
+									<p class="filter-rail__caption"><spring:message code="filter.price.perPlayer" /></p>
 								</div>
 								<spring:message var="applyPriceLabel" code="filter.price.apply" />
 								<ui:button
@@ -140,7 +159,8 @@
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 								</c:forEach>
-								<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
+								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
+								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 								<input
 									type="hidden"
@@ -168,7 +188,8 @@
 							<c:forEach var="selectedSport" items="${selectedSports}">
 								<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 							</c:forEach>
-							<input type="hidden" name="time" value="<c:out value='${selectedTime}' />" />
+							<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
+							<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 							<input
 								type="hidden"
 								name="tz"

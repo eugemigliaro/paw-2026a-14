@@ -19,23 +19,6 @@ public final class MatchFilterQueryUtils {
                 .orElse(MatchSort.SOONEST.getQueryValue());
     }
 
-    public static String normalizeTime(final String time) {
-        if (time == null || time.isBlank()) {
-            return "all";
-        }
-
-        switch (time.toLowerCase(Locale.ROOT)) {
-            case "today":
-                return "today";
-            case "tomorrow":
-                return "tomorrow";
-            case "week":
-                return "week";
-            default:
-                return "all";
-        }
-    }
-
     public static List<String> normalizeCsvValues(final List<String> rawValues) {
         if (rawValues == null || rawValues.isEmpty()) {
             return List.of();

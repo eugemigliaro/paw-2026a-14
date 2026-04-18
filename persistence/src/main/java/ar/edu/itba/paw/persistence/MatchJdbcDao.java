@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -96,8 +97,8 @@ public class MatchJdbcDao implements MatchDao {
             final String address,
             final String title,
             final String description,
-            final java.time.Instant startsAt,
-            final java.time.Instant endsAt,
+            final Instant startsAt,
+            final Instant endsAt,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
@@ -152,6 +153,8 @@ public class MatchJdbcDao implements MatchDao {
             final String query,
             final List<Sport> sports,
             final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final MatchSort sort,
@@ -170,6 +173,8 @@ public class MatchJdbcDao implements MatchDao {
                 query,
                 sports,
                 timeFilter,
+                startsAtFrom,
+                startsAtTo,
                 zoneId,
                 minPrice,
                 maxPrice,
@@ -191,6 +196,8 @@ public class MatchJdbcDao implements MatchDao {
             final String query,
             final List<Sport> sports,
             final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final ZoneId zoneId) {
@@ -207,6 +214,8 @@ public class MatchJdbcDao implements MatchDao {
                 query,
                 sports,
                 timeFilter,
+                startsAtFrom,
+                startsAtTo,
                 zoneId,
                 minPrice,
                 maxPrice,
@@ -229,6 +238,8 @@ public class MatchJdbcDao implements MatchDao {
             final List<EventVisibility> visibility,
             final List<EventStatus> statuses,
             final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final MatchSort sort,
@@ -248,6 +259,8 @@ public class MatchJdbcDao implements MatchDao {
                 query,
                 sports,
                 timeFilter,
+                startsAtFrom,
+                startsAtTo,
                 zoneId,
                 minPrice,
                 maxPrice,
@@ -272,6 +285,8 @@ public class MatchJdbcDao implements MatchDao {
             final List<EventVisibility> visibility,
             final List<EventStatus> statuses,
             final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final ZoneId zoneId) {
@@ -289,6 +304,8 @@ public class MatchJdbcDao implements MatchDao {
                 query,
                 sports,
                 timeFilter,
+                startsAtFrom,
+                startsAtTo,
                 zoneId,
                 minPrice,
                 maxPrice,
@@ -310,6 +327,8 @@ public class MatchJdbcDao implements MatchDao {
             final List<EventVisibility> visibility,
             final List<EventStatus> statuses,
             final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final MatchSort sort,
@@ -334,6 +353,8 @@ public class MatchJdbcDao implements MatchDao {
                 query,
                 sports,
                 timeFilter,
+                startsAtFrom,
+                startsAtTo,
                 zoneId,
                 minPrice,
                 maxPrice,
@@ -358,6 +379,8 @@ public class MatchJdbcDao implements MatchDao {
             final List<EventVisibility> visibility,
             final List<EventStatus> statuses,
             final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final ZoneId zoneId) {
@@ -380,6 +403,8 @@ public class MatchJdbcDao implements MatchDao {
                 query,
                 sports,
                 timeFilter,
+                startsAtFrom,
+                startsAtTo,
                 zoneId,
                 minPrice,
                 maxPrice,
@@ -501,6 +526,10 @@ public class MatchJdbcDao implements MatchDao {
             return;
         }
 
+        if (Boolean.FALSE.equals(upcoming) && timeFilter == EventTimeFilter.TOMORROW) {
+            return;
+        }
+
         final ZoneId safeZoneId = zoneId == null ? ZoneId.systemDefault() : zoneId;
 
         if (timeFilter == EventTimeFilter.FUTURE) {
@@ -550,6 +579,8 @@ public class MatchJdbcDao implements MatchDao {
             final String query,
             final List<Sport> sports,
             final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
             final ZoneId zoneId,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
@@ -560,9 +591,28 @@ public class MatchJdbcDao implements MatchDao {
         appendVisibilityFilter(sql, params, visibility);
         appendSearchFilter(sql, params, query);
         appendSportFilter(sql, params, sports);
-        appendTimeFilter(sql, params, timeFilter, zoneId, upcoming);
+        appendDateRangeFilter(sql, params, startsAtFrom, startsAtTo);
+        if (startsAtFrom == null && startsAtTo == null) {
+            appendTimeFilter(sql, params, timeFilter, zoneId, upcoming);
+        }
         appendPriceFilter(sql, params, minPrice, maxPrice);
         appendUpcomingConstraint(sql, upcoming);
+    }
+
+    private static void appendDateRangeFilter(
+            final StringBuilder sql,
+            final List<Object> params,
+            final Instant startsAtFrom,
+            final Instant startsAtTo) {
+        if (startsAtFrom != null) {
+            sql.append(" AND m.starts_at >= ?");
+            params.add(Timestamp.from(startsAtFrom));
+        }
+
+        if (startsAtTo != null) {
+            sql.append(" AND m.starts_at < ?");
+            params.add(Timestamp.from(startsAtTo));
+        }
     }
 
     private static void appendOpenSpotsConstraint(final StringBuilder sql) {
@@ -600,15 +650,9 @@ public class MatchJdbcDao implements MatchDao {
             return new TimeRange(start.toInstant(), now.toInstant());
         }
 
-        if (timeFilter == EventTimeFilter.TOMORROW) {
-            final ZonedDateTime start = today.minusDays(1).atStartOfDay(zoneId);
-            final ZonedDateTime end = today.atStartOfDay(zoneId);
-            return new TimeRange(start.toInstant(), end.toInstant());
-        }
-
         final ZonedDateTime start = now.minusDays(7);
         return new TimeRange(start.toInstant(), now.toInstant());
     }
 
-    private record TimeRange(java.time.Instant start, java.time.Instant end) {}
+    private record TimeRange(Instant start, Instant end) {}
 }

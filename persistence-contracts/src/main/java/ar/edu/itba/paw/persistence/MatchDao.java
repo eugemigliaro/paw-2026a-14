@@ -34,6 +34,8 @@ public interface MatchDao {
             String query,
             List<Sport> sports,
             EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             MatchSort sort,
@@ -41,13 +43,50 @@ public interface MatchDao {
             int offset,
             int limit);
 
+    default List<Match> findPublicMatches(
+            final String query,
+            final List<Sport> sports,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final MatchSort sort,
+            final ZoneId zoneId,
+            final int offset,
+            final int limit) {
+        return findPublicMatches(
+                query,
+                sports,
+                timeFilter,
+                null,
+                null,
+                minPrice,
+                maxPrice,
+                sort,
+                zoneId,
+                offset,
+                limit);
+    }
+
     int countPublicMatches(
             String query,
             List<Sport> sports,
             EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             ZoneId zoneId);
+
+    default int countPublicMatches(
+            final String query,
+            final List<Sport> sports,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
+        return countPublicMatches(
+                query, sports, timeFilter, null, null, minPrice, maxPrice, zoneId);
+    }
 
     List<Match> findHostedMatches(
             Long hostUserId,
@@ -57,12 +96,46 @@ public interface MatchDao {
             List<EventVisibility> visibility,
             List<EventStatus> statuses,
             EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             MatchSort sort,
             ZoneId zoneId,
             int offset,
             int limit);
+
+    default List<Match> findHostedMatches(
+            final Long hostUserId,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final MatchSort sort,
+            final ZoneId zoneId,
+            final int offset,
+            final int limit) {
+        return findHostedMatches(
+                hostUserId,
+                upcoming,
+                query,
+                sports,
+                visibility,
+                statuses,
+                timeFilter,
+                null,
+                null,
+                minPrice,
+                maxPrice,
+                sort,
+                zoneId,
+                offset,
+                limit);
+    }
 
     int countHostedMatches(
             Long hostUserId,
@@ -72,9 +145,37 @@ public interface MatchDao {
             List<EventVisibility> visibility,
             List<EventStatus> statuses,
             EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             ZoneId zoneId);
+
+    default int countHostedMatches(
+            final Long hostUserId,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
+        return countHostedMatches(
+                hostUserId,
+                upcoming,
+                query,
+                sports,
+                visibility,
+                statuses,
+                timeFilter,
+                null,
+                null,
+                minPrice,
+                maxPrice,
+                zoneId);
+    }
 
     List<Match> findJoinedMatches(
             Long userId,
@@ -84,12 +185,46 @@ public interface MatchDao {
             List<EventVisibility> visibility,
             List<EventStatus> statuses,
             EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             MatchSort sort,
             ZoneId zoneId,
             int offset,
             int limit);
+
+    default List<Match> findJoinedMatches(
+            final Long userId,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final MatchSort sort,
+            final ZoneId zoneId,
+            final int offset,
+            final int limit) {
+        return findJoinedMatches(
+                userId,
+                upcoming,
+                query,
+                sports,
+                visibility,
+                statuses,
+                timeFilter,
+                null,
+                null,
+                minPrice,
+                maxPrice,
+                sort,
+                zoneId,
+                offset,
+                limit);
+    }
 
     int countJoinedMatches(
             Long userId,
@@ -99,7 +234,35 @@ public interface MatchDao {
             List<EventVisibility> visibility,
             List<EventStatus> statuses,
             EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             ZoneId zoneId);
+
+    default int countJoinedMatches(
+            final Long userId,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<EventVisibility> visibility,
+            final List<EventStatus> statuses,
+            final EventTimeFilter timeFilter,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
+        return countJoinedMatches(
+                userId,
+                upcoming,
+                query,
+                sports,
+                visibility,
+                statuses,
+                timeFilter,
+                null,
+                null,
+                minPrice,
+                maxPrice,
+                zoneId);
+    }
 }

@@ -4,7 +4,6 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
-import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeTime;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
@@ -19,6 +18,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -56,7 +56,8 @@ public class FeedController {
             final BindingResult bindingResult,
             @RequestParam(value = "email", required = false) final String email,
             @RequestParam(value = "sport", required = false) final List<String> sports,
-            @RequestParam(value = "time", defaultValue = "all") final String time,
+            @RequestParam(value = "startDate", required = false) final String startDate,
+            @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "sort", defaultValue = "soonest") final String sort,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             @RequestParam(value = "minPrice", required = false) final String minPrice,
@@ -68,18 +69,21 @@ public class FeedController {
                         ? ""
                         : feedSearchForm.getQ();
         final FeedFilters filters =
-                normalizeFilters(sports, time, sort, timezone, minPrice, maxPrice);
+                normalizeFilters(sports, startDate, endDate, sort, timezone, minPrice, maxPrice);
         final PaginatedResult<Match> result = searchPublicMatches(query, filters, page);
         final ModelAndView mav = new ModelAndView("feed/index");
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/"));
         mav.addObject("selectedSort", filters.selectedSort());
-        mav.addObject("selectedTime", filters.selectedTime());
         mav.addObject("selectedSports", filters.selectedSports());
         mav.addObject("selectedTimezone", filters.timezone());
         mav.addObject("selectedMinPrice", filters.minPrice());
         mav.addObject("selectedMaxPrice", filters.maxPrice());
         mav.addObject("selectedMinPriceValue", formatNullablePriceValue(filters.minPrice()));
         mav.addObject("selectedMaxPriceValue", formatNullablePriceValue(filters.maxPrice()));
+        mav.addObject(
+                "selectedDateMinValue", LocalDate.now(parseZone(filters.timezone())).toString());
+        mav.addObject("selectedStartDateValue", filters.startDate());
+        mav.addObject("selectedEndDateValue", filters.endDate());
         mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
         return mav;
     }
@@ -122,7 +126,8 @@ public class FeedController {
         return matchService.searchPublicMatches(
                 query,
                 encodedSports,
-                filters.selectedTime(),
+                filters.startDate(),
+                filters.endDate(),
                 filters.selectedSort(),
                 safePage,
                 PAGE_SIZE,
@@ -185,7 +190,6 @@ public class FeedController {
             final Locale locale,
             final String email) {
         final List<String> selectedSports = filters.selectedSports();
-        final String selectedTime = filters.selectedTime();
 
         return List.of(
                 new FilterGroupViewModel(
@@ -246,46 +250,7 @@ public class FeedController {
                                                 email,
                                                 locale),
                                         null,
-                                        isSportSelected(selectedSports, Sport.PADEL)))),
-                new FilterGroupViewModel(
-                        messageSource.getMessage("filter.time", null, locale),
-                        List.of(
-                                new FilterOptionViewModel(
-                                        messageSource.getMessage("filter.anyTime", null, locale),
-                                        buildUrl(query, filters.withTime("all"), 1, email, locale),
-                                        null,
-                                        "all".equalsIgnoreCase(selectedTime)),
-                                new FilterOptionViewModel(
-                                        messageSource.getMessage("filter.today", null, locale),
-                                        buildUrl(
-                                                query,
-                                                filters.withTime(toggleTime(selectedTime, "today")),
-                                                1,
-                                                email,
-                                                locale),
-                                        null,
-                                        "today".equalsIgnoreCase(selectedTime)),
-                                new FilterOptionViewModel(
-                                        messageSource.getMessage("filter.tomorrow", null, locale),
-                                        buildUrl(
-                                                query,
-                                                filters.withTime(
-                                                        toggleTime(selectedTime, "tomorrow")),
-                                                1,
-                                                email,
-                                                locale),
-                                        null,
-                                        "tomorrow".equalsIgnoreCase(selectedTime)),
-                                new FilterOptionViewModel(
-                                        messageSource.getMessage("filter.thisWeek", null, locale),
-                                        buildUrl(
-                                                query,
-                                                filters.withTime(toggleTime(selectedTime, "week")),
-                                                1,
-                                                email,
-                                                locale),
-                                        null,
-                                        "week".equalsIgnoreCase(selectedTime)))));
+                                        isSportSelected(selectedSports, Sport.PADEL)))));
     }
 
     private EventCardViewModel toCard(final Match match, final ZoneId zoneId, final Locale locale) {
@@ -367,7 +332,6 @@ public class FeedController {
         final UriComponentsBuilder builder =
                 UriComponentsBuilder.fromPath("/explore")
                         .queryParam("q", query == null ? "" : query)
-                        .queryParam("time", filters.selectedTime())
                         .queryParam("sort", filters.selectedSort())
                         .queryParam("page", page);
 
@@ -380,6 +344,12 @@ public class FeedController {
 
         for (final String sport : filters.selectedSports()) {
             builder.queryParam("sport", sport.toLowerCase(Locale.ROOT));
+        }
+        if (filters.startDate() != null && !filters.startDate().isBlank()) {
+            builder.queryParam("startDate", filters.startDate());
+        }
+        if (filters.endDate() != null && !filters.endDate().isBlank()) {
+            builder.queryParam("endDate", filters.endDate());
         }
         if (filters.timezone() != null && !filters.timezone().isBlank()) {
             builder.queryParam("tz", filters.timezone());
@@ -406,20 +376,58 @@ public class FeedController {
 
     private static FeedFilters normalizeFilters(
             final List<String> sports,
-            final String time,
+            final String startDate,
+            final String endDate,
             final String sort,
             final String timezone,
             final String minPrice,
             final String maxPrice) {
+        final String normalizedTimezone = normalizeTimezone(timezone);
         final PriceRange priceRange = normalizePriceRange(minPrice, maxPrice);
+        final DateRange dateRange = normalizeDateRange(startDate, endDate, normalizedTimezone);
 
         return new FeedFilters(
                 normalizeSports(sports),
-                normalizeTime(time),
+                dateRange.startDate(),
+                dateRange.endDate(),
                 normalizeSort(sort),
-                normalizeTimezone(timezone),
+                normalizedTimezone,
                 priceRange.minPrice(),
                 priceRange.maxPrice());
+    }
+
+    private static DateRange normalizeDateRange(
+            final String rawStartDate, final String rawEndDate, final String timezone) {
+        final LocalDate today = LocalDate.now(parseZone(timezone));
+        LocalDate startDate = parseDate(rawStartDate);
+        LocalDate endDate = parseDate(rawEndDate);
+
+        if (startDate != null && startDate.isBefore(today)) {
+            startDate = today;
+        }
+        if (endDate != null && endDate.isBefore(today)) {
+            endDate = today;
+        }
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return new DateRange(endDate.toString(), startDate.toString());
+        }
+
+        return new DateRange(
+                startDate == null ? null : startDate.toString(),
+                endDate == null ? null : endDate.toString());
+    }
+
+    private static LocalDate parseDate(final String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(rawDate.trim());
+        } catch (final Exception ignored) {
+            return null;
+        }
     }
 
     private static String normalizeTimezone(final String timezone) {
@@ -466,10 +474,6 @@ public class FeedController {
         return toggleValue(normalizeSports(selectedSports), sportToToggle.getDbValue());
     }
 
-    private static String toggleTime(final String selectedTime, final String timeToToggle) {
-        return timeToToggle.equalsIgnoreCase(selectedTime) ? "all" : timeToToggle;
-    }
-
     private static String formatPriceValue(final BigDecimal price) {
         return price.stripTrailingZeros().toPlainString();
     }
@@ -480,9 +484,12 @@ public class FeedController {
 
     private record PriceRange(BigDecimal minPrice, BigDecimal maxPrice) {}
 
+    private record DateRange(String startDate, String endDate) {}
+
     private record FeedFilters(
             List<String> selectedSports,
-            String selectedTime,
+            String startDate,
+            String endDate,
             String selectedSort,
             String timezone,
             BigDecimal minPrice,
@@ -491,17 +498,8 @@ public class FeedController {
         private FeedFilters withSports(final List<String> sports) {
             return new FeedFilters(
                     normalizeSports(sports),
-                    selectedTime,
-                    selectedSort,
-                    timezone,
-                    minPrice,
-                    maxPrice);
-        }
-
-        private FeedFilters withTime(final String time) {
-            return new FeedFilters(
-                    selectedSports,
-                    normalizeTime(time),
+                    startDate,
+                    endDate,
                     selectedSort,
                     timezone,
                     minPrice,

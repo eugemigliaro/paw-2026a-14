@@ -28,12 +28,15 @@ import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.MatchListControlsViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -51,6 +54,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
@@ -189,7 +193,8 @@ class PawUiRouteTest {
                             final String sport,
                             final String visibility,
                             final String status,
-                            final String time,
+                            final String startDate,
+                            final String endDate,
                             final java.math.BigDecimal minPrice,
                             final java.math.BigDecimal maxPrice,
                             final String sort,
@@ -211,7 +216,8 @@ class PawUiRouteTest {
                             final String sport,
                             final String visibility,
                             final String status,
-                            final String time,
+                            final String startDate,
+                            final String endDate,
                             final java.math.BigDecimal minPrice,
                             final java.math.BigDecimal maxPrice,
                             final String sort,
@@ -229,7 +235,8 @@ class PawUiRouteTest {
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
                             final String sport,
-                            final String time,
+                            final String startDate,
+                            final String endDate,
                             final String sort,
                             final int page,
                             final int pageSize,
@@ -653,6 +660,25 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getHostFinishedMatchesDefaultsDateRangeAndNoLegacyTimeOption() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+
+        final MvcResult result =
+                mockMvc.perform(get("/host/matches/finished").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("matches/list"))
+                        .andExpect(
+                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
+                        .andExpect(model().attribute("selectedEndDateValue", today))
+                        .andReturn();
+
+        assertNoTomorrowTimeOption(
+                (MatchListControlsViewModel)
+                        result.getModelAndView().getModel().get("listControls"));
+    }
+
+    @Test
     void getPlayerPastMatchesRouteRendersPastPage() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
@@ -663,13 +689,35 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getPlayerPastMatchesDefaultsDateRangeAndNoLegacyTimeOption() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+
+        final MvcResult result =
+                mockMvc.perform(get("/player/matches/past").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("matches/list"))
+                        .andExpect(
+                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
+                        .andExpect(model().attribute("selectedEndDateValue", today))
+                        .andReturn();
+
+        assertNoTomorrowTimeOption(
+                (MatchListControlsViewModel)
+                        result.getModelAndView().getModel().get("listControls"));
+    }
+
+    @Test
     void getPlayerUpcomingMatchesRouteRendersUpcomingPage() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
+        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
 
         mockMvc.perform(get("/player/matches/upcoming"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/list"))
-                .andExpect(model().attributeExists("events"));
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attribute("selectedStartDateValue", today))
+                .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()));
     }
 
     @Test
@@ -691,6 +739,19 @@ class PawUiRouteTest {
                 new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    private static void assertNoTomorrowTimeOption(final MatchListControlsViewModel listControls) {
+        final boolean hasTomorrowOption =
+                listControls.getFilterGroups().stream()
+                        .map(FilterGroupViewModel::getOptions)
+                        .flatMap(List::stream)
+                        .anyMatch(
+                                option ->
+                                        option.getHref() != null
+                                                && option.getHref().contains("time=tomorrow"));
+
+        Assertions.assertFalse(hasTomorrowOption);
     }
 
     private static MessageSource messageSource() {

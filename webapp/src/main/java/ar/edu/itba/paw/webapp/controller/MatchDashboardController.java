@@ -4,7 +4,6 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
-import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeTime;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
@@ -21,6 +20,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.SelectOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -65,7 +65,8 @@ public class MatchDashboardController {
     public ModelAndView showHostedMatches(
             @RequestParam(value = "q", required = false) final String query,
             @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "time", required = false) final String time,
+            @RequestParam(value = "startDate", required = false) final String startDate,
+            @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
             @RequestParam(value = "timezone", required = false) final String timezone,
@@ -81,9 +82,11 @@ public class MatchDashboardController {
         final List<String> selectedStatuses =
                 normalizeValues(statuses, List.of(), HOST_ALL_STATUS_OPTIONS);
         final String selectedSort = normalizeSort(sort);
-        final String selectedTime = normalizeTime(time);
         final String searchQuery = normalizeQuery(query);
         final String selectedTimezone = normalizeTimezone(timezone);
+        final DateRange selectedDateRange =
+                normalizeDateRange(
+                        startDate, endDate, DateRangeContext.UPCOMING, ZoneId.of(selectedTimezone));
 
         final PaginatedResult<Match> result =
                 matchService.findHostedMatches(
@@ -93,7 +96,8 @@ public class MatchDashboardController {
                         encodeCsv(selectedSports),
                         encodeCsv(selectedVisibility),
                         encodeCsv(selectedStatuses),
-                        selectedTime,
+                        selectedDateRange.startDate(),
+                        selectedDateRange.endDate(),
                         minPrice,
                         maxPrice,
                         selectedSort,
@@ -108,7 +112,8 @@ public class MatchDashboardController {
                 locale,
                 searchQuery,
                 selectedSort,
-                selectedTime,
+                selectedDateRange.startDate(),
+                selectedDateRange.endDate(),
                 minPrice,
                 maxPrice,
                 selectedTimezone,
@@ -126,7 +131,8 @@ public class MatchDashboardController {
     public ModelAndView showFinishedHostedMatches(
             @RequestParam(value = "q", required = false) final String query,
             @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "time", required = false) final String time,
+            @RequestParam(value = "startDate", required = false) final String startDate,
+            @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
             @RequestParam(value = "timezone", required = false) final String timezone,
@@ -143,9 +149,11 @@ public class MatchDashboardController {
                 normalizeValues(
                         statuses, HOST_FINISHED_STATUS_OPTIONS, HOST_FINISHED_STATUS_OPTIONS);
         final String selectedSort = normalizeSort(sort);
-        final String selectedTime = normalizeTime(time);
         final String searchQuery = normalizeQuery(query);
         final String selectedTimezone = normalizeTimezone(timezone);
+        final DateRange selectedDateRange =
+                normalizeDateRange(
+                        startDate, endDate, DateRangeContext.PAST, ZoneId.of(selectedTimezone));
 
         final PaginatedResult<Match> result =
                 matchService.findHostedMatches(
@@ -155,7 +163,8 @@ public class MatchDashboardController {
                         encodeCsv(selectedSports),
                         encodeCsv(selectedVisibility),
                         encodeCsv(selectedStatuses),
-                        selectedTime,
+                        selectedDateRange.startDate(),
+                        selectedDateRange.endDate(),
                         minPrice,
                         maxPrice,
                         selectedSort,
@@ -170,7 +179,8 @@ public class MatchDashboardController {
                 locale,
                 searchQuery,
                 selectedSort,
-                selectedTime,
+                selectedDateRange.startDate(),
+                selectedDateRange.endDate(),
                 minPrice,
                 maxPrice,
                 selectedTimezone,
@@ -188,7 +198,8 @@ public class MatchDashboardController {
     public ModelAndView showPastJoinedMatches(
             @RequestParam(value = "q", required = false) final String query,
             @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "time", required = false) final String time,
+            @RequestParam(value = "startDate", required = false) final String startDate,
+            @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
             @RequestParam(value = "timezone", required = false) final String timezone,
@@ -201,9 +212,11 @@ public class MatchDashboardController {
         final List<String> selectedStatuses =
                 normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
         final String selectedSort = normalizeSort(sort);
-        final String selectedTime = normalizeTime(time);
         final String searchQuery = normalizeQuery(query);
         final String selectedTimezone = normalizeTimezone(timezone);
+        final DateRange selectedDateRange =
+                normalizeDateRange(
+                        startDate, endDate, DateRangeContext.PAST, ZoneId.of(selectedTimezone));
 
         final PaginatedResult<Match> result =
                 matchService.findJoinedMatches(
@@ -213,7 +226,8 @@ public class MatchDashboardController {
                         encodeCsv(selectedSports),
                         null,
                         encodeCsv(selectedStatuses),
-                        selectedTime,
+                        selectedDateRange.startDate(),
+                        selectedDateRange.endDate(),
                         minPrice,
                         maxPrice,
                         selectedSort,
@@ -228,7 +242,8 @@ public class MatchDashboardController {
                 locale,
                 searchQuery,
                 selectedSort,
-                selectedTime,
+                selectedDateRange.startDate(),
+                selectedDateRange.endDate(),
                 minPrice,
                 maxPrice,
                 selectedTimezone,
@@ -246,7 +261,8 @@ public class MatchDashboardController {
     public ModelAndView showUpcomingJoinedMatches(
             @RequestParam(value = "q", required = false) final String query,
             @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "time", required = false) final String time,
+            @RequestParam(value = "startDate", required = false) final String startDate,
+            @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
             @RequestParam(value = "timezone", required = false) final String timezone,
@@ -259,9 +275,11 @@ public class MatchDashboardController {
         final List<String> selectedStatuses =
                 normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
         final String selectedSort = normalizeSort(sort);
-        final String selectedTime = normalizeTime(time);
         final String searchQuery = normalizeQuery(query);
         final String selectedTimezone = normalizeTimezone(timezone);
+        final DateRange selectedDateRange =
+                normalizeDateRange(
+                        startDate, endDate, DateRangeContext.UPCOMING, ZoneId.of(selectedTimezone));
 
         final PaginatedResult<Match> result =
                 matchService.findJoinedMatches(
@@ -271,7 +289,8 @@ public class MatchDashboardController {
                         encodeCsv(selectedSports),
                         null,
                         encodeCsv(selectedStatuses),
-                        selectedTime,
+                        selectedDateRange.startDate(),
+                        selectedDateRange.endDate(),
                         minPrice,
                         maxPrice,
                         selectedSort,
@@ -286,7 +305,8 @@ public class MatchDashboardController {
                 locale,
                 searchQuery,
                 selectedSort,
-                selectedTime,
+                selectedDateRange.startDate(),
+                selectedDateRange.endDate(),
                 minPrice,
                 maxPrice,
                 selectedTimezone,
@@ -308,7 +328,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -322,6 +343,7 @@ public class MatchDashboardController {
             final Object shell) {
         final ModelAndView mav = new ModelAndView(view);
         final ZoneId zoneId = ZoneId.systemDefault();
+        final DateRangeBounds dateBounds = dateRangeBounds(path, ZoneId.of(timezone));
 
         mav.addObject("shell", shell);
         mav.addObject("pageTitleCode", pageTitleCode);
@@ -329,7 +351,10 @@ public class MatchDashboardController {
         mav.addObject("listDescription", description);
         mav.addObject("emptyMessage", emptyMessage);
         mav.addObject("selectedSort", sort);
-        mav.addObject("selectedTime", time);
+        mav.addObject("selectedStartDateValue", startDate);
+        mav.addObject("selectedEndDateValue", endDate);
+        mav.addObject("selectedDateMinValue", dateBounds.minDate());
+        mav.addObject("selectedDateMaxValue", dateBounds.maxDate());
         mav.addObject("selectedSports", selectedSports);
         mav.addObject("selectedStatuses", selectedStatuses);
         mav.addObject("selectedVisibility", selectedVisibility);
@@ -344,7 +369,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -361,7 +387,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -377,7 +404,8 @@ public class MatchDashboardController {
                                 locale,
                                 searchQuery,
                                 sort,
-                                time,
+                                startDate,
+                                endDate,
                                 minPrice,
                                 maxPrice,
                                 timezone,
@@ -394,7 +422,8 @@ public class MatchDashboardController {
                                 locale,
                                 searchQuery,
                                 sort,
-                                time,
+                                startDate,
+                                endDate,
                                 minPrice,
                                 maxPrice,
                                 timezone,
@@ -470,7 +499,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String selectedTime,
+            final String selectedStartDate,
+            final String selectedEndDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -488,7 +518,8 @@ public class MatchDashboardController {
                                 locale,
                                 searchQuery,
                                 sort,
-                                selectedTime,
+                                selectedStartDate,
+                                selectedEndDate,
                                 minPrice,
                                 maxPrice,
                                 timezone,
@@ -505,7 +536,8 @@ public class MatchDashboardController {
                                     locale,
                                     searchQuery,
                                     sort,
-                                    selectedTime,
+                                    selectedStartDate,
+                                    selectedEndDate,
                                     minPrice,
                                     maxPrice,
                                     timezone,
@@ -523,7 +555,8 @@ public class MatchDashboardController {
                                     locale,
                                     searchQuery,
                                     sort,
-                                    selectedTime,
+                                    selectedStartDate,
+                                    selectedEndDate,
                                     minPrice,
                                     maxPrice,
                                     timezone,
@@ -539,7 +572,8 @@ public class MatchDashboardController {
                                     locale,
                                     searchQuery,
                                     sort,
-                                    selectedTime,
+                                    selectedStartDate,
+                                    selectedEndDate,
                                     minPrice,
                                     maxPrice,
                                     timezone,
@@ -548,22 +582,6 @@ public class MatchDashboardController {
                                     selectedVisibility,
                                     PLAYER_STATUS_OPTIONS)));
         }
-
-        filterGroups.add(
-                new FilterGroupViewModel(
-                        messageSource.getMessage("filter.time", null, locale),
-                        buildTimeFilterOptions(
-                                path,
-                                locale,
-                                searchQuery,
-                                sort,
-                                selectedTime,
-                                minPrice,
-                                maxPrice,
-                                timezone,
-                                selectedStatuses,
-                                selectedSports,
-                                selectedVisibility)));
         filterGroups.add(
                 new FilterGroupViewModel(
                         messageSource.getMessage("filter.price", null, locale),
@@ -572,7 +590,8 @@ public class MatchDashboardController {
                                 locale,
                                 searchQuery,
                                 sort,
-                                selectedTime,
+                                selectedStartDate,
+                                selectedEndDate,
                                 timezone,
                                 selectedStatuses,
                                 selectedSports,
@@ -586,7 +605,8 @@ public class MatchDashboardController {
                                 path,
                                 locale,
                                 searchQuery,
-                                selectedTime,
+                                selectedStartDate,
+                                selectedEndDate,
                                 minPrice,
                                 maxPrice,
                                 timezone,
@@ -600,7 +620,8 @@ public class MatchDashboardController {
                                 path,
                                 locale,
                                 searchQuery,
-                                selectedTime,
+                                selectedStartDate,
+                                selectedEndDate,
                                 minPrice,
                                 maxPrice,
                                 timezone,
@@ -614,7 +635,8 @@ public class MatchDashboardController {
                                 path,
                                 locale,
                                 searchQuery,
-                                selectedTime,
+                                selectedStartDate,
+                                selectedEndDate,
                                 minPrice,
                                 maxPrice,
                                 timezone,
@@ -630,7 +652,8 @@ public class MatchDashboardController {
                         path,
                         locale,
                         sort,
-                        selectedTime,
+                        selectedStartDate,
+                        selectedEndDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -652,7 +675,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -675,7 +699,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -696,7 +721,8 @@ public class MatchDashboardController {
                             locale,
                             searchQuery,
                             sort,
-                            time,
+                            startDate,
+                            endDate,
                             minPrice,
                             maxPrice,
                             timezone,
@@ -717,7 +743,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -735,7 +762,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -751,7 +779,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -768,7 +797,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -784,8 +814,11 @@ public class MatchDashboardController {
         if (sort != null && !sort.isBlank()) {
             builder.queryParam("sort", sort);
         }
-        if (time != null && !time.isBlank()) {
-            builder.queryParam("time", time);
+        if (startDate != null && !startDate.isBlank()) {
+            builder.queryParam("startDate", startDate);
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            builder.queryParam("endDate", endDate);
         }
         if (minPrice != null) {
             builder.queryParam("minPrice", minPrice);
@@ -822,7 +855,8 @@ public class MatchDashboardController {
             final String path,
             final Locale locale,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -834,7 +868,8 @@ public class MatchDashboardController {
                 locale,
                 null,
                 sort,
-                time,
+                startDate,
+                endDate,
                 minPrice,
                 maxPrice,
                 timezone,
@@ -848,7 +883,8 @@ public class MatchDashboardController {
             final String path,
             final Locale locale,
             final String searchQuery,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -865,7 +901,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         value,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -881,7 +918,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -897,7 +935,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -914,7 +953,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -927,7 +967,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -941,7 +982,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -955,7 +997,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -969,7 +1012,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -983,7 +1027,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -999,7 +1044,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -1014,7 +1060,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -1031,7 +1078,8 @@ public class MatchDashboardController {
                             locale,
                             searchQuery,
                             sort,
-                            time,
+                            startDate,
+                            endDate,
                             minPrice,
                             maxPrice,
                             timezone,
@@ -1050,7 +1098,8 @@ public class MatchDashboardController {
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String timezone,
@@ -1063,7 +1112,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -1077,7 +1127,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -1091,7 +1142,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -1105,7 +1157,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        time,
+                        startDate,
+                        endDate,
                         minPrice,
                         maxPrice,
                         timezone,
@@ -1116,83 +1169,13 @@ public class MatchDashboardController {
                         messageSource.getMessage("visibility.inviteOnly", null, locale)));
     }
 
-    private List<FilterOptionViewModel> buildTimeFilterOptions(
-            final String path,
-            final Locale locale,
-            final String searchQuery,
-            final String sort,
-            final String selectedTime,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String timezone,
-            final List<String> selectedStatuses,
-            final List<String> selectedSports,
-            final List<String> selectedVisibility) {
-        return List.of(
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        "all",
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        "all".equals(selectedTime),
-                        messageSource.getMessage("filter.anyTime", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        "today",
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        "today".equals(selectedTime),
-                        messageSource.getMessage("filter.today", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        "tomorrow",
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        "tomorrow".equals(selectedTime),
-                        messageSource.getMessage("filter.tomorrow", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        "week",
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        "week".equals(selectedTime),
-                        messageSource.getMessage("filter.thisWeek", null, locale)));
-    }
-
     private List<FilterOptionViewModel> buildPriceFilterOptions(
             final String path,
             final Locale locale,
             final String searchQuery,
             final String sort,
-            final String selectedTime,
+            final String selectedStartDate,
+            final String selectedEndDate,
             final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
@@ -1205,7 +1188,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        selectedTime,
+                        selectedStartDate,
+                        selectedEndDate,
                         null,
                         null,
                         timezone,
@@ -1219,7 +1203,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        selectedTime,
+                        selectedStartDate,
+                        selectedEndDate,
                         BigDecimal.ZERO,
                         BigDecimal.ZERO,
                         timezone,
@@ -1234,7 +1219,8 @@ public class MatchDashboardController {
                         locale,
                         searchQuery,
                         sort,
-                        selectedTime,
+                        selectedStartDate,
+                        selectedEndDate,
                         new BigDecimal("0.01"),
                         null,
                         timezone,
@@ -1249,6 +1235,62 @@ public class MatchDashboardController {
 
     private static String normalizeQuery(final String query) {
         return query == null ? "" : query.trim();
+    }
+
+    private static DateRange normalizeDateRange(
+            final String rawStartDate,
+            final String rawEndDate,
+            final DateRangeContext context,
+            final ZoneId zoneId) {
+        LocalDate startDate = parseDate(rawStartDate);
+        LocalDate endDate = parseDate(rawEndDate);
+        final LocalDate today = LocalDate.now(zoneId);
+
+        if (context == DateRangeContext.UPCOMING) {
+            if (startDate == null || startDate.isBefore(today)) {
+                startDate = today;
+            }
+            if (endDate != null && endDate.isBefore(today)) {
+                endDate = today;
+            }
+        } else if (context == DateRangeContext.PAST) {
+            if (endDate == null || endDate.isAfter(today)) {
+                endDate = today;
+            }
+            if (startDate != null && startDate.isAfter(today)) {
+                startDate = today;
+            }
+        }
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            final LocalDate temp = startDate;
+            startDate = endDate;
+            endDate = temp;
+        }
+
+        return new DateRange(
+                startDate == null ? null : startDate.toString(),
+                endDate == null ? null : endDate.toString());
+    }
+
+    private static DateRangeBounds dateRangeBounds(final String path, final ZoneId zoneId) {
+        final LocalDate today = LocalDate.now(zoneId);
+        if (path.endsWith("/finished") || path.endsWith("/past")) {
+            return new DateRangeBounds(null, today.toString());
+        }
+        return new DateRangeBounds(today.toString(), null);
+    }
+
+    private static LocalDate parseDate(final String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(rawDate.trim());
+        } catch (final Exception ignored) {
+            return null;
+        }
     }
 
     private static String normalizeTimezone(final String timezone) {
@@ -1299,5 +1341,14 @@ public class MatchDashboardController {
 
     private static String formatNullablePriceValue(final BigDecimal price) {
         return price == null ? "" : price.stripTrailingZeros().toPlainString();
+    }
+
+    private record DateRange(String startDate, String endDate) {}
+
+    private record DateRangeBounds(String minDate, String maxDate) {}
+
+    private enum DateRangeContext {
+        UPCOMING,
+        PAST
     }
 }

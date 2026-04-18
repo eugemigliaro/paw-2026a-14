@@ -33,11 +33,15 @@ public class MatchServiceImplTest {
     @Test
     public void testSearchPublicMatchesWithValidInputs() {
         final Match match = createTestMatch(1L, "Football", "football");
+        final Instant expectedStart = Instant.parse("2026-04-10T00:00:00Z");
+        final Instant expectedEndExclusive = Instant.parse("2026-04-17T00:00:00Z");
         Mockito.when(
                         matchDao.findPublicMatches(
                                 "football",
                                 List.of(Sport.FOOTBALL),
-                                EventTimeFilter.WEEK,
+                                EventTimeFilter.ALL,
+                                expectedStart,
+                                expectedEndExclusive,
                                 null,
                                 null,
                                 MatchSort.SOONEST,
@@ -49,7 +53,9 @@ public class MatchServiceImplTest {
                         matchDao.countPublicMatches(
                                 "football",
                                 List.of(Sport.FOOTBALL),
-                                EventTimeFilter.WEEK,
+                                EventTimeFilter.ALL,
+                                expectedStart,
+                                expectedEndExclusive,
                                 null,
                                 null,
                                 ZoneId.of("UTC")))
@@ -57,7 +63,16 @@ public class MatchServiceImplTest {
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        "football", "football", "week", "soonest", 2, 10, "UTC", null, null);
+                        "football",
+                        "football",
+                        "2026-04-10",
+                        "2026-04-16",
+                        "soonest",
+                        2,
+                        10,
+                        "UTC",
+                        null,
+                        null);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Football", result.getItems().get(0).getTitle());
@@ -76,6 +91,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
                                 0,
@@ -88,12 +105,14 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 ZoneId.of("UTC")))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null, "padel", null, null, 1, 0, "UTC", null, null);
+                        null, "padel", null, null, null, 1, 0, "UTC", null, null);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Padel", result.getItems().get(0).getTitle());
@@ -111,6 +130,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
                                 0,
@@ -123,6 +144,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 ZoneId.of("UTC")))
                 .thenReturn(2);
 
@@ -130,6 +153,7 @@ public class MatchServiceImplTest {
                 matchService.searchPublicMatches(
                         null,
                         "football,tennis,invalid,football",
+                        null,
                         null,
                         null,
                         1,
@@ -153,6 +177,8 @@ public class MatchServiceImplTest {
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
+                                null,
+                                null,
                                 minPrice,
                                 maxPrice,
                                 MatchSort.PRICE_LOW,
@@ -165,6 +191,8 @@ public class MatchServiceImplTest {
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
+                                null,
+                                null,
                                 minPrice,
                                 maxPrice,
                                 ZoneId.of("UTC")))
@@ -172,7 +200,7 @@ public class MatchServiceImplTest {
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null, "padel", null, "price", 1, 12, "UTC", minPrice, maxPrice);
+                        null, "padel", null, null, "price", 1, 12, "UTC", minPrice, maxPrice);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Premium Padel", result.getItems().get(0).getTitle());
@@ -188,6 +216,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 ZoneId.of("UTC")))
                 .thenReturn(13);
         Mockito.when(
@@ -195,6 +225,8 @@ public class MatchServiceImplTest {
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
+                                null,
+                                null,
                                 null,
                                 null,
                                 MatchSort.SOONEST,
@@ -205,7 +237,7 @@ public class MatchServiceImplTest {
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null, "padel", null, null, 99, 12, "UTC", null, null);
+                        null, "padel", null, null, null, 99, 12, "UTC", null, null);
 
         Assertions.assertEquals(2, result.getPage());
         Assertions.assertEquals(2, result.getTotalPages());
@@ -295,6 +327,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 ZoneId.systemDefault()))
                 .thenReturn(1);
         Mockito.when(
@@ -308,6 +342,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 MatchSort.SOONEST,
                                 ZoneId.systemDefault(),
                                 0,
@@ -316,7 +352,7 @@ public class MatchServiceImplTest {
 
         final PaginatedResult<Match> result =
                 matchService.findHostedMatches(
-                        9L, null, null, null, null, null, null, null, null, null, null, 1, 0);
+                        9L, null, null, null, null, null, null, null, null, null, null, null, 1, 0);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals(1, result.getTotalCount());
@@ -353,6 +389,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 ZoneId.systemDefault()))
                 .thenReturn(1);
         Mockito.when(
@@ -364,6 +402,8 @@ public class MatchServiceImplTest {
                                 List.of(),
                                 List.of(EventStatus.COMPLETED, EventStatus.CANCELLED),
                                 EventTimeFilter.ALL,
+                                null,
+                                null,
                                 null,
                                 null,
                                 MatchSort.SOONEST,
@@ -380,6 +420,7 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         "completed,cancelled,invalid,completed",
+                        null,
                         null,
                         null,
                         null,
@@ -406,6 +447,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 ZoneId.systemDefault()))
                 .thenReturn(11);
         Mockito.when(
@@ -419,6 +462,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 MatchSort.SOONEST,
                                 ZoneId.systemDefault(),
                                 10,
@@ -429,6 +474,7 @@ public class MatchServiceImplTest {
                 matchService.findJoinedMatches(
                         4L,
                         Boolean.FALSE,
+                        null,
                         null,
                         null,
                         null,
@@ -460,6 +506,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 ZoneId.systemDefault()))
                 .thenReturn(5);
         Mockito.when(
@@ -473,6 +521,8 @@ public class MatchServiceImplTest {
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
+                                null,
+                                null,
                                 MatchSort.SOONEST,
                                 ZoneId.systemDefault(),
                                 0,
@@ -483,6 +533,7 @@ public class MatchServiceImplTest {
                 matchService.findJoinedMatches(
                         4L,
                         Boolean.TRUE,
+                        null,
                         null,
                         null,
                         null,

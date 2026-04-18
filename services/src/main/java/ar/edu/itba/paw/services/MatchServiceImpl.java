@@ -11,10 +11,11 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -69,7 +70,8 @@ public class MatchServiceImpl implements MatchService {
             final String sport,
             final String visibility,
             final String status,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String sort,
@@ -79,8 +81,8 @@ public class MatchServiceImpl implements MatchService {
         final List<Sport> sportFilters = parseSports(sport);
         final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
         final List<EventStatus> statusFilters = parseStatuses(status);
-        final EventTimeFilter timeFilter = parseTimeFilter(time);
         final ZoneId zoneId = parseZone(timezone);
+        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
 
         return paginate(
                 page,
@@ -94,7 +96,9 @@ public class MatchServiceImpl implements MatchService {
                                 sportFilters,
                                 visibilityFilters,
                                 statusFilters,
-                                timeFilter,
+                                EventTimeFilter.ALL,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 zoneId),
@@ -106,7 +110,9 @@ public class MatchServiceImpl implements MatchService {
                                 sportFilters,
                                 visibilityFilters,
                                 statusFilters,
-                                timeFilter,
+                                EventTimeFilter.ALL,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 parseSort(sort),
@@ -123,7 +129,8 @@ public class MatchServiceImpl implements MatchService {
             final String sport,
             final String visibility,
             final String status,
-            final String time,
+            final String startDate,
+            final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final String sort,
@@ -133,8 +140,8 @@ public class MatchServiceImpl implements MatchService {
         final List<Sport> sportFilters = parseSports(sport);
         final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
         final List<EventStatus> statusFilters = parseStatuses(status);
-        final EventTimeFilter timeFilter = parseTimeFilter(time);
         final ZoneId zoneId = parseZone(timezone);
+        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
 
         return paginate(
                 page,
@@ -148,7 +155,9 @@ public class MatchServiceImpl implements MatchService {
                                 sportFilters,
                                 visibilityFilters,
                                 statusFilters,
-                                timeFilter,
+                                EventTimeFilter.ALL,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 zoneId),
@@ -160,7 +169,9 @@ public class MatchServiceImpl implements MatchService {
                                 sportFilters,
                                 visibilityFilters,
                                 statusFilters,
-                                timeFilter,
+                                EventTimeFilter.ALL,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 parseSort(sort),
@@ -173,7 +184,8 @@ public class MatchServiceImpl implements MatchService {
     public PaginatedResult<Match> searchPublicMatches(
             final String query,
             final String sport,
-            final String time,
+            final String startDate,
+            final String endDate,
             final String sort,
             final int page,
             final int pageSize,
@@ -181,9 +193,9 @@ public class MatchServiceImpl implements MatchService {
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
         final List<Sport> sportFilters = parseSports(sport);
-        final EventTimeFilter timeFilter = parseTimeFilter(time);
         final MatchSort sortFilter = parseSort(sort);
         final ZoneId zoneId = parseZone(timezone);
+        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
 
         return paginate(
                 page,
@@ -191,12 +203,21 @@ public class MatchServiceImpl implements MatchService {
                 DEFAULT_PAGE_SIZE,
                 safePageSize ->
                         matchDao.countPublicMatches(
-                                query, sportFilters, timeFilter, minPrice, maxPrice, zoneId),
+                                query,
+                                sportFilters,
+                                EventTimeFilter.ALL,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
+                                minPrice,
+                                maxPrice,
+                                zoneId),
                 (offset, safePageSize) ->
                         matchDao.findPublicMatches(
                                 query,
                                 sportFilters,
-                                timeFilter,
+                                EventTimeFilter.ALL,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 sortFilter,
@@ -253,24 +274,36 @@ public class MatchServiceImpl implements MatchService {
         return List.copyOf(visibility);
     }
 
-    private static EventTimeFilter parseTimeFilter(final String rawTime) {
-        if (rawTime == null || rawTime.isBlank()) {
-            return EventTimeFilter.ALL;
+    private static DateRange parseDateRange(
+            final String rawStartDate, final String rawEndDate, final ZoneId zoneId) {
+        final LocalDate startDate = parseDate(rawStartDate);
+        final LocalDate endDate = parseDate(rawEndDate);
+
+        if (startDate == null && endDate == null) {
+            return new DateRange(null, null);
         }
 
-        switch (rawTime.toLowerCase(Locale.ROOT)) {
-            case "all":
-                return EventTimeFilter.ALL;
-            case "future":
-                return EventTimeFilter.FUTURE;
-            case "today":
-                return EventTimeFilter.TODAY;
-            case "tomorrow":
-                return EventTimeFilter.TOMORROW;
-            case "week":
-                return EventTimeFilter.WEEK;
-            default:
-                return EventTimeFilter.ALL;
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            final Instant start = endDate.atStartOfDay(zoneId).toInstant();
+            final Instant endExclusive = startDate.plusDays(1).atStartOfDay(zoneId).toInstant();
+            return new DateRange(start, endExclusive);
+        }
+
+        final Instant start = startDate == null ? null : startDate.atStartOfDay(zoneId).toInstant();
+        final Instant endExclusive =
+                endDate == null ? null : endDate.plusDays(1).atStartOfDay(zoneId).toInstant();
+        return new DateRange(start, endExclusive);
+    }
+
+    private static LocalDate parseDate(final String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(rawDate.trim());
+        } catch (final Exception ignored) {
+            return null;
         }
     }
 
@@ -320,4 +353,6 @@ public class MatchServiceImpl implements MatchService {
     private interface SliceSupplier {
         List<Match> items(int offset, int safePageSize);
     }
+
+    private record DateRange(Instant start, Instant endExclusive) {}
 }
