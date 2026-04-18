@@ -39,7 +39,8 @@ public final class VerificationViews {
             final Locale locale,
             final String backHref) {
         final ModelAndView mav = new ModelAndView("verification/error");
-        mav.addObject("shell", ShellViewModelFactory.browseShell(ms, locale));
+        mav.addObject(
+                "shell", ShellViewModelFactory.playerShell(ms, locale, "/verification/error"));
         mav.addObject("title", titleFor(ex.getReason(), ms, locale));
         mav.addObject("message", ex.getMessage());
         mav.addObject("backHref", backHref);

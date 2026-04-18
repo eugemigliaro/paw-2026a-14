@@ -28,12 +28,15 @@ import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.MatchListControlsViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -51,6 +54,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
@@ -112,6 +116,38 @@ class PawUiRouteTest {
                         "open",
                         4,
                         null);
+        final Match completedMatch =
+                new Match(
+                        44L,
+                        Sport.BASKETBALL,
+                        7L,
+                        "South Sports Center",
+                        "Weekend Basketball",
+                        "Completed tournament",
+                        Instant.parse("2026-04-03T19:00:00Z"),
+                        Instant.parse("2026-04-03T21:00:00Z"),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "completed",
+                        10,
+                        null);
+        final Match cancelledFutureMatch =
+                new Match(
+                        45L,
+                        Sport.TENNIS,
+                        7L,
+                        "City Tennis Club",
+                        "Sunday Tennis",
+                        "Cancelled due to weather",
+                        Instant.parse("2026-04-08T12:00:00Z"),
+                        Instant.parse("2026-04-08T14:00:00Z"),
+                        6,
+                        BigDecimal.TEN,
+                        "public",
+                        "cancelled",
+                        2,
+                        null);
 
         final MatchService matchService =
                 new MatchService() {
@@ -136,7 +172,7 @@ class PawUiRouteTest {
                     }
 
                     @Override
-                    public Optional<Match> findPublicMatchById(final Long matchId) {
+                    public Optional<Match> findMatchById(final Long matchId) {
                         return matchId == 42L ? Optional.of(realMatch) : Optional.empty();
                     }
 
@@ -150,10 +186,57 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public PaginatedResult<Match> findHostedMatches(
+                            final Long hostUserId,
+                            final Boolean upcoming,
+                            final String query,
+                            final String sport,
+                            final String visibility,
+                            final String status,
+                            final String startDate,
+                            final String endDate,
+                            final java.math.BigDecimal minPrice,
+                            final java.math.BigDecimal maxPrice,
+                            final String sort,
+                            final String timezone,
+                            final int page,
+                            final int pageSize) {
+                        final List<Match> items =
+                                status != null && status.contains("completed")
+                                        ? List.of(completedMatch)
+                                        : List.of(realMatch);
+                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> findJoinedMatches(
+                            final Long userId,
+                            final Boolean upcoming,
+                            final String query,
+                            final String sport,
+                            final String visibility,
+                            final String status,
+                            final String startDate,
+                            final String endDate,
+                            final java.math.BigDecimal minPrice,
+                            final java.math.BigDecimal maxPrice,
+                            final String sort,
+                            final String timezone,
+                            final int page,
+                            final int pageSize) {
+                        final List<Match> items =
+                                Boolean.FALSE.equals(upcoming)
+                                        ? List.of(completedMatch)
+                                        : List.of(realMatch, cancelledFutureMatch);
+                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
+                    }
+
+                    @Override
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
                             final String sport,
-                            final String time,
+                            final String startDate,
+                            final String endDate,
                             final String sort,
                             final int page,
                             final int pageSize,
@@ -322,6 +405,7 @@ class PawUiRouteTest {
                                         messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
+                                new MatchDashboardController(matchService, messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(accountAuthService, messageSource))
                         .setViewResolvers(viewResolver)
@@ -553,6 +637,99 @@ class PawUiRouteTest {
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
     }
 
+    @Test
+    void getHostAllMatchesRouteRendersDashboardPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/list"))
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attributeExists("listTitle"));
+    }
+
+    @Test
+    void getHostFinishedMatchesRouteRendersFinishedPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/finished").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/list"))
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attributeExists("listTitle"));
+    }
+
+    @Test
+    void getHostFinishedMatchesDefaultsDateRangeAndNoLegacyTimeOption() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+
+        final MvcResult result =
+                mockMvc.perform(get("/host/matches/finished").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("matches/list"))
+                        .andExpect(
+                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
+                        .andExpect(model().attribute("selectedEndDateValue", today))
+                        .andReturn();
+
+        assertNoTomorrowTimeOption(
+                (MatchListControlsViewModel)
+                        result.getModelAndView().getModel().get("listControls"));
+    }
+
+    @Test
+    void getPlayerPastMatchesRouteRendersPastPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/player/matches/past"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/list"))
+                .andExpect(model().attributeExists("events"));
+    }
+
+    @Test
+    void getPlayerPastMatchesDefaultsDateRangeAndNoLegacyTimeOption() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+
+        final MvcResult result =
+                mockMvc.perform(get("/player/matches/past").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("matches/list"))
+                        .andExpect(
+                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
+                        .andExpect(model().attribute("selectedEndDateValue", today))
+                        .andReturn();
+
+        assertNoTomorrowTimeOption(
+                (MatchListControlsViewModel)
+                        result.getModelAndView().getModel().get("listControls"));
+    }
+
+    @Test
+    void getPlayerUpcomingMatchesRouteRendersUpcomingPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+
+        mockMvc.perform(get("/player/matches/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/list"))
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attribute("selectedStartDateValue", today))
+                .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()));
+    }
+
+    @Test
+    void getHostAllMatchesRouteWithSpanishLocaleLocalizesHeader() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/list"))
+                .andExpect(model().attribute("listTitle", "Panel de eventos organizados"));
+    }
+
     private void authenticateUser(final Long userId, final String email, final String username) {
         final AuthenticatedUserPrincipal principal =
                 new AuthenticatedUserPrincipal(
@@ -562,6 +739,19 @@ class PawUiRouteTest {
                 new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    private static void assertNoTomorrowTimeOption(final MatchListControlsViewModel listControls) {
+        final boolean hasTomorrowOption =
+                listControls.getFilterGroups().stream()
+                        .map(FilterGroupViewModel::getOptions)
+                        .flatMap(List::stream)
+                        .anyMatch(
+                                option ->
+                                        option.getHref() != null
+                                                && option.getHref().contains("time=tomorrow"));
+
+        Assertions.assertFalse(hasTomorrowOption);
     }
 
     private static MessageSource messageSource() {

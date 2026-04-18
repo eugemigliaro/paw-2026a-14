@@ -40,7 +40,7 @@
       href="${href}"
       class="${classes}"
       <c:if test="${not empty id}">id="${id}"</c:if>
-      <c:if test="${not empty ariaLabel}">aria-label="${ariaLabel}"</c:if>
+      <c:if test="${not empty ariaLabel}">aria-label="<c:out value='${ariaLabel}' />"</c:if>
       <c:if test="${not empty onClick}">onclick="${onClick}"</c:if>>
       <c:if test="${not empty imageUrl}">
         <div class="card__image"<c:if test="${not empty imageHeight}"> style="height: ${imageHeight};"</c:if>>
@@ -80,7 +80,7 @@
     <article
       class="${classes}"
       <c:if test="${not empty id}">id="${id}"</c:if>
-      <c:if test="${not empty ariaLabel}">aria-label="${ariaLabel}"</c:if>
+      <c:if test="${not empty ariaLabel}">aria-label="<c:out value='${ariaLabel}' />"</c:if>
       <c:if test="${not empty onClick}">onclick="${onClick}"</c:if>>
       <c:if test="${not empty imageUrl}">
         <div class="card__image"<c:if test="${not empty imageHeight}"> style="height: ${imageHeight};"</c:if>>

@@ -16,6 +16,7 @@
 <c:url var="cssHostCreateHref" value="/css/host-create.css" />
 <c:url var="cssVerificationHref" value="/css/verification.css" />
 <c:url var="cssErrorsHref" value="/css/errors.css" />
+<c:url var="cssMatchListsHref" value="/css/match-lists.css" />
 <c:url var="cssAuthHref" value="/css/auth.css" />
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
 <c:url var="timezoneFieldHref" value="/js/timezone-field.js" />
@@ -28,6 +29,7 @@
 <link rel="stylesheet" href="${cssHostCreateHref}" />
 <link rel="stylesheet" href="${cssVerificationHref}" />
 <link rel="stylesheet" href="${cssErrorsHref}" />
+<link rel="stylesheet" href="${cssMatchListsHref}" />
 <link rel="stylesheet" href="${cssAuthHref}" />
 <script defer src="${formSubmitGuardHref}"></script>
 <script defer src="${timezoneFieldHref}"></script>

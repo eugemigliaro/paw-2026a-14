@@ -47,9 +47,9 @@
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<input
 							type="hidden"
-							name="timezone"
+							name="tz"
 							id="match-timezone"
-							value="<c:out value='${createEventForm.timezone}' />"
+							value="<c:out value='${createEventForm.tz}' />"
 							data-browser-timezone-field="true" />
 						<c:if test="${not empty formError}">
 							<p class="field__error">

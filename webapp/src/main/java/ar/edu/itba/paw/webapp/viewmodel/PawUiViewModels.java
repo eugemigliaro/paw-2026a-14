@@ -108,6 +108,100 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class SelectOptionViewModel {
+        private final String label;
+        private final String href;
+        private final boolean selected;
+
+        public SelectOptionViewModel(
+                final String label, final String href, final boolean selected) {
+            this.label = label;
+            this.href = href;
+            this.selected = selected;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getHref() {
+            return href;
+        }
+
+        public boolean isSelected() {
+            return selected;
+        }
+    }
+
+    public static final class MatchListControlsViewModel {
+        private final String searchAction;
+        private final String searchLabel;
+        private final String searchQuery;
+        private final String searchPlaceholder;
+        private final String searchButtonLabel;
+        private final String sortLabel;
+        private final List<SelectOptionViewModel> sortOptions;
+        private final String filterTitle;
+        private final List<FilterGroupViewModel> filterGroups;
+
+        public MatchListControlsViewModel(
+                final String searchAction,
+                final String searchLabel,
+                final String searchQuery,
+                final String searchPlaceholder,
+                final String searchButtonLabel,
+                final String sortLabel,
+                final List<SelectOptionViewModel> sortOptions,
+                final String filterTitle,
+                final List<FilterGroupViewModel> filterGroups) {
+            this.searchAction = searchAction;
+            this.searchLabel = searchLabel;
+            this.searchQuery = searchQuery;
+            this.searchPlaceholder = searchPlaceholder;
+            this.searchButtonLabel = searchButtonLabel;
+            this.sortLabel = sortLabel;
+            this.sortOptions = sortOptions;
+            this.filterTitle = filterTitle;
+            this.filterGroups = filterGroups;
+        }
+
+        public String getSearchAction() {
+            return searchAction;
+        }
+
+        public String getSearchLabel() {
+            return searchLabel;
+        }
+
+        public String getSearchQuery() {
+            return searchQuery;
+        }
+
+        public String getSearchPlaceholder() {
+            return searchPlaceholder;
+        }
+
+        public String getSearchButtonLabel() {
+            return searchButtonLabel;
+        }
+
+        public String getSortLabel() {
+            return sortLabel;
+        }
+
+        public List<SelectOptionViewModel> getSortOptions() {
+            return sortOptions;
+        }
+
+        public String getFilterTitle() {
+            return filterTitle;
+        }
+
+        public List<FilterGroupViewModel> getFilterGroups() {
+            return filterGroups;
+        }
+    }
+
     public static final class ChipViewModel {
         private final String label;
         private final String href;
@@ -487,31 +581,6 @@ public final class PawUiViewModels {
 
         public List<EventCardViewModel> getNearbyEvents() {
             return nearbyEvents;
-        }
-    }
-
-    public static final class SelectOptionViewModel {
-        private final String value;
-        private final String label;
-        private final boolean selected;
-
-        public SelectOptionViewModel(
-                final String value, final String label, final boolean selected) {
-            this.value = value;
-            this.label = label;
-            this.selected = selected;
-        }
-
-        public String getValue() {
-            return value;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public boolean isSelected() {
-            return selected;
         }
     }
 }
