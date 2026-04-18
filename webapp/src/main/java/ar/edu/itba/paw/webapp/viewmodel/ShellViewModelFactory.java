@@ -51,7 +51,7 @@ public final class ShellViewModelFactory {
                 isAuthenticated()
                         ? new NavItemViewModel(
                                 ms.getMessage("nav.switchToHosting", null, locale),
-                                "/host/matches/new",
+                                withLang("/host/matches/new", locale),
                                 false)
                         : null,
                 navItems);
@@ -91,7 +91,7 @@ public final class ShellViewModelFactory {
                 ms.getMessage("app.brand", null, locale),
                 new NavItemViewModel(
                         ms.getMessage("nav.switchToPlayer", null, locale),
-                        withLang(activePath, locale),
+                        withLang("/", locale),
                         false),
                 navItems);
     }

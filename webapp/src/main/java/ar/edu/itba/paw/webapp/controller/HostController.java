@@ -89,14 +89,14 @@ public class HostController {
                 toInstant(
                         createEventForm.getEventDate(),
                         createEventForm.getEventTime(),
-                        createEventForm.getTimezone());
+                        createEventForm.getTz());
         final Instant endsAt =
                 createEventForm.getEndTime() == null
                         ? null
                         : toInstant(
                                 createEventForm.getEventDate(),
                                 createEventForm.getEndTime(),
-                                createEventForm.getTimezone());
+                                createEventForm.getTz());
 
         final Long bannerImageId;
         try {
@@ -151,8 +151,7 @@ public class HostController {
     }
 
     private boolean isScheduledInFuture(final CreateEventForm form) {
-        final Instant startsAt =
-                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
+        final Instant startsAt = toInstant(form.getEventDate(), form.getEventTime(), form.getTz());
         return startsAt.isAfter(Instant.now(clock));
     }
 
@@ -161,10 +160,8 @@ public class HostController {
             return true;
         }
 
-        final Instant startsAt =
-                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone());
-        final Instant endsAt =
-                toInstant(form.getEventDate(), form.getEndTime(), form.getTimezone());
+        final Instant startsAt = toInstant(form.getEventDate(), form.getEventTime(), form.getTz());
+        final Instant endsAt = toInstant(form.getEventDate(), form.getEndTime(), form.getTz());
         return endsAt.isAfter(startsAt);
     }
 

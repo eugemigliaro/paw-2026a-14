@@ -330,7 +330,7 @@ public class FeedController {
             final String email,
             final Locale locale) {
         final UriComponentsBuilder builder =
-                UriComponentsBuilder.fromPath("/explore")
+                UriComponentsBuilder.fromPath("/")
                         .queryParam("q", query == null ? "" : query)
                         .queryParam("sort", filters.selectedSort())
                         .queryParam("page", page);

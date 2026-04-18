@@ -89,12 +89,22 @@ public class EventController {
                 matchService
                         .findMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        final Long currentUserId =
+                CurrentAuthenticatedUser.get()
+                        .map(AuthenticatedUserPrincipal::getUserId)
+                        .orElse(null);
+
+        if (!isMatchVisibleToUser(match, currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
-        mav.addObject("reservationEnabled", match.getAvailableSpots() > 0);
+        mav.addObject("reservationEnabled", canReserveMatch(match));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
@@ -316,5 +326,35 @@ public class EventController {
             default:
                 return "media-tile--padel";
         }
+    }
+
+    private boolean isMatchVisibleToUser(final Match match, final Long currentUserId) {
+        if ("draft".equalsIgnoreCase(match.getStatus())) {
+            return currentUserId != null && currentUserId.equals(match.getHostUserId());
+        }
+
+        if ("private".equalsIgnoreCase(match.getVisibility())
+                || "cancelled".equalsIgnoreCase(match.getStatus())) {
+            if (currentUserId != null && currentUserId.equals(match.getHostUserId())) {
+                return true;
+            }
+            if (currentUserId != null
+                    && matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+                return true;
+            }
+            return false;
+        }
+
+        if ("public".equalsIgnoreCase(match.getVisibility())) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean canReserveMatch(final Match match) {
+        return "public".equalsIgnoreCase(match.getVisibility())
+                && "open".equalsIgnoreCase(match.getStatus())
+                && match.getAvailableSpots() > 0;
     }
 }

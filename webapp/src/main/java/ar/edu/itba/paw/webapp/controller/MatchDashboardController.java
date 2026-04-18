@@ -69,7 +69,7 @@ public class MatchDashboardController {
             @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "timezone", required = false) final String timezone,
+            @RequestParam(value = "tz", required = false) final String timezone,
             @RequestParam(value = "sport", required = false) final List<String> sports,
             @RequestParam(value = "visibility", required = false) final List<String> visibility,
             @RequestParam(value = "status", required = false) final List<String> statuses,
@@ -135,7 +135,7 @@ public class MatchDashboardController {
             @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "timezone", required = false) final String timezone,
+            @RequestParam(value = "tz", required = false) final String timezone,
             @RequestParam(value = "sport", required = false) final List<String> sports,
             @RequestParam(value = "visibility", required = false) final List<String> visibility,
             @RequestParam(value = "status", required = false) final List<String> statuses,
@@ -202,7 +202,7 @@ public class MatchDashboardController {
             @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "timezone", required = false) final String timezone,
+            @RequestParam(value = "tz", required = false) final String timezone,
             @RequestParam(value = "sport", required = false) final List<String> sports,
             @RequestParam(value = "status", required = false) final List<String> statuses,
             @RequestParam(value = "page", defaultValue = "1") final int page,
@@ -265,7 +265,7 @@ public class MatchDashboardController {
             @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "timezone", required = false) final String timezone,
+            @RequestParam(value = "tz", required = false) final String timezone,
             @RequestParam(value = "sport", required = false) final List<String> sports,
             @RequestParam(value = "status", required = false) final List<String> statuses,
             @RequestParam(value = "page", defaultValue = "1") final int page,
@@ -342,7 +342,7 @@ public class MatchDashboardController {
             final String emptyMessage,
             final Object shell) {
         final ModelAndView mav = new ModelAndView(view);
-        final ZoneId zoneId = ZoneId.systemDefault();
+        final ZoneId zoneId = ZoneId.of(timezone);
         final DateRangeBounds dateBounds = dateRangeBounds(path, ZoneId.of(timezone));
 
         mav.addObject("shell", shell);
@@ -582,23 +582,6 @@ public class MatchDashboardController {
                                     selectedVisibility,
                                     PLAYER_STATUS_OPTIONS)));
         }
-        filterGroups.add(
-                new FilterGroupViewModel(
-                        messageSource.getMessage("filter.price", null, locale),
-                        buildPriceFilterOptions(
-                                path,
-                                locale,
-                                searchQuery,
-                                sort,
-                                selectedStartDate,
-                                selectedEndDate,
-                                timezone,
-                                selectedStatuses,
-                                selectedSports,
-                                selectedVisibility,
-                                minPrice,
-                                maxPrice)));
-
         final List<SelectOptionViewModel> sortOptions =
                 List.of(
                         sortOption(
@@ -827,7 +810,7 @@ public class MatchDashboardController {
             builder.queryParam("maxPrice", maxPrice);
         }
         if (timezone != null && !timezone.isBlank()) {
-            builder.queryParam("timezone", timezone);
+            builder.queryParam("tz", timezone);
         }
 
         final String encodedStatuses = encodeCsv(selectedStatuses);
@@ -1167,70 +1150,6 @@ public class MatchDashboardController {
                         toggleValue(selectedVisibility, "invite_only"),
                         selectedVisibility.contains("invite_only"),
                         messageSource.getMessage("visibility.inviteOnly", null, locale)));
-    }
-
-    private List<FilterOptionViewModel> buildPriceFilterOptions(
-            final String path,
-            final Locale locale,
-            final String searchQuery,
-            final String sort,
-            final String selectedStartDate,
-            final String selectedEndDate,
-            final String timezone,
-            final List<String> selectedStatuses,
-            final List<String> selectedSports,
-            final List<String> selectedVisibility,
-            final BigDecimal selectedMinPrice,
-            final BigDecimal selectedMaxPrice) {
-        return List.of(
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        selectedStartDate,
-                        selectedEndDate,
-                        null,
-                        null,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        selectedMinPrice == null && selectedMaxPrice == null,
-                        messageSource.getMessage("filter.anyPrice", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        selectedStartDate,
-                        selectedEndDate,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        BigDecimal.ZERO.equals(selectedMinPrice)
-                                && BigDecimal.ZERO.equals(selectedMaxPrice),
-                        messageSource.getMessage("price.free", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        selectedStartDate,
-                        selectedEndDate,
-                        new BigDecimal("0.01"),
-                        null,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        selectedMinPrice != null
-                                && selectedMinPrice.compareTo(BigDecimal.ZERO) > 0
-                                && selectedMaxPrice == null,
-                        messageSource.getMessage("filter.paid", null, locale)));
     }
 
     private static String normalizeQuery(final String query) {

@@ -68,7 +68,7 @@
 							<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 							<input
 								type="hidden"
-								name="timezone"
+								name="tz"
 								value="<c:out value='${selectedTimezone}' />"
 								data-browser-timezone-field="true" />
 							<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
@@ -138,7 +138,7 @@
 									<form method="get" action="${listControls.searchAction}" class="filter-rail__form">
 										<input type="hidden" name="q" value="<c:out value='${listControls.searchQuery}' />" />
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="timezone" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
+										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>

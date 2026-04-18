@@ -102,7 +102,7 @@ transform: translateY(-2px);
 .site-header__nav-link--active {
 color: var(--accent-strong);
 font-weight: 700;
-border-bottom:  0.16rem solid var(--accent-strong);
+border-bottom: 0.16rem solid var(--accent-strong);
 }
 
 .site-header__actions {

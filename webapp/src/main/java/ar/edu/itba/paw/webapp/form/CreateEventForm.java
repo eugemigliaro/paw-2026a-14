@@ -48,7 +48,7 @@ public class CreateEventForm {
     @DecimalMin(value = "0", inclusive = true, message = "Price cannot be negative")
     private BigDecimal pricePerPlayer = BigDecimal.ZERO;
 
-    private String timezone = "";
+    private String tz = "";
 
     private MultipartFile bannerImage;
 
@@ -124,12 +124,12 @@ public class CreateEventForm {
         this.pricePerPlayer = pricePerPlayer;
     }
 
-    public String getTimezone() {
-        return timezone;
+    public String getTz() {
+        return tz;
     }
 
-    public void setTimezone(final String timezone) {
-        this.timezone = timezone;
+    public void setTz(final String tz) {
+        this.tz = tz;
     }
 
     public MultipartFile getBannerImage() {
