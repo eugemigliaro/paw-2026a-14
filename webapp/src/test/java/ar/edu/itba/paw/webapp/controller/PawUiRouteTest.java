@@ -674,7 +674,9 @@ class PawUiRouteTest {
 
     @Test
     void getHostAllMatchesRouteWithSpanishLocaleLocalizesHeader() throws Exception {
-        mockMvc.perform(get("/host/matches").param("email", "host@test.com").param("lang", "es"))
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/list"))
                 .andExpect(model().attribute("listTitle", "Panel de eventos organizados"));
