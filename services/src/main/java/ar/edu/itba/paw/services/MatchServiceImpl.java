@@ -12,6 +12,7 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -33,6 +34,7 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final MatchNotificationService matchNotificationService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -40,10 +42,12 @@ public class MatchServiceImpl implements MatchService {
     public MatchServiceImpl(
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
+            final MatchNotificationService matchNotificationService,
             final MessageSource messageSource,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
+        this.matchNotificationService = matchNotificationService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -126,12 +130,15 @@ public class MatchServiceImpl implements MatchService {
                     MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
         }
 
-        return matchDao.findById(matchId)
-                .orElseThrow(
+        final Match updatedMatch =
+                matchDao.findById(matchId)
+                        .orElseThrow(
                         () ->
                                 new MatchUpdateException(
                                         MatchUpdateFailureReason.MATCH_NOT_FOUND,
                                         message("match.update.error.notFound")));
+        matchNotificationService.notifyMatchUpdated(updatedMatch);
+        return updatedMatch;
     }
 
     @Override
@@ -161,12 +168,15 @@ public class MatchServiceImpl implements MatchService {
                     message("match.cancel.error.forbidden"));
         }
 
-        return matchDao.findById(matchId)
-                .orElseThrow(
+        final Match cancelledMatch =
+                matchDao.findById(matchId)
+                        .orElseThrow(
                         () ->
                                 new MatchCancellationException(
                                         MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                         message("match.cancel.error.notFound")));
+        matchNotificationService.notifyMatchCancelled(cancelledMatch);
+        return cancelledMatch;
     }
 
     @Override

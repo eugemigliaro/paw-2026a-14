@@ -1,4 +1,5 @@
 - implementar notificar a las personas que un evento se cancelo o edito
+- chequear estilo del mail service
 
 --- cuando ya este el login
 
