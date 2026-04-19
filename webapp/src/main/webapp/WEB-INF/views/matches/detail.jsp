@@ -90,9 +90,17 @@
 								></div>
 								<div class="host-card__copy">
 									<span class="detail-label"><spring:message code="event.detail.hostedBy" /></span>
-									<strong class="host-card__name"
-										><c:out value="${eventPage.hostLabel}"
-									/></strong>
+									<c:choose>
+										<c:when test="${not empty eventPage.hostProfileHref}">
+											<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
+											<a class="host-card__name" href="${hostProfileHref}">
+												<c:out value="${eventPage.hostLabel}" />
+											</a>
+										</c:when>
+										<c:otherwise>
+											<strong class="host-card__name"><c:out value="${eventPage.hostLabel}" /></strong>
+										</c:otherwise>
+									</c:choose>
 								</div>
 							</div>
 						</article>
@@ -105,7 +113,6 @@
 								class="section-head section-head--detail-compact"
 							>
 								<div>
-									<span class="detail-label"><spring:message code="event.detail.roster" /></span>
 									<h2
 										id="participant-section-title"
 										class="detail-section__title"
@@ -155,11 +162,13 @@
 												<div
 													class="participant-list__copy"
 												>
-													<strong
+													<c:url var="participantProfileHref" value="${participant.profileHref}" />
+													<a
 														class="participant-list__name"
+														href="${participantProfileHref}"
 														><c:out
 															value="${participant.username}"
-													/></strong>
+													/></a>
 												</div>
 											</li>
 										</c:forEach>

@@ -502,7 +502,22 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "eventPage",
-                                        Matchers.hasProperty("participants", Matchers.hasSize(2))));
+                                        Matchers.hasProperty(
+                                                "hostProfileHref",
+                                                Matchers.is("/users/host-player"))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "participants",
+                                                Matchers.contains(
+                                                        Matchers.hasProperty(
+                                                                "profileHref",
+                                                                Matchers.is("/users/first-player")),
+                                                        Matchers.hasProperty(
+                                                                "profileHref",
+                                                                Matchers.is(
+                                                                        "/users/second-player"))))));
     }
 
     @Test

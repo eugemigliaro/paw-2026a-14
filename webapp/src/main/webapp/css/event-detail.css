@@ -306,7 +306,13 @@
 }
 
 .host-card__name {
+	color: inherit;
 	font-size: 1rem;
+	text-decoration: none;
+}
+
+.host-card__name:hover {
+	text-decoration: underline;
 }
 
 .host-card__note {
@@ -374,8 +380,14 @@
 }
 
 .participant-list__name {
+	color: inherit;
 	font-size: 0.98rem;
 	line-height: 1.3;
+	text-decoration: none;
+}
+
+.participant-list__name:hover {
+	text-decoration: underline;
 }
 
 .participant-empty-state {

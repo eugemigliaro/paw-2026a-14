@@ -472,10 +472,13 @@ public final class PawUiViewModels {
     public static final class ParticipantViewModel {
         private final String username;
         private final String avatarLabel;
+        private final String profileHref;
 
-        public ParticipantViewModel(final String username, final String avatarLabel) {
+        public ParticipantViewModel(
+                final String username, final String avatarLabel, final String profileHref) {
             this.username = username;
             this.avatarLabel = avatarLabel;
+            this.profileHref = profileHref;
         }
 
         public String getUsername() {
@@ -485,6 +488,10 @@ public final class PawUiViewModels {
         public String getAvatarLabel() {
             return avatarLabel;
         }
+
+        public String getProfileHref() {
+            return profileHref;
+        }
     }
 
     public static final class EventDetailPageViewModel {
@@ -492,6 +499,7 @@ public final class PawUiViewModels {
         private final String heroSubtitle;
         private final String heroMeta;
         private final String hostLabel;
+        private final String hostProfileHref;
         private final List<ParticipantViewModel> participants;
         private final String participantCountLabel;
         private final String participantsEmptyState;
@@ -507,6 +515,7 @@ public final class PawUiViewModels {
                 final String heroSubtitle,
                 final String heroMeta,
                 final String hostLabel,
+                final String hostProfileHref,
                 final List<ParticipantViewModel> participants,
                 final String participantCountLabel,
                 final String participantsEmptyState,
@@ -520,6 +529,7 @@ public final class PawUiViewModels {
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
             this.hostLabel = hostLabel;
+            this.hostProfileHref = hostProfileHref;
             this.participants = participants;
             this.participantCountLabel = participantCountLabel;
             this.participantsEmptyState = participantsEmptyState;
@@ -545,6 +555,10 @@ public final class PawUiViewModels {
 
         public String getHostLabel() {
             return hostLabel;
+        }
+
+        public String getHostProfileHref() {
+            return hostProfileHref;
         }
 
         public List<ParticipantViewModel> getParticipants() {
