@@ -54,7 +54,7 @@
           <spring:message var="loginLabel" code="nav.login" />
           <spring:message var="registerLabel" code="nav.register" />
           <div class="site-header__auth">
-            <a class="site-header__auth-link" href="${loginHref}">${loginLabel}</a>
+            <ui:button label="${loginLabel}" href="${loginHref}" variant="secondary" size="sm" />
             <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
           </div>
         </c:otherwise>

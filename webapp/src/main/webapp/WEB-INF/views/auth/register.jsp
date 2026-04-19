@@ -25,6 +25,7 @@
 					<spring:message var="usernamePlaceholder" code="form.username.placeholder" />
 					<spring:message var="passwordPlaceholder" code="form.password.placeholder" />
 					<spring:message var="confirmPasswordPlaceholder" code="form.confirmPassword.placeholder" />
+					<spring:message var="passwordRequirement" code="RegisterForm.password.Size" />
 					<spring:message var="registerSubmitLabel" code="auth.register.submit" />
 					<c:url var="registerAction" value="/register" />
 					<form:form method="post" action="${registerAction}" modelAttribute="registerForm" cssClass="auth-form">
@@ -58,6 +59,11 @@
 								cssClass="field__control"
 								placeholder="${passwordPlaceholder}"
 								autocomplete="new-password" />
+							<spring:bind path="registerForm.password">
+								<c:if test="${empty status.errorMessages}">
+									<span class="field__hint">${passwordRequirement}</span>
+								</c:if>
+							</spring:bind>
 							<form:errors path="password" cssClass="field__error" element="span" />
 						</label>
 						<label class="field" for="register-confirm-password">

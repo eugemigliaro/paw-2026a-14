@@ -32,6 +32,7 @@
 
 					<spring:message var="newPasswordPlaceholder" code="form.password.newPlaceholder" />
 					<spring:message var="confirmPasswordPlaceholder" code="form.confirmPassword.placeholder" />
+					<spring:message var="passwordRequirement" code="ResetPasswordForm.password.Size" />
 					<spring:message var="resetPasswordSubmitLabel" code="auth.resetPassword.submit" />
 					<c:url var="resetPasswordAction" value="${resetPath}" />
 					<form:form
@@ -48,6 +49,11 @@
 								cssClass="field__control"
 								placeholder="${newPasswordPlaceholder}"
 								autocomplete="new-password" />
+							<spring:bind path="resetPasswordForm.password">
+								<c:if test="${empty status.errorMessages}">
+									<span class="field__hint">${passwordRequirement}</span>
+								</c:if>
+							</spring:bind>
 							<form:errors path="password" cssClass="field__error" element="span" />
 						</label>
 						<label class="field" for="reset-confirm-password">
