@@ -20,6 +20,8 @@
 <c:set var="escapedValue" value="${fn:escapeXml(value)}" />
 <c:set var="escapedPlaceholder" value="${fn:escapeXml(placeholder)}" />
 <c:set var="escapedAutocomplete" value="${fn:escapeXml(autocomplete)}" />
+<c:set var="escapedShowLabel" value="${fn:escapeXml(showLabel)}" />
+<c:set var="escapedHideLabel" value="${fn:escapeXml(hideLabel)}" />
 
 <label class="field" for="${resolvedId}">
   <span class="field__label"><c:out value="${label}" /></span>
@@ -49,9 +51,9 @@
       type="button"
       class="password-field__toggle"
       data-password-toggle="true"
-      data-label-show="${showLabel}"
-      data-label-hide="${hideLabel}"
-      aria-label="${showLabel}"
+      data-label-show="${escapedShowLabel}"
+      data-label-hide="${escapedHideLabel}"
+      aria-label="${escapedShowLabel}"
       aria-pressed="false">
       <span class="password-field__icon password-field__icon--show" aria-hidden="true">
         <svg viewBox="0 0 24 24" focusable="false">
