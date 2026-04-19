@@ -1,0 +1,55 @@
+.public-profile-shell {
+	max-width: 960px;
+}
+
+.public-profile-panel {
+	display: grid;
+	gap: 2rem;
+	padding: 2rem;
+}
+
+.public-profile-panel__title {
+	font-size: clamp(2.6rem, 5vw, 3.7rem);
+}
+
+.public-profile-panel__description {
+	max-width: 44rem;
+}
+
+.public-profile-avatar-panel {
+	display: grid;
+	gap: 1.5rem;
+	padding: 1.5rem;
+}
+
+.public-profile-avatar-panel__content {
+	display: flex;
+	justify-content: center;
+}
+
+.public-profile-avatar-panel__image {
+	aspect-ratio: 1;
+	background: #eef3ef;
+	border: 1px solid rgba(28, 46, 43, 0.08);
+	border-radius: 999px;
+	box-shadow: 0 20px 40px -34px rgba(24, 46, 42, 0.35);
+	height: auto;
+	max-width: 180px;
+	width: 100%;
+}
+
+.public-profile-summary {
+	display: grid;
+	gap: 1rem;
+}
+
+.public-profile-summary__control {
+	color: var(--text-primary);
+	cursor: default;
+}
+
+@media (max-width: 760px) {
+	.public-profile-panel {
+		padding: 1.5rem;
+	}
+}

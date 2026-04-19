@@ -583,4 +583,29 @@ public final class PawUiViewModels {
             return nearbyEvents;
         }
     }
+
+    public static final class PublicProfilePageViewModel {
+        private final String username;
+        private final String email;
+        private final String profileImageUrl;
+
+        public PublicProfilePageViewModel(
+                final String username, final String email, final String profileImageUrl) {
+            this.username = username;
+            this.email = email;
+            this.profileImageUrl = profileImageUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
+        }
+    }
 }

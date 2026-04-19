@@ -287,6 +287,9 @@ class PawUiRouteTest {
 
                     @Override
                     public Optional<User> findByUsername(final String username) {
+                        if ("host-player".equals(username)) {
+                            return Optional.of(new User(9L, "host@test.com", "host-player"));
+                        }
                         return Optional.empty();
                     }
                 };
@@ -403,6 +406,7 @@ class PawUiRouteTest {
                                         matchReservationService,
                                         userService,
                                         messageSource),
+                                new PublicProfileController(userService, messageSource),
                                 new AccountController(messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
@@ -731,6 +735,38 @@ class PawUiRouteTest {
                 .andExpect(model().attribute("username", "host-player"))
                 .andExpect(model().attribute("email", "host@test.com"))
                 .andExpect(model().attributeExists("shell"));
+    }
+
+    @Test
+    void getPublicProfileRouteRendersPublicProfileForAnonymousUsers() throws Exception {
+        mockMvc.perform(get("/users/host-player"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attributeExists("profilePage"))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "username", Matchers.is("host-player"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "email", Matchers.is("host@test.com"))));
+    }
+
+    @Test
+    void getPublicProfileRouteWithSpanishLocaleLocalizesPageCopy() throws Exception {
+        mockMvc.perform(get("/users/host-player").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("profileTitle", "Perfil p\u00fablico"))
+                .andExpect(model().attribute("profileUsernameLabel", "Usuario"));
+    }
+
+    @Test
+    void getUnknownPublicProfileRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/users/missing-player")).andExpect(status().isNotFound());
     }
 
     @Test
