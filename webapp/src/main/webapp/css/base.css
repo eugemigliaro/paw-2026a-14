@@ -124,31 +124,48 @@ display: flex;
 gap: 1.2rem;
 }
 
-.site-header__user {
-display: grid;
-gap: 0.1rem;
-text-align: right;
-}
-
-.site-header__user-label {
-color: var(--text-muted);
-font-size: 0.72rem;
-font-weight: 700;
-letter-spacing: 0.08em;
-text-transform: uppercase;
-}
-
-.site-header__user-name {
-font-size: 0.92rem;
-line-height: 1.2;
-}
-
-.site-header__logout-form {
-margin: 0;
-}
-
 .site-header__host-button {
 white-space: nowrap;
+}
+
+.site-header__account-link {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid #d6ddd9;
+	border-radius: 999px;
+	box-shadow: 0 1px 0 rgba(17, 37, 34, 0.04);
+	color: #20443f;
+	display: inline-flex;
+	height: 2.2rem;
+	justify-content: center;
+	text-decoration: none;
+	transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+	width: 2.2rem;
+}
+
+.site-header__account-link:hover {
+	border-color: rgba(10, 105, 95, 0.28);
+	color: var(--accent-strong);
+	transform: translateY(-1px);
+}
+
+.site-header__account-link:focus-visible {
+	outline: 3px solid rgba(10, 105, 95, 0.14);
+	outline-offset: 2px;
+}
+
+.site-header__account-link svg {
+	fill: none;
+	height: 1.1rem;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+	width: 1.1rem;
+}
+
+.site-header__account-link svg * {
+	stroke: currentColor;
 }
 
 .page-shell {

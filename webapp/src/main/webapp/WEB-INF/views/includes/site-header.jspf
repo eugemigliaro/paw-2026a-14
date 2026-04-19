@@ -5,6 +5,7 @@
 <c:url var="siteHeaderBrandHref" value="/" />
 <c:url var="loginHref" value="/login" />
 <c:url var="registerHref" value="/register" />
+<c:url var="accountHref" value="/account" />
 <c:url var="logoutAction" value="/logout" />
 <header class="site-header">
   <div class="site-header__inner">
@@ -35,20 +36,13 @@
     <div class="site-header__actions">
       <c:choose>
         <c:when test="${pageContext.request.userPrincipal ne null}">
-          <spring:message var="signedInAsLabel" code="nav.signedInAs" />
-          <spring:message var="logoutLabel" code="nav.logout" />
-          <div class="site-header__auth">
-            <div class="site-header__user">
-              <span class="site-header__user-label">${signedInAsLabel}</span>
-              <strong class="site-header__user-name">
-                <c:out value="${pageContext.request.userPrincipal.name}" />
-              </strong>
-            </div>
-            <form method="post" action="${logoutAction}" class="site-header__logout-form">
-              <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-              <ui:button label="${logoutLabel}" type="submit" variant="secondary" size="sm" />
-            </form>
-          </div>
+          <spring:message var="accountLabel" code="nav.account" text="Account" />
+          <a class="site-header__account-link" href="${accountHref}" aria-label="${accountLabel}" title="${accountLabel}">
+            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+              <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
+              <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
+            </svg>
+          </a>
         </c:when>
         <c:otherwise>
           <spring:message var="loginLabel" code="nav.login" />

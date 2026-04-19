@@ -183,6 +183,52 @@
 	display: grid;
 }
 
+.account-shell {
+	max-width: 760px;
+}
+
+.account-panel {
+	display: grid;
+	gap: 1.5rem;
+	padding: 2rem;
+}
+
+.account-panel__title {
+	font-size: clamp(2.5rem, 4.8vw, 3.5rem);
+}
+
+.account-panel__description {
+	max-width: 42rem;
+}
+
+.account-summary {
+	display: grid;
+	gap: 1rem;
+}
+
+.account-summary__item {
+	background: rgba(0, 100, 90, 0.05);
+	border: 1px solid rgba(0, 100, 90, 0.12);
+	border-radius: 18px;
+	display: grid;
+	gap: 0.45rem;
+	padding: 1rem 1.1rem;
+}
+
+.account-summary__value {
+	color: var(--text-primary);
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1.45;
+	margin: 0;
+}
+
+.account-actions {
+	display: flex;
+	justify-content: flex-start;
+	margin: 0;
+}
+
 @media (max-width: 640px) {
 	.auth-panel {
 		padding: 1.5rem;
