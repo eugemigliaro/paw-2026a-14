@@ -7,7 +7,6 @@ import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MatchLifecycleMailTemplateData;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
-
 import java.util.List;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +36,8 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
     @Override
     public void notifyMatchUpdated(final Match match) {
-        final List<User> participants = matchParticipantDao.findConfirmedParticipants(match.getId());
+        final List<User> participants =
+                matchParticipantDao.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
             final MatchLifecycleMailTemplateData templateData =
                     buildTemplateData(participant, match);
@@ -49,7 +49,8 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
     @Override
     public void notifyMatchCancelled(final Match match) {
-        final List<User> participants = matchParticipantDao.findConfirmedParticipants(match.getId());
+        final List<User> participants =
+                matchParticipantDao.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
             final MatchLifecycleMailTemplateData templateData =
                     buildTemplateData(participant, match);

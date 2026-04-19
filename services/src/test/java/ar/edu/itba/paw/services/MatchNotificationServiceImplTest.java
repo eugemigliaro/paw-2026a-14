@@ -63,7 +63,8 @@ public class MatchNotificationServiceImplTest {
         matchNotificationService.notifyMatchUpdated(match);
 
         final ArgumentCaptor<String> recipientCaptor = ArgumentCaptor.forClass(String.class);
-        final ArgumentCaptor<MailContent> contentCaptor = ArgumentCaptor.forClass(MailContent.class);
+        final ArgumentCaptor<MailContent> contentCaptor =
+                ArgumentCaptor.forClass(MailContent.class);
         Mockito.verify(mailDispatchService, Mockito.times(2))
                 .dispatch(recipientCaptor.capture(), contentCaptor.capture());
 
@@ -89,7 +90,8 @@ public class MatchNotificationServiceImplTest {
         matchNotificationService.notifyMatchCancelled(match);
 
         final ArgumentCaptor<String> recipientCaptor = ArgumentCaptor.forClass(String.class);
-        final ArgumentCaptor<MailContent> contentCaptor = ArgumentCaptor.forClass(MailContent.class);
+        final ArgumentCaptor<MailContent> contentCaptor =
+                ArgumentCaptor.forClass(MailContent.class);
         Mockito.verify(mailDispatchService, Mockito.times(2))
                 .dispatch(recipientCaptor.capture(), contentCaptor.capture());
 

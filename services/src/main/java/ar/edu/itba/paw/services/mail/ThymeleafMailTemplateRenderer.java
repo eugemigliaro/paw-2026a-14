@@ -38,8 +38,7 @@ public class ThymeleafMailTemplateRenderer {
             final MatchLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
         final Context context = buildMatchLifecycleContext(templateData, locale);
-        context.setVariable(
-                "mailEyebrow", message("mail.matchLifecycle.updated.eyebrow", locale));
+        context.setVariable("mailEyebrow", message("mail.matchLifecycle.updated.eyebrow", locale));
         context.setVariable(
                 "title",
                 message(

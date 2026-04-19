@@ -178,17 +178,14 @@ public class ThymeleafMailTemplateRendererTest {
                 "mail.matchLifecycle.requestedFor", Locale.of("es"), "Solicitado para");
         messageSource.addMessage("mail.matchLifecycle.details", Locale.ENGLISH, "Details");
         messageSource.addMessage("mail.matchLifecycle.details", Locale.of("es"), "Detalles");
-        messageSource.addMessage(
-                "mail.matchLifecycle.field.matchTitle", Locale.ENGLISH, "Match");
+        messageSource.addMessage("mail.matchLifecycle.field.matchTitle", Locale.ENGLISH, "Match");
         messageSource.addMessage("mail.matchLifecycle.field.matchTitle", Locale.of("es"), "Evento");
         messageSource.addMessage("mail.matchLifecycle.field.sport", Locale.ENGLISH, "Sport");
         messageSource.addMessage("mail.matchLifecycle.field.sport", Locale.of("es"), "Deporte");
         messageSource.addMessage("mail.matchLifecycle.field.address", Locale.ENGLISH, "Venue");
         messageSource.addMessage("mail.matchLifecycle.field.address", Locale.of("es"), "Lugar");
-        messageSource.addMessage(
-                "mail.matchLifecycle.field.startsAt", Locale.ENGLISH, "Starts at");
-        messageSource.addMessage(
-                "mail.matchLifecycle.field.startsAt", Locale.of("es"), "Empieza");
+        messageSource.addMessage("mail.matchLifecycle.field.startsAt", Locale.ENGLISH, "Starts at");
+        messageSource.addMessage("mail.matchLifecycle.field.startsAt", Locale.of("es"), "Empieza");
         messageSource.addMessage("mail.matchLifecycle.field.endsAt", Locale.ENGLISH, "Ends at");
         messageSource.addMessage("mail.matchLifecycle.field.endsAt", Locale.of("es"), "Termina");
         messageSource.addMessage("mail.matchLifecycle.field.status", Locale.ENGLISH, "Status");
@@ -198,19 +195,13 @@ public class ThymeleafMailTemplateRendererTest {
         messageSource.addMessage(
                 "mail.matchLifecycle.updated.eyebrow", Locale.of("es"), "Evento actualizado");
         messageSource.addMessage(
-                "mail.matchLifecycle.updated.subject",
-                Locale.ENGLISH,
-                "Event updated: {0}");
+                "mail.matchLifecycle.updated.subject", Locale.ENGLISH, "Event updated: {0}");
         messageSource.addMessage(
-                "mail.matchLifecycle.updated.subject",
-                Locale.of("es"),
-                "Evento actualizado: {0}");
+                "mail.matchLifecycle.updated.subject", Locale.of("es"), "Evento actualizado: {0}");
         messageSource.addMessage(
                 "mail.matchLifecycle.updated.title", Locale.ENGLISH, "{0} was updated");
         messageSource.addMessage(
-                "mail.matchLifecycle.updated.title",
-                Locale.of("es"),
-                "{0} fue actualizado");
+                "mail.matchLifecycle.updated.title", Locale.of("es"), "{0} fue actualizado");
         messageSource.addMessage(
                 "mail.matchLifecycle.updated.summary",
                 Locale.ENGLISH,
@@ -224,19 +215,13 @@ public class ThymeleafMailTemplateRendererTest {
         messageSource.addMessage(
                 "mail.matchLifecycle.cancelled.eyebrow", Locale.of("es"), "Evento cancelado");
         messageSource.addMessage(
-                "mail.matchLifecycle.cancelled.subject",
-                Locale.ENGLISH,
-                "Event cancelled: {0}");
+                "mail.matchLifecycle.cancelled.subject", Locale.ENGLISH, "Event cancelled: {0}");
         messageSource.addMessage(
-                "mail.matchLifecycle.cancelled.subject",
-                Locale.of("es"),
-                "Evento cancelado: {0}");
+                "mail.matchLifecycle.cancelled.subject", Locale.of("es"), "Evento cancelado: {0}");
         messageSource.addMessage(
                 "mail.matchLifecycle.cancelled.title", Locale.ENGLISH, "{0} was cancelled");
         messageSource.addMessage(
-                "mail.matchLifecycle.cancelled.title",
-                Locale.of("es"),
-                "{0} fue cancelado");
+                "mail.matchLifecycle.cancelled.title", Locale.of("es"), "{0} fue cancelado");
         messageSource.addMessage(
                 "mail.matchLifecycle.cancelled.summary",
                 Locale.ENGLISH,

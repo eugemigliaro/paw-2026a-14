@@ -12,7 +12,6 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
-
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -133,10 +132,10 @@ public class MatchServiceImpl implements MatchService {
         final Match updatedMatch =
                 matchDao.findById(matchId)
                         .orElseThrow(
-                        () ->
-                                new MatchUpdateException(
-                                        MatchUpdateFailureReason.MATCH_NOT_FOUND,
-                                        message("match.update.error.notFound")));
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
         matchNotificationService.notifyMatchUpdated(updatedMatch);
         return updatedMatch;
     }
@@ -171,10 +170,10 @@ public class MatchServiceImpl implements MatchService {
         final Match cancelledMatch =
                 matchDao.findById(matchId)
                         .orElseThrow(
-                        () ->
-                                new MatchCancellationException(
-                                        MatchCancellationFailureReason.MATCH_NOT_FOUND,
-                                        message("match.cancel.error.notFound")));
+                                () ->
+                                        new MatchCancellationException(
+                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                message("match.cancel.error.notFound")));
         matchNotificationService.notifyMatchCancelled(cancelledMatch);
         return cancelledMatch;
     }
