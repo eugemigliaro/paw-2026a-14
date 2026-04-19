@@ -26,6 +26,84 @@
 	gap: 1rem;
 }
 
+.auth-form__support {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: -0.35rem;
+}
+
+.password-field {
+	position: relative;
+}
+
+.password-field__input {
+	padding-right: 3.9rem;
+}
+
+.password-field__input::-ms-reveal,
+.password-field__input::-ms-clear {
+	display: none;
+}
+
+.password-field__input::-webkit-credentials-auto-fill-button,
+.password-field__input::-webkit-textfield-decoration-container {
+	appearance: none;
+	display: none !important;
+	visibility: hidden;
+}
+
+.password-field__toggle {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 10px;
+	color: #54716b;
+	cursor: pointer;
+	display: inline-flex;
+	height: 2.4rem;
+	justify-content: center;
+	padding: 0;
+	position: absolute;
+	right: 0.35rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 2.4rem;
+}
+
+.password-field__toggle:hover {
+	color: #214a44;
+}
+
+.password-field__toggle:focus-visible {
+	outline: 3px solid rgba(10, 105, 95, 0.14);
+	outline-offset: 2px;
+}
+
+.password-field__icon {
+	display: inline-flex;
+	height: 1.2rem;
+	width: 1.2rem;
+}
+
+.password-field__icon svg {
+	fill: none;
+	height: 100%;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+	width: 100%;
+}
+
+.password-field.is-visible .password-field__icon--show,
+.password-field__icon--hide {
+	display: none;
+}
+
+.password-field.is-visible .password-field__icon--hide {
+	display: inline-flex;
+}
+
 .field__error {
 	color: #8a1f1f;
 	display: block;
@@ -78,6 +156,10 @@
 	text-decoration: underline;
 }
 
+.auth-link--inline {
+	font-size: 0.92rem;
+}
+
 .auth-link--strong {
 	margin-left: 0.35rem;
 }
@@ -99,6 +181,69 @@
 
 .auth-support__form {
 	display: grid;
+}
+
+.account-shell {
+	max-width: 760px;
+}
+
+.account-panel {
+	display: grid;
+	gap: 1.5rem;
+	padding: 2rem;
+}
+
+.account-panel__title {
+	font-size: clamp(2.5rem, 4.8vw, 3.5rem);
+}
+
+.account-panel__description {
+	max-width: 42rem;
+}
+
+.account-summary {
+	display: grid;
+	gap: 1rem;
+}
+
+.account-locked-field {
+	position: relative;
+}
+
+.account-locked-field__control {
+	color: var(--text-primary);
+	cursor: default;
+	padding-right: 3rem;
+}
+
+.account-locked-field__icon {
+	align-items: center;
+	color: var(--text-muted);
+	display: inline-flex;
+	height: 1rem;
+	justify-content: center;
+	pointer-events: none;
+	position: absolute;
+	right: 0.95rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1rem;
+}
+
+.account-locked-field__icon svg {
+	fill: none;
+	height: 100%;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+	width: 100%;
+}
+
+.account-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin: 0;
 }
 
 @media (max-width: 640px) {

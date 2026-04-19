@@ -403,6 +403,7 @@ class PawUiRouteTest {
                                         matchReservationService,
                                         userService,
                                         messageSource),
+                                new AccountController(messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
                                 new MatchDashboardController(matchService, messageSource),
@@ -718,6 +719,18 @@ class PawUiRouteTest {
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attribute("selectedStartDateValue", today))
                 .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()));
+    }
+
+    @Test
+    void getAccountRouteRendersPrivateAccountPageForAuthenticatedUsers() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/account"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/index"))
+                .andExpect(model().attribute("username", "host-player"))
+                .andExpect(model().attribute("email", "host@test.com"))
+                .andExpect(model().attributeExists("shell"));
     }
 
     @Test

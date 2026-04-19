@@ -44,7 +44,11 @@
 						<spring:message var="emailPlaceholder" code="form.email.placeholder" />
 						<spring:message var="passwordLabel" code="form.password.label" />
 						<spring:message var="passwordPlaceholder" code="form.password.placeholder" />
+						<spring:message var="showPasswordLabel" code="form.password.show" text="Show password" />
+						<spring:message var="hidePasswordLabel" code="form.password.hide" text="Hide password" />
 						<spring:message var="loginSubmitLabel" code="auth.login.submit" />
+						<c:url var="forgotPasswordHref" value="/forgot-password" />
+						<c:url var="registerHref" value="/register" />
 						<c:url var="loginAction" value="/login" />
 						<form method="post" action="${loginAction}" class="auth-form">
 							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
@@ -56,22 +60,24 @@
 								placeholder="${emailPlaceholder}"
 								required="${true}"
 								autocomplete="email" />
-							<ui:textInput
+							<ui:passwordInput
 								label="${passwordLabel}"
 								name="password"
-								type="password"
+								id="login-password"
 								placeholder="${passwordPlaceholder}"
 								required="${true}"
-								autocomplete="current-password" />
+								autocomplete="current-password"
+								showLabel="${showPasswordLabel}"
+								hideLabel="${hidePasswordLabel}" />
+							<div class="auth-form__support">
+								<a class="auth-link auth-link--inline" href="${forgotPasswordHref}">
+									<spring:message code="auth.login.forgotPassword" />
+								</a>
+							</div>
 							<ui:button label="${loginSubmitLabel}" type="submit" fullWidth="${true}" />
 						</form>
 
 						<div class="auth-links">
-							<c:url var="forgotPasswordHref" value="/forgot-password" />
-							<c:url var="registerHref" value="/register" />
-							<a class="auth-link" href="${forgotPasswordHref}">
-								<spring:message code="auth.login.forgotPassword" />
-							</a>
 							<p class="auth-links__meta">
 								<spring:message code="auth.login.noAccount" />
 								<a class="auth-link auth-link--strong" href="${registerHref}">
