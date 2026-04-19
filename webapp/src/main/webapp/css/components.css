@@ -217,6 +217,18 @@
 	outline: none;
 }
 
+.field__control[type="password"]::-ms-reveal,
+.field__control[type="password"]::-ms-clear {
+	display: none;
+}
+
+.field__control[type="password"]::-webkit-credentials-auto-fill-button,
+.field__control[type="password"]::-webkit-textfield-decoration-container {
+	appearance: none;
+	display: none !important;
+	visibility: hidden;
+}
+
 .field__control--textarea {
 	min-height: 8rem;
 	resize: vertical;

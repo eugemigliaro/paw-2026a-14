@@ -19,6 +19,7 @@
 <c:url var="cssMatchListsHref" value="/css/match-lists.css" />
 <c:url var="cssAuthHref" value="/css/auth.css" />
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
+<c:url var="passwordToggleHref" value="/js/password-visibility-toggle.js" />
 <c:url var="timezoneFieldHref" value="/js/timezone-field.js" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
 <link rel="stylesheet" href="${cssComponentsHref}" />
@@ -32,4 +33,5 @@
 <link rel="stylesheet" href="${cssMatchListsHref}" />
 <link rel="stylesheet" href="${cssAuthHref}" />
 <script defer src="${formSubmitGuardHref}"></script>
+<script defer src="${passwordToggleHref}"></script>
 <script defer src="${timezoneFieldHref}"></script>

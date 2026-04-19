@@ -44,6 +44,8 @@
 						<spring:message var="emailPlaceholder" code="form.email.placeholder" />
 						<spring:message var="passwordLabel" code="form.password.label" />
 						<spring:message var="passwordPlaceholder" code="form.password.placeholder" />
+						<spring:message var="showPasswordLabel" code="form.password.show" text="Show password" />
+						<spring:message var="hidePasswordLabel" code="form.password.hide" text="Hide password" />
 						<spring:message var="loginSubmitLabel" code="auth.login.submit" />
 						<c:url var="loginAction" value="/login" />
 						<form method="post" action="${loginAction}" class="auth-form">
@@ -56,13 +58,15 @@
 								placeholder="${emailPlaceholder}"
 								required="${true}"
 								autocomplete="email" />
-							<ui:textInput
+							<ui:passwordInput
 								label="${passwordLabel}"
 								name="password"
-								type="password"
+								id="login-password"
 								placeholder="${passwordPlaceholder}"
 								required="${true}"
-								autocomplete="current-password" />
+								autocomplete="current-password"
+								showLabel="${showPasswordLabel}"
+								hideLabel="${hidePasswordLabel}" />
 							<ui:button label="${loginSubmitLabel}" type="submit" fullWidth="${true}" />
 						</form>
 
