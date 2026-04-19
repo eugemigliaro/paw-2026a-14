@@ -206,21 +206,38 @@
 	gap: 1rem;
 }
 
-.account-summary__item {
-	background: rgba(0, 100, 90, 0.05);
-	border: 1px solid rgba(0, 100, 90, 0.12);
-	border-radius: 18px;
-	display: grid;
-	gap: 0.45rem;
-	padding: 1rem 1.1rem;
+.account-locked-field {
+	position: relative;
 }
 
-.account-summary__value {
+.account-locked-field__control {
 	color: var(--text-primary);
-	font-size: 1rem;
-	font-weight: 700;
-	line-height: 1.45;
-	margin: 0;
+	cursor: default;
+	padding-right: 3rem;
+}
+
+.account-locked-field__icon {
+	align-items: center;
+	color: var(--text-muted);
+	display: inline-flex;
+	height: 1rem;
+	justify-content: center;
+	pointer-events: none;
+	position: absolute;
+	right: 0.95rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1rem;
+}
+
+.account-locked-field__icon svg {
+	fill: none;
+	height: 100%;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+	width: 100%;
 }
 
 .account-actions {

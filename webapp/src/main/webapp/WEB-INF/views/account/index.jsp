@@ -19,15 +19,43 @@
 						<c:out value="${accountDescription}" />
 					</p>
 
-					<div class="account-summary" role="list">
-						<div class="account-summary__item" role="listitem">
-							<span class="detail-label"><c:out value="${accountUsernameLabel}" /></span>
-							<p class="account-summary__value"><c:out value="${username}" /></p>
-						</div>
-						<div class="account-summary__item" role="listitem">
-							<span class="detail-label"><c:out value="${accountEmailLabel}" /></span>
-							<p class="account-summary__value"><c:out value="${email}" /></p>
-						</div>
+					<div class="account-summary">
+						<label class="field" for="account-username">
+							<span class="field__label"><c:out value="${accountUsernameLabel}" /></span>
+							<div class="account-locked-field">
+								<input
+									id="account-username"
+									type="text"
+									class="field__control account-locked-field__control"
+									value="<c:out value='${username}' />"
+									readonly="readonly"
+									aria-readonly="true" />
+								<span class="account-locked-field__icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
+										<rect x="6.5" y="10" width="11" height="9" rx="2.2" />
+									</svg>
+								</span>
+							</div>
+						</label>
+						<label class="field" for="account-email">
+							<span class="field__label"><c:out value="${accountEmailLabel}" /></span>
+							<div class="account-locked-field">
+								<input
+									id="account-email"
+									type="text"
+									class="field__control account-locked-field__control"
+									value="<c:out value='${email}' />"
+									readonly="readonly"
+									aria-readonly="true" />
+								<span class="account-locked-field__icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
+										<rect x="6.5" y="10" width="11" height="9" rx="2.2" />
+									</svg>
+								</span>
+							</div>
+						</label>
 					</div>
 
 					<c:url var="logoutAction" value="/logout" />
