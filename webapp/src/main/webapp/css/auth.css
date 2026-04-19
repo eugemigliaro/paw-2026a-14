@@ -26,6 +26,12 @@
 	gap: 1rem;
 }
 
+.auth-form__support {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: -0.35rem;
+}
+
 .password-field {
 	position: relative;
 }
@@ -148,6 +154,10 @@
 
 .auth-link:hover {
 	text-decoration: underline;
+}
+
+.auth-link--inline {
+	font-size: 0.92rem;
 }
 
 .auth-link--strong {

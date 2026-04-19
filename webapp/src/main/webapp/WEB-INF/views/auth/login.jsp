@@ -47,6 +47,8 @@
 						<spring:message var="showPasswordLabel" code="form.password.show" text="Show password" />
 						<spring:message var="hidePasswordLabel" code="form.password.hide" text="Hide password" />
 						<spring:message var="loginSubmitLabel" code="auth.login.submit" />
+						<c:url var="forgotPasswordHref" value="/forgot-password" />
+						<c:url var="registerHref" value="/register" />
 						<c:url var="loginAction" value="/login" />
 						<form method="post" action="${loginAction}" class="auth-form">
 							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
@@ -67,15 +69,15 @@
 								autocomplete="current-password"
 								showLabel="${showPasswordLabel}"
 								hideLabel="${hidePasswordLabel}" />
+							<div class="auth-form__support">
+								<a class="auth-link auth-link--inline" href="${forgotPasswordHref}">
+									<spring:message code="auth.login.forgotPassword" />
+								</a>
+							</div>
 							<ui:button label="${loginSubmitLabel}" type="submit" fullWidth="${true}" />
 						</form>
 
 						<div class="auth-links">
-							<c:url var="forgotPasswordHref" value="/forgot-password" />
-							<c:url var="registerHref" value="/register" />
-							<a class="auth-link" href="${forgotPasswordHref}">
-								<spring:message code="auth.login.forgotPassword" />
-							</a>
 							<p class="auth-links__meta">
 								<spring:message code="auth.login.noAccount" />
 								<a class="auth-link auth-link--strong" href="${registerHref}">
