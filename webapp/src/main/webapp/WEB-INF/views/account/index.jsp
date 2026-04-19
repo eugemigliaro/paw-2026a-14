@@ -13,7 +13,6 @@
 
 			<main class="page-shell account-shell">
 				<section class="panel account-panel">
-					<p class="eyebrow"><spring:message code="account.eyebrow" text="Account" /></p>
 					<h1 class="page-heading__title account-panel__title"><c:out value="${accountTitle}" /></h1>
 					<p class="page-heading__description account-panel__description">
 						<c:out value="${accountDescription}" />
