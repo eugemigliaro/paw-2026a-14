@@ -218,6 +218,13 @@
 									<spring:message code="event.booking.confirmed" />
 								</p>
 							</c:if>
+							<c:if test="${not empty hostActionNotice}">
+								<p
+									class="booking-panel__notice booking-panel__notice--success"
+								>
+									<c:out value="${hostActionNotice}" />
+								</p>
+							</c:if>
 							<c:if test="${not empty reservationError}">
 								<p
 									class="booking-panel__notice booking-panel__notice--error"
@@ -241,6 +248,41 @@
 										value="${eventPage.participantCountLabel}"
 								/></span>
 							</div>
+
+							<c:if test="${hostCanManage}">
+								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
+								<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
+								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
+								<div class="booking-panel__details">
+									<div class="booking-panel__detail-row">
+										<dt><spring:message code="host.manage.label" /></dt>
+										<dd><spring:message code="host.manage.detail" /></dd>
+									</div>
+								</div>
+								<c:url var="hostEditHref" value="${hostEditPath}" />
+								<ui:button
+									label="${hostManageEditLabel}"
+									href="${hostEditHref}"
+									variant="secondary"
+									fullWidth="${true}"
+								/>
+								<c:url var="hostCancelAction" value="${hostCancelPath}" />
+								<form
+									method="post"
+									action="${hostCancelAction}"
+									data-submit-guard="true"
+									data-submit-loading-label="${hostManageCancellingLabel}"
+									class="booking-panel__request-form"
+								>
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<ui:button
+										label="${hostManageCancelLabel}"
+										type="submit"
+										variant="danger"
+										fullWidth="${true}"
+									/>
+								</form>
+							</c:if>
 
 							<dl class="booking-panel__details">
 								<c:forEach

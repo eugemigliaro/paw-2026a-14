@@ -15,8 +15,10 @@ import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.MatchCancellationFailureReason;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.MatchUpdateFailureReason;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.UserService;
@@ -25,7 +27,9 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
+import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
@@ -179,6 +183,9 @@ class PawUiRouteTest {
                         if (matchId == 43L) {
                             return Optional.of(footballMatch);
                         }
+                        if (matchId == 45L) {
+                            return Optional.of(cancelledFutureMatch);
+                        }
                         return Optional.empty();
                     }
 
@@ -201,6 +208,19 @@ class PawUiRouteTest {
                             final Long matchId,
                             final Long actingUserId,
                             final ar.edu.itba.paw.services.UpdateMatchRequest request) {
+                        if (matchId != 42L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.MATCH_NOT_FOUND, "Missing match");
+                        }
+                        if (actingUserId != 7L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.FORBIDDEN, "Forbidden");
+                        }
+                        if (request.getMaxPlayers() < 2) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                                    "Capacity too low");
+                        }
                         return new Match(
                                 matchId,
                                 request.getSport(),
@@ -220,6 +240,15 @@ class PawUiRouteTest {
 
                     @Override
                     public Match cancelMatch(final Long matchId, final Long actingUserId) {
+                        if (matchId != 42L) {
+                            throw new MatchCancellationException(
+                                    MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                    "Missing match");
+                        }
+                        if (actingUserId != 7L) {
+                            throw new MatchCancellationException(
+                                    MatchCancellationFailureReason.FORBIDDEN, "Forbidden");
+                        }
                         return new Match(
                                 matchId,
                                 Sport.PADEL,
@@ -563,6 +592,29 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getRealMatchDetailsRouteForHostExposesManagementActions() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
+                .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteWithSpanishHostActionLocalizesNotice() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/42").param("hostAction", "updated").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "hostActionNotice",
+                                        "Tu evento fue actualizado correctamente."));
+    }
+
+    @Test
     void postReservationRequestWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(post("/matches/42/reservations")).andExpect(status().isUnauthorized());
     }
@@ -687,6 +739,92 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    @Test
+    void getHostEditRouteRendersPrefilledFormForHost() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/42/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attribute("isEditMode", true))
+                .andExpect(model().attribute("formAction", "/host/matches/42/edit"))
+                .andExpect(
+                        model().attribute(
+                                        "createEventForm",
+                                        Matchers.hasProperty(
+                                                "title", Matchers.is("Sunrise Padel"))));
+    }
+
+    @Test
+    void getHostEditRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getHostEditRouteForNonHostReturnsNotFound() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void postHostEditRedirectsToDetailOnSuccess() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/42/edit")
+                                .param("title", "Updated Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+    }
+
+    @Test
+    void postHostEditWithCapacityBelowConfirmedRerendersFormWithError() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/42/edit")
+                                .param("title", "Updated Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("maxPlayers", "1")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "maxPlayers"));
+    }
+
+    @Test
+    void postHostCancelWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postHostCancelForNonHostReturnsNotFound() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void postHostCancelRedirectsToDetailOnSuccess() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(post("/host/matches/42/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42?hostAction=cancelled"));
     }
 
     @Test

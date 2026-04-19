@@ -1,9 +1,9 @@
-- implementar notificar a las personas que un evento se cancelo o edito
-- chequear estilo del mail service
+- cuando alguien mas quiere editar algo que no es suyo tira 404 -> esta bien? o tiro un permission denied?
 
---- cuando ya este el login
+- categoria tiene que dejar poner "otro"
+- hora de inicio + duracion
 
-- implementar endpoints en el controller
-- hacer las pantallas para editar
+
 - hacer lo de que el evento tenga visibilidad y join policy
 - set event visibility and tags
+- borrar este archivo

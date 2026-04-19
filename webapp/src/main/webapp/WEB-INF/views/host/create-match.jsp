@@ -3,7 +3,6 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
-	<spring:message var="pageTitle" code="page.title.hostMode" />
 	<!DOCTYPE html>
 	<html lang="${pageContext.response.locale.language}">
 	<head>
@@ -16,14 +15,13 @@
 			<main class="page-shell">
 				<section class="create-layout__main">
 					<header class="page-heading">
-						<p class="eyebrow"><spring:message code="host.eyebrow" /></p>
-						<h1 class="page-heading__title"><spring:message code="host.title" /></h1>
+						<p class="eyebrow"><c:out value="${formEyebrow}" /></p>
+						<h1 class="page-heading__title"><c:out value="${formTitle}" /></h1>
 						<p class="page-heading__description">
-							<spring:message code="host.description" />
+							<c:out value="${formDescription}" />
 						</p>
 					</header>
 
-					<spring:message var="publishingLabel" code="host.form.submitting" />
 					<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
 					<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
 					<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
@@ -31,17 +29,16 @@
 					<spring:message var="sportFootball" code="sport.football" />
 					<spring:message var="sportTennis" code="sport.tennis" />
 					<spring:message var="sportBasketball" code="sport.basketball" />
-					<spring:message var="publishLabel" code="host.form.submit" />
-					<c:url var="createMatchAction" value="/host/matches/new" />
+					<c:url var="resolvedFormAction" value="${formAction}" />
 
 					<form:form
 						method="post"
-						action="${createMatchAction}"
+						action="${resolvedFormAction}"
 						modelAttribute="createEventForm"
 						enctype="multipart/form-data"
 						id="create-match-form"
 						data-submit-guard="true"
-						data-submit-loading-label="${publishingLabel}"
+						data-submit-loading-label="${submitLoadingLabel}"
 						cssClass="create-form"
 					>
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
@@ -265,9 +262,9 @@
 
 						<div class="create-layout__actions">
 							<ui:button
-								label="${publishLabel}"
+								label="${submitLabel}"
 								type="submit"
-								id="publish-match-button"
+								id="${submitButtonId}"
 								size="lg"
 								fullWidth="${true}"
 								className="create-layout__submit"

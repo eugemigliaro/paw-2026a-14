@@ -58,9 +58,10 @@ public class EventController {
     public ModelAndView showEventDetails(
             @PathVariable("eventId") final String eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
+            @RequestParam(value = "hostAction", required = false) final String hostAction,
             final Locale locale) {
         return showRealEventDetails(
-                parseEventIdOrThrowNotFound(eventId), reservationStatus, null, locale);
+                parseEventIdOrThrowNotFound(eventId), reservationStatus, hostAction, null, locale);
     }
 
     @PostMapping("/matches/{eventId}/reservations")
@@ -76,13 +77,18 @@ public class EventController {
             return new ModelAndView("redirect:/matches/" + matchId + "?reservation=confirmed");
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
-                    matchId, null, reservationErrorMessage(exception.getCode(), locale), locale);
+                    matchId,
+                    null,
+                    null,
+                    reservationErrorMessage(exception.getCode(), locale),
+                    locale);
         }
     }
 
     private ModelAndView showRealEventDetails(
             final Long eventId,
             final String reservationStatus,
+            final String hostAction,
             final String reservationError,
             final Locale locale) {
         final Match match =
@@ -108,6 +114,10 @@ public class EventController {
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
+        mav.addObject("hostCanManage", isHost(match, currentUserId));
+        mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
+        mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
+        mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
         return mav;
     }
 
@@ -356,5 +366,19 @@ public class EventController {
         return "public".equalsIgnoreCase(match.getVisibility())
                 && "open".equalsIgnoreCase(match.getStatus())
                 && match.getAvailableSpots() > 0;
+    }
+
+    private String hostActionNotice(final String hostAction, final Locale locale) {
+        if ("updated".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.updated", null, locale);
+        }
+        if ("cancelled".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.cancelled", null, locale);
+        }
+        return null;
+    }
+
+    private boolean isHost(final Match match, final Long currentUserId) {
+        return currentUserId != null && currentUserId.equals(match.getHostUserId());
     }
 }
