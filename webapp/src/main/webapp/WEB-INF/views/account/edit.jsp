@@ -42,7 +42,7 @@
 									id="account-email"
 									type="email"
 									class="field__control account-readonly-control account-locked-field__control"
-									value="${accountEmail}"
+									value="<c:out value='${accountEmail}' />"
 									disabled="disabled"
 									aria-disabled="true"
 									readonly="readonly"
@@ -109,7 +109,7 @@
 									<img
 										class="account-profile-media__image"
 										src="${accountProfileImageSrc}"
-										alt="${accountProfileImageAlt}"
+										alt="<c:out value='${accountProfileImageAlt}' />"
 										loading="eager"
 										decoding="async" />
 									<div class="account-profile-media__copy">
@@ -140,8 +140,7 @@
 							<ui:button
 								label="${accountSaveLabel}"
 								type="submit"
-								id="account-save-button"
-								disabled="${true}" />
+								id="account-save-button" />
 							<c:url var="accountHref" value="/account" />
 							<ui:button label="${accountCancelLabel}" href="${accountHref}" variant="secondary" />
 						</div>

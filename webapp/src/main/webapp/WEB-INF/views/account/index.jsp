@@ -37,7 +37,7 @@
 								id="account-email"
 								type="email"
 								class="field__control account-readonly-control"
-								value="${accountProfile.email}"
+								value="<c:out value='${accountProfile.email}' />"
 								readonly="readonly"
 								aria-readonly="true" />
 						</label>
@@ -47,7 +47,7 @@
 								id="account-username"
 								type="text"
 								class="field__control account-readonly-control"
-								value="${accountProfile.username}"
+								value="<c:out value='${accountProfile.username}' />"
 								readonly="readonly"
 								aria-readonly="true" />
 						</label>
@@ -57,7 +57,7 @@
 								id="account-name"
 								type="text"
 								class="field__control account-readonly-control"
-								value="${accountProfile.name}"
+								value="<c:out value='${accountProfile.name}' />"
 								readonly="readonly"
 								aria-readonly="true" />
 						</label>
@@ -67,7 +67,7 @@
 								id="account-last-name"
 								type="text"
 								class="field__control account-readonly-control"
-								value="${accountProfile.lastName}"
+								value="<c:out value='${accountProfile.lastName}' />"
 								readonly="readonly"
 								aria-readonly="true" />
 						</label>
@@ -77,7 +77,7 @@
 								id="account-phone"
 								type="tel"
 								class="field__control account-readonly-control"
-								value="${accountPhoneValue}"
+								value="<c:out value='${accountPhoneValue}' />"
 								readonly="readonly"
 								aria-readonly="true" />
 						</label>
@@ -87,11 +87,11 @@
 						<span class="field__label">
 							<spring:message code="account.profileImage.field" />
 						</span>
-						<section class="account-profile-media" aria-label="${accountProfileImageAlt}">
+						<section class="account-profile-media" aria-label="<c:out value='${accountProfileImageAlt}' />">
 							<img
 								class="account-profile-media__image"
 								src="${accountProfileImageSrc}"
-								alt="${accountProfileImageAlt}"
+								alt="<c:out value='${accountProfileImageAlt}' />"
 								loading="eager"
 								decoding="async" />
 						</section>
