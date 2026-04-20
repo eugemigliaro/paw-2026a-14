@@ -92,6 +92,9 @@ Supporting contract modules sit between layers:
 - Flyway migrations:
   - `persistence/src/main/resources/db/migration`
 
+- Match lifecycle/status note:
+  - `docs/match-status.md`
+
 - Runtime property template:
   - `webapp/src/main/resources/application.properties`
 

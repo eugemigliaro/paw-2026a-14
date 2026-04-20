@@ -1,8 +1,0 @@
-
-
-- poner duracion predeterminada y tambien que se pueda editar hora inicio hora fin como en google maps
-
-
-- hacer lo de que el evento tenga visibilidad y join policy
-- borrar este archivo
-
