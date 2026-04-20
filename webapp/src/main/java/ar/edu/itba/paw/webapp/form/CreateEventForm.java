@@ -37,12 +37,13 @@ public class CreateEventForm {
     @DateTimeFormat(pattern = "HH:mm")
     private LocalTime eventTime = LocalTime.of(18, 0);
 
-    @NotBlank(message = "Duration option is required")
-    private String durationPreset = "90";
+    @NotNull(message = "Event end date is required")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate endDate = LocalDate.now().plusDays(1);
 
-    private Integer customDurationHours;
-
-    private Integer customDurationMinutesPart;
+    @NotNull(message = "Event end time is required")
+    @DateTimeFormat(pattern = "HH:mm")
+    private LocalTime endTime = LocalTime.of(19, 30);
 
     @NotNull(message = "Capacity is required")
     @Min(value = 1, message = "Capacity must be at least 1")
@@ -104,28 +105,20 @@ public class CreateEventForm {
         this.eventTime = eventTime;
     }
 
-    public String getDurationPreset() {
-        return durationPreset;
+    public LocalDate getEndDate() {
+        return endDate;
     }
 
-    public void setDurationPreset(final String durationPreset) {
-        this.durationPreset = durationPreset;
+    public void setEndDate(final LocalDate endDate) {
+        this.endDate = endDate;
     }
 
-    public Integer getCustomDurationHours() {
-        return customDurationHours;
+    public LocalTime getEndTime() {
+        return endTime;
     }
 
-    public void setCustomDurationHours(final Integer customDurationHours) {
-        this.customDurationHours = customDurationHours;
-    }
-
-    public Integer getCustomDurationMinutesPart() {
-        return customDurationMinutesPart;
-    }
-
-    public void setCustomDurationMinutesPart(final Integer customDurationMinutesPart) {
-        this.customDurationMinutesPart = customDurationMinutesPart;
+    public void setEndTime(final LocalTime endTime) {
+        this.endTime = endTime;
     }
 
     public Integer getMaxPlayers() {

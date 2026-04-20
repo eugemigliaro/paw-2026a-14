@@ -33,8 +33,6 @@
 					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
 					<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
 					<spring:message var="durationCustom" code="host.form.duration.custom" />
-					<spring:message var="durationHoursLabel" code="host.form.duration.hours" />
-					<spring:message var="durationMinutesLabel" code="host.form.duration.minutes" />
 					<c:url var="resolvedFormAction" value="${formAction}" />
 
 					<form:form
@@ -179,69 +177,50 @@
 								<div class="field">
 									<span class="field__label"><spring:message code="host.form.duration" /></span>
 									<div class="duration-options" role="radiogroup" aria-label="<spring:message code='host.form.duration' />">
-										<label class="chip duration-option ${createEventForm.durationPreset eq '60' ? 'chip--active' : ''}">
-											<form:radiobutton path="durationPreset" value="60" cssClass="duration-option__input" />
+										<label class="chip duration-option" data-duration-minutes="60">
+											<input type="radio" name="durationPresetUi" value="60" class="duration-option__input" />
 											<span>${durationOneHour}</span>
 										</label>
-										<label class="chip duration-option ${createEventForm.durationPreset eq '90' ? 'chip--active' : ''}">
-											<form:radiobutton path="durationPreset" value="90" cssClass="duration-option__input" />
+										<label class="chip duration-option" data-duration-minutes="90">
+											<input type="radio" name="durationPresetUi" value="90" class="duration-option__input" />
 											<span>${durationNinetyMinutes}</span>
 										</label>
-										<label class="chip duration-option ${createEventForm.durationPreset eq 'custom' ? 'chip--active' : ''}">
-											<form:radiobutton path="durationPreset" value="custom" cssClass="duration-option__input" />
+										<label class="chip duration-option" data-duration-minutes="custom">
+											<input type="radio" name="durationPresetUi" value="custom" class="duration-option__input" />
 											<span>${durationCustom}</span>
 										</label>
 									</div>
+								</div>
+
+								<label class="field" for="match-end-date">
+									<span class="field__label"><spring:message code="host.form.endDate" /></span>
+									<form:input
+										path="endDate"
+										id="match-end-date"
+										type="date"
+										cssClass="field__control"
+									/>
 									<form:errors
-										path="durationPreset"
+										path="endDate"
 										cssClass="field__error"
 										element="span"
 									/>
-									<c:set var="customDurationVisible" value="${createEventForm.durationPreset eq 'custom'}" />
-									<div class="field ${customDurationVisible ? '' : 'field--hidden'}" id="custom-duration-field">
-										<span class="field__label"><spring:message code="host.form.duration.customLabel" /></span>
-										<div class="form-card__grid">
-											<label class="field" for="match-custom-duration-hours">
-												<span class="field__label"><c:out value="${durationHoursLabel}" /></span>
-												<form:select
-													path="customDurationHours"
-													id="match-custom-duration-hours"
-													cssClass="field__control field__control--select"
-												>
-													<form:option value="0" label="0" />
-													<form:option value="1" label="1" />
-													<form:option value="2" label="2" />
-													<form:option value="3" label="3" />
-													<form:option value="4" label="4" />
-													<form:option value="5" label="5" />
-												</form:select>
-												<form:errors
-													path="customDurationHours"
-													cssClass="field__error"
-													element="span"
-												/>
-											</label>
-											<label class="field" for="match-custom-duration-minutes">
-												<span class="field__label"><c:out value="${durationMinutesLabel}" /></span>
-												<form:select
-													path="customDurationMinutesPart"
-													id="match-custom-duration-minutes"
-													cssClass="field__control field__control--select"
-												>
-													<form:option value="0" label="00" />
-													<form:option value="15" label="15" />
-													<form:option value="30" label="30" />
-													<form:option value="45" label="45" />
-												</form:select>
-												<form:errors
-													path="customDurationMinutesPart"
-													cssClass="field__error"
-													element="span"
-												/>
-											</label>
-										</div>
-									</div>
-								</div>
+								</label>
+
+								<label class="field" for="match-end-time">
+									<span class="field__label"><spring:message code="host.form.endTime" /></span>
+									<form:input
+										path="endTime"
+										id="match-end-time"
+										type="time"
+										cssClass="field__control"
+									/>
+									<form:errors
+										path="endTime"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
 							</div>
 						</article>
 
@@ -335,32 +314,119 @@
 		</div>
 		<script>
 			(function () {
-				var presetInputs = document.querySelectorAll('input[name="durationPreset"]');
-				var customDurationField = document.getElementById('custom-duration-field');
+				var presetInputs = document.querySelectorAll('input[name="durationPresetUi"]');
+				var startDateInput = document.getElementById('match-date');
+				var startTimeInput = document.getElementById('match-time');
+				var endDateInput = document.getElementById('match-end-date');
+				var endTimeInput = document.getElementById('match-end-time');
+				var activeMode = null;
 
-				if (!presetInputs.length || !customDurationField) {
+				if (!presetInputs.length || !startDateInput || !startTimeInput || !endDateInput || !endTimeInput) {
 					return;
 				}
 
-				function syncDurationPresetUi() {
-					var selected = document.querySelector('input[name="durationPreset"]:checked');
-					var isCustom = selected && selected.value === 'custom';
+				function parseLocalDateTime(dateValue, timeValue) {
+					if (!dateValue || !timeValue) {
+						return null;
+					}
 
-					customDurationField.classList.toggle('field--hidden', !isCustom);
+					var dateParts = dateValue.split('-').map(Number);
+					var timeParts = timeValue.split(':').map(Number);
+					return new Date(
+						dateParts[0],
+						dateParts[1] - 1,
+						dateParts[2],
+						timeParts[0],
+						timeParts[1],
+						0,
+						0
+					);
+				}
+
+				function pad(value) {
+					return String(value).padStart(2, '0');
+				}
+
+				function setEndFromPreset(durationMinutes) {
+					var start = parseLocalDateTime(startDateInput.value, startTimeInput.value);
+					if (!start) {
+						return;
+					}
+
+					var end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+					endDateInput.value =
+						end.getFullYear() + '-' + pad(end.getMonth() + 1) + '-' + pad(end.getDate());
+					endTimeInput.value = pad(end.getHours()) + ':' + pad(end.getMinutes());
+				}
+
+				function syncPresetUi(activePresetValue) {
+					var explicitValue = activePresetValue == null ? null : String(activePresetValue);
 
 					presetInputs.forEach(function (input) {
 						var chip = input.closest('.duration-option');
+						var isActive = explicitValue != null && input.value === explicitValue;
+						input.checked = isActive;
 						if (chip) {
-							chip.classList.toggle('chip--active', input.checked);
+							chip.classList.toggle('chip--active', isActive);
 						}
 					});
 				}
 
+				function detectPresetMode() {
+					var start = parseLocalDateTime(startDateInput.value, startTimeInput.value);
+					var end = parseLocalDateTime(endDateInput.value, endTimeInput.value);
+					if (!start || !end) {
+						return 'custom';
+					}
+
+					var diffMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+					if (diffMinutes === 60 || diffMinutes === 90) {
+						return String(diffMinutes);
+					}
+					return 'custom';
+				}
+
 				presetInputs.forEach(function (input) {
-					input.addEventListener('change', syncDurationPresetUi);
+					input.addEventListener('change', function () {
+						if (!input.checked) {
+							return;
+						}
+
+						activeMode = input.value;
+						if (activeMode === 'custom') {
+							syncPresetUi(activeMode);
+							return;
+						}
+
+						setEndFromPreset(Number(activeMode));
+						syncPresetUi(activeMode);
+					});
 				});
 
-				syncDurationPresetUi();
+				[startDateInput, startTimeInput].forEach(function (input) {
+					input.addEventListener('change', function () {
+						if (activeMode === '60' || activeMode === '90') {
+							setEndFromPreset(Number(activeMode));
+							syncPresetUi(activeMode);
+							return;
+						}
+
+						if (activeMode !== 'custom') {
+							activeMode = detectPresetMode();
+						}
+						syncPresetUi(activeMode);
+					});
+				});
+
+				[endDateInput, endTimeInput].forEach(function (input) {
+					input.addEventListener('change', function () {
+						activeMode = detectPresetMode();
+						syncPresetUi(activeMode);
+					});
+				});
+
+				activeMode = detectPresetMode();
+				syncPresetUi(activeMode);
 			})();
 		</script>
 	</body>

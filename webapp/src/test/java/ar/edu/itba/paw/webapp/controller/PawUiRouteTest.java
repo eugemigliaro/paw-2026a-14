@@ -41,6 +41,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -698,7 +699,8 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "90")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isUnauthorized());
@@ -716,7 +718,8 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "90")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
@@ -735,7 +738,8 @@ class PawUiRouteTest {
                                 .param("sport", "other")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "90")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
@@ -743,7 +747,7 @@ class PawUiRouteTest {
     }
 
     @Test
-    void postHostPublishWithMissingCustomDurationRerendersFormWithError() throws Exception {
+    void postHostPublishWithInvalidEndTimeRerendersFormWithError() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
@@ -754,20 +758,17 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "custom")
-                                .param("customDurationHours", "0")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "later")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
-                .andExpect(
-                        model().attributeHasFieldErrors(
-                                        "createEventForm", "customDurationMinutesPart"));
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
     }
 
     @Test
-    void postHostPublishWithNonNumericCustomDurationHoursRerendersFormWithFriendlyError()
-            throws Exception {
+    void postHostPublishWithEndEqualToStartRerendersFormWithFriendlyError() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
@@ -778,19 +779,17 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "custom")
-                                .param("customDurationHours", "holamanola")
-                                .param("customDurationMinutesPart", "30")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "18:00")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
-                .andExpect(
-                        model().attributeHasFieldErrors("createEventForm", "customDurationHours"));
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
     }
 
     @Test
-    void postHostPublishWithZeroCustomDurationRerendersFormWithFriendlyError() throws Exception {
+    void postHostPublishWithEndBeforeStartRerendersFormWithFriendlyError() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
@@ -801,15 +800,13 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "custom")
-                                .param("customDurationHours", "0")
-                                .param("customDurationMinutesPart", "0")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "17:45")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
-                .andExpect(
-                        model().attributeHasFieldErrors("createEventForm", "customDurationHours"));
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
     }
 
     @Test
@@ -825,7 +822,17 @@ class PawUiRouteTest {
                         model().attribute(
                                         "createEventForm",
                                         Matchers.hasProperty(
-                                                "title", Matchers.is("Sunrise Padel"))));
+                                                "title", Matchers.is("Sunrise Padel"))))
+                .andExpect(
+                        model().attribute(
+                                        "createEventForm",
+                                        Matchers.allOf(
+                                                Matchers.hasProperty(
+                                                        "endDate",
+                                                        Matchers.is(LocalDate.of(2026, 4, 6))),
+                                                Matchers.hasProperty(
+                                                        "endTime",
+                                                        Matchers.is(LocalTime.of(9, 0))))));
     }
 
     @Test
@@ -852,7 +859,8 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "90")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
@@ -871,7 +879,8 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("durationPreset", "90")
+                                .param("endDate", "2099-04-11")
+                                .param("endTime", "00:15")
                                 .param("maxPlayers", "1")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
