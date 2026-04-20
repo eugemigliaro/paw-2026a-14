@@ -243,6 +243,18 @@ public class AuthController {
         }
         if ("password_invalid".equals(code)) {
             bindingResult.rejectValue("password", code, exception.getMessage());
+            return;
+        }
+        if ("name_invalid".equals(code)) {
+            bindingResult.rejectValue("name", code, exception.getMessage());
+            return;
+        }
+        if ("lastName_invalid".equals(code)) {
+            bindingResult.rejectValue("lastName", code, exception.getMessage());
+            return;
+        }
+        if ("phone_invalid".equals(code)) {
+            bindingResult.rejectValue("phone", code, exception.getMessage());
         }
     }
 }
