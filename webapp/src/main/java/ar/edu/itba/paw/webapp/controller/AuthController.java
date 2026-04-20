@@ -102,6 +102,9 @@ public class AuthController {
                             new RegisterAccountRequest(
                                     registerForm.getEmail(),
                                     registerForm.getUsername(),
+                                    registerForm.getName(),
+                                    registerForm.getLastName(),
+                                    registerForm.getPhone(),
                                     registerForm.getPassword()));
             return checkEmailView(
                     locale,

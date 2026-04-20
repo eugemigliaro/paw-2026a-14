@@ -56,6 +56,9 @@ public class UserJdbcDaoTest {
                 userDao.createAccount(
                         "auth@test.com",
                         "auth_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
                         "{bcrypt}encoded",
                         UserRole.ADMIN_MOD,
                         verifiedAt);
@@ -64,6 +67,9 @@ public class UserJdbcDaoTest {
                 userDao.findAccountByEmail("auth@test.com").orElseThrow(AssertionError::new);
 
         Assertions.assertEquals(account.getId(), persisted.getId());
+        Assertions.assertEquals("Jamie", persisted.getName());
+        Assertions.assertEquals("Rivera", persisted.getLastName());
+        Assertions.assertEquals("+1 555 123 4567", persisted.getPhone());
         Assertions.assertEquals("{bcrypt}encoded", persisted.getPasswordHash());
         Assertions.assertEquals(UserRole.ADMIN_MOD, persisted.getRole());
         Assertions.assertEquals(verifiedAt, persisted.getEmailVerifiedAt());
@@ -72,7 +78,14 @@ public class UserJdbcDaoTest {
     @Test
     public void testCreateAccountSupportsUnverifiedUsersWithoutLegacyDefaults() {
         userDao.createAccount(
-                "pending@test.com", "pending_user", "{bcrypt}encoded", UserRole.USER, null);
+                "pending@test.com",
+                "pending_user",
+                "Jamie",
+                "Rivera",
+                "+1 555 123 4567",
+                "{bcrypt}encoded",
+                UserRole.USER,
+                null);
 
         final UserAccount persisted =
                 userDao.findAccountByEmail("pending@test.com").orElseThrow(AssertionError::new);
@@ -85,7 +98,14 @@ public class UserJdbcDaoTest {
     public void testUpdatePasswordHashUpdatesExistingAccount() {
         final UserAccount account =
                 userDao.createAccount(
-                        "reset@test.com", "reset_user", null, UserRole.USER, Instant.now());
+                        "reset@test.com",
+                        "reset_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
+                        null,
+                        UserRole.USER,
+                        Instant.now());
 
         userDao.updatePasswordHash(account.getId(), "{bcrypt}newhash");
 
@@ -99,7 +119,14 @@ public class UserJdbcDaoTest {
     public void testMarkEmailVerifiedUpdatesExistingAccount() {
         final UserAccount account =
                 userDao.createAccount(
-                        "verify@test.com", "verify_user", "{bcrypt}hash", UserRole.USER, null);
+                        "verify@test.com",
+                        "verify_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        null);
         final Instant verifiedAt = Instant.parse("2026-04-18T12:00:00Z");
 
         userDao.markEmailVerified(account.getId(), verifiedAt);

@@ -13,6 +13,9 @@ public interface UserDao {
     UserAccount createAccount(
             String email,
             String username,
+            String name,
+            String lastName,
+            String phone,
             String passwordHash,
             UserRole role,
             Instant emailVerifiedAt);

@@ -114,6 +114,9 @@ class AuthFlowControllerTest {
                                 post("/register")
                                         .param("email", "new@test.com")
                                         .param("username", "new_user")
+                                        .param("name", "Jamie")
+                                        .param("lastName", "Rivera")
+                                        .param("phone", "+1 555 123 4567")
                                         .param("password", "Password123!")
                                         .param("confirmPassword", "Password123!"))
                         .andExpect(status().isOk())
@@ -131,11 +134,36 @@ class AuthFlowControllerTest {
                         post("/register")
                                 .param("email", "new@test.com")
                                 .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567")
                                 .param("password", "Password123!")
                                 .param("confirmPassword", "Password1234!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "confirmPassword"));
+    }
+
+    @Test
+    void postRegisterWithoutPhoneStillRendersCheckEmailPage() throws Exception {
+        Mockito.when(
+                        accountAuthService.register(
+                                ArgumentMatchers.any(RegisterAccountRequest.class)))
+                .thenReturn(
+                        new VerificationRequestResult(
+                                "new@test.com", Instant.parse("2026-04-11T18:00:00Z")));
+
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification/check-email"));
     }
 
     @Test
