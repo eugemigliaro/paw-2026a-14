@@ -616,13 +616,21 @@ public final class PawUiViewModels {
 
     public static final class PublicProfilePageViewModel {
         private final String username;
-        private final String email;
+        private final String name;
+        private final String lastName;
+        private final String phone;
         private final String profileImageUrl;
 
         public PublicProfilePageViewModel(
-                final String username, final String email, final String profileImageUrl) {
+                final String username,
+                final String name,
+                final String lastName,
+                final String phone,
+                final String profileImageUrl) {
             this.username = username;
-            this.email = email;
+            this.name = name;
+            this.lastName = lastName;
+            this.phone = phone;
             this.profileImageUrl = profileImageUrl;
         }
 
@@ -630,8 +638,16 @@ public final class PawUiViewModels {
             return username;
         }
 
-        public String getEmail() {
-            return email;
+        public String getName() {
+            return name;
+        }
+
+        public String getLastName() {
+            return lastName;
+        }
+
+        public String getPhone() {
+            return phone;
         }
 
         public String getProfileImageUrl() {

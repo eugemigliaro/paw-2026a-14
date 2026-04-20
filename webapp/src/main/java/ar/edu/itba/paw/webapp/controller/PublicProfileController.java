@@ -47,7 +47,11 @@ public class PublicProfileController {
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(
-                        user.getUsername(), user.getEmail(), ImageUrlHelper.profileUrlFor(user)));
+                        user.getUsername(),
+                        user.getName(),
+                        user.getLastName(),
+                        user.getPhone(),
+                        ImageUrlHelper.profileUrlFor(user)));
         mav.addObject(
                 "profileEyebrow",
                 messageSource.getMessage(
@@ -60,7 +64,7 @@ public class PublicProfileController {
                 messageSource.getMessage(
                         "profile.public.description",
                         null,
-                        "See this Match Point member's public identity and contact email.",
+                        "See this Match Point member's public identity and profile details.",
                         locale));
         mav.addObject(
                 "profileImageAlt",
@@ -73,8 +77,14 @@ public class PublicProfileController {
                 "profileUsernameLabel",
                 messageSource.getMessage("profile.public.username", null, "Username", locale));
         mav.addObject(
-                "profileEmailLabel",
-                messageSource.getMessage("profile.public.email", null, "Email", locale));
+                "profileNameLabel",
+                messageSource.getMessage("profile.public.name", null, "First name", locale));
+        mav.addObject(
+                "profileLastNameLabel",
+                messageSource.getMessage("profile.public.lastName", null, "Last name", locale));
+        mav.addObject(
+                "profilePhoneLabel",
+                messageSource.getMessage("profile.public.phone", null, "Phone", locale));
         CurrentAuthenticatedUser.get()
                 .filter(principal -> principal.getUserId().equals(user.getId()))
                 .ifPresent(

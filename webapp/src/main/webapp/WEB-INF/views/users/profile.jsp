@@ -13,15 +13,14 @@
 			<main class="page-shell public-profile-shell">
 				<section class="panel public-profile-panel">
 					<header class="page-heading">
-						<p class="eyebrow"><c:out value="${profileEyebrow}" /></p>
 						<h1 class="page-heading__title public-profile-panel__title"><c:out value="${profileTitle}" /></h1>
 						<p class="page-heading__description public-profile-panel__description">
 							<c:out value="${profileDescription}" />
 						</p>
 					</header>
 
+					<span class="field__label"><c:out value="${profileEyebrow}" /></span>
 					<article class="panel public-profile-avatar-panel">
-						<span class="detail-label"><c:out value="${profileEyebrow}" /></span>
 						<div class="public-profile-avatar-panel__content">
 							<c:url var="profileImageSrc" value="${profilePage.profileImageUrl}" />
 							<img
@@ -45,16 +44,44 @@
 								aria-readonly="true" />
 						</label>
 
-						<label class="field" for="public-profile-email">
-							<span class="field__label"><c:out value="${profileEmailLabel}" /></span>
-							<input
-								id="public-profile-email"
-								type="text"
-								class="field__control public-profile-summary__control"
-								value="<c:out value='${profilePage.email}' />"
-								readonly="readonly"
-							aria-readonly="true" />
-						</label>
+						<c:if test="${not empty profilePage.name}">
+							<label class="field" for="public-profile-name">
+								<span class="field__label"><c:out value="${profileNameLabel}" /></span>
+								<input
+									id="public-profile-name"
+									type="text"
+									class="field__control public-profile-summary__control"
+									value="<c:out value='${profilePage.name}' />"
+									readonly="readonly"
+									aria-readonly="true" />
+							</label>
+						</c:if>
+
+						<c:if test="${not empty profilePage.lastName}">
+							<label class="field" for="public-profile-last-name">
+								<span class="field__label"><c:out value="${profileLastNameLabel}" /></span>
+								<input
+									id="public-profile-last-name"
+									type="text"
+									class="field__control public-profile-summary__control"
+									value="<c:out value='${profilePage.lastName}' />"
+									readonly="readonly"
+									aria-readonly="true" />
+							</label>
+						</c:if>
+
+						<c:if test="${not empty profilePage.phone}">
+							<label class="field" for="public-profile-phone">
+								<span class="field__label"><c:out value="${profilePhoneLabel}" /></span>
+								<input
+									id="public-profile-phone"
+									type="tel"
+									class="field__control public-profile-summary__control"
+									value="<c:out value='${profilePage.phone}' />"
+									readonly="readonly"
+									aria-readonly="true" />
+							</label>
+						</c:if>
 					</div>
 
 					<c:if test="${not empty profileEditHref}">

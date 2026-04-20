@@ -968,8 +968,19 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "profilePage",
+                                        Matchers.hasProperty("name", Matchers.is("Jamie"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty("lastName", Matchers.is("Rivera"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
                                         Matchers.hasProperty(
-                                                "email", Matchers.is("host@test.com"))))
+                                                "phone", Matchers.is("+1 555 123 4567"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage", Matchers.not(Matchers.hasProperty("email"))))
                 .andExpect(
                         model().attribute(
                                         "profilePage",
@@ -1031,7 +1042,8 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attribute("profileTitle", "Perfil p\u00fablico"))
-                .andExpect(model().attribute("profileUsernameLabel", "Usuario"));
+                .andExpect(model().attribute("profileUsernameLabel", "Usuario"))
+                .andExpect(model().attribute("profilePhoneLabel", "Tel\u00e9fono"));
     }
 
     @Test
