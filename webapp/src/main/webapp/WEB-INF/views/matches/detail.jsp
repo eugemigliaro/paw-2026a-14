@@ -332,7 +332,6 @@
 				<section class="detail-recommendations">
 					<div class="section-head">
 						<div>
-							<span class="detail-label"><spring:message code="event.nearby.label" /></span>
 							<h2
 								class="section-head__title section-head__title--detail"
 							>
@@ -347,7 +346,7 @@
 						>
 					</div>
 
-					<div class="event-grid event-grid--detail">
+					<div class="event-grid">
 						<c:forEach
 							var="event"
 							items="${eventPage.nearbyEvents}"
@@ -374,7 +373,7 @@
 										/>
 									</c:if>
 									<span class="event-card__badge"
-										><c:out value="${event.sport}"
+										><c:out value="${event.badge}"
 									/></span>
 								</div>
 
@@ -395,15 +394,9 @@
 									</div>
 
 									<div class="event-card__footer">
-										<strong class="event-card__price"
-											><c:out
-												value="${event.priceLabel}"
-											/>
-											<spring:message code="event.pricePerPerson" /></strong
-										>
-										<span class="event-card__spots"
-											><c:out value="${event.badge}"
-										/></span>
+										<div class="event-card__cta">
+											<span><c:out value="${event.priceLabel}" /></span>
+										</div>
 									</div>
 								</div>
 							</ui:card>
