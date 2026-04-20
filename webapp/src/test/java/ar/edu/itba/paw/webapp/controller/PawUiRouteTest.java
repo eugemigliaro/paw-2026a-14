@@ -894,6 +894,11 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getAccountRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/account")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void getAccountEditRouteRendersEditablePageForAuthenticatedUsers() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
@@ -901,6 +906,17 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/edit"))
                 .andExpect(model().attributeExists("accountProfileForm"));
+    }
+
+    @Test
+    void postAccountEditRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(
+                        post("/account/edit")
+                                .param("username", "updated_user")
+                                .param("name", "Taylor")
+                                .param("lastName", "Morgan")
+                                .param("phone", ""))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

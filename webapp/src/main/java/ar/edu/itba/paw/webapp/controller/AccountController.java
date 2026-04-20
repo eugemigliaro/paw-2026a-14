@@ -6,6 +6,7 @@ import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.io.InputStream;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.context.MessageSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +23,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 
 @Controller
@@ -63,8 +66,7 @@ public class AccountController {
             final Locale locale) {
         final Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
-        final AuthenticatedUserPrincipal principal =
-                (AuthenticatedUserPrincipal) authentication.getPrincipal();
+        final AuthenticatedUserPrincipal principal = requiredAuthenticatedPrincipal();
         final User currentUser = requiredAuthenticatedUser();
 
         if (bindingResult.hasErrors()) {
@@ -211,12 +213,15 @@ public class AccountController {
     }
 
     private User requiredAuthenticatedUser() {
-        final AuthenticatedUserPrincipal principal =
-                (AuthenticatedUserPrincipal)
-                        SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        final AuthenticatedUserPrincipal principal = requiredAuthenticatedPrincipal();
         return userService
                 .findById(principal.getUserId())
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    private static AuthenticatedUserPrincipal requiredAuthenticatedPrincipal() {
+        return CurrentAuthenticatedUser.get()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static AccountProfileForm accountProfileFormFrom(final User user) {
