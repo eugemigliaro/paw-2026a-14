@@ -1228,6 +1228,10 @@ class PawUiRouteTest {
     @Test
     void postAccountEditRouteShowsLocalizedImageErrorForUnsupportedFormat() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
+        final String expectedMessage =
+                messageSource()
+                        .getMessage(
+                                "account.profileImage.error.invalidFormat", null, Locale.ENGLISH);
 
         mockMvc.perform(
                         multipart("/account/edit")
@@ -1237,16 +1241,14 @@ class PawUiRouteTest {
                                                 "avatar.pdf",
                                                 "application/pdf",
                                                 new byte[] {1, 2, 3}))
+                                .locale(Locale.ENGLISH)
                                 .param("username", "host-player")
                                 .param("name", "Jamie")
                                 .param("lastName", "Rivera")
                                 .param("phone", "+1 555 123 4567"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/edit"))
-                .andExpect(
-                        model().attribute(
-                                        "accountProfileImageError",
-                                        "Please upload a JPG, PNG, WEBP, or GIF image."));
+                .andExpect(model().attribute("accountProfileImageError", expectedMessage));
     }
 
     @Test
