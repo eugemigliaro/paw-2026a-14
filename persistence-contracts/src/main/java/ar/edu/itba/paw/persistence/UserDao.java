@@ -31,7 +31,15 @@ public interface UserDao {
     Optional<User> findByUsername(final String username);
 
     void updateProfile(
-            Long id, String email, String username, String name, String lastName, String phone);
+            Long id,
+            String email,
+            String username,
+            String name,
+            String lastName,
+            String phone,
+            Long profileImageId);
+
+    void updateProfileImage(Long id, Long profileImageId);
 
     void updatePasswordHash(Long id, String passwordHash);
 

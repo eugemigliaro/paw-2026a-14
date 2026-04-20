@@ -23,6 +23,7 @@
 					<spring:message var="namePlaceholder" code="form.name.placeholder" />
 					<spring:message var="lastNamePlaceholder" code="form.lastName.placeholder" />
 					<spring:message var="phonePlaceholder" code="form.phone.placeholder" />
+					<spring:message var="profileImageLabel" code="account.profileImage.field" />
 					<c:url var="accountAction" value="/account/edit" />
 					<form:form
 						method="post"
@@ -30,8 +31,41 @@
 						modelAttribute="accountProfileForm"
 						cssClass="account-form"
 						id="account-edit-form"
-						data-account-edit-form="true">
+						data-account-edit-form="true"
+						enctype="multipart/form-data">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+						<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
+						<section class="account-profile-media account-profile-media--editable">
+							<div class="account-profile-media__preview">
+								<img
+									class="account-profile-media__image"
+									src="${accountProfileImageSrc}"
+									alt="${accountProfileImageAlt}"
+									loading="eager"
+									decoding="async" />
+								<div class="account-profile-media__copy">
+									<h2 class="account-profile-media__title"><c:out value="${accountProfileImageTitle}" /></h2>
+									<p class="account-profile-media__description">
+										<c:out value="${accountProfileImageDescription}" />
+									</p>
+								</div>
+							</div>
+
+							<c:if test="${not empty accountProfileImageUpdated}">
+								<p class="auth-notice auth-notice--success"><c:out value="${accountProfileImageUpdated}" /></p>
+							</c:if>
+
+							<label class="field" for="account-profile-image">
+								<span class="field__label"><c:out value="${profileImageLabel}" /></span>
+								<input
+									id="account-profile-image"
+									name="profileImage"
+									type="file"
+									class="field__control"
+									accept="image/png,image/jpeg,image/webp,image/gif" />
+							</label>
+							<p class="auth-links__meta"><c:out value="${accountProfileImageHint}" /></p>
+						</section>
 						<label class="field field--required" for="account-email">
 							<span class="field__label"><spring:message code="form.email.label" /></span>
 							<div class="account-locked-field">

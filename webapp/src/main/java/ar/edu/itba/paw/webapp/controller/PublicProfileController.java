@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PublicProfilePageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.Locale;
@@ -16,8 +17,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 @Controller
 public class PublicProfileController {
-
-    private static final String DEFAULT_PROFILE_IMAGE_URL = "/assets/default-profile-avatar.svg";
 
     private final UserService userService;
     private final MessageSource messageSource;
@@ -48,7 +47,7 @@ public class PublicProfileController {
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(
-                        user.getUsername(), user.getEmail(), DEFAULT_PROFILE_IMAGE_URL));
+                        user.getUsername(), user.getEmail(), ImageUrlHelper.profileUrlFor(user)));
         mav.addObject(
                 "profileEyebrow",
                 messageSource.getMessage(

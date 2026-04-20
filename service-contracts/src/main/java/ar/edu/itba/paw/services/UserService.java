@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.User;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 
 public interface UserService {
@@ -13,5 +15,18 @@ public interface UserService {
 
     Optional<User> findByUsername(final String username);
 
-    User updateProfile(Long id, String username, String name, String lastName, String phone);
+    User updateProfile(
+            Long id,
+            String username,
+            String name,
+            String lastName,
+            String phone,
+            String profileImageContentType,
+            long profileImageContentLength,
+            InputStream profileImageContentStream)
+            throws IOException;
+
+    User updateProfileImage(
+            Long id, String contentType, long contentLength, InputStream contentStream)
+            throws IOException;
 }

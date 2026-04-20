@@ -5,7 +5,10 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.context.MessageSource;
@@ -48,7 +51,7 @@ public class AccountController {
     @GetMapping("/account/edit")
     public ModelAndView showEditAccount(final Locale locale) {
         final User user = requiredAuthenticatedUser();
-        return accountEditView(accountProfileFormFrom(user), user.getEmail(), locale);
+        return accountEditView(accountProfileFormFrom(user), user.getEmail(), null, locale);
     }
 
     @PostMapping("/account/edit")
@@ -64,17 +67,28 @@ public class AccountController {
         final User currentUser = requiredAuthenticatedUser();
 
         if (bindingResult.hasErrors()) {
-            return accountEditView(accountProfileForm, currentUser.getEmail(), locale);
+            return accountEditView(accountProfileForm, currentUser.getEmail(), null, locale);
         }
 
-        try {
+        try (InputStream profileImageStream =
+                accountProfileForm.getProfileImage() == null
+                                || accountProfileForm.getProfileImage().isEmpty()
+                        ? null
+                        : accountProfileForm.getProfileImage().getInputStream()) {
             final User updatedUser =
                     userService.updateProfile(
                             principal.getUserId(),
                             accountProfileForm.getUsername(),
                             accountProfileForm.getName(),
                             accountProfileForm.getLastName(),
-                            accountProfileForm.getPhone());
+                            accountProfileForm.getPhone(),
+                            accountProfileForm.getProfileImage() == null
+                                    ? null
+                                    : accountProfileForm.getProfileImage().getContentType(),
+                            accountProfileForm.getProfileImage() == null
+                                    ? 0L
+                                    : accountProfileForm.getProfileImage().getSize(),
+                            profileImageStream);
             SecurityContextHolder.getContext()
                     .setAuthentication(
                             new UsernamePasswordAuthenticationToken(
@@ -85,7 +99,19 @@ public class AccountController {
             return new ModelAndView("redirect:/account?updated=1");
         } catch (final AccountRegistrationException exception) {
             applyProfileUpdateError(bindingResult, exception);
-            return accountEditView(accountProfileForm, currentUser.getEmail(), locale);
+            return accountEditView(accountProfileForm, currentUser.getEmail(), null, locale);
+        } catch (final IllegalArgumentException exception) {
+            return accountEditView(
+                    accountProfileForm, currentUser.getEmail(), exception.getMessage(), locale);
+        } catch (final IOException exception) {
+            return accountEditView(
+                    accountProfileForm,
+                    currentUser.getEmail(),
+                    profileImageError(
+                            "account.profileImage.error.unavailable",
+                            "We could not process the uploaded image. Please try again.",
+                            locale),
+                    locale);
         }
     }
 
@@ -117,6 +143,7 @@ public class AccountController {
                         ? messageSource.getMessage(
                                 "account.updated", null, "Your profile was updated.", locale)
                         : null);
+        addProfileImageObjects(mav, user, locale);
         mav.addObject("accountProfile", user);
         return mav;
     }
@@ -124,8 +151,10 @@ public class AccountController {
     private ModelAndView accountEditView(
             final AccountProfileForm accountProfileForm,
             final String accountEmail,
+            final String profileImageStatus,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("account/edit");
+        final User user = requiredAuthenticatedUser();
         mav.addObject(
                 "pageTitle",
                 messageSource.getMessage(
@@ -148,8 +177,30 @@ public class AccountController {
         mav.addObject(
                 "accountCancelLabel",
                 messageSource.getMessage("common.cancel", null, "Cancel", locale));
+        mav.addObject(
+                "accountProfileImageTitle",
+                messageSource.getMessage(
+                        "account.profileImage.title", null, "Profile picture", locale));
+        mav.addObject(
+                "accountProfileImageDescription",
+                messageSource.getMessage(
+                        "account.profileImage.description",
+                        null,
+                        "Upload a photo shown on your account and public profile.",
+                        locale));
+        mav.addObject(
+                "accountProfileImageHint",
+                messageSource.getMessage(
+                        "account.profileImage.hint",
+                        null,
+                        "Accepted formats: JPG, PNG, WEBP, GIF. Max size 5 MB.",
+                        locale));
+        mav.addObject(
+                "accountProfileImageUpdated",
+                profileImageStatus != null ? profileImageStatus : null);
         mav.addObject("accountEmail", accountEmail);
         mav.addObject("accountProfileForm", accountProfileForm);
+        addProfileImageObjects(mav, user, locale);
         return mav;
     }
 
@@ -189,5 +240,22 @@ public class AccountController {
         if ("phone_invalid".equals(code)) {
             bindingResult.rejectValue("phone", code, exception.getMessage());
         }
+    }
+
+    private void addProfileImageObjects(
+            final ModelAndView mav, final User user, final Locale locale) {
+        mav.addObject("accountProfileImageUrl", ImageUrlHelper.profileUrlFor(user));
+        mav.addObject(
+                "accountProfileImageAlt",
+                messageSource.getMessage(
+                        "account.profileImage.alt",
+                        new Object[] {user.getUsername()},
+                        user.getUsername() + " profile picture",
+                        locale));
+    }
+
+    private String profileImageError(
+            final String code, final String defaultMessage, final Locale locale) {
+        return messageSource.getMessage(code, null, defaultMessage, locale);
     }
 }

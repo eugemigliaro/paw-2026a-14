@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -50,6 +51,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -279,7 +281,8 @@ class PawUiRouteTest {
                                     "host-player",
                                     "Jamie",
                                     "Rivera",
-                                    "+1 555 123 4567");
+                                    "+1 555 123 4567",
+                                    null);
 
                     @Override
                     public User createUser(final String email, final String username) {
@@ -312,6 +315,7 @@ class PawUiRouteTest {
                                             "second-player",
                                             "Second",
                                             "Player",
+                                            null,
                                             null));
                         }
                         if ("host-player".equals(username)) {
@@ -322,7 +326,8 @@ class PawUiRouteTest {
                                             "host-player",
                                             "Jamie",
                                             "Rivera",
-                                            "+1 555 123 4567"));
+                                            "+1 555 123 4567",
+                                            currentUser.getProfileImageId()));
                         }
                         return Optional.empty();
                     }
@@ -333,7 +338,10 @@ class PawUiRouteTest {
                             final String username,
                             final String name,
                             final String lastName,
-                            final String phone) {
+                            final String phone,
+                            final String profileImageContentType,
+                            final long profileImageContentLength,
+                            final InputStream profileImageContentStream) {
                         currentUser =
                                 new User(
                                         id,
@@ -341,7 +349,28 @@ class PawUiRouteTest {
                                         username.trim().toLowerCase(Locale.ROOT),
                                         name.trim(),
                                         lastName.trim(),
-                                        phone == null || phone.isBlank() ? null : phone.trim());
+                                        phone == null || phone.isBlank() ? null : phone.trim(),
+                                        profileImageContentLength > 0
+                                                ? Long.valueOf(500L)
+                                                : currentUser.getProfileImageId());
+                        return currentUser;
+                    }
+
+                    @Override
+                    public User updateProfileImage(
+                            final Long id,
+                            final String contentType,
+                            final long contentLength,
+                            final InputStream contentStream) {
+                        currentUser =
+                                new User(
+                                        id,
+                                        currentUser.getEmail(),
+                                        currentUser.getUsername(),
+                                        currentUser.getName(),
+                                        currentUser.getLastName(),
+                                        currentUser.getPhone(),
+                                        500L);
                         return currentUser;
                     }
                 };
@@ -829,6 +858,26 @@ class PawUiRouteTest {
     }
 
     @Test
+    void postAccountEditRouteUpdatesPictureAndRedirects() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        multipart("/account/edit")
+                                .file(
+                                        new MockMultipartFile(
+                                                "profileImage",
+                                                "avatar.png",
+                                                "image/png",
+                                                new byte[] {1, 2, 3}))
+                                .param("username", "host-player")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/account?updated=1"));
+    }
+
+    @Test
     void getPublicProfileRouteRendersPublicProfileForAnonymousUsers() throws Exception {
         mockMvc.perform(get("/users/host-player"))
                 .andExpect(status().isOk())
@@ -843,7 +892,41 @@ class PawUiRouteTest {
                         model().attribute(
                                         "profilePage",
                                         Matchers.hasProperty(
-                                                "email", Matchers.is("host@test.com"))));
+                                                "email", Matchers.is("host@test.com"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "profileImageUrl",
+                                                Matchers.is(
+                                                        "/assets/default-profile-avatar.svg"))));
+    }
+
+    @Test
+    void getPublicProfileRouteUsesUploadedProfileImageWhenPresent() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        multipart("/account/edit")
+                                .file(
+                                        new MockMultipartFile(
+                                                "profileImage",
+                                                "avatar.png",
+                                                "image/png",
+                                                new byte[] {1, 2, 3}))
+                                .param("username", "host-player")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567"))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(get("/users/host-player"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "profileImageUrl", Matchers.is("/images/500"))));
     }
 
     @Test

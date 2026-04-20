@@ -28,6 +28,16 @@
 					</c:if>
 					<spring:message code="account.phone.empty" var="accountPhoneEmptyLabel" />
 					<c:set var="accountPhoneValue" value="${empty accountProfile.phone ? accountPhoneEmptyLabel : accountProfile.phone}" />
+					<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
+
+					<section class="account-profile-media" aria-label="${accountProfileImageAlt}">
+						<img
+							class="account-profile-media__image"
+							src="${accountProfileImageSrc}"
+							alt="${accountProfileImageAlt}"
+							loading="eager"
+							decoding="async" />
+					</section>
 
 					<div class="account-summary">
 						<label class="field" for="account-email">

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
+import java.io.ByteArrayInputStream;
 import java.sql.Timestamp;
 import java.time.Instant;
 import javax.sql.DataSource;
@@ -151,7 +152,13 @@ public class UserJdbcDaoTest {
                         Instant.now());
 
         userDao.updateProfile(
-                account.getId(), "updated@test.com", "updated_user", "Taylor", "Morgan", null);
+                account.getId(),
+                "updated@test.com",
+                "updated_user",
+                "Taylor",
+                "Morgan",
+                null,
+                null);
 
         final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
 
@@ -160,6 +167,29 @@ public class UserJdbcDaoTest {
         Assertions.assertEquals("Taylor", persisted.getName());
         Assertions.assertEquals("Morgan", persisted.getLastName());
         Assertions.assertNull(persisted.getPhone());
+    }
+
+    @Test
+    public void testUpdateProfileImageStoresProfileImageId() throws Exception {
+        final UserAccount account =
+                userDao.createAccount(
+                        "avatar@test.com",
+                        "avatar_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        Instant.now());
+        final ImageDao imageDao = new ImageJdbcDao(dataSource);
+        final Long imageId =
+                imageDao.create("image/png", 4L, new ByteArrayInputStream(new byte[] {1, 2, 3, 4}));
+
+        userDao.updateProfileImage(account.getId(), imageId);
+
+        final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
+
+        Assertions.assertEquals(imageId, persisted.getProfileImageId());
     }
 
     @Test

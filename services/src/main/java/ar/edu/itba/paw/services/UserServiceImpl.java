@@ -3,6 +3,8 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -19,11 +21,16 @@ public class UserServiceImpl implements UserService {
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9_]{3,50}$");
 
     private final UserDao userDao;
+    private final ImageService imageService;
     private final MessageSource messageSource;
 
     @Autowired
-    public UserServiceImpl(final UserDao userDao, final MessageSource messageSource) {
+    public UserServiceImpl(
+            final UserDao userDao,
+            final ImageService imageService,
+            final MessageSource messageSource) {
         this.userDao = userDao;
+        this.imageService = imageService;
         this.messageSource = messageSource;
     }
 
@@ -54,16 +61,26 @@ public class UserServiceImpl implements UserService {
             final String username,
             final String name,
             final String lastName,
-            final String phone) {
+            final String phone,
+            final String profileImageContentType,
+            final long profileImageContentLength,
+            final InputStream profileImageContentStream)
+            throws IOException {
         final Locale locale = currentLocale();
         final User existingUser =
                 userDao.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        final String normalizedUsername = normalizeUsername(username, locale);
+        final String normalizedUsername = normalizeUsername(existingUser, username, locale);
         final String normalizedName = normalizeRequiredText(name, 150, "name", locale);
         final String normalizedLastName = normalizeRequiredText(lastName, 150, "lastName", locale);
         final String normalizedPhone = normalizePhone(phone, locale);
+        final Long profileImageId =
+                resolveProfileImageId(
+                        existingUser,
+                        profileImageContentType,
+                        profileImageContentLength,
+                        profileImageContentStream);
 
         final Optional<User> userWithUsername = userDao.findByUsername(normalizedUsername);
         if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(id)) {
@@ -78,7 +95,8 @@ public class UserServiceImpl implements UserService {
                     normalizedUsername,
                     normalizedName,
                     normalizedLastName,
-                    normalizedPhone);
+                    normalizedPhone,
+                    profileImageId);
         } catch (final DataIntegrityViolationException exception) {
             if (userDao.findByUsername(normalizedUsername)
                     .filter(user -> !user.getId().equals(id))
@@ -95,16 +113,59 @@ public class UserServiceImpl implements UserService {
                 normalizedUsername,
                 normalizedName,
                 normalizedLastName,
-                normalizedPhone);
+                normalizedPhone,
+                profileImageId);
     }
 
-    private String normalizeUsername(final String username, final Locale locale) {
+    @Override
+    @Transactional
+    public User updateProfileImage(
+            final Long id,
+            final String contentType,
+            final long contentLength,
+            final InputStream contentStream)
+            throws IOException {
+        final User existingUser =
+                userDao.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        final Long profileImageId = imageService.store(contentType, contentLength, contentStream);
+        userDao.updateProfileImage(id, profileImageId);
+        return new User(
+                existingUser.getId(),
+                existingUser.getEmail(),
+                existingUser.getUsername(),
+                existingUser.getName(),
+                existingUser.getLastName(),
+                existingUser.getPhone(),
+                profileImageId);
+    }
+
+    private Long resolveProfileImageId(
+            final User existingUser,
+            final String profileImageContentType,
+            final long profileImageContentLength,
+            final InputStream profileImageContentStream)
+            throws IOException {
+        if (profileImageContentStream == null || profileImageContentLength <= 0) {
+            return existingUser.getProfileImageId();
+        }
+
+        return imageService.store(
+                profileImageContentType, profileImageContentLength, profileImageContentStream);
+    }
+
+    private String normalizeUsername(
+            final User existingUser, final String username, final Locale locale) {
         if (username == null) {
             throw new AccountRegistrationException(
                     "username_invalid", message("profile.edit.error.usernameInvalid", locale));
         }
 
         final String normalized = username.trim().toLowerCase(Locale.ROOT);
+        if (existingUser.getUsername() != null
+                && existingUser.getUsername().trim().equalsIgnoreCase(normalized)) {
+            return existingUser.getUsername();
+        }
         if (!USERNAME_PATTERN.matcher(normalized).matches()) {
             throw new AccountRegistrationException(
                     "username_invalid", message("profile.edit.error.usernameInvalid", locale));

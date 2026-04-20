@@ -10,6 +10,7 @@ public class UserAccount {
     private final String name;
     private final String lastName;
     private final String phone;
+    private final Long profileImageId;
     private final String passwordHash;
     private final UserRole role;
     private final Instant emailVerifiedAt;
@@ -21,7 +22,7 @@ public class UserAccount {
             final String passwordHash,
             final UserRole role,
             final Instant emailVerifiedAt) {
-        this(id, email, username, null, null, null, passwordHash, role, emailVerifiedAt);
+        this(id, email, username, null, null, null, null, passwordHash, role, emailVerifiedAt);
     }
 
     public UserAccount(
@@ -31,6 +32,7 @@ public class UserAccount {
             final String name,
             final String lastName,
             final String phone,
+            final Long profileImageId,
             final String passwordHash,
             final UserRole role,
             final Instant emailVerifiedAt) {
@@ -40,6 +42,7 @@ public class UserAccount {
         this.name = name;
         this.lastName = lastName;
         this.phone = phone;
+        this.profileImageId = profileImageId;
         this.passwordHash = passwordHash;
         this.role = role;
         this.emailVerifiedAt = emailVerifiedAt;
@@ -67,6 +70,10 @@ public class UserAccount {
 
     public String getPhone() {
         return phone;
+    }
+
+    public Long getProfileImageId() {
+        return profileImageId;
     }
 
     public String getPasswordHash() {

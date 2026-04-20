@@ -27,7 +27,10 @@ public class UserJdbcDao implements UserDao {
                             rs.getString("username"),
                             rs.getString("name"),
                             rs.getString("last_name"),
-                            rs.getString("phone"));
+                            rs.getString("phone"),
+                            rs.getObject("profile_image_id") == null
+                                    ? null
+                                    : rs.getLong("profile_image_id"));
     private static final RowMapper<UserAccount> USER_ACCOUNT_ROW_MAPPER =
             (ResultSet rs, int rowNum) -> {
                 final Timestamp emailVerifiedAt = rs.getTimestamp("email_verified_at");
@@ -38,6 +41,9 @@ public class UserJdbcDao implements UserDao {
                         rs.getString("name"),
                         rs.getString("last_name"),
                         rs.getString("phone"),
+                        rs.getObject("profile_image_id") == null
+                                ? null
+                                : rs.getLong("profile_image_id"),
                         rs.getString("password_hash"),
                         UserRole.fromDbValue(rs.getString("role")).orElse(UserRole.USER),
                         emailVerifiedAt == null ? null : emailVerifiedAt.toInstant());
@@ -105,6 +111,7 @@ public class UserJdbcDao implements UserDao {
                 name,
                 lastName,
                 phone,
+                null,
                 passwordHash,
                 role,
                 emailVerifiedAt);
@@ -155,16 +162,27 @@ public class UserJdbcDao implements UserDao {
             final String username,
             final String name,
             final String lastName,
-            final String phone) {
+            final String phone,
+            final Long profileImageId) {
         jdbcTemplate.update(
                 "UPDATE users "
-                        + "SET email = ?, username = ?, name = ?, last_name = ?, phone = ?, updated_at = ? "
+                        + "SET email = ?, username = ?, name = ?, last_name = ?, phone = ?, profile_image_id = ?, updated_at = ? "
                         + "WHERE id = ?",
                 email,
                 username,
                 name,
                 lastName,
                 phone,
+                profileImageId,
+                Timestamp.from(Instant.now()),
+                id);
+    }
+
+    @Override
+    public void updateProfileImage(final Long id, final Long profileImageId) {
+        jdbcTemplate.update(
+                "UPDATE users SET profile_image_id = ?, updated_at = ? WHERE id = ?",
+                profileImageId,
                 Timestamp.from(Instant.now()),
                 id);
     }
