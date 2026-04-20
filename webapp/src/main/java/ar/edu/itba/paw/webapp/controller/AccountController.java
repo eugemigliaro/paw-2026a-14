@@ -47,7 +47,8 @@ public class AccountController {
 
     @GetMapping("/account/edit")
     public ModelAndView showEditAccount(final Locale locale) {
-        return accountEditView(accountProfileFormFrom(requiredAuthenticatedUser()), locale);
+        final User user = requiredAuthenticatedUser();
+        return accountEditView(accountProfileFormFrom(user), user.getEmail(), locale);
     }
 
     @PostMapping("/account/edit")
@@ -62,10 +63,8 @@ public class AccountController {
                 (AuthenticatedUserPrincipal) authentication.getPrincipal();
         final User currentUser = requiredAuthenticatedUser();
 
-        accountProfileForm.setEmail(currentUser.getEmail());
-
         if (bindingResult.hasErrors()) {
-            return accountEditView(accountProfileForm, locale);
+            return accountEditView(accountProfileForm, currentUser.getEmail(), locale);
         }
 
         try {
@@ -86,8 +85,7 @@ public class AccountController {
             return new ModelAndView("redirect:/account?updated=1");
         } catch (final AccountRegistrationException exception) {
             applyProfileUpdateError(bindingResult, exception);
-            accountProfileForm.setEmail(currentUser.getEmail());
-            return accountEditView(accountProfileForm, locale);
+            return accountEditView(accountProfileForm, currentUser.getEmail(), locale);
         }
     }
 
@@ -124,7 +122,9 @@ public class AccountController {
     }
 
     private ModelAndView accountEditView(
-            final AccountProfileForm accountProfileForm, final Locale locale) {
+            final AccountProfileForm accountProfileForm,
+            final String accountEmail,
+            final Locale locale) {
         final ModelAndView mav = new ModelAndView("account/edit");
         mav.addObject(
                 "pageTitle",
@@ -148,6 +148,7 @@ public class AccountController {
         mav.addObject(
                 "accountCancelLabel",
                 messageSource.getMessage("common.cancel", null, "Cancel", locale));
+        mav.addObject("accountEmail", accountEmail);
         mav.addObject("accountProfileForm", accountProfileForm);
         return mav;
     }
@@ -163,7 +164,6 @@ public class AccountController {
 
     private static AccountProfileForm accountProfileFormFrom(final User user) {
         final AccountProfileForm form = new AccountProfileForm();
-        form.setEmail(user.getEmail());
         form.setUsername(user.getUsername());
         form.setName(user.getName());
         form.setLastName(user.getLastName());

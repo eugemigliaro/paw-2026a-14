@@ -14,18 +14,20 @@
 			<main class="page-shell account-shell">
 				<section class="panel account-panel">
 					<h1 class="page-heading__title account-panel__title"><c:out value="${accountTitle}" /></h1>
-					<p class="page-heading__description account-panel__description">
-						<c:out value="${accountDescription}" />
-					</p>
+					<div class="account-panel__header">
+						<p class="page-heading__description account-panel__description">
+							<c:out value="${accountDescription}" />
+						</p>
+						<div class="account-actions account-actions--top">
+							<c:url var="accountEditHref" value="/account/edit" />
+							<ui:button label="${accountEditLabel}" href="${accountEditHref}" variant="secondary" />
+						</div>
+					</div>
 					<c:if test="${not empty accountUpdated}">
 						<p class="auth-notice auth-notice--success"><c:out value="${accountUpdated}" /></p>
 					</c:if>
-					<c:set var="accountPhoneValue" value="${empty accountProfile.phone ? '' : accountProfile.phone}" />
-
-					<div class="account-actions account-actions--top">
-						<c:url var="accountEditHref" value="/account/edit" />
-						<ui:button label="${accountEditLabel}" href="${accountEditHref}" variant="secondary" />
-					</div>
+					<spring:message code="account.phone.empty" var="accountPhoneEmptyLabel" />
+					<c:set var="accountPhoneValue" value="${empty accountProfile.phone ? accountPhoneEmptyLabel : accountProfile.phone}" />
 
 					<div class="account-summary">
 						<label class="field" for="account-email">

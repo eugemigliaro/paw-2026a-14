@@ -23,7 +23,6 @@
 					<spring:message var="namePlaceholder" code="form.name.placeholder" />
 					<spring:message var="lastNamePlaceholder" code="form.lastName.placeholder" />
 					<spring:message var="phonePlaceholder" code="form.phone.placeholder" />
-					<c:set var="accountEditEmailValue" value="${accountProfileForm.email}" />
 					<c:url var="accountAction" value="/account/edit" />
 					<form:form
 						method="post"
@@ -33,7 +32,6 @@
 						id="account-edit-form"
 						data-account-edit-form="true">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-						<form:hidden path="email" />
 						<label class="field field--required" for="account-email">
 							<span class="field__label"><spring:message code="form.email.label" /></span>
 							<div class="account-locked-field">
@@ -41,7 +39,7 @@
 									id="account-email"
 									type="email"
 									class="field__control account-readonly-control account-locked-field__control"
-									value="${accountEditEmailValue}"
+									value="${accountEmail}"
 									disabled="disabled"
 									aria-disabled="true"
 									readonly="readonly"

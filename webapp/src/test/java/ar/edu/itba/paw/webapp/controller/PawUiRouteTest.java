@@ -820,7 +820,6 @@ class PawUiRouteTest {
 
         mockMvc.perform(
                         post("/account/edit")
-                                .param("email", "host@test.com")
                                 .param("username", "updated_user")
                                 .param("name", "Taylor")
                                 .param("lastName", "Morgan")

@@ -201,6 +201,13 @@
 	max-width: 42rem;
 }
 
+.account-panel__header {
+	align-items: center;
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+}
+
 .account-form,
 .account-summary {
 	display: grid;
@@ -215,7 +222,8 @@
 }
 
 .account-actions--top {
-	margin-top: -0.25rem;
+	flex-shrink: 0;
+	margin-top: 0;
 }
 
 .account-logout {
@@ -264,5 +272,10 @@
 @media (max-width: 640px) {
 	.auth-panel {
 		padding: 1.5rem;
+	}
+
+	.account-panel__header {
+		align-items: stretch;
+		flex-direction: column;
 	}
 }

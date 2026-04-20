@@ -1,16 +1,10 @@
 package ar.edu.itba.paw.webapp.form;
 
-import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 public class AccountProfileForm {
-
-    @NotBlank(message = "{AccountProfileForm.email.NotBlank}")
-    @Email(message = "{AccountProfileForm.email.Email}")
-    @Size(max = 255, message = "{AccountProfileForm.email.Size}")
-    private String email;
 
     @NotBlank(message = "{AccountProfileForm.username.NotBlank}")
     @Pattern(regexp = "^[a-z0-9_]{3,50}$", message = "{AccountProfileForm.username.Pattern}")
@@ -27,14 +21,6 @@ public class AccountProfileForm {
     @Size(max = 50, message = "{AccountProfileForm.phone.Size}")
     @Pattern(regexp = "^$|^[0-9+()\\-\\s]{6,50}$", message = "{AccountProfileForm.phone.Pattern}")
     private String phone;
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(final String email) {
-        this.email = email;
-    }
 
     public String getUsername() {
         return username;
