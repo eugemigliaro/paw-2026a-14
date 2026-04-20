@@ -74,3 +74,4 @@ webapp/tmp/
 
 *.codex
 .playwright-mcp/
+load.ps1

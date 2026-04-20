@@ -23,8 +23,16 @@
 
 					<spring:message var="emailPlaceholder" code="form.email.placeholder" />
 					<spring:message var="usernamePlaceholder" code="form.username.placeholder" />
+					<spring:message var="namePlaceholder" code="form.name.placeholder" />
+					<spring:message var="lastNamePlaceholder" code="form.lastName.placeholder" />
+					<spring:message var="phonePlaceholder" code="form.phone.placeholder" />
+					<spring:message var="passwordLabel" code="form.password.label" />
 					<spring:message var="passwordPlaceholder" code="form.password.placeholder" />
+					<spring:message var="confirmPasswordLabel" code="form.confirmPassword.label" />
 					<spring:message var="confirmPasswordPlaceholder" code="form.confirmPassword.placeholder" />
+					<spring:message var="passwordRequirement" code="RegisterForm.password.Size" />
+					<spring:message var="showPasswordLabel" code="form.password.show" text="Show password" />
+					<spring:message var="hidePasswordLabel" code="form.password.hide" text="Hide password" />
 					<spring:message var="registerSubmitLabel" code="auth.register.submit" />
 					<c:url var="registerAction" value="/register" />
 					<form:form method="post" action="${registerAction}" modelAttribute="registerForm" cssClass="auth-form">
@@ -37,6 +45,7 @@
 								type="email"
 								cssClass="field__control"
 								placeholder="${emailPlaceholder}"
+								required="required"
 								autocomplete="email" />
 							<form:errors path="email" cssClass="field__error" element="span" />
 						</label>
@@ -47,29 +56,62 @@
 								id="register-username"
 								cssClass="field__control"
 								placeholder="${usernamePlaceholder}"
+								required="required"
 								autocomplete="username" />
 							<form:errors path="username" cssClass="field__error" element="span" />
 						</label>
-						<label class="field" for="register-password">
-							<span class="field__label"><spring:message code="form.password.label" /></span>
-							<form:password
-								path="password"
-								id="register-password"
+						<label class="field" for="register-name">
+							<span class="field__label"><spring:message code="form.name.label" /></span>
+							<form:input
+								path="name"
+								id="register-name"
 								cssClass="field__control"
-								placeholder="${passwordPlaceholder}"
-								autocomplete="new-password" />
-							<form:errors path="password" cssClass="field__error" element="span" />
+								placeholder="${namePlaceholder}"
+								required="required"
+								autocomplete="given-name" />
+							<form:errors path="name" cssClass="field__error" element="span" />
 						</label>
-						<label class="field" for="register-confirm-password">
-							<span class="field__label"><spring:message code="form.confirmPassword.label" /></span>
-							<form:password
-								path="confirmPassword"
-								id="register-confirm-password"
+						<label class="field" for="register-last-name">
+							<span class="field__label"><spring:message code="form.lastName.label" /></span>
+							<form:input
+								path="lastName"
+								id="register-last-name"
 								cssClass="field__control"
-								placeholder="${confirmPasswordPlaceholder}"
-								autocomplete="new-password" />
-							<form:errors path="confirmPassword" cssClass="field__error" element="span" />
+								placeholder="${lastNamePlaceholder}"
+								required="required"
+								autocomplete="family-name" />
+							<form:errors path="lastName" cssClass="field__error" element="span" />
 						</label>
+						<label class="field" for="register-phone">
+							<span class="field__label"><spring:message code="form.phone.label" /></span>
+							<form:input
+								path="phone"
+								id="register-phone"
+								type="tel"
+								cssClass="field__control"
+								placeholder="${phonePlaceholder}"
+								autocomplete="tel" />
+							<form:errors path="phone" cssClass="field__error" element="span" />
+						</label>
+						<ui:passwordInput
+							label="${passwordLabel}"
+							path="password"
+							id="register-password"
+							placeholder="${passwordPlaceholder}"
+							required="${true}"
+							autocomplete="new-password"
+							hint="${passwordRequirement}"
+							showLabel="${showPasswordLabel}"
+							hideLabel="${hidePasswordLabel}" />
+						<ui:passwordInput
+							label="${confirmPasswordLabel}"
+							path="confirmPassword"
+							id="register-confirm-password"
+							placeholder="${confirmPasswordPlaceholder}"
+							required="${true}"
+							autocomplete="new-password"
+							showLabel="${showPasswordLabel}"
+							hideLabel="${hidePasswordLabel}" />
 						<ui:button label="${registerSubmitLabel}" type="submit" fullWidth="${true}" />
 					</form:form>
 

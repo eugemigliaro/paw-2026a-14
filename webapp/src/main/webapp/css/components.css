@@ -199,6 +199,12 @@
 	margin-left: 0.2rem;
 }
 
+.field--required .field__label::after {
+	content: "*";
+	color: #d62828;
+	margin-left: 0.2rem;
+}
+
 .field__control {
 	background: #ffffff;
 	border: 1px solid #dcded8;
@@ -215,6 +221,18 @@
 	border-color: rgba(13, 110, 99, 0.32);
 	box-shadow: 0 0 0 4px rgba(15, 112, 101, 0.1);
 	outline: none;
+}
+
+.field__control[type="password"]::-ms-reveal,
+.field__control[type="password"]::-ms-clear {
+	display: none;
+}
+
+.field__control[type="password"]::-webkit-credentials-auto-fill-button,
+.field__control[type="password"]::-webkit-textfield-decoration-container {
+	appearance: none;
+	display: none !important;
+	visibility: hidden;
 }
 
 .field__control--textarea {

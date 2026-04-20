@@ -14,6 +14,7 @@ import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
 import java.time.Instant;
@@ -114,6 +115,9 @@ class AuthFlowControllerTest {
                                 post("/register")
                                         .param("email", "new@test.com")
                                         .param("username", "new_user")
+                                        .param("name", "Jamie")
+                                        .param("lastName", "Rivera")
+                                        .param("phone", "+1 555 123 4567")
                                         .param("password", "Password123!")
                                         .param("confirmPassword", "Password123!"))
                         .andExpect(status().isOk())
@@ -131,11 +135,77 @@ class AuthFlowControllerTest {
                         post("/register")
                                 .param("email", "new@test.com")
                                 .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567")
                                 .param("password", "Password123!")
                                 .param("confirmPassword", "Password1234!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "confirmPassword"));
+    }
+
+    @Test
+    void postRegisterWithoutPhoneStillRendersCheckEmailPage() throws Exception {
+        Mockito.when(
+                        accountAuthService.register(
+                                ArgumentMatchers.any(RegisterAccountRequest.class)))
+                .thenReturn(
+                        new VerificationRequestResult(
+                                "new@test.com", Instant.parse("2026-04-11T18:00:00Z")));
+
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification/check-email"));
+    }
+
+    @Test
+    void postRegisterWithServiceNameErrorRerendersRegisterViewWithNameError() throws Exception {
+        Mockito.when(
+                        accountAuthService.register(
+                                ArgumentMatchers.any(RegisterAccountRequest.class)))
+                .thenThrow(new AccountRegistrationException("name_invalid", "Invalid name"));
+
+        mockMvc.perform(validRegisterRequest())
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/register"))
+                .andExpect(model().attributeHasFieldErrors("registerForm", "name"));
+    }
+
+    @Test
+    void postRegisterWithServiceLastNameErrorRerendersRegisterViewWithLastNameError()
+            throws Exception {
+        Mockito.when(
+                        accountAuthService.register(
+                                ArgumentMatchers.any(RegisterAccountRequest.class)))
+                .thenThrow(
+                        new AccountRegistrationException("lastName_invalid", "Invalid last name"));
+
+        mockMvc.perform(validRegisterRequest())
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/register"))
+                .andExpect(model().attributeHasFieldErrors("registerForm", "lastName"));
+    }
+
+    @Test
+    void postRegisterWithServicePhoneErrorRerendersRegisterViewWithPhoneError() throws Exception {
+        Mockito.when(
+                        accountAuthService.register(
+                                ArgumentMatchers.any(RegisterAccountRequest.class)))
+                .thenThrow(new AccountRegistrationException("phone_invalid", "Invalid phone"));
+
+        mockMvc.perform(validRegisterRequest())
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/register"))
+                .andExpect(model().attributeHasFieldErrors("registerForm", "phone"));
     }
 
     @Test
@@ -228,6 +298,18 @@ class AuthFlowControllerTest {
 
         Assertions.assertFalse(shell.getPrimaryNav().isEmpty());
         Assertions.assertFalse(shell.getPrimaryNav().get(0).isActive());
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            validRegisterRequest() {
+        return post("/register")
+                .param("email", "new@test.com")
+                .param("username", "new_user")
+                .param("name", "Jamie")
+                .param("lastName", "Rivera")
+                .param("phone", "+1 555 123 4567")
+                .param("password", "Password123!")
+                .param("confirmPassword", "Password123!");
     }
 
     private static MessageSource messageSource() {

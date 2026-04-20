@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.security;
 
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import java.io.Serial;
@@ -20,6 +21,13 @@ public class AuthenticatedUserPrincipal implements Principal, Serializable {
         this.email = account.getEmail();
         this.username = account.getUsername();
         this.role = account.getRole();
+    }
+
+    public AuthenticatedUserPrincipal(final User user, final UserRole role) {
+        this.userId = user.getId();
+        this.email = user.getEmail();
+        this.username = user.getUsername();
+        this.role = role;
     }
 
     public Long getUserId() {

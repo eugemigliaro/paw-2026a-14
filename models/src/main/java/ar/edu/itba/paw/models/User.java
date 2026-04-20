@@ -5,11 +5,30 @@ public class User {
     private final Long id;
     private final String email;
     private final String username;
+    private final String name;
+    private final String lastName;
+    private final String phone;
+    private final Long profileImageId;
 
     public User(final Long id, final String email, final String username) {
+        this(id, email, username, null, null, null, null);
+    }
+
+    public User(
+            final Long id,
+            final String email,
+            final String username,
+            final String name,
+            final String lastName,
+            final String phone,
+            final Long profileImageId) {
         this.id = id;
         this.email = email;
         this.username = username;
+        this.name = name;
+        this.lastName = lastName;
+        this.phone = phone;
+        this.profileImageId = profileImageId;
     }
 
     public Long getId() {
@@ -24,6 +43,22 @@ public class User {
         return username;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public Long getProfileImageId() {
+        return profileImageId;
+    }
+
     @Override
     public String toString() {
         return "User{"
@@ -32,6 +67,18 @@ public class User {
                 + '\''
                 + ", username='"
                 + username
+                + '\''
+                + ", name='"
+                + name
+                + '\''
+                + ", lastName='"
+                + lastName
+                + '\''
+                + ", phone='"
+                + phone
+                + '\''
+                + ", profileImageId='"
+                + profileImageId
                 + '\''
                 + ", id='"
                 + id
