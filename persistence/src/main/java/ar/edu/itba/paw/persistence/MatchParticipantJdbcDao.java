@@ -161,4 +161,14 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         userId);
         return rows == 1;
     }
+
+    @Override
+    public List<Long> findPendingMatchIds(final Long userId) {
+        return jdbcTemplate.queryForList(
+                "SELECT match_id FROM match_participants"
+                        + " WHERE user_id = ? AND status = 'pending_approval'"
+                        + " ORDER BY joined_at ASC",
+                Long.class,
+                userId);
+    }
 }

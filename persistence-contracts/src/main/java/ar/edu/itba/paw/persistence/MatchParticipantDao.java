@@ -24,4 +24,6 @@ public interface MatchParticipantDao {
     boolean removeParticipant(Long matchId, Long userId);
 
     boolean cancelJoinRequest(Long matchId, Long userId);
+
+    List<Long> findPendingMatchIds(Long userId);
 }

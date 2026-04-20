@@ -8,6 +8,8 @@ import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -170,6 +172,15 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         requireHost(match, hostUserId);
         return matchParticipantDao.findConfirmedParticipants(matchId);
+    }
+
+    @Override
+    public List<Match> findPendingRequestMatches(final Long userId) {
+        return matchParticipantDao.findPendingMatchIds(userId).stream()
+                .map(matchDao::findMatchById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
     }
 
     // -------------------------------------------------------------------------

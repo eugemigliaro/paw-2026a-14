@@ -6,9 +6,11 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
@@ -39,6 +41,7 @@ public class EventController {
 
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
+    private final MatchParticipationService matchParticipationService;
     private final UserService userService;
     private final MessageSource messageSource;
 
@@ -46,10 +49,12 @@ public class EventController {
     public EventController(
             final MatchService matchService,
             final MatchReservationService matchReservationService,
+            final MatchParticipationService matchParticipationService,
             final UserService userService,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
+        this.matchParticipationService = matchParticipationService;
         this.userService = userService;
         this.messageSource = messageSource;
     }
@@ -58,9 +63,16 @@ public class EventController {
     public ModelAndView showEventDetails(
             @PathVariable("eventId") final String eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
+            @RequestParam(value = "join", required = false) final String joinStatus,
+            @RequestParam(value = "joinError", required = false) final String joinErrorCode,
             final Locale locale) {
         return showRealEventDetails(
-                parseEventIdOrThrowNotFound(eventId), reservationStatus, null, locale);
+                parseEventIdOrThrowNotFound(eventId),
+                reservationStatus,
+                null,
+                joinStatus,
+                joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
+                locale);
     }
 
     @PostMapping("/matches/{eventId}/reservations")
@@ -76,7 +88,12 @@ public class EventController {
             return new ModelAndView("redirect:/matches/" + matchId + "?reservation=confirmed");
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
-                    matchId, null, reservationErrorMessage(exception.getCode(), locale), locale);
+                    matchId,
+                    null,
+                    reservationErrorMessage(exception.getCode(), locale),
+                    null,
+                    null,
+                    locale);
         }
     }
 
@@ -84,6 +101,8 @@ public class EventController {
             final Long eventId,
             final String reservationStatus,
             final String reservationError,
+            final String joinStatus,
+            final String joinError,
             final Locale locale) {
         final Match match =
                 matchService
@@ -99,15 +118,29 @@ public class EventController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
+        final boolean hasPendingRequest =
+                currentUserId != null
+                        && "invite_only".equalsIgnoreCase(match.getVisibility())
+                        && matchParticipationService.hasPendingRequest(eventId, currentUserId);
+
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
+
         mav.addObject("reservationEnabled", canReserveMatch(match));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
+
+        mav.addObject("joinRequestEnabled", canRequestToJoin(match));
+        mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
+        mav.addObject("cancelJoinRequestPath", "/matches/" + eventId + "/join-requests/cancel");
+        mav.addObject("hasPendingJoinRequest", hasPendingRequest);
+        mav.addObject("joinRequested", "requested".equalsIgnoreCase(joinStatus));
+        mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
+        mav.addObject("joinError", joinError);
         return mav;
     }
 
@@ -345,16 +378,44 @@ public class EventController {
             return false;
         }
 
-        if ("public".equalsIgnoreCase(match.getVisibility())) {
-            return true;
-        }
-
-        return false;
+        // public and invite_only are visible to everyone
+        return "public".equalsIgnoreCase(match.getVisibility())
+                || "invite_only".equalsIgnoreCase(match.getVisibility());
     }
 
     private boolean canReserveMatch(final Match match) {
         return "public".equalsIgnoreCase(match.getVisibility())
                 && "open".equalsIgnoreCase(match.getStatus())
                 && match.getAvailableSpots() > 0;
+    }
+
+    private boolean canRequestToJoin(final Match match) {
+        return "invite_only".equalsIgnoreCase(match.getVisibility())
+                && "open".equalsIgnoreCase(match.getStatus())
+                && match.getAvailableSpots() > 0;
+    }
+
+    private String joinErrorMessage(final String code, final Locale locale) {
+        switch (code) {
+            case "closed":
+                return messageSource.getMessage("join.error.closed", null, locale);
+            case "started":
+                return messageSource.getMessage("join.error.started", null, locale);
+            case "already_joined":
+                return messageSource.getMessage("join.error.alreadyJoined", null, locale);
+            case "already_pending":
+                return messageSource.getMessage("join.error.alreadyPending", null, locale);
+            case "full":
+                return messageSource.getMessage("join.error.full", null, locale);
+            case "is_host":
+                return messageSource.getMessage("join.error.isHost", null, locale);
+            case "not_invite_only":
+                return messageSource.getMessage("join.error.notInviteOnly", null, locale);
+            case "no_pending_request":
+                return messageSource.getMessage("join.error.noPendingRequest", null, locale);
+            case "not_found":
+            default:
+                return messageSource.getMessage("join.error.notFound", null, locale);
+        }
     }
 }

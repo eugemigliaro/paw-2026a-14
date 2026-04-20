@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
 import java.util.List;
 
@@ -26,4 +27,6 @@ public interface MatchParticipationService {
     List<User> findPendingRequests(Long matchId, Long hostUserId);
 
     List<User> findConfirmedParticipants(Long matchId, Long hostUserId);
+
+    List<Match> findPendingRequestMatches(Long userId);
 }

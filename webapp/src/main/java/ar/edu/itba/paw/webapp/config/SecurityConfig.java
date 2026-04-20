@@ -51,6 +51,12 @@ public class SecurityConfig {
                                         .requestMatchers(
                                                 new AntPathRequestMatcher(
                                                         "/matches/*/reservations",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/join-requests",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/join-requests/cancel",
                                                         HttpMethod.POST.name()))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(new AntPathRequestMatcher("/host/**"))
