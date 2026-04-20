@@ -25,19 +25,35 @@
 					<spring:message var="phonePlaceholder" code="form.phone.placeholder" />
 					<c:set var="accountEditEmailValue" value="${accountProfileForm.email}" />
 					<c:url var="accountAction" value="/account/edit" />
-					<form:form method="post" action="${accountAction}" modelAttribute="accountProfileForm" cssClass="account-form">
+					<form:form
+						method="post"
+						action="${accountAction}"
+						modelAttribute="accountProfileForm"
+						cssClass="account-form"
+						id="account-edit-form"
+						data-account-edit-form="true">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<form:hidden path="email" />
-						<label class="field" for="account-email">
+						<label class="field field--required" for="account-email">
 							<span class="field__label"><spring:message code="form.email.label" /></span>
-							<input
-								id="account-email"
-								type="email"
-								class="field__control account-readonly-control"
-								value="${accountEditEmailValue}"
-								readonly="readonly"
-								aria-readonly="true"
-								autocomplete="email" />
+							<div class="account-locked-field">
+								<input
+									id="account-email"
+									type="email"
+									class="field__control account-readonly-control account-locked-field__control"
+									value="${accountEditEmailValue}"
+									disabled="disabled"
+									aria-disabled="true"
+									readonly="readonly"
+									aria-readonly="true"
+									autocomplete="email" />
+								<span class="account-locked-field__icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
+										<rect x="6.5" y="10" width="11" height="9" rx="2.2" />
+									</svg>
+								</span>
+							</div>
 						</label>
 						<label class="field" for="account-username">
 							<span class="field__label"><spring:message code="form.username.label" /></span>
@@ -84,7 +100,11 @@
 							<form:errors path="phone" cssClass="field__error" element="span" />
 						</label>
 						<div class="account-actions">
-							<ui:button label="${accountSaveLabel}" type="submit" />
+							<ui:button
+								label="${accountSaveLabel}"
+								type="submit"
+								id="account-save-button"
+								disabled="${true}" />
 							<c:url var="accountHref" value="/account" />
 							<ui:button label="${accountCancelLabel}" href="${accountHref}" variant="secondary" />
 						</div>

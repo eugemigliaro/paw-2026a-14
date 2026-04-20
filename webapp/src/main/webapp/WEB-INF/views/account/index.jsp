@@ -22,6 +22,11 @@
 					</c:if>
 					<c:set var="accountPhoneValue" value="${empty accountProfile.phone ? '' : accountProfile.phone}" />
 
+					<div class="account-actions account-actions--top">
+						<c:url var="accountEditHref" value="/account/edit" />
+						<ui:button label="${accountEditLabel}" href="${accountEditHref}" variant="secondary" />
+					</div>
+
 					<div class="account-summary">
 						<label class="field" for="account-email">
 							<span class="field__label"><spring:message code="form.email.label" /></span>
@@ -73,11 +78,6 @@
 								readonly="readonly"
 								aria-readonly="true" />
 						</label>
-					</div>
-
-					<div class="account-actions">
-						<c:url var="accountEditHref" value="/account/edit" />
-						<ui:button label="${accountEditLabel}" href="${accountEditHref}" variant="secondary" />
 					</div>
 
 					<c:url var="logoutAction" value="/logout" />

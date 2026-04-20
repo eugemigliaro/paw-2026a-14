@@ -214,6 +214,10 @@
 	margin-top: 0.5rem;
 }
 
+.account-actions--top {
+	margin-top: -0.25rem;
+}
+
 .account-logout {
 	display: flex;
 	justify-content: flex-end;
@@ -223,6 +227,38 @@
 .account-readonly-control {
 	color: var(--text-primary);
 	cursor: default;
+}
+
+.account-locked-field {
+	position: relative;
+}
+
+.account-locked-field__control {
+	padding-right: 3rem;
+}
+
+.account-locked-field__icon {
+	align-items: center;
+	color: var(--text-muted);
+	display: inline-flex;
+	height: 1rem;
+	justify-content: center;
+	pointer-events: none;
+	position: absolute;
+	right: 0.95rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1rem;
+}
+
+.account-locked-field__icon svg {
+	fill: none;
+	height: 100%;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+	width: 100%;
 }
 
 @media (max-width: 640px) {
