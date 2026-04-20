@@ -201,49 +201,28 @@
 	max-width: 42rem;
 }
 
+.account-form,
 .account-summary {
 	display: grid;
 	gap: 1rem;
 }
 
-.account-locked-field {
-	position: relative;
-}
-
-.account-locked-field__control {
-	color: var(--text-primary);
-	cursor: default;
-	padding-right: 3rem;
-}
-
-.account-locked-field__icon {
-	align-items: center;
-	color: var(--text-muted);
-	display: inline-flex;
-	height: 1rem;
-	justify-content: center;
-	pointer-events: none;
-	position: absolute;
-	right: 0.95rem;
-	top: 50%;
-	transform: translateY(-50%);
-	width: 1rem;
-}
-
-.account-locked-field__icon svg {
-	fill: none;
-	height: 100%;
-	stroke: currentColor;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-	stroke-width: 1.8;
-	width: 100%;
-}
-
 .account-actions {
+	display: flex;
+	gap: 0.75rem;
+	justify-content: flex-end;
+	margin-top: 0.5rem;
+}
+
+.account-logout {
 	display: flex;
 	justify-content: flex-end;
 	margin: 0;
+}
+
+.account-readonly-control {
+	color: var(--text-primary);
+	cursor: default;
 }
 
 @media (max-width: 640px) {

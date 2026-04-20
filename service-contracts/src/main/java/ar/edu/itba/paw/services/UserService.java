@@ -12,4 +12,6 @@ public interface UserService {
     Optional<User> findById(final Long id);
 
     Optional<User> findByUsername(final String username);
+
+    User updateProfile(Long id, String username, String name, String lastName, String phone);
 }

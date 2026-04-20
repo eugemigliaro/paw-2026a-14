@@ -56,6 +56,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
@@ -78,6 +79,7 @@ class PawUiRouteTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
         final MessageSource messageSource = messageSource();
+        final LocalValidatorFactoryBean validator = validator(messageSource);
 
         lastSportsFilter = new AtomicReference<>();
         lastReservedMatchId = new AtomicReference<>();
@@ -270,6 +272,15 @@ class PawUiRouteTest {
 
         final UserService userService =
                 new UserService() {
+                    private User currentUser =
+                            new User(
+                                    9L,
+                                    "host@test.com",
+                                    "host-player",
+                                    "Jamie",
+                                    "Rivera",
+                                    "+1 555 123 4567");
+
                     @Override
                     public User createUser(final String email, final String username) {
                         return new User(9L, email, username);
@@ -282,15 +293,56 @@ class PawUiRouteTest {
 
                     @Override
                     public Optional<User> findById(final Long id) {
+                        if (id.equals(currentUser.getId())) {
+                            return Optional.of(currentUser);
+                        }
                         return Optional.of(new User(id, "host@test.com", "host-player"));
                     }
 
                     @Override
                     public Optional<User> findByUsername(final String username) {
+                        if (currentUser.getUsername().equals(username)) {
+                            return Optional.of(currentUser);
+                        }
+                        if ("second-player".equals(username)) {
+                            return Optional.of(
+                                    new User(
+                                            3L,
+                                            "second@test.com",
+                                            "second-player",
+                                            "Second",
+                                            "Player",
+                                            null));
+                        }
                         if ("host-player".equals(username)) {
-                            return Optional.of(new User(9L, "host@test.com", "host-player"));
+                            return Optional.of(
+                                    new User(
+                                            9L,
+                                            "host@test.com",
+                                            "host-player",
+                                            "Jamie",
+                                            "Rivera",
+                                            "+1 555 123 4567"));
                         }
                         return Optional.empty();
+                    }
+
+                    @Override
+                    public User updateProfile(
+                            final Long id,
+                            final String username,
+                            final String name,
+                            final String lastName,
+                            final String phone) {
+                        currentUser =
+                                new User(
+                                        id,
+                                        currentUser.getEmail(),
+                                        username.trim().toLowerCase(Locale.ROOT),
+                                        name.trim(),
+                                        lastName.trim(),
+                                        phone == null || phone.isBlank() ? null : phone.trim());
+                        return currentUser;
                     }
                 };
 
@@ -407,7 +459,7 @@ class PawUiRouteTest {
                                         userService,
                                         messageSource),
                                 new PublicProfileController(userService, messageSource),
-                                new AccountController(messageSource),
+                                new AccountController(userService, messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
                                 new MatchDashboardController(matchService, messageSource),
@@ -416,6 +468,7 @@ class PawUiRouteTest {
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
+                        .setValidator(validator)
                         .setConversionService(new DefaultFormattingConversionService())
                         .build();
     }
@@ -747,9 +800,33 @@ class PawUiRouteTest {
         mockMvc.perform(get("/account"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
-                .andExpect(model().attribute("username", "host-player"))
-                .andExpect(model().attribute("email", "host@test.com"))
+                .andExpect(model().attributeExists("accountProfile"))
                 .andExpect(model().attributeExists("shell"));
+    }
+
+    @Test
+    void getAccountEditRouteRendersEditablePageForAuthenticatedUsers() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/account/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/edit"))
+                .andExpect(model().attributeExists("accountProfileForm"));
+    }
+
+    @Test
+    void postAccountEditRouteUpdatesProfileAndRedirects() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/account/edit")
+                                .param("email", "host@test.com")
+                                .param("username", "updated_user")
+                                .param("name", "Taylor")
+                                .param("lastName", "Morgan")
+                                .param("phone", ""))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/account?updated=1"));
     }
 
     @Test
@@ -768,6 +845,25 @@ class PawUiRouteTest {
                                         "profilePage",
                                         Matchers.hasProperty(
                                                 "email", Matchers.is("host@test.com"))));
+    }
+
+    @Test
+    void getOwnPublicProfileRouteShowsEditAction() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/host-player"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("profileEditHref", "/account/edit"));
+    }
+
+    @Test
+    void getOtherPublicProfileRouteDoesNotShowEditAction() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attributeDoesNotExist("profileEditHref"));
     }
 
     @Test
@@ -836,5 +932,12 @@ class PawUiRouteTest {
         final LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
         return localeChangeInterceptor;
+    }
+
+    private static LocalValidatorFactoryBean validator(final MessageSource messageSource) {
+        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.setValidationMessageSource(messageSource);
+        validator.afterPropertiesSet();
+        return validator;
     }
 }

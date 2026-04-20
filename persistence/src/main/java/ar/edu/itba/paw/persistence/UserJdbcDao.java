@@ -149,6 +149,27 @@ public class UserJdbcDao implements UserDao {
     }
 
     @Override
+    public void updateProfile(
+            final Long id,
+            final String email,
+            final String username,
+            final String name,
+            final String lastName,
+            final String phone) {
+        jdbcTemplate.update(
+                "UPDATE users "
+                        + "SET email = ?, username = ?, name = ?, last_name = ?, phone = ?, updated_at = ? "
+                        + "WHERE id = ?",
+                email,
+                username,
+                name,
+                lastName,
+                phone,
+                Timestamp.from(Instant.now()),
+                id);
+    }
+
+    @Override
     public void updatePasswordHash(final Long id, final String passwordHash) {
         jdbcTemplate.update(
                 "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",

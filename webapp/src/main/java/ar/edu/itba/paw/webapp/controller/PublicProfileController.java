@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PublicProfilePageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.Locale;
@@ -75,6 +76,16 @@ public class PublicProfileController {
         mav.addObject(
                 "profileEmailLabel",
                 messageSource.getMessage("profile.public.email", null, "Email", locale));
+        CurrentAuthenticatedUser.get()
+                .filter(principal -> principal.getUserId().equals(user.getId()))
+                .ifPresent(
+                        principal -> {
+                            mav.addObject("profileEditHref", "/account/edit");
+                            mav.addObject(
+                                    "profileEditLabel",
+                                    messageSource.getMessage(
+                                            "profile.public.edit", null, "Edit profile", locale));
+                        });
         return mav;
     }
 }

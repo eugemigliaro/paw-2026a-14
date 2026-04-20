@@ -138,6 +138,31 @@ public class UserJdbcDaoTest {
     }
 
     @Test
+    public void testUpdateProfileUpdatesEditableFields() {
+        final UserAccount account =
+                userDao.createAccount(
+                        "profile@test.com",
+                        "profile_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        Instant.now());
+
+        userDao.updateProfile(
+                account.getId(), "updated@test.com", "updated_user", "Taylor", "Morgan", null);
+
+        final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
+
+        Assertions.assertEquals("updated@test.com", persisted.getEmail());
+        Assertions.assertEquals("updated_user", persisted.getUsername());
+        Assertions.assertEquals("Taylor", persisted.getName());
+        Assertions.assertEquals("Morgan", persisted.getLastName());
+        Assertions.assertNull(persisted.getPhone());
+    }
+
+    @Test
     public void testLegacyCreateUserMarksUserAsVerifiedWithDefaultRole() {
         final User user = userDao.createUser("legacy@test.com", "legacy_user");
 

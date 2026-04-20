@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -52,9 +53,16 @@
 								class="field__control public-profile-summary__control"
 								value="<c:out value='${profilePage.email}' />"
 								readonly="readonly"
-								aria-readonly="true" />
+							aria-readonly="true" />
 						</label>
 					</div>
+
+					<c:if test="${not empty profileEditHref}">
+						<div class="public-profile-actions">
+							<c:url var="profileEditAction" value="${profileEditHref}" />
+							<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
+						</div>
+					</c:if>
 				</section>
 			</main>
 		</div>

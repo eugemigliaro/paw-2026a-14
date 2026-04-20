@@ -43,6 +43,11 @@
 	gap: 1rem;
 }
 
+.public-profile-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
 .public-profile-summary__control {
 	color: var(--text-primary);
 	cursor: default;

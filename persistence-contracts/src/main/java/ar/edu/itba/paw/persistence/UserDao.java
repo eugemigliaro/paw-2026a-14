@@ -30,6 +30,9 @@ public interface UserDao {
 
     Optional<User> findByUsername(final String username);
 
+    void updateProfile(
+            Long id, String email, String username, String name, String lastName, String phone);
+
     void updatePasswordHash(Long id, String passwordHash);
 
     void markEmailVerified(Long id, Instant emailVerifiedAt);
