@@ -54,18 +54,14 @@ public class HostParticipationController {
         mav.addObject("match", match);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("participants", toRosterViewModels(participants, resolvedMatchId));
-        mav.addObject(
-                "emptyMessage",
-                messageSource.getMessage("host.roster.empty", null, locale));
-        mav.addObject(
-                "requestsUrl", "/host/matches/" + resolvedMatchId + "/requests");
+        mav.addObject("emptyMessage", messageSource.getMessage("host.roster.empty", null, locale));
+        mav.addObject("requestsUrl", "/host/matches/" + resolvedMatchId + "/requests");
         return mav;
     }
 
     @GetMapping("/host/matches/{matchId}/requests")
     public ModelAndView showPendingRequests(
-            @PathVariable("matchId") final String matchId,
-            final Locale locale) {
+            @PathVariable("matchId") final String matchId, final Locale locale) {
         final long hostUserId = requireAuthenticatedUserId();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
@@ -79,10 +75,8 @@ public class HostParticipationController {
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("pendingRequests", toPendingRequestViewModels(pending, resolvedMatchId));
         mav.addObject(
-                "emptyMessage",
-                messageSource.getMessage("host.requests.empty", null, locale));
-        mav.addObject(
-                "rosterUrl", "/host/matches/" + resolvedMatchId + "/participants");
+                "emptyMessage", messageSource.getMessage("host.requests.empty", null, locale));
+        mav.addObject("rosterUrl", "/host/matches/" + resolvedMatchId + "/participants");
         return mav;
     }
 
@@ -154,7 +148,11 @@ public class HostParticipationController {
                                 new RosterParticipantViewModel(
                                         u.getUsername(),
                                         avatarLabel(u.getUsername()),
-                                        "/host/matches/" + matchId + "/participants/" + u.getId() + "/remove"))
+                                        "/host/matches/"
+                                                + matchId
+                                                + "/participants/"
+                                                + u.getId()
+                                                + "/remove"))
                 .toList();
     }
 
@@ -166,8 +164,16 @@ public class HostParticipationController {
                                 new PendingRequestViewModel(
                                         u.getUsername(),
                                         avatarLabel(u.getUsername()),
-                                        "/host/matches/" + matchId + "/requests/" + u.getId() + "/approve",
-                                        "/host/matches/" + matchId + "/requests/" + u.getId() + "/reject"))
+                                        "/host/matches/"
+                                                + matchId
+                                                + "/requests/"
+                                                + u.getId()
+                                                + "/approve",
+                                        "/host/matches/"
+                                                + matchId
+                                                + "/requests/"
+                                                + u.getId()
+                                                + "/reject"))
                 .toList();
     }
 

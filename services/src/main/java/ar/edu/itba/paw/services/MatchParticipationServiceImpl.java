@@ -47,13 +47,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
         if (!"invite_only".equalsIgnoreCase(match.getVisibility())) {
             throw new MatchParticipationException(
-                    "not_invite_only",
-                    "This event does not require approval to join.");
+                    "not_invite_only", "This event does not require approval to join.");
         }
 
         if (!match.getStartsAt().isAfter(Instant.now(clock))) {
-            throw new MatchParticipationException(
-                    "started", "The event has already started.");
+            throw new MatchParticipationException("started", "The event has already started.");
         }
 
         if (userId.equals(match.getHostUserId())) {
@@ -106,14 +104,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     @Override
     @Transactional
-    public void approveRequest(
-            final Long matchId, final Long hostUserId, final Long targetUserId) {
+    public void approveRequest(final Long matchId, final Long hostUserId, final Long targetUserId) {
         final Match match = requireMatch(matchId);
         requireHost(match, hostUserId);
 
         if (!"open".equalsIgnoreCase(match.getStatus())) {
-            throw new MatchParticipationException(
-                    "closed", "The event is not open.");
+            throw new MatchParticipationException("closed", "The event is not open.");
         }
 
         if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
@@ -123,22 +119,19 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
         if (!matchParticipantDao.approveRequest(matchId, targetUserId)) {
             throw new MatchParticipationException(
-                    "no_pending_request",
-                    "No pending join request found for the specified user.");
+                    "no_pending_request", "No pending join request found for the specified user.");
         }
     }
 
     @Override
     @Transactional
-    public void rejectRequest(
-            final Long matchId, final Long hostUserId, final Long targetUserId) {
+    public void rejectRequest(final Long matchId, final Long hostUserId, final Long targetUserId) {
         final Match match = requireMatch(matchId);
         requireHost(match, hostUserId);
 
         if (!matchParticipantDao.rejectRequest(matchId, targetUserId)) {
             throw new MatchParticipationException(
-                    "no_pending_request",
-                    "No pending join request found for the specified user.");
+                    "no_pending_request", "No pending join request found for the specified user.");
         }
     }
 
@@ -188,8 +181,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     // -------------------------------------------------------------------------
 
     private Match requireMatch(final Long matchId) {
-        return matchDao
-                .findMatchById(matchId)
+        return matchDao.findMatchById(matchId)
                 .orElseThrow(
                         () ->
                                 new MatchParticipationException(

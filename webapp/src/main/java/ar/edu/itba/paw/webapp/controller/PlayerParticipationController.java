@@ -49,11 +49,9 @@ public class PlayerParticipationController {
 
         final ModelAndView mav = new ModelAndView("player/participation/requests");
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
+        mav.addObject("pendingMatches", toPendingJoinViewModels(pendingMatches, locale));
         mav.addObject(
-                "pendingMatches", toPendingJoinViewModels(pendingMatches, locale));
-        mav.addObject(
-                "emptyMessage",
-                messageSource.getMessage("player.requests.empty", null, locale));
+                "emptyMessage", messageSource.getMessage("player.requests.empty", null, locale));
         return mav;
     }
 
@@ -90,9 +88,11 @@ public class PlayerParticipationController {
     private List<PendingJoinMatchViewModel> toPendingJoinViewModels(
             final List<Match> matches, final Locale locale) {
         return matches.stream()
-                .map(m -> new PendingJoinMatchViewModel(
-                        toCard(m, locale),
-                        "/matches/" + m.getId() + "/join-requests/cancel"))
+                .map(
+                        m ->
+                                new PendingJoinMatchViewModel(
+                                        toCard(m, locale),
+                                        "/matches/" + m.getId() + "/join-requests/cancel"))
                 .toList();
     }
 
