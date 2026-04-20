@@ -197,10 +197,7 @@ public class EventController {
     }
 
     private String profileImageUrlForParticipant(final User participant) {
-        return userService
-                .findById(participant.getId())
-                .map(user -> profileUrlFor(user))
-                .orElseGet(() -> profileUrlFor(participant));
+        return profileUrlFor(participant);
     }
 
     private String profileHrefFor(final User user) {

@@ -185,7 +185,14 @@ class PawUiRouteTest {
                     public List<User> findConfirmedParticipants(final Long matchId) {
                         return matchId == 42L
                                 ? List.of(
-                                        new User(2L, "first@test.com", "first-player"),
+                                        new User(
+                                                2L,
+                                                "first@test.com",
+                                                "first-player",
+                                                "First",
+                                                "Player",
+                                                null,
+                                                77L),
                                         new User(3L, "second@test.com", "second-player"))
                                 : List.of();
                     }
