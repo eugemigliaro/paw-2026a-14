@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_URL;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -126,6 +128,7 @@ public class EventController {
                                         new Object[] {match.getHostUserId()},
                                         locale)),
                 host.map(this::profileHrefFor).orElse(null),
+                host.map(user -> profileUrlFor(user)).orElse(DEFAULT_PROFILE_IMAGE_URL),
                 toParticipantViewModels(confirmedParticipants),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
@@ -188,8 +191,16 @@ public class EventController {
                                 new ParticipantViewModel(
                                         participant.getUsername(),
                                         avatarLabelForUsername(participant.getUsername()),
-                                        profileHrefFor(participant)))
+                                        profileHrefFor(participant),
+                                        profileImageUrlForParticipant(participant)))
                 .toList();
+    }
+
+    private String profileImageUrlForParticipant(final User participant) {
+        return userService
+                .findById(participant.getId())
+                .map(user -> profileUrlFor(user))
+                .orElseGet(() -> profileUrlFor(participant));
     }
 
     private String profileHrefFor(final User user) {

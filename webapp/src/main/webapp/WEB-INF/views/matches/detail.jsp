@@ -84,10 +84,14 @@
 					<div class="detail-layout__main">
 						<article class="panel host-card">
 							<div class="host-card__main">
-								<div
+								<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
+								<img
 									class="host-card__avatar"
+									src="${hostProfileImageSrc}"
+									alt=""
 									aria-hidden="true"
-								></div>
+									loading="lazy"
+									decoding="async" />
 								<div class="host-card__copy">
 									<span class="detail-label"><spring:message code="event.detail.hostedBy" /></span>
 									<c:choose>
@@ -153,12 +157,14 @@
 											items="${eventPage.participants}"
 										>
 											<li class="participant-list__item">
-												<span
+												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
+												<img
 													class="participant-list__avatar"
+													src="${participantProfileImageSrc}"
+													alt=""
 													aria-hidden="true"
-													><c:out
-														value="${participant.avatarLabel}"
-												/></span>
+													loading="lazy"
+													decoding="async" />
 												<div
 													class="participant-list__copy"
 												>

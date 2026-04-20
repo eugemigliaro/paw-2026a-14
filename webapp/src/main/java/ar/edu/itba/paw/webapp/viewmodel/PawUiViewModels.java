@@ -473,12 +473,17 @@ public final class PawUiViewModels {
         private final String username;
         private final String avatarLabel;
         private final String profileHref;
+        private final String profileImageUrl;
 
         public ParticipantViewModel(
-                final String username, final String avatarLabel, final String profileHref) {
+                final String username,
+                final String avatarLabel,
+                final String profileHref,
+                final String profileImageUrl) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.profileHref = profileHref;
+            this.profileImageUrl = profileImageUrl;
         }
 
         public String getUsername() {
@@ -492,6 +497,10 @@ public final class PawUiViewModels {
         public String getProfileHref() {
             return profileHref;
         }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
+        }
     }
 
     public static final class EventDetailPageViewModel {
@@ -500,6 +509,7 @@ public final class PawUiViewModels {
         private final String heroMeta;
         private final String hostLabel;
         private final String hostProfileHref;
+        private final String hostProfileImageUrl;
         private final List<ParticipantViewModel> participants;
         private final String participantCountLabel;
         private final String participantsEmptyState;
@@ -516,6 +526,7 @@ public final class PawUiViewModels {
                 final String heroMeta,
                 final String hostLabel,
                 final String hostProfileHref,
+                final String hostProfileImageUrl,
                 final List<ParticipantViewModel> participants,
                 final String participantCountLabel,
                 final String participantsEmptyState,
@@ -530,6 +541,7 @@ public final class PawUiViewModels {
             this.heroMeta = heroMeta;
             this.hostLabel = hostLabel;
             this.hostProfileHref = hostProfileHref;
+            this.hostProfileImageUrl = hostProfileImageUrl;
             this.participants = participants;
             this.participantCountLabel = participantCountLabel;
             this.participantsEmptyState = participantsEmptyState;
@@ -559,6 +571,10 @@ public final class PawUiViewModels {
 
         public String getHostProfileHref() {
             return hostProfileHref;
+        }
+
+        public String getHostProfileImageUrl() {
+            return hostProfileImageUrl;
         }
 
         public List<ParticipantViewModel> getParticipants() {

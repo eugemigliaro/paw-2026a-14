@@ -297,6 +297,7 @@
 	border-radius: 999px;
 	box-shadow: inset 0 0 0 1px rgba(0, 100, 90, 0.08);
 	height: 3.3rem;
+	object-fit: cover;
 	width: 3.3rem;
 }
 
@@ -370,6 +371,7 @@
 	height: 2.8rem;
 	justify-content: center;
 	letter-spacing: 0.04em;
+	object-fit: cover;
 	width: 2.8rem;
 }
 

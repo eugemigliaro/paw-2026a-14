@@ -300,6 +300,39 @@ class PawUiRouteTest {
                         if (id.equals(currentUser.getId())) {
                             return Optional.of(currentUser);
                         }
+                        if (id.equals(2L)) {
+                            return Optional.of(
+                                    new User(
+                                            2L,
+                                            "first@test.com",
+                                            "first-player",
+                                            "First",
+                                            "Player",
+                                            null,
+                                            77L));
+                        }
+                        if (id.equals(3L)) {
+                            return Optional.of(
+                                    new User(
+                                            3L,
+                                            "second@test.com",
+                                            "second-player",
+                                            "Second",
+                                            "Player",
+                                            null,
+                                            null));
+                        }
+                        if (id.equals(7L)) {
+                            return Optional.of(
+                                    new User(
+                                            7L,
+                                            "host@test.com",
+                                            "host-player",
+                                            "Jamie",
+                                            "Rivera",
+                                            "+1 555 123 4567",
+                                            88L));
+                        }
                         return Optional.of(new User(id, "host@test.com", "host-player"));
                     }
 
@@ -596,15 +629,30 @@ class PawUiRouteTest {
                         model().attribute(
                                         "eventPage",
                                         Matchers.hasProperty(
+                                                "hostProfileImageUrl", Matchers.is("/images/88"))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
                                                 "participants",
                                                 Matchers.contains(
-                                                        Matchers.hasProperty(
-                                                                "profileHref",
-                                                                Matchers.is("/users/first-player")),
-                                                        Matchers.hasProperty(
-                                                                "profileHref",
-                                                                Matchers.is(
-                                                                        "/users/second-player"))))));
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "profileHref",
+                                                                        Matchers.is(
+                                                                                "/users/first-player")),
+                                                                Matchers.hasProperty(
+                                                                        "profileImageUrl",
+                                                                        Matchers.is("/images/77"))),
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "profileHref",
+                                                                        Matchers.is(
+                                                                                "/users/second-player")),
+                                                                Matchers.hasProperty(
+                                                                        "profileImageUrl",
+                                                                        Matchers.is(
+                                                                                "/assets/default-profile-avatar.svg")))))));
     }
 
     @Test
