@@ -269,64 +269,58 @@ class PawUiRouteTest {
                     }
                 };
 
-                final MatchParticipationService matchParticipationService =
-                                new MatchParticipationService() {
-                                        @Override
-                                        public void requestToJoin(final Long matchId, final Long userId) {
-                                                // No-op for route rendering tests.
-                                        }
+        final MatchParticipationService matchParticipationService =
+                new MatchParticipationService() {
+                    @Override
+                    public void requestToJoin(final Long matchId, final Long userId) {
+                        // No-op for route rendering tests.
+                    }
 
-                                        @Override
-                                        public void cancelJoinRequest(final Long matchId, final Long userId) {
-                                                // No-op for route rendering tests.
-                                        }
+                    @Override
+                    public void cancelJoinRequest(final Long matchId, final Long userId) {
+                        // No-op for route rendering tests.
+                    }
 
-                                        @Override
-                                        public boolean hasPendingRequest(final Long matchId, final Long userId) {
-                                                return false;
-                                        }
+                    @Override
+                    public boolean hasPendingRequest(final Long matchId, final Long userId) {
+                        return false;
+                    }
 
-                                        @Override
-                                        public void approveRequest(
-                                                        final Long matchId,
-                                                        final Long hostUserId,
-                                                        final Long targetUserId) {
-                                                // No-op for route rendering tests.
-                                        }
+                    @Override
+                    public void approveRequest(
+                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                        // No-op for route rendering tests.
+                    }
 
-                                        @Override
-                                        public void rejectRequest(
-                                                        final Long matchId,
-                                                        final Long hostUserId,
-                                                        final Long targetUserId) {
-                                                // No-op for route rendering tests.
-                                        }
+                    @Override
+                    public void rejectRequest(
+                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                        // No-op for route rendering tests.
+                    }
 
-                                        @Override
-                                        public void removeParticipant(
-                                                        final Long matchId,
-                                                        final Long hostUserId,
-                                                        final Long targetUserId) {
-                                                // No-op for route rendering tests.
-                                        }
+                    @Override
+                    public void removeParticipant(
+                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                        // No-op for route rendering tests.
+                    }
 
-                                        @Override
-                                        public List<User> findPendingRequests(
-                                                        final Long matchId, final Long hostUserId) {
-                                                return List.of();
-                                        }
+                    @Override
+                    public List<User> findPendingRequests(
+                            final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
 
-                                        @Override
-                                        public List<User> findConfirmedParticipants(
-                                                        final Long matchId, final Long hostUserId) {
-                                                return List.of();
-                                        }
+                    @Override
+                    public List<User> findConfirmedParticipants(
+                            final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
 
-                                        @Override
-                                        public List<Match> findPendingRequestMatches(final Long userId) {
-                                                return List.of();
-                                        }
-                                };
+                    @Override
+                    public List<Match> findPendingRequestMatches(final Long userId) {
+                        return List.of();
+                    }
+                };
 
         final UserService userService =
                 new UserService() {
