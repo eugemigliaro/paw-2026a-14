@@ -83,19 +83,24 @@
 						</label>
 					</div>
 
-					<section class="account-profile-media" aria-label="${accountProfileImageAlt}">
-						<img
-							class="account-profile-media__image"
-							src="${accountProfileImageSrc}"
-							alt="${accountProfileImageAlt}"
-							loading="eager"
-							decoding="async" />
-					</section>
+					<div class="field">
+						<span class="field__label">
+							<spring:message code="account.profileImage.field" />
+						</span>
+						<section class="account-profile-media" aria-label="${accountProfileImageAlt}">
+							<img
+								class="account-profile-media__image"
+								src="${accountProfileImageSrc}"
+								alt="${accountProfileImageAlt}"
+								loading="eager"
+								decoding="async" />
+						</section>
+					</div>
 
 					<c:url var="logoutAction" value="/logout" />
 					<form method="post" action="${logoutAction}" class="account-logout">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-						<ui:button label="${logoutLabel}" type="submit" variant="secondary" />
+						<ui:button label="${logoutLabel}" type="submit" variant="danger" />
 					</form>
 				</section>
 			</main>

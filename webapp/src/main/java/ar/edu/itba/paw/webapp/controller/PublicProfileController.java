@@ -51,7 +51,7 @@ public class PublicProfileController {
         mav.addObject(
                 "profileEyebrow",
                 messageSource.getMessage(
-                        "profile.public.eyebrow", null, "Community profile", locale));
+                        "profile.public.eyebrow", null, "Profile picture", locale));
         mav.addObject(
                 "profileTitle",
                 messageSource.getMessage("profile.public.title", null, "Public profile", locale));

@@ -100,37 +100,42 @@
 								autocomplete="tel" />
 							<form:errors path="phone" cssClass="field__error" element="span" />
 						</label>
-						<section class="account-profile-media account-profile-media--editable">
-							<div class="account-profile-media__preview">
-								<img
-									class="account-profile-media__image"
-									src="${accountProfileImageSrc}"
-									alt="${accountProfileImageAlt}"
-									loading="eager"
-									decoding="async" />
-								<div class="account-profile-media__copy">
-									<h2 class="account-profile-media__title"><c:out value="${accountProfileImageTitle}" /></h2>
-									<p class="account-profile-media__description">
-										<c:out value="${accountProfileImageDescription}" />
-									</p>
+						<div class="field">
+							<span class="field__label">
+								<c:out value="${profileImageLabel}" />
+							</span>
+							<section class="account-profile-media account-profile-media--editable">
+								<div class="account-profile-media__preview">
+									<img
+										class="account-profile-media__image"
+										src="${accountProfileImageSrc}"
+										alt="${accountProfileImageAlt}"
+										loading="eager"
+										decoding="async" />
+									<div class="account-profile-media__copy">
+										<h2 class="account-profile-media__title"><c:out value="${accountProfileImageTitle}" /></h2>
+										<p class="account-profile-media__description">
+											<c:out value="${accountProfileImageDescription}" />
+										</p>
+									</div>
 								</div>
-							</div>
 
-							<c:if test="${not empty accountProfileImageError}">
-								<p class="auth-notice auth-notice--error"><c:out value="${accountProfileImageError}" /></p>
-							</c:if>
+								<c:if test="${not empty accountProfileImageError}">
+									<p class="auth-notice auth-notice--error"><c:out value="${accountProfileImageError}" /></p>
+								</c:if>
 
-							<label class="field" for="account-profile-image">
-								<span class="field__label"><c:out value="${profileImageLabel}" /></span>
-								<input
-									id="account-profile-image"
-									name="profileImage"
-									type="file"
-									class="field__control"
-									accept="image/png,image/jpeg,image/webp,image/gif" />
-							</label>
-							<p class="auth-links__meta"><c:out value="${accountProfileImageHint}" /></p>
-						</section>
+								<label class="field" for="account-profile-image">
+									<span class="field__label"><c:out value="${profileImageLabel}" /></span>
+									<input
+										id="account-profile-image"
+										name="profileImage"
+										type="file"
+										class="field__control"
+										accept="image/png,image/jpeg,image/webp,image/gif" />
+								</label>
+								<p class="auth-links__meta"><c:out value="${accountProfileImageHint}" /></p>
+							</section>
+						</div>
 						<div class="account-actions">
 							<ui:button
 								label="${accountSaveLabel}"
