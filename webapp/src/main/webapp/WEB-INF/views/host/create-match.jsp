@@ -88,6 +88,7 @@
 											path="sport"
 											id="match-sport"
 											cssClass="field__control field__control--select"
+											required="required"
 										>
 											<form:option value="padel" label="${sportPadel}" />
 											<form:option value="football" label="${sportFootball}" />
@@ -151,6 +152,7 @@
 										id="match-date"
 										type="date"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="eventDate"
@@ -166,6 +168,7 @@
 										id="match-time"
 										type="time"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="eventTime"
@@ -199,6 +202,7 @@
 										id="match-end-date"
 										type="date"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="endDate"
@@ -214,6 +218,7 @@
 										id="match-end-time"
 										type="time"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="endTime"
@@ -238,6 +243,7 @@
 										type="number"
 										min="1"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="maxPlayers"
@@ -257,6 +263,7 @@
 										min="0"
 										step="0.01"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="pricePerPlayer"
