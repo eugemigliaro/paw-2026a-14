@@ -29,6 +29,12 @@
 					<spring:message var="sportFootball" code="sport.football" />
 					<spring:message var="sportTennis" code="sport.tennis" />
 					<spring:message var="sportBasketball" code="sport.basketball" />
+					<spring:message var="sportOther" code="sport.other" />
+					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
+					<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
+					<spring:message var="durationCustom" code="host.form.duration.custom" />
+					<spring:message var="durationHoursLabel" code="host.form.duration.hours" />
+					<spring:message var="durationMinutesLabel" code="host.form.duration.minutes" />
 					<c:url var="resolvedFormAction" value="${formAction}" />
 
 					<form:form
@@ -89,6 +95,7 @@
 											<form:option value="football" label="${sportFootball}" />
 											<form:option value="tennis" label="${sportTennis}" />
 											<form:option value="basketball" label="${sportBasketball}" />
+											<form:option value="other" label="${sportOther}" />
 										</form:select>
 									</span>
 									<form:errors
@@ -169,20 +176,72 @@
 									/>
 								</label>
 
-								<label class="field" for="match-end-time">
-									<span class="field__label"><spring:message code="host.form.endTime" /></span>
-									<form:input
-										path="endTime"
-										id="match-end-time"
-										type="time"
-										cssClass="field__control"
-									/>
+								<div class="field">
+									<span class="field__label"><spring:message code="host.form.duration" /></span>
+									<div class="duration-options" role="radiogroup" aria-label="<spring:message code='host.form.duration' />">
+										<label class="chip duration-option ${createEventForm.durationPreset eq '60' ? 'chip--active' : ''}">
+											<form:radiobutton path="durationPreset" value="60" cssClass="duration-option__input" />
+											<span>${durationOneHour}</span>
+										</label>
+										<label class="chip duration-option ${createEventForm.durationPreset eq '90' ? 'chip--active' : ''}">
+											<form:radiobutton path="durationPreset" value="90" cssClass="duration-option__input" />
+											<span>${durationNinetyMinutes}</span>
+										</label>
+										<label class="chip duration-option ${createEventForm.durationPreset eq 'custom' ? 'chip--active' : ''}">
+											<form:radiobutton path="durationPreset" value="custom" cssClass="duration-option__input" />
+											<span>${durationCustom}</span>
+										</label>
+									</div>
 									<form:errors
-										path="endTime"
+										path="durationPreset"
 										cssClass="field__error"
 										element="span"
 									/>
-								</label>
+									<c:set var="customDurationVisible" value="${createEventForm.durationPreset eq 'custom'}" />
+									<div class="field ${customDurationVisible ? '' : 'field--hidden'}" id="custom-duration-field">
+										<span class="field__label"><spring:message code="host.form.duration.customLabel" /></span>
+										<div class="form-card__grid">
+											<label class="field" for="match-custom-duration-hours">
+												<span class="field__label"><c:out value="${durationHoursLabel}" /></span>
+												<form:select
+													path="customDurationHours"
+													id="match-custom-duration-hours"
+													cssClass="field__control field__control--select"
+												>
+													<form:option value="0" label="0" />
+													<form:option value="1" label="1" />
+													<form:option value="2" label="2" />
+													<form:option value="3" label="3" />
+													<form:option value="4" label="4" />
+													<form:option value="5" label="5" />
+												</form:select>
+												<form:errors
+													path="customDurationHours"
+													cssClass="field__error"
+													element="span"
+												/>
+											</label>
+											<label class="field" for="match-custom-duration-minutes">
+												<span class="field__label"><c:out value="${durationMinutesLabel}" /></span>
+												<form:select
+													path="customDurationMinutesPart"
+													id="match-custom-duration-minutes"
+													cssClass="field__control field__control--select"
+												>
+													<form:option value="0" label="00" />
+													<form:option value="15" label="15" />
+													<form:option value="30" label="30" />
+													<form:option value="45" label="45" />
+												</form:select>
+												<form:errors
+													path="customDurationMinutesPart"
+													cssClass="field__error"
+													element="span"
+												/>
+											</label>
+										</div>
+									</div>
+								</div>
 							</div>
 						</article>
 
@@ -274,5 +333,35 @@
 				</section>
 			</main>
 		</div>
+		<script>
+			(function () {
+				var presetInputs = document.querySelectorAll('input[name="durationPreset"]');
+				var customDurationField = document.getElementById('custom-duration-field');
+
+				if (!presetInputs.length || !customDurationField) {
+					return;
+				}
+
+				function syncDurationPresetUi() {
+					var selected = document.querySelector('input[name="durationPreset"]:checked');
+					var isCustom = selected && selected.value === 'custom';
+
+					customDurationField.classList.toggle('field--hidden', !isCustom);
+
+					presetInputs.forEach(function (input) {
+						var chip = input.closest('.duration-option');
+						if (chip) {
+							chip.classList.toggle('chip--active', input.checked);
+						}
+					});
+				}
+
+				presetInputs.forEach(function (input) {
+					input.addEventListener('change', syncDurationPresetUi);
+				});
+
+				syncDurationPresetUi();
+			})();
+		</script>
 	</body>
 </html>

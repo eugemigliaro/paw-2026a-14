@@ -698,6 +698,7 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
+                                .param("durationPreset", "90")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isUnauthorized());
@@ -715,6 +716,7 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
+                                .param("durationPreset", "90")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
@@ -722,7 +724,26 @@ class PawUiRouteTest {
     }
 
     @Test
-    void postHostPublishWithEndTimeBeforeStartTimeRerendersFormWithError() throws Exception {
+    void postHostPublishAcceptsOtherSportOption() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "other")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("durationPreset", "90")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+    }
+
+    @Test
+    void postHostPublishWithMissingCustomDurationRerendersFormWithError() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
@@ -733,12 +754,62 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
-                                .param("endTime", "17:00")
+                                .param("durationPreset", "custom")
+                                .param("customDurationHours", "0")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
-                .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+                .andExpect(
+                        model().attributeHasFieldErrors(
+                                        "createEventForm", "customDurationMinutesPart"));
+    }
+
+    @Test
+    void postHostPublishWithNonNumericCustomDurationHoursRerendersFormWithFriendlyError()
+            throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("durationPreset", "custom")
+                                .param("customDurationHours", "holamanola")
+                                .param("customDurationMinutesPart", "30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(
+                        model().attributeHasFieldErrors("createEventForm", "customDurationHours"));
+    }
+
+    @Test
+    void postHostPublishWithZeroCustomDurationRerendersFormWithFriendlyError() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("durationPreset", "custom")
+                                .param("customDurationHours", "0")
+                                .param("customDurationMinutesPart", "0")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(
+                        model().attributeHasFieldErrors("createEventForm", "customDurationHours"));
     }
 
     @Test
@@ -781,6 +852,7 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
+                                .param("durationPreset", "90")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
@@ -799,6 +871,7 @@ class PawUiRouteTest {
                                 .param("sport", "padel")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
+                                .param("durationPreset", "90")
                                 .param("maxPlayers", "1")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().isOk())

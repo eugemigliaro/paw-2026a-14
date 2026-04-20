@@ -1,0 +1,1 @@
+ALTER TYPE sport_type ADD VALUE IF NOT EXISTS 'other';

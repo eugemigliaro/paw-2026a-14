@@ -16,6 +16,7 @@ import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -76,18 +77,17 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
+        final int durationMinutes = resolveDurationMinutes(createEventForm, bindingResult, locale);
+        if (bindingResult.hasErrors()) {
+            return hostFormView(createEventForm, null, locale, formConfig);
+        }
+
         final Instant startsAt =
                 toInstant(
                         createEventForm.getEventDate(),
                         createEventForm.getEventTime(),
                         createEventForm.getTz());
-        final Instant endsAt =
-                createEventForm.getEndTime() == null
-                        ? null
-                        : toInstant(
-                                createEventForm.getEventDate(),
-                                createEventForm.getEndTime(),
-                                createEventForm.getTz());
+        final Instant endsAt = startsAt.plus(Duration.ofMinutes(durationMinutes));
 
         final Long bannerImageId;
         try {
@@ -145,18 +145,17 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
+        final int durationMinutes = resolveDurationMinutes(createEventForm, bindingResult, locale);
+        if (bindingResult.hasErrors()) {
+            return hostFormView(createEventForm, null, locale, formConfig);
+        }
+
         final Instant startsAt =
                 toInstant(
                         createEventForm.getEventDate(),
                         createEventForm.getEventTime(),
                         createEventForm.getTz());
-        final Instant endsAt =
-                createEventForm.getEndTime() == null
-                        ? null
-                        : toInstant(
-                                createEventForm.getEventDate(),
-                                createEventForm.getEndTime(),
-                                createEventForm.getTz());
+        final Instant endsAt = startsAt.plus(Duration.ofMinutes(durationMinutes));
 
         final Long bannerImageId;
         try {
@@ -269,12 +268,13 @@ public class HostController {
         }
         if (!bindingResult.hasFieldErrors("eventDate")
                 && !bindingResult.hasFieldErrors("eventTime")
-                && !bindingResult.hasFieldErrors("endTime")
-                && !isEndTimeAfterStartTime(form)) {
+                && !bindingResult.hasFieldErrors("durationPreset")
+                && !isSupportedDurationPreset(form)) {
             bindingResult.rejectValue(
-                    "endTime",
-                    "match.schedule.error.endBeforeStart",
-                    messageSource.getMessage("match.schedule.error.endBeforeStart", null, locale));
+                    "durationPreset",
+                    "CreateEventForm.durationPreset.NotBlank",
+                    messageSource.getMessage(
+                            "CreateEventForm.durationPreset.NotBlank", null, locale));
         }
     }
 
@@ -283,14 +283,10 @@ public class HostController {
         return startsAt.isAfter(Instant.now(clock));
     }
 
-    private boolean isEndTimeAfterStartTime(final CreateEventForm form) {
-        if (form.getEndTime() == null) {
-            return true;
-        }
-
-        final Instant startsAt = toInstant(form.getEventDate(), form.getEventTime(), form.getTz());
-        final Instant endsAt = toInstant(form.getEventDate(), form.getEndTime(), form.getTz());
-        return endsAt.isAfter(startsAt);
+    private boolean isSupportedDurationPreset(final CreateEventForm form) {
+        return "60".equals(form.getDurationPreset())
+                || "90".equals(form.getDurationPreset())
+                || "custom".equals(form.getDurationPreset());
     }
 
     private HostFormConfig createFormConfig(final Locale locale) {
@@ -330,15 +326,102 @@ public class HostController {
         form.setSport(match.getSport().getDbValue());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
-        form.setEndTime(
-                match.getEndsAt() == null
-                        ? null
-                        : LocalDateTime.ofInstant(match.getEndsAt(), ZoneId.systemDefault())
-                                .toLocalTime());
+        applyDurationSelection(form, resolveDurationMinutes(match));
         form.setMaxPlayers(match.getMaxPlayers());
         form.setPricePerPlayer(match.getPricePerPlayer());
         form.setTz(ZoneId.systemDefault().getId());
         return form;
+    }
+
+    private int resolveDurationMinutes(
+            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
+        if ("60".equals(form.getDurationPreset())) {
+            return 60;
+        }
+        if ("90".equals(form.getDurationPreset())) {
+            return 90;
+        }
+        if (!"custom".equals(form.getDurationPreset())) {
+            bindingResult.rejectValue(
+                    "durationPreset",
+                    "CreateEventForm.durationPreset.NotBlank",
+                    messageSource.getMessage(
+                            "CreateEventForm.durationPreset.NotBlank", null, locale));
+            return 90;
+        }
+        if (form.getCustomDurationHours() == null) {
+            bindingResult.rejectValue(
+                    "customDurationHours",
+                    "CreateEventForm.customDurationHours.NotNull",
+                    messageSource.getMessage(
+                            "CreateEventForm.customDurationHours.NotNull", null, locale));
+            return 90;
+        }
+        if (form.getCustomDurationMinutesPart() == null) {
+            bindingResult.rejectValue(
+                    "customDurationMinutesPart",
+                    "CreateEventForm.customDurationMinutesPart.NotNull",
+                    messageSource.getMessage(
+                            "CreateEventForm.customDurationMinutesPart.NotNull", null, locale));
+            return 90;
+        }
+        if (form.getCustomDurationHours() < 0) {
+            bindingResult.rejectValue(
+                    "customDurationHours",
+                    "CreateEventForm.customDurationHours.Min",
+                    messageSource.getMessage(
+                            "CreateEventForm.customDurationHours.Min", null, locale));
+            return 90;
+        }
+        if (!isSupportedCustomMinutePart(form.getCustomDurationMinutesPart())) {
+            bindingResult.rejectValue(
+                    "customDurationMinutesPart",
+                    "CreateEventForm.customDurationMinutesPart.Pattern",
+                    messageSource.getMessage(
+                            "CreateEventForm.customDurationMinutesPart.Pattern", null, locale));
+            return 90;
+        }
+
+        final int totalMinutes =
+                form.getCustomDurationHours() * 60 + form.getCustomDurationMinutesPart();
+        if (totalMinutes < 1) {
+            bindingResult.rejectValue(
+                    "customDurationHours",
+                    "CreateEventForm.customDuration.Min",
+                    messageSource.getMessage("CreateEventForm.customDuration.Min", null, locale));
+            return 90;
+        }
+        return totalMinutes;
+    }
+
+    private Integer resolveDurationMinutes(final Match match) {
+        if (match.getEndsAt() == null) {
+            return 90;
+        }
+        final long minutes = Duration.between(match.getStartsAt(), match.getEndsAt()).toMinutes();
+        return minutes > 0 ? Math.toIntExact(minutes) : 90;
+    }
+
+    private void applyDurationSelection(final CreateEventForm form, final int durationMinutes) {
+        if (durationMinutes == 60) {
+            form.setDurationPreset("60");
+            form.setCustomDurationHours(null);
+            form.setCustomDurationMinutesPart(null);
+            return;
+        }
+        if (durationMinutes == 90) {
+            form.setDurationPreset("90");
+            form.setCustomDurationHours(null);
+            form.setCustomDurationMinutesPart(null);
+            return;
+        }
+        form.setDurationPreset("custom");
+        form.setCustomDurationHours(durationMinutes / 60);
+        form.setCustomDurationMinutesPart(durationMinutes % 60);
+    }
+
+    private boolean isSupportedCustomMinutePart(final Integer minutes) {
+        return minutes != null && (minutes == 0 || minutes == 15 || minutes == 30 || minutes == 45);
     }
 
     private Match findOwnedMatchOrThrowNotFound(final Long matchId, final Long actingUserId) {
