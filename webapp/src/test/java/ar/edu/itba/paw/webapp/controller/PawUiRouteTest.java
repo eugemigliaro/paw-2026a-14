@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -26,6 +27,7 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
@@ -50,12 +52,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
@@ -78,6 +82,7 @@ class PawUiRouteTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
         final MessageSource messageSource = messageSource();
+        final LocalValidatorFactoryBean validator = validator(messageSource);
 
         lastSportsFilter = new AtomicReference<>();
         lastReservedMatchId = new AtomicReference<>();
@@ -180,7 +185,14 @@ class PawUiRouteTest {
                     public List<User> findConfirmedParticipants(final Long matchId) {
                         return matchId == 42L
                                 ? List.of(
-                                        new User(2L, "first@test.com", "first-player"),
+                                        new User(
+                                                2L,
+                                                "first@test.com",
+                                                "first-player",
+                                                "First",
+                                                "Player",
+                                                null,
+                                                77L),
                                         new User(3L, "second@test.com", "second-player"))
                                 : List.of();
                     }
@@ -270,6 +282,16 @@ class PawUiRouteTest {
 
         final UserService userService =
                 new UserService() {
+                    private User currentUser =
+                            new User(
+                                    9L,
+                                    "host@test.com",
+                                    "host-player",
+                                    "Jamie",
+                                    "Rivera",
+                                    "+1 555 123 4567",
+                                    null);
+
                     @Override
                     public User createUser(final String email, final String username) {
                         return new User(9L, email, username);
@@ -282,12 +304,119 @@ class PawUiRouteTest {
 
                     @Override
                     public Optional<User> findById(final Long id) {
+                        if (id.equals(currentUser.getId())) {
+                            return Optional.of(currentUser);
+                        }
+                        if (id.equals(2L)) {
+                            return Optional.of(
+                                    new User(
+                                            2L,
+                                            "first@test.com",
+                                            "first-player",
+                                            "First",
+                                            "Player",
+                                            null,
+                                            77L));
+                        }
+                        if (id.equals(3L)) {
+                            return Optional.of(
+                                    new User(
+                                            3L,
+                                            "second@test.com",
+                                            "second-player",
+                                            "Second",
+                                            "Player",
+                                            null,
+                                            null));
+                        }
+                        if (id.equals(7L)) {
+                            return Optional.of(
+                                    new User(
+                                            7L,
+                                            "host@test.com",
+                                            "host-player",
+                                            "Jamie",
+                                            "Rivera",
+                                            "+1 555 123 4567",
+                                            88L));
+                        }
                         return Optional.of(new User(id, "host@test.com", "host-player"));
                     }
 
                     @Override
                     public Optional<User> findByUsername(final String username) {
+                        if (currentUser.getUsername().equals(username)) {
+                            return Optional.of(currentUser);
+                        }
+                        if ("second-player".equals(username)) {
+                            return Optional.of(
+                                    new User(
+                                            3L,
+                                            "second@test.com",
+                                            "second-player",
+                                            "Second",
+                                            "Player",
+                                            null,
+                                            null));
+                        }
+                        if ("host-player".equals(username)) {
+                            return Optional.of(
+                                    new User(
+                                            9L,
+                                            "host@test.com",
+                                            "host-player",
+                                            "Jamie",
+                                            "Rivera",
+                                            "+1 555 123 4567",
+                                            currentUser.getProfileImageId()));
+                        }
                         return Optional.empty();
+                    }
+
+                    @Override
+                    public User updateProfile(
+                            final Long id,
+                            final String username,
+                            final String name,
+                            final String lastName,
+                            final String phone,
+                            final String profileImageContentType,
+                            final long profileImageContentLength,
+                            final InputStream profileImageContentStream) {
+                        if (profileImageContentType != null
+                                && !profileImageContentType.startsWith("image/")) {
+                            throw new ImageUploadException(ImageUploadException.UNSUPPORTED_FORMAT);
+                        }
+                        currentUser =
+                                new User(
+                                        id,
+                                        currentUser.getEmail(),
+                                        username.trim().toLowerCase(Locale.ROOT),
+                                        name.trim(),
+                                        lastName.trim(),
+                                        phone == null || phone.isBlank() ? null : phone.trim(),
+                                        profileImageContentLength > 0
+                                                ? Long.valueOf(500L)
+                                                : currentUser.getProfileImageId());
+                        return currentUser;
+                    }
+
+                    @Override
+                    public User updateProfileImage(
+                            final Long id,
+                            final String contentType,
+                            final long contentLength,
+                            final InputStream contentStream) {
+                        currentUser =
+                                new User(
+                                        id,
+                                        currentUser.getEmail(),
+                                        currentUser.getUsername(),
+                                        currentUser.getName(),
+                                        currentUser.getLastName(),
+                                        currentUser.getPhone(),
+                                        500L);
+                        return currentUser;
                     }
                 };
 
@@ -403,7 +532,8 @@ class PawUiRouteTest {
                                         matchReservationService,
                                         userService,
                                         messageSource),
-                                new AccountController(messageSource),
+                                new PublicProfileController(userService, messageSource),
+                                new AccountController(userService, messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
                                 new MatchDashboardController(matchService, messageSource),
@@ -412,6 +542,7 @@ class PawUiRouteTest {
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
+                        .setValidator(validator)
                         .setConversionService(new DefaultFormattingConversionService())
                         .build();
     }
@@ -498,7 +629,37 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "eventPage",
-                                        Matchers.hasProperty("participants", Matchers.hasSize(2))));
+                                        Matchers.hasProperty(
+                                                "hostProfileHref",
+                                                Matchers.is("/users/host-player"))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "hostProfileImageUrl", Matchers.is("/images/88"))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "participants",
+                                                Matchers.contains(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "profileHref",
+                                                                        Matchers.is(
+                                                                                "/users/first-player")),
+                                                                Matchers.hasProperty(
+                                                                        "profileImageUrl",
+                                                                        Matchers.is("/images/77"))),
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "profileHref",
+                                                                        Matchers.is(
+                                                                                "/users/second-player")),
+                                                                Matchers.hasProperty(
+                                                                        "profileImageUrl",
+                                                                        Matchers.is(
+                                                                                "/assets/default-profile-avatar.svg")))))));
     }
 
     @Test
@@ -728,9 +889,189 @@ class PawUiRouteTest {
         mockMvc.perform(get("/account"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
-                .andExpect(model().attribute("username", "host-player"))
-                .andExpect(model().attribute("email", "host@test.com"))
+                .andExpect(model().attributeExists("accountProfile"))
                 .andExpect(model().attributeExists("shell"));
+    }
+
+    @Test
+    void getAccountRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/account")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getAccountEditRouteRendersEditablePageForAuthenticatedUsers() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/account/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/edit"))
+                .andExpect(model().attributeExists("accountProfileForm"));
+    }
+
+    @Test
+    void postAccountEditRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(
+                        post("/account/edit")
+                                .param("username", "updated_user")
+                                .param("name", "Taylor")
+                                .param("lastName", "Morgan")
+                                .param("phone", ""))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postAccountEditRouteUpdatesProfileAndRedirects() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/account/edit")
+                                .param("username", "updated_user")
+                                .param("name", "Taylor")
+                                .param("lastName", "Morgan")
+                                .param("phone", ""))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/account?updated=1"));
+    }
+
+    @Test
+    void postAccountEditRouteUpdatesPictureAndRedirects() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        multipart("/account/edit")
+                                .file(
+                                        new MockMultipartFile(
+                                                "profileImage",
+                                                "avatar.png",
+                                                "image/png",
+                                                new byte[] {1, 2, 3}))
+                                .param("username", "host-player")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/account?updated=1"));
+    }
+
+    @Test
+    void postAccountEditRouteShowsLocalizedImageErrorForUnsupportedFormat() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        multipart("/account/edit")
+                                .file(
+                                        new MockMultipartFile(
+                                                "profileImage",
+                                                "avatar.pdf",
+                                                "application/pdf",
+                                                new byte[] {1, 2, 3}))
+                                .param("username", "host-player")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/edit"))
+                .andExpect(
+                        model().attribute(
+                                        "accountProfileImageError",
+                                        "Please upload a JPG, PNG, WEBP, or GIF image."));
+    }
+
+    @Test
+    void getPublicProfileRouteRendersPublicProfileForAnonymousUsers() throws Exception {
+        mockMvc.perform(get("/users/host-player"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attributeExists("profilePage"))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "username", Matchers.is("host-player"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty("name", Matchers.is("Jamie"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty("lastName", Matchers.is("Rivera"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "phone", Matchers.is("+1 555 123 4567"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage", Matchers.not(Matchers.hasProperty("email"))))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "profileImageUrl",
+                                                Matchers.is(
+                                                        "/assets/default-profile-avatar.svg"))));
+    }
+
+    @Test
+    void getPublicProfileRouteUsesUploadedProfileImageWhenPresent() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        multipart("/account/edit")
+                                .file(
+                                        new MockMultipartFile(
+                                                "profileImage",
+                                                "avatar.png",
+                                                "image/png",
+                                                new byte[] {1, 2, 3}))
+                                .param("username", "host-player")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567"))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(get("/users/host-player"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "profileImageUrl", Matchers.is("/images/500"))));
+    }
+
+    @Test
+    void getOwnPublicProfileRouteShowsEditAction() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/host-player"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("profileEditHref", "/account/edit"));
+    }
+
+    @Test
+    void getOtherPublicProfileRouteDoesNotShowEditAction() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attributeDoesNotExist("profileEditHref"));
+    }
+
+    @Test
+    void getPublicProfileRouteWithSpanishLocaleLocalizesPageCopy() throws Exception {
+        mockMvc.perform(get("/users/host-player").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("profileTitle", "Perfil p\u00fablico"))
+                .andExpect(model().attribute("profileUsernameLabel", "Usuario"))
+                .andExpect(model().attribute("profilePhoneLabel", "Tel\u00e9fono"));
+    }
+
+    @Test
+    void getUnknownPublicProfileRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/users/missing-player")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -785,5 +1126,12 @@ class PawUiRouteTest {
         final LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
         return localeChangeInterceptor;
+    }
+
+    private static LocalValidatorFactoryBean validator(final MessageSource messageSource) {
+        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.setValidationMessageSource(messageSource);
+        validator.afterPropertiesSet();
+        return validator;
     }
 }

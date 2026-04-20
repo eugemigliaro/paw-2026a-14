@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_URL;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -23,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -113,18 +116,19 @@ public class EventController {
 
     private EventDetailPageViewModel buildRealEventPage(
             final Match match, final List<User> confirmedParticipants, final Locale locale) {
+        final Optional<User> host = userService.findById(match.getHostUserId());
         return new EventDetailPageViewModel(
                 toCard(match, locale),
                 null,
                 null,
-                userService
-                        .findById(match.getHostUserId())
-                        .map(User::getUsername)
+                host.map(User::getUsername)
                         .orElse(
                                 messageSource.getMessage(
                                         "event.detail.unknownHost",
                                         new Object[] {match.getHostUserId()},
                                         locale)),
+                host.map(this::profileHrefFor).orElse(null),
+                host.map(user -> profileUrlFor(user)).orElse(DEFAULT_PROFILE_IMAGE_URL),
                 toParticipantViewModels(confirmedParticipants),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
@@ -186,8 +190,18 @@ public class EventController {
                         participant ->
                                 new ParticipantViewModel(
                                         participant.getUsername(),
-                                        avatarLabelForUsername(participant.getUsername())))
+                                        avatarLabelForUsername(participant.getUsername()),
+                                        profileHrefFor(participant),
+                                        profileImageUrlForParticipant(participant)))
                 .toList();
+    }
+
+    private String profileImageUrlForParticipant(final User participant) {
+        return profileUrlFor(participant);
+    }
+
+    private String profileHrefFor(final User user) {
+        return "/users/" + user.getUsername();
     }
 
     private List<EventCardViewModel> loadNearbyMatches(

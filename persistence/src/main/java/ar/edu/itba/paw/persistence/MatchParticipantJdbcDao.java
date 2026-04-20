@@ -59,14 +59,23 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     @Override
     public List<User> findConfirmedParticipants(final Long matchId) {
         return jdbcTemplate.query(
-                "SELECT u.id, u.email, u.username"
+                "SELECT u.id, u.email, u.username, u.name, u.last_name, u.phone, u.profile_image_id"
                         + " FROM match_participants mp"
                         + " JOIN users u ON u.id = mp.user_id"
                         + " WHERE mp.match_id = ?"
                         + " AND mp.status IN ('joined', 'checked_in')"
                         + " ORDER BY mp.joined_at ASC, u.username ASC",
                 (rs, rowNum) ->
-                        new User(rs.getLong("id"), rs.getString("email"), rs.getString("username")),
+                        new User(
+                                rs.getLong("id"),
+                                rs.getString("email"),
+                                rs.getString("username"),
+                                rs.getString("name"),
+                                rs.getString("last_name"),
+                                rs.getString("phone"),
+                                rs.getObject("profile_image_id") == null
+                                        ? null
+                                        : rs.getLong("profile_image_id")),
                 matchId);
     }
 }

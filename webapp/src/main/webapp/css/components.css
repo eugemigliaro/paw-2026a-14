@@ -199,6 +199,12 @@
 	margin-left: 0.2rem;
 }
 
+.field--required .field__label::after {
+	content: "*";
+	color: #d62828;
+	margin-left: 0.2rem;
+}
+
 .field__control {
 	background: #ffffff;
 	border: 1px solid #dcded8;

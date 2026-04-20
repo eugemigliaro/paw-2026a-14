@@ -94,12 +94,15 @@ public class AccountAuthServiceImplTest {
                         userDao.createAccount(
                                 ArgumentMatchers.eq("new@test.com"),
                                 ArgumentMatchers.eq("new_user"),
+                                ArgumentMatchers.eq("Jamie"),
+                                ArgumentMatchers.eq("Rivera"),
+                                ArgumentMatchers.eq("+1 555 123 4567"),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq(UserRole.USER),
                                 ArgumentMatchers.isNull()))
                 .thenAnswer(
                         invocation -> {
-                            capturedPasswordHash.set(invocation.getArgument(2));
+                            capturedPasswordHash.set(invocation.getArgument(5));
                             return createdAccount;
                         });
         Mockito.when(
@@ -132,7 +135,13 @@ public class AccountAuthServiceImplTest {
 
         final VerificationRequestResult result =
                 accountAuthService.register(
-                        new RegisterAccountRequest("New@Test.com", "new_user", "Password123!"));
+                        new RegisterAccountRequest(
+                                "New@Test.com",
+                                "new_user",
+                                "Jamie",
+                                "Rivera",
+                                "+1 555 123 4567",
+                                "Password123!"));
 
         Assertions.assertEquals("new@test.com", result.getEmail());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(24 * 3600L), result.getExpiresAt());
@@ -162,7 +171,12 @@ public class AccountAuthServiceImplTest {
                         () ->
                                 accountAuthService.register(
                                         new RegisterAccountRequest(
-                                                "player@test.com", "player", "Password123!")));
+                                                "player@test.com",
+                                                "player",
+                                                "Jamie",
+                                                "Rivera",
+                                                "+1 555 123 4567",
+                                                "Password123!")));
 
         Assertions.assertEquals("email_taken", exception.getCode());
     }
@@ -186,7 +200,12 @@ public class AccountAuthServiceImplTest {
                         () ->
                                 accountAuthService.register(
                                         new RegisterAccountRequest(
-                                                "pending@test.com", "pending", "Password123!")));
+                                                "pending@test.com",
+                                                "pending",
+                                                "Jamie",
+                                                "Rivera",
+                                                "+1 555 123 4567",
+                                                "Password123!")));
 
         Assertions.assertEquals("email_pending_verification", exception.getCode());
     }
@@ -206,9 +225,65 @@ public class AccountAuthServiceImplTest {
                         () ->
                                 accountAuthService.register(
                                         new RegisterAccountRequest(
-                                                "new@test.com", "taken_name", "Password123!")));
+                                                "new@test.com",
+                                                "taken_name",
+                                                "Jamie",
+                                                "Rivera",
+                                                "+1 555 123 4567",
+                                                "Password123!")));
 
         Assertions.assertEquals("username_taken", exception.getCode());
+    }
+
+    @Test
+    public void testRegisterAllowsMissingPhone() {
+        final UserAccount createdAccount =
+                new UserAccount(
+                        9L, "new@test.com", "new_user", "{bcrypt}hash", UserRole.USER, null);
+
+        Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
+        Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
+        Mockito.when(
+                        userDao.createAccount(
+                                ArgumentMatchers.eq("new@test.com"),
+                                ArgumentMatchers.eq("new_user"),
+                                ArgumentMatchers.eq("Jamie"),
+                                ArgumentMatchers.eq("Rivera"),
+                                ArgumentMatchers.isNull(),
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.eq(UserRole.USER),
+                                ArgumentMatchers.isNull()))
+                .thenReturn(createdAccount);
+        Mockito.when(
+                        emailActionRequestDao.create(
+                                ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
+                                ArgumentMatchers.eq("new@test.com"),
+                                ArgumentMatchers.eq(9L),
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.eq("{}"),
+                                ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
+                .thenReturn(
+                        new EmailActionRequest(
+                                20L,
+                                EmailActionType.ACCOUNT_VERIFICATION,
+                                "new@test.com",
+                                9L,
+                                "token-hash",
+                                "{}",
+                                EmailActionStatus.PENDING,
+                                FIXED_NOW.plusSeconds(24 * 3600L),
+                                null,
+                                FIXED_NOW,
+                                FIXED_NOW));
+        Mockito.when(templateRenderer.renderActionMail(ArgumentMatchers.any()))
+                .thenReturn(new MailContent("subject", "<p>html</p>", "text"));
+
+        final VerificationRequestResult result =
+                accountAuthService.register(
+                        new RegisterAccountRequest(
+                                "new@test.com", "new_user", "Jamie", "Rivera", "", "Password123!"));
+
+        Assertions.assertEquals("new@test.com", result.getEmail());
     }
 
     @Test
@@ -505,6 +580,16 @@ public class AccountAuthServiceImplTest {
                 "auth.registration.error.usernameInvalid",
                 Locale.ENGLISH,
                 "Use 3 to 50 lowercase letters, numbers, or underscores for your username.");
+        messageSource.addMessage(
+                "auth.registration.error.nameInvalid", Locale.ENGLISH, "Enter a valid first name.");
+        messageSource.addMessage(
+                "auth.registration.error.lastNameInvalid",
+                Locale.ENGLISH,
+                "Enter a valid last name.");
+        messageSource.addMessage(
+                "auth.registration.error.phoneInvalid",
+                Locale.ENGLISH,
+                "Enter a valid phone number.");
         messageSource.addMessage(
                 "auth.registration.error.passwordInvalid",
                 Locale.ENGLISH,
