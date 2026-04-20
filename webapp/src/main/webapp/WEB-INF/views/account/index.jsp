@@ -30,15 +30,6 @@
 					<c:set var="accountPhoneValue" value="${empty accountProfile.phone ? accountPhoneEmptyLabel : accountProfile.phone}" />
 					<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
 
-					<section class="account-profile-media" aria-label="${accountProfileImageAlt}">
-						<img
-							class="account-profile-media__image"
-							src="${accountProfileImageSrc}"
-							alt="${accountProfileImageAlt}"
-							loading="eager"
-							decoding="async" />
-					</section>
-
 					<div class="account-summary">
 						<label class="field" for="account-email">
 							<span class="field__label"><spring:message code="form.email.label" /></span>
@@ -91,6 +82,15 @@
 								aria-readonly="true" />
 						</label>
 					</div>
+
+					<section class="account-profile-media" aria-label="${accountProfileImageAlt}">
+						<img
+							class="account-profile-media__image"
+							src="${accountProfileImageSrc}"
+							alt="${accountProfileImageAlt}"
+							loading="eager"
+							decoding="async" />
+					</section>
 
 					<c:url var="logoutAction" value="/logout" />
 					<form method="post" action="${logoutAction}" class="account-logout">
