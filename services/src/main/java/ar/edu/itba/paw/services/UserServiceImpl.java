@@ -91,7 +91,6 @@ public class UserServiceImpl implements UserService {
         try {
             userDao.updateProfile(
                     id,
-                    existingUser.getEmail(),
                     normalizedUsername,
                     normalizedName,
                     normalizedLastName,

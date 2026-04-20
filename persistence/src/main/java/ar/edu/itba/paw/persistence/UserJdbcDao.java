@@ -158,7 +158,6 @@ public class UserJdbcDao implements UserDao {
     @Override
     public void updateProfile(
             final Long id,
-            final String email,
             final String username,
             final String name,
             final String lastName,
@@ -166,9 +165,8 @@ public class UserJdbcDao implements UserDao {
             final Long profileImageId) {
         jdbcTemplate.update(
                 "UPDATE users "
-                        + "SET email = ?, username = ?, name = ?, last_name = ?, phone = ?, profile_image_id = ?, updated_at = ? "
+                        + "SET username = ?, name = ?, last_name = ?, phone = ?, profile_image_id = ?, updated_at = ? "
                         + "WHERE id = ?",
-                email,
                 username,
                 name,
                 lastName,

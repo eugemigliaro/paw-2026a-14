@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
@@ -100,9 +101,15 @@ public class AccountController {
         } catch (final AccountRegistrationException exception) {
             applyProfileUpdateError(bindingResult, exception);
             return accountEditView(accountProfileForm, currentUser.getEmail(), null, locale);
+        } catch (final ImageUploadException exception) {
+            return accountEditView(
+                    accountProfileForm,
+                    currentUser.getEmail(),
+                    profileImageError(exception, locale),
+                    locale);
         } catch (final IllegalArgumentException exception) {
             return accountEditView(
-                    accountProfileForm, currentUser.getEmail(), exception.getMessage(), locale);
+                    accountProfileForm, currentUser.getEmail(), profileImageError(locale), locale);
         } catch (final IOException exception) {
             return accountEditView(
                     accountProfileForm,
@@ -151,7 +158,7 @@ public class AccountController {
     private ModelAndView accountEditView(
             final AccountProfileForm accountProfileForm,
             final String accountEmail,
-            final String profileImageStatus,
+            final String profileImageError,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("account/edit");
         final User user = requiredAuthenticatedUser();
@@ -196,8 +203,7 @@ public class AccountController {
                         "Accepted formats: JPG, PNG, WEBP, GIF. Max size 5 MB.",
                         locale));
         mav.addObject(
-                "accountProfileImageUpdated",
-                profileImageStatus != null ? profileImageStatus : null);
+                "accountProfileImageError", profileImageError != null ? profileImageError : null);
         mav.addObject("accountEmail", accountEmail);
         mav.addObject("accountProfileForm", accountProfileForm);
         addProfileImageObjects(mav, user, locale);
@@ -257,5 +263,43 @@ public class AccountController {
     private String profileImageError(
             final String code, final String defaultMessage, final Locale locale) {
         return messageSource.getMessage(code, null, defaultMessage, locale);
+    }
+
+    private String profileImageError(final ImageUploadException exception, final Locale locale) {
+        if (ImageUploadException.UNSUPPORTED_FORMAT.equals(exception.getCode())) {
+            return messageSource.getMessage(
+                    "account.profileImage.error.invalidFormat",
+                    null,
+                    "Please upload a JPG, PNG, WEBP, or GIF image.",
+                    locale);
+        }
+        if (ImageUploadException.EMPTY_FILE.equals(exception.getCode())) {
+            return messageSource.getMessage(
+                    "account.profileImage.error.empty",
+                    null,
+                    "The uploaded image is empty.",
+                    locale);
+        }
+        if (ImageUploadException.TOO_LARGE.equals(exception.getCode())) {
+            return messageSource.getMessage(
+                    "account.profileImage.error.tooLarge",
+                    null,
+                    "The uploaded image must be 5 MB or smaller.",
+                    locale);
+        }
+
+        return messageSource.getMessage(
+                "account.update.error.unavailable",
+                null,
+                "We could not update your profile. Please try again.",
+                locale);
+    }
+
+    private String profileImageError(final Locale locale) {
+        return messageSource.getMessage(
+                "account.update.error.unavailable",
+                null,
+                "We could not update your profile. Please try again.",
+                locale);
     }
 }

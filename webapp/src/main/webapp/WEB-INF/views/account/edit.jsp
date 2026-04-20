@@ -51,8 +51,8 @@
 								</div>
 							</div>
 
-							<c:if test="${not empty accountProfileImageUpdated}">
-								<p class="auth-notice auth-notice--success"><c:out value="${accountProfileImageUpdated}" /></p>
+							<c:if test="${not empty accountProfileImageError}">
+								<p class="auth-notice auth-notice--error"><c:out value="${accountProfileImageError}" /></p>
 							</c:if>
 
 							<label class="field" for="account-profile-image">

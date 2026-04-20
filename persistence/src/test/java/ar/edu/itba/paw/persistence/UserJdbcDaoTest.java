@@ -151,18 +151,11 @@ public class UserJdbcDaoTest {
                         UserRole.USER,
                         Instant.now());
 
-        userDao.updateProfile(
-                account.getId(),
-                "updated@test.com",
-                "updated_user",
-                "Taylor",
-                "Morgan",
-                null,
-                null);
+        userDao.updateProfile(account.getId(), "updated_user", "Taylor", "Morgan", null, null);
 
         final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
 
-        Assertions.assertEquals("updated@test.com", persisted.getEmail());
+        Assertions.assertEquals("profile@test.com", persisted.getEmail());
         Assertions.assertEquals("updated_user", persisted.getUsername());
         Assertions.assertEquals("Taylor", persisted.getName());
         Assertions.assertEquals("Morgan", persisted.getLastName());

@@ -27,6 +27,7 @@ import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
+import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
@@ -342,6 +343,10 @@ class PawUiRouteTest {
                             final String profileImageContentType,
                             final long profileImageContentLength,
                             final InputStream profileImageContentStream) {
+                        if (profileImageContentType != null
+                                && !profileImageContentType.startsWith("image/")) {
+                            throw new ImageUploadException(ImageUploadException.UNSUPPORTED_FORMAT);
+                        }
                         currentUser =
                                 new User(
                                         id,
@@ -875,6 +880,30 @@ class PawUiRouteTest {
                                 .param("phone", "+1 555 123 4567"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/account?updated=1"));
+    }
+
+    @Test
+    void postAccountEditRouteShowsLocalizedImageErrorForUnsupportedFormat() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        multipart("/account/edit")
+                                .file(
+                                        new MockMultipartFile(
+                                                "profileImage",
+                                                "avatar.pdf",
+                                                "application/pdf",
+                                                new byte[] {1, 2, 3}))
+                                .param("username", "host-player")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/edit"))
+                .andExpect(
+                        model().attribute(
+                                        "accountProfileImageError",
+                                        "Please upload a JPG, PNG, WEBP, or GIF image."));
     }
 
     @Test

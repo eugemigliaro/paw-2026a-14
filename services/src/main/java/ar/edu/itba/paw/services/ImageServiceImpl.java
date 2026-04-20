@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.persistence.ImageDao;
+import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -53,16 +54,16 @@ public class ImageServiceImpl implements ImageService {
     private static void validateContentType(final String contentType) {
         final String normalized = normalizeContentType(contentType);
         if (normalized.isBlank() || !ALLOWED_CONTENT_TYPES.contains(normalized)) {
-            throw new IllegalArgumentException("Unsupported image format.");
+            throw new ImageUploadException(ImageUploadException.UNSUPPORTED_FORMAT);
         }
     }
 
     private static void validateContentLength(final long contentLength) {
         if (contentLength <= 0) {
-            throw new IllegalArgumentException("Image file is empty.");
+            throw new ImageUploadException(ImageUploadException.EMPTY_FILE);
         }
         if (contentLength > MAX_IMAGE_SIZE_BYTES) {
-            throw new IllegalArgumentException("Image exceeds the 5 MB size limit.");
+            throw new ImageUploadException(ImageUploadException.TOO_LARGE);
         }
     }
 }

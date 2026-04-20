@@ -32,7 +32,6 @@ public interface UserDao {
 
     void updateProfile(
             Long id,
-            String email,
             String username,
             String name,
             String lastName,
