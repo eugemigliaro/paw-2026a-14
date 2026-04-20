@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
@@ -268,6 +269,55 @@ class PawUiRouteTest {
                     }
                 };
 
+        final MatchParticipationService matchParticipationService =
+                new MatchParticipationService() {
+
+                    @Override
+                    public boolean createReservationIfSpace(Long matchId, Long userId) {
+                        return true;
+                    }
+
+                    @Override
+                    public List<User> findConfirmedParticipants(Long matchId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public boolean hasPendingRequest(Long matchId, Long userId) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean createJoinRequest(Long matchId, Long userId) {
+                        return true;
+                    }
+
+                    @Override
+                    public List<User> findPendingRequests(Long matchId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public boolean approveRequest(Long matchId, Long userId) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean rejectRequest(Long matchId, Long userId) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean removeParticipant(Long matchId, Long userId) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean cancelJoinRequest(Long matchId, Long userId) {
+                        return true;
+                    }
+                };
+
         final UserService userService =
                 new UserService() {
                     @Override
@@ -401,6 +451,7 @@ class PawUiRouteTest {
                                 new EventController(
                                         matchService,
                                         matchReservationService,
+                                        matchParticipationService,
                                         userService,
                                         messageSource),
                                 new AccountController(messageSource),
