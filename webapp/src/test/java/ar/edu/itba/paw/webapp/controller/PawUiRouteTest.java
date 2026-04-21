@@ -765,8 +765,21 @@ class PawUiRouteTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("hostCanEdit", true))
+                .andExpect(model().attribute("hostCanCancel", true))
                 .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
                 .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteForHostDisablesManagementOnCompletedEvent() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/44"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("hostCanEdit", false))
+                .andExpect(model().attribute("hostCanCancel", false));
     }
 
     @Test
@@ -1146,6 +1159,13 @@ class PawUiRouteTest {
         mockMvc.perform(post("/host/matches/42/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42?hostAction=cancelled"));
+    }
+
+    @Test
+    void postHostCancelForCompletedEventReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(post("/host/matches/44/cancel")).andExpect(status().isNotFound());
     }
 
     @Test

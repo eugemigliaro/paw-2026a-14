@@ -668,6 +668,34 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testCancelMatchRejectsCompletedMatch() {
+        final Match completedMatch =
+                new Match(
+                        29L,
+                        Sport.FOOTBALL,
+                        1L,
+                        "Test Address",
+                        "Completed Match",
+                        "Test Description",
+                        FIXED_NOW.minusSeconds(7200),
+                        FIXED_NOW.minusSeconds(3600),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "completed",
+                        0,
+                        null);
+        Mockito.when(matchDao.findById(29L)).thenReturn(Optional.of(completedMatch));
+
+        final MatchCancellationException exception =
+                Assertions.assertThrows(
+                        MatchCancellationException.class, () -> matchService.cancelMatch(29L, 1L));
+
+        Assertions.assertEquals(MatchCancellationFailureReason.FORBIDDEN, exception.getReason());
+        Assertions.assertEquals("match.cancel.error.forbidden", exception.getMessage());
+    }
+
+    @Test
     public void testCancelMatchPersistsAndReturnsCancelledMatch() {
         final Match existingMatch = createTestMatch(23L, "Test Match", "football");
         final Match cancelledMatch =

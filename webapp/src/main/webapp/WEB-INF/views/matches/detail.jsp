@@ -275,12 +275,25 @@
 									</div>
 								</div>
 								<c:url var="hostEditHref" value="${hostEditPath}" />
-								<ui:button
-									label="${hostManageEditLabel}"
-									href="${hostEditHref}"
-									variant="secondary"
-									fullWidth="${true}"
-								/>
+								<c:choose>
+									<c:when test="${hostCanEdit}">
+										<ui:button
+											label="${hostManageEditLabel}"
+											href="${hostEditHref}"
+											variant="secondary"
+											fullWidth="${true}"
+										/>
+									</c:when>
+									<c:otherwise>
+										<ui:button
+											label="${hostManageEditLabel}"
+											type="button"
+											variant="secondary"
+											fullWidth="${true}"
+											disabled="${true}"
+										/>
+									</c:otherwise>
+								</c:choose>
 								<c:url var="hostCancelAction" value="${hostCancelPath}" />
 								<form
 									method="post"
@@ -294,6 +307,7 @@
 										label="${hostManageCancelLabel}"
 										type="submit"
 										variant="danger"
+										disabled="${not hostCanCancel}"
 										fullWidth="${true}"
 									/>
 								</form>

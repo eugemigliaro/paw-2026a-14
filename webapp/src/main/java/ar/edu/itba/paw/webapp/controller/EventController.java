@@ -4,6 +4,7 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
@@ -110,6 +111,7 @@ public class EventController {
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
+        final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
@@ -117,7 +119,9 @@ public class EventController {
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
-        mav.addObject("hostCanManage", isHost(match, currentUserId));
+        mav.addObject("hostCanManage", hostCanManage);
+        mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
+        mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
         mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
         mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
@@ -394,5 +398,17 @@ public class EventController {
 
     private boolean isHost(final Match match, final Long currentUserId) {
         return currentUserId != null && currentUserId.equals(match.getHostUserId());
+    }
+
+    private boolean canHostEdit(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
+    }
+
+    private boolean canHostCancel(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
     }
 }

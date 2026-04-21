@@ -163,6 +163,12 @@ public class MatchServiceImpl implements MatchService {
                     message("match.cancel.error.forbidden"));
         }
 
+        if (EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
         if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())) {
             return match;
         }
