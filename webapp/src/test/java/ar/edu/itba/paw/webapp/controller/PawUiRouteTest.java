@@ -866,7 +866,7 @@ class PawUiRouteTest {
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("errors/error-page"))
                 .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attribute("errorPageNumber", "404"));
+                .andExpect(model().attribute("number", "404"));
     }
 
     @Test
@@ -875,7 +875,7 @@ class PawUiRouteTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("errors/error-page"))
                 .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attribute("errorPageNumber", "400"));
+                .andExpect(model().attribute("number", "400"));
     }
 
     @Test
@@ -884,7 +884,7 @@ class PawUiRouteTest {
                 .andExpect(status().isForbidden())
                 .andExpect(view().name("errors/error-page"))
                 .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attribute("errorPageNumber", "403"));
+                .andExpect(model().attribute("number", "403"));
     }
 
     @Test
@@ -893,7 +893,7 @@ class PawUiRouteTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(view().name("errors/error-page"))
                 .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attribute("errorPageNumber", "500"));
+                .andExpect(model().attribute("number", "500"));
     }
 
     @Test
