@@ -139,4 +139,24 @@ public class MatchParticipantJdbcDaoTest {
         Assertions.assertEquals(1L, participants.get(0).getId());
         Assertions.assertEquals(3L, participants.get(1).getId());
     }
+
+        @Test
+        public void testCreateJoinRequestAllowsReRequestAfterCancellation() {
+                final boolean firstRequestCreated = matchParticipantDao.createJoinRequest(10L, 2L);
+                Assertions.assertTrue(firstRequestCreated);
+
+                final boolean cancelled = matchParticipantDao.cancelJoinRequest(10L, 2L);
+                Assertions.assertTrue(cancelled);
+
+                final boolean secondRequestCreated = matchParticipantDao.createJoinRequest(10L, 2L);
+                Assertions.assertTrue(secondRequestCreated);
+
+                final Integer pendingRows =
+                                jdbcTemplate.queryForObject(
+                                                "SELECT COUNT(*) FROM match_participants"
+                                                                + " WHERE match_id = 10 AND user_id = 2"
+                                                                + " AND status = 'pending_approval'",
+                                                Integer.class);
+                Assertions.assertEquals(1, pendingRows);
+        }
 }

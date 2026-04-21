@@ -29,6 +29,11 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class HostController {
 
+    private static final String VISIBILITY_PUBLIC = "public";
+    private static final String VISIBILITY_PRIVATE = "private";
+    private static final String JOIN_POLICY_DIRECT = "direct";
+    private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
+
     private final MatchService matchService;
     private final ImageService imageService;
     private final Clock clock;
@@ -80,6 +85,7 @@ public class HostController {
             bindingResult.rejectValue(
                     "endTime", "endTime.beforeStart", "End time must be after start time");
         }
+        validateVisibilityAndJoinPolicy(createEventForm, bindingResult);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale);
@@ -121,7 +127,8 @@ public class HostController {
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        "public",
+                        normalize(createEventForm.getVisibility()),
+                        normalize(createEventForm.getJoinPolicy()),
                         "open",
                         bannerImageId);
 
@@ -182,5 +189,47 @@ public class HostController {
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
         }
+    }
+
+    private static void validateVisibilityAndJoinPolicy(
+            final CreateEventForm form, final BindingResult bindingResult) {
+        if (bindingResult.hasFieldErrors("visibility")
+                || bindingResult.hasFieldErrors("joinPolicy")) {
+            return;
+        }
+
+        final String visibility = normalize(form.getVisibility());
+        final String joinPolicy = normalize(form.getJoinPolicy());
+
+        final boolean validVisibility =
+                VISIBILITY_PUBLIC.equals(visibility) || VISIBILITY_PRIVATE.equals(visibility);
+        final boolean validJoinPolicy =
+                JOIN_POLICY_DIRECT.equals(joinPolicy)
+                        || JOIN_POLICY_APPROVAL_REQUIRED.equals(joinPolicy);
+
+        if (!validVisibility) {
+            bindingResult.rejectValue(
+                    "visibility",
+                    "host.validation.visibility.invalid",
+                    "Choose a valid visibility");
+        }
+
+        if (!validJoinPolicy) {
+            bindingResult.rejectValue(
+                    "joinPolicy",
+                    "host.validation.joinPolicy.invalid",
+                    "Choose a valid join policy");
+        }
+
+        if (VISIBILITY_PRIVATE.equals(visibility) && JOIN_POLICY_DIRECT.equals(joinPolicy)) {
+            bindingResult.rejectValue(
+                    "joinPolicy",
+                    "host.validation.joinPolicy.privateRequiresApproval",
+                    "Private events must be approval-required");
+        }
+    }
+
+    private static String normalize(final String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 }

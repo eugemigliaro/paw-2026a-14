@@ -28,6 +28,12 @@ public class CreateEventForm {
     @NotBlank(message = "Sport is required")
     private String sport = "padel";
 
+    @NotBlank(message = "{host.validation.visibility.required}")
+    private String visibility = "";
+
+    @NotBlank(message = "{host.validation.joinPolicy.required}")
+    private String joinPolicy = "";
+
     @NotNull(message = "Match date is required")
     @FutureOrPresent(message = "Match date cannot be in the past")
     @DateTimeFormat(pattern = "yyyy-MM-dd")
@@ -82,6 +88,22 @@ public class CreateEventForm {
 
     public void setSport(final String sport) {
         this.sport = sport;
+    }
+
+    public String getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(final String visibility) {
+        this.visibility = visibility;
+    }
+
+    public String getJoinPolicy() {
+        return joinPolicy;
+    }
+
+    public void setJoinPolicy(final String joinPolicy) {
+        this.joinPolicy = joinPolicy;
     }
 
     public LocalDate getEventDate() {

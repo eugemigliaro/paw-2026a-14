@@ -119,8 +119,10 @@ public class EventController {
 
         final boolean hasPendingRequest =
                 currentUserId != null
-                        && "invite_only".equalsIgnoreCase(match.getVisibility())
+                        && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
                         && matchParticipationService.hasPendingRequest(eventId, currentUserId);
+        final boolean isHostViewer =
+            currentUserId != null && currentUserId.equals(match.getHostUserId());
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
@@ -140,6 +142,9 @@ public class EventController {
         mav.addObject("joinRequested", "requested".equalsIgnoreCase(joinStatus));
         mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
         mav.addObject("joinError", joinError);
+        mav.addObject("hostViewer", isHostViewer);
+        mav.addObject("hostRequestsPath", "/host/matches/" + eventId + "/requests");
+        mav.addObject("hostParticipantsPath", "/host/matches/" + eventId + "/participants");
         return mav;
     }
 
@@ -377,19 +382,19 @@ public class EventController {
             return false;
         }
 
-        // public and invite_only are visible to everyone
-        return "public".equalsIgnoreCase(match.getVisibility())
-                || "invite_only".equalsIgnoreCase(match.getVisibility());
+        return "public".equalsIgnoreCase(match.getVisibility());
     }
 
     private boolean canReserveMatch(final Match match) {
         return "public".equalsIgnoreCase(match.getVisibility())
+                && "direct".equalsIgnoreCase(match.getJoinPolicy())
                 && "open".equalsIgnoreCase(match.getStatus())
                 && match.getAvailableSpots() > 0;
     }
 
     private boolean canRequestToJoin(final Match match) {
-        return "invite_only".equalsIgnoreCase(match.getVisibility())
+        return "public".equalsIgnoreCase(match.getVisibility())
+                && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
                 && "open".equalsIgnoreCase(match.getStatus())
                 && match.getAvailableSpots() > 0;
     }

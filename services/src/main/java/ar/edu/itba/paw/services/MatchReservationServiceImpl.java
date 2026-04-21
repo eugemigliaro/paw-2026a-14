@@ -58,6 +58,11 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "closed", "The event is not open for reservations.");
         }
 
+        if (!"direct".equalsIgnoreCase(match.getJoinPolicy())) {
+            throw new MatchReservationException(
+                    "closed", "The event requires host approval to join.");
+        }
+
         if (!match.getStartsAt().isAfter(Instant.now(clock))) {
             throw new MatchReservationException("started", "The event has already started.");
         }
@@ -82,7 +87,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         }
 
         if (!"open".equalsIgnoreCase(currentMatch.getStatus())
-                || !"public".equalsIgnoreCase(currentMatch.getVisibility())) {
+                || !"public".equalsIgnoreCase(currentMatch.getVisibility())
+                || !"direct".equalsIgnoreCase(currentMatch.getJoinPolicy())) {
             return new MatchReservationException(
                     "closed", "The event is not open for reservations.");
         }

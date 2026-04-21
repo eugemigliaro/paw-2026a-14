@@ -48,8 +48,7 @@ public class MatchDashboardController {
             List.of("completed", "cancelled");
     private static final List<String> PLAYER_STATUS_OPTIONS =
             List.of("draft", "open", "completed", "cancelled");
-    private static final List<String> HOST_VISIBILITY_OPTIONS =
-            List.of("public", "private", "invite_only");
+    private static final List<String> HOST_VISIBILITY_OPTIONS = List.of("public", "private");
 
     private final MatchService matchService;
     private final MessageSource messageSource;
@@ -379,7 +378,9 @@ public class MatchDashboardController {
                         selectedVisibility));
         mav.addObject(
                 "events",
-                result.getItems().stream().map(match -> toCard(match, zoneId, locale)).toList());
+                result.getItems().stream()
+                        .map(match -> toCard(match, zoneId, locale, path.startsWith("/host/")))
+                        .toList());
         mav.addObject(
                 "paginationItems",
                 buildPagination(
@@ -441,7 +442,11 @@ public class MatchDashboardController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
-    private EventCardViewModel toCard(final Match match, final ZoneId zoneId, final Locale locale) {
+    private EventCardViewModel toCard(
+            final Match match,
+            final ZoneId zoneId,
+            final Locale locale,
+            final boolean hostDashboardView) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final String schedule =
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
@@ -453,9 +458,14 @@ public class MatchDashboardController {
                 messageSource.getMessage(
                         "match.status." + match.getStatus(), null, match.getStatus(), locale);
 
+        final String cardHref =
+                hostDashboardView
+                        ? "/host/matches/" + match.getId() + "/requests"
+                        : "/matches/" + match.getId();
+
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
-                "/matches/" + match.getId(),
+                cardHref,
                 messageSource.getMessage(
                         "sport." + match.getSport().getDbValue(),
                         null,

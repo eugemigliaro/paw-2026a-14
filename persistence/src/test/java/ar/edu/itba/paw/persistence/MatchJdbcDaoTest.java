@@ -112,6 +112,54 @@ public class MatchJdbcDaoTest {
     }
 
     @Test
+    public void testFindPublicEventsIncludesApprovalRequiredVisibility() {
+        matchDao.createMatch(
+                hostUserId,
+                "Test Address",
+                "Approval Required Match",
+                "Description",
+                ZonedDateTime.now().plusDays(1).toInstant(),
+                null,
+                10,
+                BigDecimal.ZERO,
+                Sport.FOOTBALL,
+                "public",
+                "approval_required",
+                "open",
+                null);
+
+        insertMatchWithStatus(
+                "Legacy Invite Only Match",
+                "open",
+                ZonedDateTime.now().plusDays(1),
+                hostUserId,
+                "invite_only");
+        insertMatchWithStatus(
+                "Private Match", "open", ZonedDateTime.now().plusDays(1), hostUserId, "private");
+
+        final List<Match> result =
+                matchDao.findPublicMatches(
+                        null,
+                        List.of(),
+                        EventTimeFilter.WEEK,
+                        null,
+                        null,
+                        MatchSort.SOONEST,
+                        ZoneId.systemDefault(),
+                        0,
+                        20);
+
+        Assertions.assertTrue(
+                result.stream()
+                        .anyMatch(match -> "Approval Required Match".equals(match.getTitle())));
+        Assertions.assertTrue(
+                result.stream()
+                        .noneMatch(match -> "Legacy Invite Only Match".equals(match.getTitle())));
+        Assertions.assertTrue(
+                result.stream().noneMatch(match -> "Private Match".equals(match.getTitle())));
+    }
+
+    @Test
     public void testFindPublicEventsBySportFilter() {
         insertMatch(
                 "Morning Football",

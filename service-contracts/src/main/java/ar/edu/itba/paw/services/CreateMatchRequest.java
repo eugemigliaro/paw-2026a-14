@@ -16,6 +16,7 @@ public class CreateMatchRequest {
     private final BigDecimal pricePerPlayer;
     private final Sport sport;
     private final String visibility;
+    private final String joinPolicy;
     private final String status;
     private final Long bannerImageId;
 
@@ -32,6 +33,36 @@ public class CreateMatchRequest {
             final String visibility,
             final String status,
             final Long bannerImageId) {
+        this(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                "public".equalsIgnoreCase(visibility) ? "direct" : "approval_required",
+                status,
+                bannerImageId);
+    }
+
+    public CreateMatchRequest(
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final Long bannerImageId) {
         this.hostUserId = hostUserId;
         this.address = address;
         this.title = title;
@@ -42,6 +73,7 @@ public class CreateMatchRequest {
         this.pricePerPlayer = pricePerPlayer;
         this.sport = sport;
         this.visibility = visibility;
+        this.joinPolicy = joinPolicy;
         this.status = status;
         this.bannerImageId = bannerImageId;
     }
@@ -84,6 +116,10 @@ public class CreateMatchRequest {
 
     public String getVisibility() {
         return visibility;
+    }
+
+    public String getJoinPolicy() {
+        return joinPolicy;
     }
 
     public String getStatus() {

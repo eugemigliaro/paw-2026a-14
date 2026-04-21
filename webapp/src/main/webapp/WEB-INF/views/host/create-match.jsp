@@ -31,6 +31,12 @@
 					<spring:message var="sportFootball" code="sport.football" />
 					<spring:message var="sportTennis" code="sport.tennis" />
 					<spring:message var="sportBasketball" code="sport.basketball" />
+					<spring:message var="visibilityPlaceholder" code="host.form.visibility.placeholder" />
+					<spring:message var="visibilityPublic" code="host.form.visibility.public" />
+					<spring:message var="visibilityPrivate" code="host.form.visibility.private" />
+					<spring:message var="joinPolicyPlaceholder" code="host.form.joinPolicy.placeholder" />
+					<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
+					<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
 					<spring:message var="publishLabel" code="host.form.submit" />
 					<c:url var="createMatchAction" value="/host/matches/new" />
 
@@ -225,6 +231,48 @@
 									/>
 									<form:errors
 										path="pricePerPlayer"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
+
+								<label class="field" for="match-visibility">
+									<span class="field__label"><spring:message code="host.form.visibility" /></span>
+									<span class="field__select-wrap">
+										<form:select
+											path="visibility"
+											id="match-visibility"
+											cssClass="field__control field__control--select"
+											required="required"
+										>
+											<form:option value="" label="${visibilityPlaceholder}" />
+											<form:option value="public" label="${visibilityPublic}" />
+											<form:option value="private" label="${visibilityPrivate}" />
+										</form:select>
+									</span>
+									<form:errors
+										path="visibility"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
+
+								<label class="field" for="match-join-policy">
+									<span class="field__label"><spring:message code="host.form.joinPolicy" /></span>
+									<span class="field__select-wrap">
+										<form:select
+											path="joinPolicy"
+											id="match-join-policy"
+											cssClass="field__control field__control--select"
+											required="required"
+										>
+											<form:option value="" label="${joinPolicyPlaceholder}" />
+											<form:option value="direct" label="${joinPolicyDirect}" />
+											<form:option value="approval_required" label="${joinPolicyApproval}" />
+										</form:select>
+									</span>
+									<form:errors
+										path="joinPolicy"
 										cssClass="field__error"
 										element="span"
 									/>

@@ -648,6 +648,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("maxPlayers", "8")
@@ -665,6 +667,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("maxPlayers", "8")
@@ -683,6 +687,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endTime", "17:00")
@@ -691,6 +697,28 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    @Test
+    void postHostPublishWithPrivateAndDirectJoinRerendersFormWithJoinPolicyError()
+            throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "private")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "joinPolicy"));
     }
 
     @Test

@@ -42,6 +42,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + " AND mp.status IN ('joined', 'checked_in')"
                                 + " WHERE m.id = ?"
                                 + " AND m.visibility = 'public'"
+                                + " AND m.join_policy = 'direct'"
                                 + " AND m.status = 'open'"
                                 + " AND m.starts_at > CURRENT_TIMESTAMP"
                                 + " AND NOT EXISTS ("
@@ -85,19 +86,34 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
 
     @Override
     public boolean createJoinRequest(final Long matchId, final Long userId) {
-        final int rows =
+        final int restoredRows =
+                jdbcTemplate.update(
+                        "UPDATE match_participants"
+                                + " SET status = 'pending_approval', joined_at = CURRENT_TIMESTAMP"
+                                + " WHERE match_id = ? AND user_id = ?"
+                                + " AND status = 'cancelled'",
+                        matchId,
+                        userId);
+
+        if (restoredRows == 1) {
+            return true;
+        }
+
+        final int insertedRows =
                 jdbcTemplate.update(
                         "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
                                 + " SELECT ?, ?, 'pending_approval', CURRENT_TIMESTAMP"
-                                + " WHERE NOT EXISTS ("
+                                + " FROM users u"
+                                + " WHERE u.id = ?"
+                                + " AND NOT EXISTS ("
                                 + "   SELECT 1 FROM match_participants"
-                                + "   WHERE match_id = ? AND user_id = ?"
-                                + "   AND status IN ('joined', 'checked_in', 'pending_approval'))",
+                                + "   WHERE match_id = ? AND user_id = ?)",
                         matchId,
+                        userId,
                         userId,
                         matchId,
                         userId);
-        return rows == 1;
+        return insertedRows == 1;
     }
 
     @Override

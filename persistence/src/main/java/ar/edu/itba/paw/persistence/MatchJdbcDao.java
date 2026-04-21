@@ -42,7 +42,7 @@ public class MatchJdbcDao implements MatchDao {
     private static final String MATCH_SELECT_WITH_JOINED_PLAYERS =
             "SELECT m.id, m.sport, m.host_user_id, m.address, m.title, m.description,"
                     + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
-                    + " m.visibility, "
+                    + " m.visibility, m.join_policy, "
                     + DERIVED_STATUS_SQL
                     + " AS status, m.banner_image_id, COUNT(mp.id) AS joined_players";
 
@@ -72,6 +72,7 @@ public class MatchJdbcDao implements MatchDao {
                         rs.getInt("max_players"),
                         price,
                         rs.getString("visibility"),
+                        rs.getString("join_policy"),
                         rs.getString("status"),
                         rs.getInt("joined_players"),
                         rs.getObject("banner_image_id") == null
@@ -103,6 +104,7 @@ public class MatchJdbcDao implements MatchDao {
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final String visibility,
+            final String joinPolicy,
             final String status,
             final Long bannerImageId) {
         final Map<String, Object> values = new HashMap<>();
@@ -116,6 +118,7 @@ public class MatchJdbcDao implements MatchDao {
         values.put("price_per_player", pricePerPlayer);
         values.put("sport", new SqlParameterValue(Types.OTHER, sport.getDbValue()));
         values.put("visibility", new SqlParameterValue(Types.OTHER, visibility));
+        values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy));
         values.put("status", new SqlParameterValue(Types.OTHER, status));
         values.put("banner_image_id", bannerImageId);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
@@ -135,6 +138,7 @@ public class MatchJdbcDao implements MatchDao {
                 maxPlayers,
                 pricePerPlayer,
                 visibility,
+                joinPolicy,
                 status,
                 0,
                 bannerImageId);

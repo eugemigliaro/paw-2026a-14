@@ -276,6 +276,15 @@
 
 							<spring:message var="joiningLabel" code="event.booking.joining" />
 							<c:choose>
+								<c:when test="${hostViewer}">
+									<c:url var="hostRequestsHref" value="${hostRequestsPath}" />
+									<spring:message var="hostRequestsLabel" code="event.host.requests" />
+									<ui:button label="${hostRequestsLabel}" href="${hostRequestsHref}" fullWidth="${true}" />
+
+									<c:url var="hostParticipantsHref" value="${hostParticipantsPath}" />
+									<spring:message var="hostParticipantsLabel" code="event.host.participants" />
+									<ui:button label="${hostParticipantsLabel}" href="${hostParticipantsHref}" fullWidth="${true}" variant="secondary" />
+								</c:when>
 								<%-- Not logged in --%>
 								<c:when test="${reservationRequiresLogin}">
 									<c:choose>

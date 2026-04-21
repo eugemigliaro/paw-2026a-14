@@ -45,7 +45,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     "closed", "The event is not open for join requests.");
         }
 
-        if (!"invite_only".equalsIgnoreCase(match.getVisibility())) {
+        if (!"public".equalsIgnoreCase(match.getVisibility())
+                || !"approval_required".equalsIgnoreCase(match.getJoinPolicy())) {
             throw new MatchParticipationException(
                     "not_invite_only", "This event does not require approval to join.");
         }
