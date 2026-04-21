@@ -33,6 +33,7 @@
 					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
 					<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
 					<spring:message var="durationCustom" code="host.form.duration.custom" />
+					<spring:message var="durationLabel" code="host.form.duration" />
 					<c:url var="resolvedFormAction" value="${formAction}" />
 
 					<form:form
@@ -179,7 +180,7 @@
 
 								<div class="field">
 									<span class="field__label"><spring:message code="host.form.duration" /></span>
-									<div class="duration-options" role="radiogroup" aria-label="<spring:message code='host.form.duration' />">
+									<div class="duration-options" role="radiogroup" aria-label="${durationLabel}">
 										<label class="chip duration-option" data-duration-minutes="60">
 											<input type="radio" name="durationPresetUi" value="60" class="duration-option__input" />
 											<span>${durationOneHour}</span>
