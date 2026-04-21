@@ -194,6 +194,20 @@ public class HostController {
                         "maxPlayers",
                         "match.update.error.capacityBelowConfirmed",
                         exception.getMessage());
+            } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
+                if (!isEndAfterStart(createEventForm)) {
+                    bindingResult.rejectValue(
+                            "endTime",
+                            "match.schedule.error.endBeforeStart",
+                            messageSource.getMessage(
+                                    "match.schedule.error.endBeforeStart", null, locale));
+                } else {
+                    bindingResult.rejectValue(
+                            "eventTime",
+                            "match.schedule.error.startsAtPast",
+                            messageSource.getMessage(
+                                    "match.schedule.error.startsAtPast", null, locale));
+                }
             } else {
                 bindingResult.rejectValue(
                         "eventTime", "match.schedule.error.startsAtPast", exception.getMessage());

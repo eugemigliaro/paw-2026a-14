@@ -1051,6 +1051,27 @@ class PawUiRouteTest {
     }
 
     @Test
+    void postHostEditWithEndBeforeStartRerendersFormWithErrorOnEndTime() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/42/edit")
+                                .param("title", "Updated Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "17:45")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    @Test
     void postHostCancelWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isUnauthorized());
     }
