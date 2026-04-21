@@ -13,6 +13,7 @@
 
 			<main class="page-shell account-shell">
 				<section class="panel account-panel">
+					<ui:returnButton />
 					<h1 class="page-heading__title account-panel__title"><c:out value="${accountTitle}" /></h1>
 					<div class="account-panel__header">
 						<p class="page-heading__description account-panel__description">
