@@ -13,6 +13,7 @@
 			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
 			<main class="page-shell">
+				<ui:returnButton />
 				<section class="create-layout__main">
 					<header class="page-heading">
 						<p class="eyebrow"><c:out value="${formEyebrow}" /></p>

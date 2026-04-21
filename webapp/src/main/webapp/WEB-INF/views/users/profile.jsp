@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -12,6 +13,7 @@
 
 			<main class="page-shell public-profile-shell">
 				<section class="panel public-profile-panel">
+					<ui:returnButton />
 					<header class="page-heading">
 						<h1 class="page-heading__title public-profile-panel__title"><c:out value="${profileTitle}" /></h1>
 						<p class="page-heading__description public-profile-panel__description">

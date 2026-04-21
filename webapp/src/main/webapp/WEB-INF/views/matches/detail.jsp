@@ -15,6 +15,7 @@
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 
 			<main class="page-shell page-shell--detail">
+				<ui:returnButton />
 				<section
 					class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
 				>
