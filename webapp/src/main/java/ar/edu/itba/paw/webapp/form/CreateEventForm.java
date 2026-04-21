@@ -14,43 +14,46 @@ import org.springframework.web.multipart.MultipartFile;
 
 public class CreateEventForm {
 
-    @NotBlank(message = "Event title is required")
-    @Size(max = 150, message = "Event title cannot exceed 150 characters")
+    @NotBlank(message = "{CreateEventForm.title.NotBlank}")
+    @Size(max = 150, message = "{CreateEventForm.title.Size}")
     private String title = "";
 
-    @Size(max = 4000, message = "Description cannot exceed 4000 characters")
+    @Size(max = 4000, message = "{CreateEventForm.description.Size}")
     private String description = "";
 
-    @NotBlank(message = "Location is required")
-    @Size(max = 255, message = "Location cannot exceed 255 characters")
+    @NotBlank(message = "{CreateEventForm.address.NotBlank}")
+    @Size(max = 255, message = "{CreateEventForm.address.Size}")
     private String address = "";
 
-    @NotBlank(message = "Sport is required")
+    @NotBlank(message = "{CreateEventForm.sport.NotBlank}")
     private String sport = "padel";
 
-    @NotNull(message = "Match date is required")
-    @FutureOrPresent(message = "Match date cannot be in the past")
+    @NotNull(message = "{CreateEventForm.eventDate.NotNull}")
+    @FutureOrPresent(message = "{CreateEventForm.eventDate.FutureOrPresent}")
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate eventDate = LocalDate.now().plusDays(1);
 
-    @NotNull(message = "Event time is required")
+    @NotNull(message = "{CreateEventForm.eventTime.NotNull}")
     @DateTimeFormat(pattern = "HH:mm")
     private LocalTime eventTime = LocalTime.of(18, 0);
 
-    @NotNull(message = "Event end date is required")
+    @NotNull(message = "{CreateEventForm.endDate.NotNull}")
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate = LocalDate.now().plusDays(1);
 
-    @NotNull(message = "Event end time is required")
+    @NotNull(message = "{CreateEventForm.endTime.NotNull}")
     @DateTimeFormat(pattern = "HH:mm")
     private LocalTime endTime = LocalTime.of(19, 30);
 
-    @NotNull(message = "Capacity is required")
-    @Min(value = 1, message = "Capacity must be at least 1")
+    @NotNull(message = "{CreateEventForm.maxPlayers.NotNull}")
+    @Min(value = 1, message = "{CreateEventForm.maxPlayers.Min}")
     private Integer maxPlayers = 8;
 
-    @NotNull(message = "Price is required")
-    @DecimalMin(value = "0", inclusive = true, message = "Price cannot be negative")
+    @NotNull(message = "{CreateEventForm.pricePerPlayer.NotNull}")
+    @DecimalMin(
+            value = "0",
+            inclusive = true,
+            message = "{CreateEventForm.pricePerPlayer.DecimalMin}")
     private BigDecimal pricePerPlayer = BigDecimal.ZERO;
 
     private String tz = "";
