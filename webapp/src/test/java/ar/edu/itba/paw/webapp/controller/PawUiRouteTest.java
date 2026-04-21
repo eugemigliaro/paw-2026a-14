@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
@@ -189,6 +190,9 @@ class PawUiRouteTest {
                         if (matchId == 43L) {
                             return Optional.of(footballMatch);
                         }
+                        if (matchId == 44L) {
+                            return Optional.of(completedMatch);
+                        }
                         if (matchId == 45L) {
                             return Optional.of(cancelledFutureMatch);
                         }
@@ -296,7 +300,7 @@ class PawUiRouteTest {
                             final int page,
                             final int pageSize) {
                         final List<Match> items =
-                                status != null && status.contains("completed")
+                                status != null && status.contains(EventStatus.COMPLETED.getValue())
                                         ? List.of(completedMatch)
                                         : List.of(realMatch);
                         return new PaginatedResult<>(items, items.size(), 1, pageSize);
@@ -1010,6 +1014,20 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getHostEditRouteForCompletedMatchReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/44/edit")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getHostEditRouteForCancelledMatchReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/45/edit")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void postHostEditRedirectsToDetailOnSuccess() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1069,6 +1087,44 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    @Test
+    void postHostEditForCompletedMatchReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/44/edit")
+                                .param("title", "Updated Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void postHostEditForCancelledMatchReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/45/edit")
+                                .param("title", "Updated Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

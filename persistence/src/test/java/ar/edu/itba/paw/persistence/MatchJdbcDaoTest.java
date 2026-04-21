@@ -645,8 +645,12 @@ public class MatchJdbcDaoTest {
                 finished.stream()
                         .allMatch(
                                 match ->
-                                        "completed".equals(match.getStatus())
-                                                || "cancelled".equals(match.getStatus())));
+                                        EventStatus.COMPLETED
+                                                        .getValue()
+                                                        .equalsIgnoreCase(match.getStatus())
+                                                || EventStatus.CANCELLED
+                                                        .getValue()
+                                                        .equalsIgnoreCase(match.getStatus())));
         Assertions.assertTrue(
                 finished.stream().anyMatch(match -> "Host Open Past".equals(match.getTitle())));
         Assertions.assertEquals(
@@ -702,7 +706,12 @@ public class MatchJdbcDaoTest {
 
         Assertions.assertEquals(2, upcoming.size());
         Assertions.assertTrue(
-                upcoming.stream().anyMatch(match -> "cancelled".equals(match.getStatus())));
+                upcoming.stream()
+                        .anyMatch(
+                                match ->
+                                        EventStatus.CANCELLED
+                                                .getValue()
+                                                .equals(match.getStatus())));
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(

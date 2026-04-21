@@ -395,6 +395,50 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateMatchRejectsCompletedMatch() {
+        final Match completedMatch =
+                new Match(
+                        17L,
+                        Sport.FOOTBALL,
+                        1L,
+                        "Test Address",
+                        "Completed Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "completed",
+                        0,
+                        null);
+        Mockito.when(matchDao.findById(17L)).thenReturn(Optional.of(completedMatch));
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        17L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Updated Match",
+                                                "Test Description",
+                                                FIXED_NOW.plusSeconds(5400),
+                                                FIXED_NOW.plusSeconds(9000),
+                                                10,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                "public",
+                                                "open",
+                                                null)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.NOT_EDITABLE, exception.getReason());
+        Assertions.assertEquals("match.update.error.notEditable", exception.getMessage());
+    }
+
+    @Test
     public void testUpdateMatchRejectsPastStartTime() {
         final Match existingMatch = createTestMatch(15L, "Test Match", "football");
         Mockito.when(matchDao.findById(15L)).thenReturn(Optional.of(existingMatch));

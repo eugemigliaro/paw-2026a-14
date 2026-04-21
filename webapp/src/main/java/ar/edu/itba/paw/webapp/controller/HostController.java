@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.CreateMatchRequest;
@@ -124,7 +125,7 @@ public class HostController {
             @PathVariable("matchId") final String matchId, final Locale locale) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();
-        final Match match = findOwnedMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        final Match match = findOwnedEditableMatchOrThrowNotFound(parsedMatchId, actingUserId);
         return hostFormView(toForm(match), null, locale, editFormConfig(match, locale));
     }
 
@@ -136,7 +137,8 @@ public class HostController {
             final Locale locale) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();
-        final Match existingMatch = findOwnedMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        final Match existingMatch =
+                findOwnedEditableMatchOrThrowNotFound(parsedMatchId, actingUserId);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
 
@@ -194,6 +196,8 @@ public class HostController {
                         "maxPlayers",
                         "match.update.error.capacityBelowConfirmed",
                         exception.getMessage());
+            } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
+                return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
             } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
                 if (!isEndAfterStart(createEventForm)) {
                     bindingResult.rejectValue(
@@ -361,6 +365,16 @@ public class HostController {
                         .findMatchById(matchId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!match.getHostUserId().equals(actingUserId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return match;
+    }
+
+    private Match findOwnedEditableMatchOrThrowNotFound(
+            final Long matchId, final Long actingUserId) {
+        final Match match = findOwnedMatchOrThrowNotFound(matchId, actingUserId);
+        final EventStatus status = EventStatus.fromDbValue(match.getStatus()).orElse(null);
+        if (status == EventStatus.COMPLETED || status == EventStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return match;
