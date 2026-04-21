@@ -37,13 +37,13 @@ public final class ShellViewModelFactory {
                                     withLang("/", locale),
                                     "/".equals(activePath)),
                             new NavItemViewModel(
-                                    ms.getMessage("nav.player.pastEvents", null, locale),
-                                    withLang("/player/matches/past", locale),
-                                    "/player/matches/past".equals(activePath)),
-                            new NavItemViewModel(
                                     ms.getMessage("nav.player.upcomingEvents", null, locale),
                                     withLang("/player/matches/upcoming", locale),
-                                    "/player/matches/upcoming".equals(activePath)));
+                                    "/player/matches/upcoming".equals(activePath)),
+                            new NavItemViewModel(
+                                    ms.getMessage("nav.player.pastEvents", null, locale),
+                                    withLang("/player/matches/past", locale),
+                                    "/player/matches/past".equals(activePath)));
         }
 
         return new ShellViewModel(
