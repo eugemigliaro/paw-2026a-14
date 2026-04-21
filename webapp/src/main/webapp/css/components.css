@@ -192,7 +192,6 @@
 	text-transform: uppercase;
 }
 
-
 .field:has(.field__control[required]) .field__label::after {
 	content: "*";
 	color: #d62828;
@@ -249,7 +248,9 @@
 		calc(100% - 20px) calc(50% - 3px),
 		calc(100% - 14px) calc(50% - 3px);
 	background-repeat: no-repeat;
-	background-size: 6px 6px, 6px 6px;
+	background-size:
+		6px 6px,
+		6px 6px;
 	padding-right: 2.8rem;
 }
 

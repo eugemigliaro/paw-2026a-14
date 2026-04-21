@@ -135,7 +135,11 @@
 }
 
 .event-hero.event-hero--with-image::after {
-	background: linear-gradient(180deg, rgba(7, 21, 18, 0.1), rgba(7, 21, 18, 0.62));
+	background: linear-gradient(
+		180deg,
+		rgba(7, 21, 18, 0.1),
+		rgba(7, 21, 18, 0.62)
+	);
 }
 
 .event-hero__content {
