@@ -864,8 +864,36 @@ class PawUiRouteTest {
     void getNotFoundErrorRouteRenders404Page() throws Exception {
         mockMvc.perform(get("/errors/404"))
                 .andExpect(status().isNotFound())
-                .andExpect(view().name("errors/not-found"))
-                .andExpect(model().attributeExists("shell"));
+                .andExpect(view().name("errors/error-page"))
+                .andExpect(model().attributeExists("shell"))
+                .andExpect(model().attribute("errorPageNumber", "404"));
+    }
+
+    @Test
+    void getBadRequestErrorRouteRenders400Page() throws Exception {
+        mockMvc.perform(get("/errors/400"))
+                .andExpect(status().isBadRequest())
+                .andExpect(view().name("errors/error-page"))
+                .andExpect(model().attributeExists("shell"))
+                .andExpect(model().attribute("errorPageNumber", "400"));
+    }
+
+    @Test
+    void getForbiddenErrorRouteRenders403Page() throws Exception {
+        mockMvc.perform(get("/errors/403"))
+                .andExpect(status().isForbidden())
+                .andExpect(view().name("errors/error-page"))
+                .andExpect(model().attributeExists("shell"))
+                .andExpect(model().attribute("errorPageNumber", "403"));
+    }
+
+    @Test
+    void getInternalServerErrorRouteRenders500Page() throws Exception {
+        mockMvc.perform(get("/errors/500"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(view().name("errors/error-page"))
+                .andExpect(model().attributeExists("shell"))
+                .andExpect(model().attribute("errorPageNumber", "500"));
     }
 
     @Test
