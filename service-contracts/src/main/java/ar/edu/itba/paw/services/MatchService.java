@@ -13,7 +13,13 @@ public interface MatchService {
 
     Optional<Match> findMatchById(Long matchId);
 
+    Optional<Match> findPublicMatchById(Long matchId);
+
     List<User> findConfirmedParticipants(Long matchId);
+
+    Match updateMatch(Long matchId, Long actingUserId, UpdateMatchRequest request);
+
+    Match cancelMatch(Long matchId, Long actingUserId);
 
     PaginatedResult<Match> findHostedMatches(
             Long hostUserId,

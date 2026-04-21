@@ -28,7 +28,7 @@ public class SmtpMailService implements MailService {
             helper.setText(content.getTextBody(), content.getHtmlBody());
             javaMailSender.send(mimeMessage);
         } catch (final MessagingException | MailException exception) {
-            throw new IllegalStateException("Failed to send verification email", exception);
+            throw new IllegalStateException("Failed to send email", exception);
         }
     }
 }

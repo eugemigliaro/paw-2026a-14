@@ -15,6 +15,7 @@
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 
 			<main class="page-shell page-shell--detail">
+				<ui:returnButton />
 				<section
 					class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
 				>
@@ -233,6 +234,13 @@
 									<spring:message code="event.booking.confirmed" />
 								</p>
 							</c:if>
+							<c:if test="${not empty hostActionNotice}">
+								<p
+									class="booking-panel__notice booking-panel__notice--success"
+								>
+									<c:out value="${hostActionNotice}" />
+								</p>
+							</c:if>
 							<c:if test="${not empty reservationError}">
 								<p
 									class="booking-panel__notice booking-panel__notice--error"
@@ -256,6 +264,55 @@
 										value="${eventPage.participantCountLabel}"
 								/></span>
 							</div>
+
+							<c:if test="${hostCanManage}">
+								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
+								<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
+								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
+								<div class="booking-panel__details">
+									<div class="booking-panel__detail-row">
+										<dt><spring:message code="host.manage.label" /></dt>
+										<dd><spring:message code="host.manage.detail" /></dd>
+									</div>
+								</div>
+								<c:url var="hostEditHref" value="${hostEditPath}" />
+								<c:choose>
+									<c:when test="${hostCanEdit}">
+										<ui:button
+											label="${hostManageEditLabel}"
+											href="${hostEditHref}"
+											variant="secondary"
+											fullWidth="${true}"
+										/>
+									</c:when>
+									<c:otherwise>
+										<ui:button
+											label="${hostManageEditLabel}"
+											type="button"
+											variant="secondary"
+											fullWidth="${true}"
+											disabled="${true}"
+										/>
+									</c:otherwise>
+								</c:choose>
+								<c:url var="hostCancelAction" value="${hostCancelPath}" />
+								<form
+									method="post"
+									action="${hostCancelAction}"
+									data-submit-guard="true"
+									data-submit-loading-label="${hostManageCancellingLabel}"
+									class="booking-panel__request-form"
+								>
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<ui:button
+										label="${hostManageCancelLabel}"
+										type="submit"
+										variant="danger"
+										disabled="${not hostCanCancel}"
+										fullWidth="${true}"
+									/>
+								</form>
+							</c:if>
 
 							<dl class="booking-panel__details">
 								<c:forEach

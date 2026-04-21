@@ -9,6 +9,7 @@ import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.PasswordResetException;
+import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;

@@ -141,9 +141,77 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
-    public Optional<Match> findMatchById(final Long matchId) {
+    public boolean updateMatch(
+            final Long matchId,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String status,
+            final Long bannerImageId) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET address = ?, title = ?, description = ?, starts_at = ?,"
+                                + " ends_at = ?, max_players = ?, price_per_player = ?, sport = ?,"
+                                + " visibility = ?, status = ?, banner_image_id = ?,"
+                                + " updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ? AND host_user_id = ?",
+                        address,
+                        title,
+                        description,
+                        Timestamp.from(startsAt),
+                        endsAt == null ? null : Timestamp.from(endsAt),
+                        maxPlayers,
+                        pricePerPlayer,
+                        new SqlParameterValue(Types.OTHER, sport.getDbValue()),
+                        new SqlParameterValue(Types.OTHER, visibility),
+                        new SqlParameterValue(Types.OTHER, status),
+                        bannerImageId,
+                        matchId,
+                        hostUserId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
+    public boolean cancelMatch(final Long matchId, final Long hostUserId) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ? AND host_user_id = ?",
+                        matchId,
+                        hostUserId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
+    public Optional<Match> findById(final Long matchId) {
         final String sql =
                 MATCH_SELECT_WITH_JOINED_PLAYERS + BASE_FROM + " WHERE m.id = ? GROUP BY m.id";
+
+        return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
+    }
+
+    @Override
+    public Optional<Match> findPublicMatchById(final Long matchId) {
+        final String sql =
+                MATCH_SELECT_WITH_JOINED_PLAYERS
+                        + BASE_FROM
+                        + " WHERE m.id = ?"
+                        + " AND m.visibility = 'public'"
+                        + " AND "
+                        + DERIVED_STATUS_SQL
+                        + " = 'open'"
+                        + " GROUP BY m.id";
 
         return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
     }

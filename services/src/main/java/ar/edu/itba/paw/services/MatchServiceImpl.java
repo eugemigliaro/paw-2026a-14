@@ -10,14 +10,20 @@ import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
+import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,16 +33,32 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final MatchNotificationService matchNotificationService;
+    private final MessageSource messageSource;
+    private final Clock clock;
 
     @Autowired
     public MatchServiceImpl(
-            final MatchDao matchDao, final MatchParticipantDao matchParticipantDao) {
+            final MatchDao matchDao,
+            final MatchParticipantDao matchParticipantDao,
+            final MatchNotificationService matchNotificationService,
+            final MessageSource messageSource,
+            final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
+        this.matchNotificationService = matchNotificationService;
+        this.messageSource = messageSource;
+        this.clock = clock;
     }
 
     @Override
     public Match createMatch(final CreateMatchRequest request) {
+        validateScheduleOrThrow(
+                request.getStartsAt(),
+                request.getEndsAt(),
+                new IllegalArgumentException(message("match.schedule.error.startsAtPast")),
+                new IllegalArgumentException(message("match.schedule.error.endBeforeStart")));
+
         return matchDao.createMatch(
                 request.getHostUserId(),
                 request.getAddress(),
@@ -53,8 +75,130 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    public Match updateMatch(
+            final Long matchId, final Long actingUserId, final UpdateMatchRequest request) {
+        final Match match =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
+
+        if (!match.getHostUserId().equals(actingUserId)) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+        }
+
+        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())
+                || EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_EDITABLE,
+                    message("match.update.error.notEditable"));
+        }
+
+        validateScheduleOrThrow(
+                request.getStartsAt(),
+                request.getEndsAt(),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.startsAtPast")),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.endBeforeStart")));
+
+        final int confirmedParticipants =
+                matchParticipantDao.findConfirmedParticipants(matchId).size();
+        if (request.getMaxPlayers() < confirmedParticipants) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                    message("match.update.error.capacityBelowConfirmed"));
+        }
+
+        final boolean updated =
+                matchDao.updateMatch(
+                        matchId,
+                        actingUserId,
+                        request.getAddress(),
+                        request.getTitle(),
+                        request.getDescription(),
+                        request.getStartsAt(),
+                        request.getEndsAt(),
+                        request.getMaxPlayers(),
+                        request.getPricePerPlayer(),
+                        request.getSport(),
+                        request.getVisibility(),
+                        request.getStatus(),
+                        request.getBannerImageId());
+
+        if (!updated) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+        }
+
+        final Match updatedMatch =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
+        matchNotificationService.notifyMatchUpdated(updatedMatch);
+        return updatedMatch;
+    }
+
+    @Override
+    public Match cancelMatch(final Long matchId, final Long actingUserId) {
+        final Match match =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchCancellationException(
+                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                message("match.cancel.error.notFound")));
+
+        if (!match.getHostUserId().equals(actingUserId)) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        if (EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())) {
+            return match;
+        }
+
+        final boolean updated = matchDao.cancelMatch(matchId, actingUserId);
+        if (!updated) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        final Match cancelledMatch =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchCancellationException(
+                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                message("match.cancel.error.notFound")));
+        matchNotificationService.notifyMatchCancelled(cancelledMatch);
+        return cancelledMatch;
+    }
+
+    @Override
     public Optional<Match> findMatchById(final Long matchId) {
-        return matchDao.findMatchById(matchId);
+        return matchDao.findById(matchId);
+    }
+
+    @Override
+    public Optional<Match> findPublicMatchById(final Long matchId) {
+        return matchDao.findPublicMatchById(matchId);
     }
 
     @Override
@@ -323,6 +467,25 @@ public class MatchServiceImpl implements MatchService {
             return ZoneId.of(timezone);
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
+        }
+    }
+
+    private String message(final String code) {
+        final Locale locale = LocaleContextHolder.getLocale();
+        return messageSource.getMessage(code, null, code, locale);
+    }
+
+    private void validateScheduleOrThrow(
+            final Instant startsAt,
+            final Instant endsAt,
+            final RuntimeException startsAtException,
+            final RuntimeException endsAtException) {
+        if (startsAt != null && !startsAt.isAfter(Instant.now(clock))) {
+            throw startsAtException;
+        }
+
+        if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
+            throw endsAtException;
         }
     }
 

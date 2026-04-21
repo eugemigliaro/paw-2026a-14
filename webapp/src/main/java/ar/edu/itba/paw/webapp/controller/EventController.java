@@ -4,6 +4,7 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
@@ -61,9 +62,10 @@ public class EventController {
     public ModelAndView showEventDetails(
             @PathVariable("eventId") final String eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
+            @RequestParam(value = "hostAction", required = false) final String hostAction,
             final Locale locale) {
         return showRealEventDetails(
-                parseEventIdOrThrowNotFound(eventId), reservationStatus, null, locale);
+                parseEventIdOrThrowNotFound(eventId), reservationStatus, hostAction, null, locale);
     }
 
     @PostMapping("/matches/{eventId}/reservations")
@@ -79,13 +81,18 @@ public class EventController {
             return new ModelAndView("redirect:/matches/" + matchId + "?reservation=confirmed");
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
-                    matchId, null, reservationErrorMessage(exception.getCode(), locale), locale);
+                    matchId,
+                    null,
+                    null,
+                    reservationErrorMessage(exception.getCode(), locale),
+                    locale);
         }
     }
 
     private ModelAndView showRealEventDetails(
             final Long eventId,
             final String reservationStatus,
+            final String hostAction,
             final String reservationError,
             final Locale locale) {
         final Match match =
@@ -104,6 +111,7 @@ public class EventController {
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
+        final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
@@ -111,6 +119,12 @@ public class EventController {
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
+        mav.addObject("hostCanManage", hostCanManage);
+        mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
+        mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
+        mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
+        mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
+        mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
         return mav;
     }
 
@@ -370,5 +384,31 @@ public class EventController {
         return "public".equalsIgnoreCase(match.getVisibility())
                 && "open".equalsIgnoreCase(match.getStatus())
                 && match.getAvailableSpots() > 0;
+    }
+
+    private String hostActionNotice(final String hostAction, final Locale locale) {
+        if ("updated".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.updated", null, locale);
+        }
+        if ("cancelled".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.cancelled", null, locale);
+        }
+        return null;
+    }
+
+    private boolean isHost(final Match match, final Long currentUserId) {
+        return currentUserId != null && currentUserId.equals(match.getHostUserId());
+    }
+
+    private boolean canHostEdit(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
+    }
+
+    private boolean canHostCancel(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
     }
 }

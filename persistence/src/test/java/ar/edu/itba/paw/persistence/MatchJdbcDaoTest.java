@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.Sport;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -372,6 +373,191 @@ public class MatchJdbcDaoTest {
     }
 
     @Test
+    public void testUpdateMatchUpdatesOwnedMatch() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        final boolean updated =
+                matchDao.updateMatch(
+                        created.getId(),
+                        hostUserId,
+                        "Updated Address",
+                        "Updated Title",
+                        "Updated Description",
+                        ZonedDateTime.now().plusDays(2).toInstant(),
+                        ZonedDateTime.now().plusDays(2).plusHours(2).toInstant(),
+                        10,
+                        new BigDecimal("15"),
+                        Sport.TENNIS,
+                        "public",
+                        "open",
+                        null);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertTrue(updated);
+        Assertions.assertEquals("Updated Address", found.getAddress());
+        Assertions.assertEquals("Updated Title", found.getTitle());
+        Assertions.assertEquals("Updated Description", found.getDescription());
+        Assertions.assertEquals(Sport.TENNIS, found.getSport());
+        Assertions.assertEquals(10, found.getMaxPlayers());
+        Assertions.assertEquals(new BigDecimal("15.00"), found.getPricePerPlayer());
+    }
+
+    @Test
+    public void testUpdateMatchRejectsWrongHostUserId() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, created_at, updated_at)"
+                        + " VALUES (2, 'other-host', 'other-host@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+
+        final boolean updated =
+                matchDao.updateMatch(
+                        created.getId(),
+                        2L,
+                        "Updated Address",
+                        "Updated Title",
+                        "Updated Description",
+                        ZonedDateTime.now().plusDays(2).toInstant(),
+                        ZonedDateTime.now().plusDays(2).plusHours(2).toInstant(),
+                        10,
+                        new BigDecimal("15"),
+                        Sport.TENNIS,
+                        "public",
+                        "open",
+                        null);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertFalse(updated);
+        Assertions.assertEquals("Original Address", found.getAddress());
+        Assertions.assertEquals("Original Title", found.getTitle());
+        Assertions.assertEquals(Sport.FOOTBALL, found.getSport());
+        Assertions.assertEquals(8, found.getMaxPlayers());
+    }
+
+    @Test
+    public void testCancelMatchCancelsOwnedMatch() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), hostUserId);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertTrue(cancelled);
+        Assertions.assertEquals("cancelled", found.getStatus());
+    }
+
+    @Test
+    public void testCancelMatchRejectsWrongHostUserId() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, created_at, updated_at)"
+                        + " VALUES (2, 'other-host', 'other-host@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), 2L);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertFalse(cancelled);
+        Assertions.assertEquals("open", found.getStatus());
+    }
+
+    @Test
+    public void testCancelMatchUpdatesTimestamp() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        jdbcTemplate.update(
+                "UPDATE matches SET updated_at = TIMESTAMPADD(SECOND, -5, updated_at) WHERE id = ?",
+                created.getId());
+
+        final Timestamp beforeCancel =
+                jdbcTemplate.queryForObject(
+                        "SELECT updated_at FROM matches WHERE id = ?",
+                        Timestamp.class,
+                        created.getId());
+
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), hostUserId);
+
+        final Timestamp afterUpdate =
+                jdbcTemplate.queryForObject(
+                        "SELECT updated_at FROM matches WHERE id = ?",
+                        Timestamp.class,
+                        created.getId());
+
+        Assertions.assertTrue(cancelled);
+        Assertions.assertNotNull(beforeCancel);
+        Assertions.assertNotNull(afterUpdate);
+        Assertions.assertTrue(afterUpdate.after(beforeCancel));
+    }
+
+    @Test
     public void testFindHostedMatchesReturnsAllStatusesOrderedBySoonest() {
         insertMatchWithStatus(
                 "Host Draft", "draft", ZonedDateTime.now().plusDays(2), hostUserId, "private");
@@ -459,8 +645,12 @@ public class MatchJdbcDaoTest {
                 finished.stream()
                         .allMatch(
                                 match ->
-                                        "completed".equals(match.getStatus())
-                                                || "cancelled".equals(match.getStatus())));
+                                        EventStatus.COMPLETED
+                                                        .getValue()
+                                                        .equalsIgnoreCase(match.getStatus())
+                                                || EventStatus.CANCELLED
+                                                        .getValue()
+                                                        .equalsIgnoreCase(match.getStatus())));
         Assertions.assertTrue(
                 finished.stream().anyMatch(match -> "Host Open Past".equals(match.getTitle())));
         Assertions.assertEquals(
@@ -516,7 +706,12 @@ public class MatchJdbcDaoTest {
 
         Assertions.assertEquals(2, upcoming.size());
         Assertions.assertTrue(
-                upcoming.stream().anyMatch(match -> "cancelled".equals(match.getStatus())));
+                upcoming.stream()
+                        .anyMatch(
+                                match ->
+                                        EventStatus.CANCELLED
+                                                .getValue()
+                                                .equals(match.getStatus())));
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(

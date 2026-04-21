@@ -15,6 +15,7 @@
 	<main class="page-shell error-shell">
 		<section class="error-hero">
 			<div class="error-hero__copy">
+				<ui:returnButton />
 				<p class="eyebrow"><spring:message code="error.404.eyebrow" /></p>
 				<header class="page-heading">
 					<h1 class="page-heading__title"><spring:message code="error.404.title" /></h1>

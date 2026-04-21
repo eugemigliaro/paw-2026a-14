@@ -1,4 +1,6 @@
-package ar.edu.itba.paw.services;
+package ar.edu.itba.paw.services.exceptions;
+
+import ar.edu.itba.paw.services.VerificationFailureReason;
 
 public class VerificationFailureException extends RuntimeException {
 
