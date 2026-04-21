@@ -122,7 +122,7 @@ public class EventController {
                         && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
                         && matchParticipationService.hasPendingRequest(eventId, currentUserId);
         final boolean isHostViewer =
-            currentUserId != null && currentUserId.equals(match.getHostUserId());
+                currentUserId != null && currentUserId.equals(match.getHostUserId());
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
