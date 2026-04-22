@@ -1,14 +1,17 @@
 package ar.edu.itba.paw.services.exceptions;
 
+import org.springframework.lang.NonNull;
+
 public class PasswordResetException extends RuntimeException {
 
-    private final String code;
+    @NonNull private final String code;
 
-    public PasswordResetException(final String code, final String message) {
+    public PasswordResetException(@NonNull final String code, @NonNull final String message) {
         super(message);
         this.code = code;
     }
 
+    @NonNull
     public String getCode() {
         return code;
     }

@@ -6,6 +6,7 @@ import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +30,9 @@ public class UserServiceImpl implements UserService {
             final UserDao userDao,
             final ImageService imageService,
             final MessageSource messageSource) {
-        this.userDao = userDao;
-        this.imageService = imageService;
-        this.messageSource = messageSource;
+        this.userDao = Objects.requireNonNull(userDao);
+        this.imageService = Objects.requireNonNull(imageService);
+        this.messageSource = Objects.requireNonNull(messageSource);
     }
 
     @Override
@@ -207,7 +208,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private String message(final String code, final Locale locale) {
-        return messageSource.getMessage(code, null, code, locale);
+        return messageSource.getMessage(
+                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
 
     private static Locale currentLocale() {

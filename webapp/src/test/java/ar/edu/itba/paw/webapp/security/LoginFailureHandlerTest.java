@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.security;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import javax.servlet.ServletException;
@@ -24,6 +25,7 @@ class LoginFailureHandlerTest {
                 response,
                 new EmailNotVerifiedAuthenticationException("Email verification required"));
 
+        assertNotNull(response.getRedirectedUrl());
         assertTrue(response.getRedirectedUrl().contains("/login?error=verify"));
         assertTrue(response.getRedirectedUrl().contains("email=pending@test.com"));
     }
@@ -42,6 +44,7 @@ class LoginFailureHandlerTest {
                 response,
                 new PasswordSetupRequiredAuthenticationException("Password setup required"));
 
+        assertNotNull(response.getRedirectedUrl());
         assertTrue(response.getRedirectedUrl().contains("/login?error=set-password"));
         assertTrue(response.getRedirectedUrl().contains("email=legacy@test.com"));
     }
@@ -58,6 +61,7 @@ class LoginFailureHandlerTest {
         handler.onAuthenticationFailure(
                 request, response, new BadCredentialsException("Invalid credentials"));
 
+        assertNotNull(response.getRedirectedUrl());
         assertTrue(response.getRedirectedUrl().contains("/login?error=invalid"));
         assertTrue(response.getRedirectedUrl().contains("email=player@test.com"));
     }

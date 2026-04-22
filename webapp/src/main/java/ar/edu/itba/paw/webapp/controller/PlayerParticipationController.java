@@ -18,6 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -38,8 +39,8 @@ public class PlayerParticipationController {
     public PlayerParticipationController(
             final MatchParticipationService matchParticipationService,
             final MessageSource messageSource) {
-        this.matchParticipationService = matchParticipationService;
-        this.messageSource = messageSource;
+        this.matchParticipationService = Objects.requireNonNull(matchParticipationService);
+        this.messageSource = Objects.requireNonNull(messageSource);
     }
 
     @GetMapping("/player/matches/requests")
@@ -49,10 +50,12 @@ public class PlayerParticipationController {
                 matchParticipationService.findPendingRequestMatches(userId);
 
         final ModelAndView mav = new ModelAndView("player/participation/requests");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
-        mav.addObject("pendingMatches", toPendingJoinViewModels(pendingMatches, locale));
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, resolvedLocale));
+        mav.addObject("pendingMatches", toPendingJoinViewModels(pendingMatches, resolvedLocale));
         mav.addObject(
-                "emptyMessage", messageSource.getMessage("player.requests.empty", null, locale));
+                "emptyMessage",
+                messageSource.getMessage("player.requests.empty", null, resolvedLocale));
         return mav;
     }
 
@@ -93,13 +96,15 @@ public class PlayerParticipationController {
                 matchParticipationService.findInvitedMatches(userId);
 
         final ModelAndView mav = new ModelAndView("player/participation/invites");
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         mav.addObject(
                 "shell",
                 ShellViewModelFactory.playerShell(
-                        messageSource, locale, "/player/matches/invites"));
-        mav.addObject("invitedMatches", toInvitedMatchViewModels(invitedMatches, locale));
+                        messageSource, resolvedLocale, "/player/matches/invites"));
+        mav.addObject("invitedMatches", toInvitedMatchViewModels(invitedMatches, resolvedLocale));
         mav.addObject(
-                "emptyMessage", messageSource.getMessage("player.invites.empty", null, locale));
+                "emptyMessage",
+                messageSource.getMessage("player.invites.empty", null, resolvedLocale));
         return mav;
     }
 

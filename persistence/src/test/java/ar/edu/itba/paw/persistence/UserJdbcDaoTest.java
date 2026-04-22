@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.lang.NonNull;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -27,7 +28,7 @@ public class UserJdbcDaoTest {
 
     @Autowired private UserDao userDao;
 
-    @Autowired private DataSource dataSource;
+    @Autowired @NonNull private DataSource dataSource;
 
     private JdbcTemplate jdbcTemplate;
 

@@ -26,6 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -54,6 +55,7 @@ public class MatchJdbcDao implements MatchDao {
 
     private static final String BASE_GROUP_BY = " GROUP BY m.id";
 
+    @NonNull
     private static final RowMapper<Match> MATCH_ROW_MAPPER =
             (ResultSet rs, int rowNum) -> {
                 final Timestamp startsAt = rs.getTimestamp("starts_at");
@@ -84,7 +86,7 @@ public class MatchJdbcDao implements MatchDao {
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
-    public MatchJdbcDao(final DataSource dataSource) {
+    public MatchJdbcDao(@NonNull final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)

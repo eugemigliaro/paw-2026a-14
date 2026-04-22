@@ -14,6 +14,7 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+import org.springframework.lang.NonNull;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.validation.Validator;
@@ -85,7 +86,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public PlatformTransactionManager transactionManager(final DataSource dataSource) {
+    public PlatformTransactionManager transactionManager(@NonNull final DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
     }
 
@@ -113,7 +114,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addInterceptors(final InterceptorRegistry registry) {
+    public void addInterceptors(@NonNull final InterceptorRegistry registry) {
         registry.addInterceptor(localeChangeInterceptor());
     }
 
@@ -125,7 +126,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean(initMethod = "migrate")
-    public Flyway flyway(final DataSource dataSource) {
+    public Flyway flyway(@NonNull final DataSource dataSource) {
         return Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
@@ -134,7 +135,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addResourceHandlers(final ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(@NonNull final ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/css/**").addResourceLocations("/css/");
         registry.addResourceHandler("/js/**").addResourceLocations("/js/");
         registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");

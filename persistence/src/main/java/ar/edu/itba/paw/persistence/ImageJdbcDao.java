@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -24,7 +25,7 @@ public class ImageJdbcDao implements ImageDao {
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public ImageJdbcDao(final DataSource dataSource) {
+    public ImageJdbcDao(@NonNull final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
 

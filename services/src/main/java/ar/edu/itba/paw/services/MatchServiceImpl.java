@@ -20,6 +20,7 @@ import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -473,7 +474,8 @@ public class MatchServiceImpl implements MatchService {
 
     private String message(final String code) {
         final Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(code, null, code, locale);
+        return messageSource.getMessage(
+                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
 
     private void validateScheduleOrThrow(

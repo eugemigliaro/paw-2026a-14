@@ -10,6 +10,7 @@ import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.util.Locale;
+import java.util.Objects;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -30,8 +31,8 @@ public class PasswordResetController {
     @Autowired
     public PasswordResetController(
             final AccountAuthService accountAuthService, final MessageSource messageSource) {
-        this.accountAuthService = accountAuthService;
-        this.messageSource = messageSource;
+        this.accountAuthService = Objects.requireNonNull(accountAuthService);
+        this.messageSource = Objects.requireNonNull(messageSource);
     }
 
     @ModelAttribute("resetPasswordForm")
@@ -67,7 +68,10 @@ public class PasswordResetController {
             bindingResult.rejectValue(
                     "confirmPassword",
                     "auth.validation.passwordMismatch",
-                    messageSource.getMessage("auth.validation.passwordMismatch", null, locale));
+                    messageSource.getMessage(
+                            "auth.validation.passwordMismatch",
+                            null,
+                            Objects.requireNonNull(locale)));
         }
 
         if (bindingResult.hasErrors()) {
@@ -87,7 +91,10 @@ public class PasswordResetController {
                     accountAuthService.resetPassword(token, resetPasswordForm.getPassword());
             return new ModelAndView("redirect:" + result.getRedirectUrl());
         } catch (final PasswordResetException exception) {
-            bindingResult.rejectValue("password", exception.getCode(), exception.getMessage());
+            bindingResult.rejectValue(
+                    "password",
+                    Objects.requireNonNull(exception.getCode()),
+                    Objects.requireNonNull(exception.getMessage()));
             try {
                 return passwordResetView(
                         token,
