@@ -36,8 +36,6 @@
 					<spring:message var="joinPolicyPlaceholder" code="host.form.joinPolicy.placeholder" />
 					<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
 					<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
-					<spring:message var="publishLabel" code="host.form.submit" />
-					<c:url var="createMatchAction" value="/host/matches/new" />
 					<spring:message var="sportOther" code="sport.other" />
 					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
 					<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />

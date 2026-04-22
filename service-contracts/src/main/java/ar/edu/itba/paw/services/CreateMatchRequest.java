@@ -44,7 +44,7 @@ public class CreateMatchRequest {
                 pricePerPlayer,
                 sport,
                 visibility,
-                "public".equalsIgnoreCase(visibility) ? "direct" : "approval_required",
+                "public".equalsIgnoreCase(visibility) ? "direct" : "invite_only",
                 status,
                 bannerImageId);
     }

@@ -84,9 +84,7 @@ public class HostController {
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult);
 
         if (bindingResult.hasErrors()) {
-            return new ModelAndView("host/create-match")
-                    .addObject("createEventForm", createEventForm)
-                    .addObject("formConfig", formConfig);
+            return hostFormView(createEventForm, null, locale, formConfig);
         }
 
         final Instant startsAt =
@@ -463,15 +461,18 @@ public class HostController {
         }
 
         final String joinPolicy = normalize(form.getJoinPolicy());
+
+        if (joinPolicy.isEmpty()) {
+            bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.required");
+            return;
+        }
+
         final boolean validJoinPolicy =
                 JOIN_POLICY_DIRECT.equals(joinPolicy)
                         || JOIN_POLICY_APPROVAL_REQUIRED.equals(joinPolicy);
 
         if (!validJoinPolicy) {
-            bindingResult.rejectValue(
-                    "joinPolicy",
-                    "host.validation.joinPolicy.invalid",
-                    "Choose a valid join policy");
+            bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.invalid");
         }
     }
 

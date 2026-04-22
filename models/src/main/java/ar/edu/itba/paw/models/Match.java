@@ -91,6 +91,9 @@ public class Match {
         if ("public".equalsIgnoreCase(visibility)) {
             return "direct";
         }
+        if ("private".equalsIgnoreCase(visibility)) {
+            return "invite_only";
+        }
         return "approval_required";
     }
 

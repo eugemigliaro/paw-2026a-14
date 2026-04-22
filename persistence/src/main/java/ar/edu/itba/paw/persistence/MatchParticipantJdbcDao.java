@@ -100,7 +100,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         "UPDATE match_participants"
                                 + " SET status = 'pending_approval', joined_at = CURRENT_TIMESTAMP"
                                 + " WHERE match_id = ? AND user_id = ?"
-                                + " AND status = 'cancelled'",
+                                + " AND status IN ('cancelled', 'declined_invite')",
                         matchId,
                         userId);
 
@@ -204,7 +204,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         "UPDATE match_participants"
                                 + " SET status = 'invited', joined_at = CURRENT_TIMESTAMP"
                                 + " WHERE match_id = ? AND user_id = ?"
-                                + " AND status = 'cancelled'",
+                                + " AND status IN ('cancelled', 'declined_invite')",
                         matchId,
                         userId);
 
@@ -258,7 +258,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     public boolean declineInvite(final Long matchId, final Long userId) {
         final int rows =
                 jdbcTemplate.update(
-                        "UPDATE match_participants SET status = 'cancelled'"
+                        "UPDATE match_participants SET status = 'declined_invite'"
                                 + " WHERE match_id = ? AND user_id = ?"
                                 + " AND status = 'invited'",
                         matchId,
@@ -287,7 +287,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         + " FROM match_participants mp"
                         + " JOIN users u ON u.id = mp.user_id"
                         + " WHERE mp.match_id = ?"
-                        + " AND mp.status = 'cancelled'"
+                        + " AND mp.status = 'declined_invite'"
                         + " ORDER BY mp.joined_at ASC, u.username ASC",
                 (rs, rowNum) ->
                         new User(rs.getLong("id"), rs.getString("email"), rs.getString("username")),
