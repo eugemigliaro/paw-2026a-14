@@ -458,19 +458,7 @@ public class MatchDashboardController {
                 messageSource.getMessage(
                         "match.status." + match.getStatus(), null, match.getStatus(), locale);
 
-        final String cardHref;
-        if (hostDashboardView) {
-            final String joinPolicy = match.getJoinPolicy();
-            if ("invite_only".equalsIgnoreCase(joinPolicy)) {
-                cardHref = "/host/matches/" + match.getId() + "/invites";
-            } else if ("approval_required".equalsIgnoreCase(joinPolicy)) {
-                cardHref = "/host/matches/" + match.getId() + "/requests";
-            } else {
-                cardHref = "/host/matches/" + match.getId() + "/participants";
-            }
-        } else {
-            cardHref = "/matches/" + match.getId();
-        }
+        final String cardHref = "/matches/" + match.getId();
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),

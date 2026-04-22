@@ -51,7 +51,10 @@ public class PlayerParticipationController {
 
         final ModelAndView mav = new ModelAndView("player/participation/requests");
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, resolvedLocale));
+        mav.addObject(
+                "shell",
+                ShellViewModelFactory.playerShell(
+                        messageSource, resolvedLocale, "/player/matches/requests"));
         mav.addObject("pendingMatches", toPendingJoinViewModels(pendingMatches, resolvedLocale));
         mav.addObject(
                 "emptyMessage",
@@ -163,9 +166,10 @@ public class PlayerParticipationController {
 
     private EventCardViewModel toCard(final Match match, final Locale locale) {
         final Locale resolved = locale == null ? Locale.ENGLISH : locale;
+        String cardHref = "/matches/" + match.getId();
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
-                "/matches/" + match.getId(),
+                cardHref,
                 messageSource.getMessage(
                         "sport." + match.getSport().getDbValue(),
                         null,
