@@ -17,8 +17,8 @@ import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchCancellationFailureReason;
+import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
@@ -1252,8 +1252,9 @@ class PawUiRouteTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection());
     }
-  @Test  
-  void postHostEditForCompletedMatchReturnsNotFound() throws Exception {
+
+    @Test
+    void postHostEditForCompletedMatchReturnsNotFound() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(

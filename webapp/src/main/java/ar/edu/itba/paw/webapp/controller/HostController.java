@@ -76,18 +76,18 @@ public class HostController {
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
             final Locale locale) {
-      
-      final Long actingUserId = requireAuthenticatedUserId();
-      final HostFormConfig formConfig = createFormConfig(locale);
-        
-      applyScheduleValidation(createEventForm, bindingResult, locale);
-      validateVisibilityAndJoinPolicy(createEventForm, bindingResult);
 
-      if (bindingResult.hasErrors()) {
-          return new ModelAndView("host/create-match")
-              .addObject("createEventForm", createEventForm)
-              .addObject("formConfig", formConfig);
-      }
+        final Long actingUserId = requireAuthenticatedUserId();
+        final HostFormConfig formConfig = createFormConfig(locale);
+
+        applyScheduleValidation(createEventForm, bindingResult, locale);
+        validateVisibilityAndJoinPolicy(createEventForm, bindingResult);
+
+        if (bindingResult.hasErrors()) {
+            return new ModelAndView("host/create-match")
+                    .addObject("createEventForm", createEventForm)
+                    .addObject("formConfig", formConfig);
+        }
 
         final Instant startsAt =
                 toInstant(
@@ -478,6 +478,7 @@ public class HostController {
     private static String normalize(final String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
+
     private record HostFormConfig(
             String pageTitle,
             String eyebrow,

@@ -32,6 +32,7 @@ public class CreateEventForm {
     private String visibility = "";
 
     private String joinPolicy = "";
+
     @NotNull(message = "{CreateEventForm.eventDate.NotNull}")
     @FutureOrPresent(message = "{CreateEventForm.eventDate.FutureOrPresent}")
     @DateTimeFormat(pattern = "yyyy-MM-dd")

@@ -347,23 +347,31 @@
 							</c:if>
 
 							<spring:message var="joiningLabel" code="event.booking.joining" />
+							<c:if test="${hostViewer}">
+								<c:choose>
+									<c:when test="${isPrivateEvent}">
+										<c:url var="hostInvitesHref" value="${hostInvitesPath}" />
+										<spring:message var="hostInvitesLabel" code="event.host.invites" />
+										<ui:button label="${hostInvitesLabel}" href="${hostInvitesHref}" fullWidth="${true}" />
+									</c:when>
+									<c:otherwise>
+										<c:url var="hostRequestsHref" value="${hostRequestsPath}" />
+										<spring:message var="hostRequestsLabel" code="event.host.requests" />
+										<ui:button label="${hostRequestsLabel}" href="${hostRequestsHref}" fullWidth="${true}" />
+									</c:otherwise>
+								</c:choose>
+								<c:url var="hostParticipantsHref" value="${hostParticipantsPath}" />
+								<spring:message var="hostParticipantsLabel" code="event.host.participants" />
+								<ui:button label="${hostParticipantsLabel}" href="${hostParticipantsHref}" fullWidth="${true}" variant="secondary" />
+							</c:if>
+
+							<spring:message var="joiningLabel" code="event.booking.joining" />
 							<c:choose>
-								<c:when test="${hostViewer}">
-									<c:choose>
-										<c:when test="${isPrivateEvent}">
-											<c:url var="hostInvitesHref" value="${hostInvitesPath}" />
-											<spring:message var="hostInvitesLabel" code="event.host.invites" />
-											<ui:button label="${hostInvitesLabel}" href="${hostInvitesHref}" fullWidth="${true}" />
-										</c:when>
-										<c:otherwise>
-											<c:url var="hostRequestsHref" value="${hostRequestsPath}" />
-											<spring:message var="hostRequestsLabel" code="event.host.requests" />
-											<ui:button label="${hostRequestsLabel}" href="${hostRequestsHref}" fullWidth="${true}" />
-										</c:otherwise>
-									</c:choose>
-									<c:url var="hostParticipantsHref" value="${hostParticipantsPath}" />
-									<spring:message var="hostParticipantsLabel" code="event.host.participants" />
-									<ui:button label="${hostParticipantsLabel}" href="${hostParticipantsHref}" fullWidth="${true}" variant="secondary" />
+								<%-- Already a confirmed participant --%>
+								<c:when test="${isConfirmedParticipant}">
+									<p class="booking-panel__notice booking-panel__notice--success">
+										<spring:message code="event.booking.confirmed" />
+									</p>
 								</c:when>
 								<%-- Not logged in --%>
 								<c:when test="${reservationRequiresLogin}">

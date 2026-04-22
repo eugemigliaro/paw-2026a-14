@@ -58,11 +58,6 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("started", "The event has already started.");
         }
 
-        if (userId.equals(match.getHostUserId())) {
-            throw new MatchParticipationException(
-                    "is_host", "The host cannot request to join their own event.");
-        }
-
         if (matchParticipantDao.hasActiveReservation(matchId, userId)) {
             throw new MatchParticipationException(
                     "already_joined", "You are already a confirmed participant.");
@@ -209,10 +204,6 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                                         new MatchParticipationException(
                                                 "user_not_found",
                                                 "No user found with that email address."));
-
-        if (target.getId().equals(hostUserId)) {
-            throw new MatchParticipationException("is_host", "The host cannot invite themselves.");
-        }
 
         if (matchParticipantDao.hasActiveReservation(matchId, target.getId())) {
             throw new MatchParticipationException(

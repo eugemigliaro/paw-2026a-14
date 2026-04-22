@@ -310,6 +310,7 @@
 											path="joinPolicy"
 											id="match-join-policy"
 											cssClass="field__control field__control--select"
+											required="required"
 										>
 											<form:option value="" label="${joinPolicyPlaceholder}" />
 											<form:option value="direct" label="${joinPolicyDirect}" />
@@ -376,21 +377,21 @@
 				var joinPolicyField = document.getElementById('join-policy-field');
 				var joinPolicySelect = document.getElementById('match-join-policy');
 
-				  if (visibilitySelect && joinPolicyField && joinPolicySelect) {
+				if (visibilitySelect && joinPolicyField && joinPolicySelect) {
 
-        function updateJoinPolicyVisibility() {
-            var isPrivate = visibilitySelect.value === 'private';
-            joinPolicyField.style.display = isPrivate ? 'none' : '';
+		function updateJoinPolicyVisibility() {
+			var isPrivate = visibilitySelect.value === 'private';
+			joinPolicyField.style.display = isPrivate ? 'none' : '';
 
-            if (isPrivate) {
-                joinPolicySelect.value = '';
-            }
-        }
+			if (isPrivate) {
+				joinPolicySelect.value = '';
+			}
+		}
 
-        visibilitySelect.addEventListener('change', updateJoinPolicyVisibility);
-        updateJoinPolicyVisibility();
-    }
-        
+		visibilitySelect.addEventListener('change', updateJoinPolicyVisibility);
+		updateJoinPolicyVisibility();
+	}
+
 				var presetInputs = document.querySelectorAll('input[name="durationPresetUi"]');
 				var startDateInput = document.getElementById('match-date');
 				var startTimeInput = document.getElementById('match-time');
