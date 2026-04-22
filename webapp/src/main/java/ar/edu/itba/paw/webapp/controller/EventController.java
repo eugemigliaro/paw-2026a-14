@@ -189,6 +189,8 @@ public class EventController {
         mav.addObject("hostInvitesPath", "/host/matches/" + eventId + "/invites");
         mav.addObject("hostParticipantsPath", "/host/matches/" + eventId + "/participants");
         mav.addObject("hostCanManage", hostCanManage);
+        mav.addObject(
+                "hostCanManageParticipants", hostCanManage && canHostManageParticipants(match));
         mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
         mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
         mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
@@ -528,5 +530,9 @@ public class EventController {
         return EventStatus.fromDbValue(match.getStatus())
                 .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
                 .orElse(true);
+    }
+
+    private boolean canHostManageParticipants(final Match match) {
+        return canHostEdit(match);
     }
 }
