@@ -19,15 +19,18 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final UserService userService;
     private final Clock clock;
 
     @Autowired
     public MatchParticipationServiceImpl(
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
+            final UserService userService,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
+        this.userService = userService;
         this.clock = clock;
     }
 
@@ -171,6 +174,126 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     public List<Match> findPendingRequestMatches(final Long userId) {
         return matchParticipantDao.findPendingMatchIds(userId).stream()
+                .map(matchDao::findMatchById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+    }
+
+    // -------------------------------------------------------------------------
+    // Invite-only flow
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public void inviteUser(final Long matchId, final Long hostUserId, final String email) {
+        final Match match = requireMatch(matchId);
+        requireHost(match, hostUserId);
+
+        if (!"open".equalsIgnoreCase(match.getStatus())) {
+            throw new MatchParticipationException("closed", "The event is not open.");
+        }
+
+        if (!"private".equalsIgnoreCase(match.getVisibility())
+                || !"invite_only".equalsIgnoreCase(match.getJoinPolicy())) {
+            throw new MatchParticipationException(
+                    "not_invite_only",
+                    "Invitations are only supported for private invite-only events.");
+        }
+
+        final User target =
+                userService
+                        .findByEmail(email)
+                        .orElseThrow(
+                                () ->
+                                        new MatchParticipationException(
+                                                "user_not_found",
+                                                "No user found with that email address."));
+
+        if (target.getId().equals(hostUserId)) {
+            throw new MatchParticipationException("is_host", "The host cannot invite themselves.");
+        }
+
+        if (matchParticipantDao.hasActiveReservation(matchId, target.getId())) {
+            throw new MatchParticipationException(
+                    "already_joined", "That user is already a confirmed participant.");
+        }
+
+        if (matchParticipantDao.hasInvitation(matchId, target.getId())) {
+            throw new MatchParticipationException(
+                    "already_invited", "That user already has a pending invitation.");
+        }
+
+        if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
+            throw new MatchParticipationException("full", "The event is already full.");
+        }
+
+        if (!matchParticipantDao.inviteUser(matchId, target.getId())) {
+            throw new MatchParticipationException(
+                    "already_invited", "Could not send the invitation.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void acceptInvite(final Long matchId, final Long userId) {
+        final Match match = requireMatch(matchId);
+
+        if (!"open".equalsIgnoreCase(match.getStatus())) {
+            throw new MatchParticipationException("closed", "The event is not open.");
+        }
+
+        if (!match.getStartsAt().isAfter(Instant.now(clock))) {
+            throw new MatchParticipationException("started", "The event has already started.");
+        }
+
+        if (!matchParticipantDao.hasInvitation(matchId, userId)) {
+            throw new MatchParticipationException(
+                    "no_invitation", "No pending invitation found for this event.");
+        }
+
+        if (!matchParticipantDao.acceptInvite(matchId, userId)) {
+            throw new MatchParticipationException(
+                    "no_invitation", "No pending invitation found for this event.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void declineInvite(final Long matchId, final Long userId) {
+        if (!matchParticipantDao.hasInvitation(matchId, userId)) {
+            throw new MatchParticipationException(
+                    "no_invitation", "No pending invitation found for this event.");
+        }
+
+        if (!matchParticipantDao.declineInvite(matchId, userId)) {
+            throw new MatchParticipationException(
+                    "no_invitation", "No pending invitation found for this event.");
+        }
+    }
+
+    @Override
+    public boolean hasInvitation(final Long matchId, final Long userId) {
+        return matchParticipantDao.hasInvitation(matchId, userId);
+    }
+
+    @Override
+    public List<User> findInvitedUsers(final Long matchId, final Long hostUserId) {
+        final Match match = requireMatch(matchId);
+        requireHost(match, hostUserId);
+        return matchParticipantDao.findInvitedUsers(matchId);
+    }
+
+    @Override
+    public List<User> findDeclinedInvitees(final Long matchId, final Long hostUserId) {
+        final Match match = requireMatch(matchId);
+        requireHost(match, hostUserId);
+        return matchParticipantDao.findDeclinedInvitees(matchId);
+    }
+
+    @Override
+    public List<Match> findInvitedMatches(final Long userId) {
+        return matchParticipantDao.findInvitedMatchIds(userId).stream()
                 .map(matchDao::findMatchById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)

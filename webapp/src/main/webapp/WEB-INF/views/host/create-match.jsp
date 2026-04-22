@@ -257,14 +257,13 @@
 									/>
 								</label>
 
-								<label class="field" for="match-join-policy">
+								<label class="field" for="match-join-policy" id="join-policy-field">
 									<span class="field__label"><spring:message code="host.form.joinPolicy" /></span>
 									<span class="field__select-wrap">
 										<form:select
 											path="joinPolicy"
 											id="match-join-policy"
 											cssClass="field__control field__control--select"
-											required="required"
 										>
 											<form:option value="" label="${joinPolicyPlaceholder}" />
 											<form:option value="direct" label="${joinPolicyDirect}" />
@@ -325,5 +324,23 @@
 				</section>
 			</main>
 		</div>
+		<script>
+			(function () {
+				var visibilitySelect = document.getElementById('match-visibility');
+				var joinPolicyField = document.getElementById('join-policy-field');
+				var joinPolicySelect = document.getElementById('match-join-policy');
+
+				function updateJoinPolicyVisibility() {
+					var isPrivate = visibilitySelect.value === 'private';
+					joinPolicyField.style.display = isPrivate ? 'none' : '';
+					if (isPrivate) {
+						joinPolicySelect.value = '';
+					}
+				}
+
+				visibilitySelect.addEventListener('change', updateJoinPolicyVisibility);
+				updateJoinPolicyVisibility();
+			})();
+		</script>
 	</body>
 </html>

@@ -44,10 +44,20 @@
 
 				<div class="participation-layout">
 					<div class="participation-nav">
-						<c:url var="requestsHref" value="${requestsUrl}" />
-						<a class="section-link" href="${requestsHref}">
-							<spring:message code="host.roster.viewRequests" />
-						</a>
+						<c:choose>
+							<c:when test="${isPrivateEvent}">
+								<c:url var="invitesHref" value="${invitesUrl}" />
+								<a class="section-link" href="${invitesHref}">
+									<spring:message code="host.roster.viewInvites" />
+								</a>
+							</c:when>
+							<c:otherwise>
+								<c:url var="requestsHref" value="${requestsUrl}" />
+								<a class="section-link" href="${requestsHref}">
+									<spring:message code="host.roster.viewRequests" />
+								</a>
+							</c:otherwise>
+						</c:choose>
 					</div>
 
 					<section class="panel participation-panel">

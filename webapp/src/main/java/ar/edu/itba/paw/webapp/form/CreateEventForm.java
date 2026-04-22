@@ -31,7 +31,6 @@ public class CreateEventForm {
     @NotBlank(message = "{host.validation.visibility.required}")
     private String visibility = "";
 
-    @NotBlank(message = "{host.validation.joinPolicy.required}")
     private String joinPolicy = "";
 
     @NotNull(message = "Match date is required")

@@ -458,10 +458,15 @@ public class MatchDashboardController {
                 messageSource.getMessage(
                         "match.status." + match.getStatus(), null, match.getStatus(), locale);
 
-        final String cardHref =
-                hostDashboardView
-                        ? "/host/matches/" + match.getId() + "/requests"
-                        : "/matches/" + match.getId();
+        final String cardHref;
+        if (hostDashboardView) {
+            cardHref =
+                    "private".equalsIgnoreCase(match.getVisibility())
+                            ? "/host/matches/" + match.getId() + "/invites"
+                            : "/host/matches/" + match.getId() + "/requests";
+        } else {
+            cardHref = "/matches/" + match.getId();
+        }
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),

@@ -9,6 +9,7 @@ import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.InvitedMatchViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PendingJoinMatchViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
@@ -83,6 +84,65 @@ public class PlayerParticipationController {
             return new ModelAndView(
                     "redirect:/matches/" + resolvedMatchId + "?joinError=" + e.getCode());
         }
+    }
+
+    @GetMapping("/player/matches/invites")
+    public ModelAndView showInvites(final Locale locale) {
+        final long userId = requireAuthenticatedUserId();
+        final java.util.List<Match> invitedMatches =
+                matchParticipationService.findInvitedMatches(userId);
+
+        final ModelAndView mav = new ModelAndView("player/participation/invites");
+        mav.addObject(
+                "shell",
+                ShellViewModelFactory.playerShell(
+                        messageSource, locale, "/player/matches/invites"));
+        mav.addObject("invitedMatches", toInvitedMatchViewModels(invitedMatches, locale));
+        mav.addObject(
+                "emptyMessage", messageSource.getMessage("player.invites.empty", null, locale));
+        return mav;
+    }
+
+    @PostMapping("/matches/{matchId}/invites/accept")
+    public ModelAndView acceptInvite(
+            @PathVariable("matchId") final String matchId, final Locale locale) {
+        final long userId = requireAuthenticatedUserId();
+        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
+
+        try {
+            matchParticipationService.acceptInvite(resolvedMatchId, userId);
+            return new ModelAndView("redirect:/matches/" + resolvedMatchId + "?invite=accepted");
+        } catch (final MatchParticipationException e) {
+            return new ModelAndView(
+                    "redirect:/matches/" + resolvedMatchId + "?inviteError=" + e.getCode());
+        }
+    }
+
+    @PostMapping("/matches/{matchId}/invites/decline")
+    public ModelAndView declineInvite(
+            @PathVariable("matchId") final String matchId, final Locale locale) {
+        final long userId = requireAuthenticatedUserId();
+        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
+
+        try {
+            matchParticipationService.declineInvite(resolvedMatchId, userId);
+            return new ModelAndView("redirect:/player/matches/invites?invite=declined");
+        } catch (final MatchParticipationException e) {
+            return new ModelAndView(
+                    "redirect:/matches/" + resolvedMatchId + "?inviteError=" + e.getCode());
+        }
+    }
+
+    private java.util.List<InvitedMatchViewModel> toInvitedMatchViewModels(
+            final java.util.List<Match> matches, final Locale locale) {
+        return matches.stream()
+                .map(
+                        m ->
+                                new InvitedMatchViewModel(
+                                        toCard(m, locale),
+                                        "/matches/" + m.getId() + "/invites/accept",
+                                        "/matches/" + m.getId() + "/invites/decline"))
+                .toList();
     }
 
     private List<PendingJoinMatchViewModel> toPendingJoinViewModels(

@@ -33,6 +33,7 @@ public class HostController {
     private static final String VISIBILITY_PRIVATE = "private";
     private static final String JOIN_POLICY_DIRECT = "direct";
     private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
+    private static final String JOIN_POLICY_INVITE_ONLY = "invite_only";
 
     private final MatchService matchService;
     private final ImageService imageService;
@@ -116,6 +117,12 @@ public class HostController {
                     locale);
         }
 
+        final String resolvedVisibility = normalize(createEventForm.getVisibility());
+        final String resolvedJoinPolicy =
+                VISIBILITY_PRIVATE.equals(resolvedVisibility)
+                        ? JOIN_POLICY_INVITE_ONLY
+                        : normalize(createEventForm.getJoinPolicy());
+
         final CreateMatchRequest request =
                 new CreateMatchRequest(
                         currentUser.getUserId(),
@@ -127,8 +134,8 @@ public class HostController {
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        normalize(createEventForm.getVisibility()),
-                        normalize(createEventForm.getJoinPolicy()),
+                        resolvedVisibility,
+                        resolvedJoinPolicy,
                         "open",
                         bannerImageId);
 
@@ -193,39 +200,42 @@ public class HostController {
 
     private static void validateVisibilityAndJoinPolicy(
             final CreateEventForm form, final BindingResult bindingResult) {
-        if (bindingResult.hasFieldErrors("visibility")
-                || bindingResult.hasFieldErrors("joinPolicy")) {
+        if (bindingResult.hasFieldErrors("visibility")) {
             return;
         }
 
         final String visibility = normalize(form.getVisibility());
-        final String joinPolicy = normalize(form.getJoinPolicy());
 
         final boolean validVisibility =
                 VISIBILITY_PUBLIC.equals(visibility) || VISIBILITY_PRIVATE.equals(visibility);
-        final boolean validJoinPolicy =
-                JOIN_POLICY_DIRECT.equals(joinPolicy)
-                        || JOIN_POLICY_APPROVAL_REQUIRED.equals(joinPolicy);
 
         if (!validVisibility) {
             bindingResult.rejectValue(
                     "visibility",
                     "host.validation.visibility.invalid",
                     "Choose a valid visibility");
+            return;
         }
+
+        if (VISIBILITY_PRIVATE.equals(visibility)) {
+            // Private events are always invite_only; no join policy selection needed.
+            return;
+        }
+
+        if (bindingResult.hasFieldErrors("joinPolicy")) {
+            return;
+        }
+
+        final String joinPolicy = normalize(form.getJoinPolicy());
+        final boolean validJoinPolicy =
+                JOIN_POLICY_DIRECT.equals(joinPolicy)
+                        || JOIN_POLICY_APPROVAL_REQUIRED.equals(joinPolicy);
 
         if (!validJoinPolicy) {
             bindingResult.rejectValue(
                     "joinPolicy",
                     "host.validation.joinPolicy.invalid",
                     "Choose a valid join policy");
-        }
-
-        if (VISIBILITY_PRIVATE.equals(visibility) && JOIN_POLICY_DIRECT.equals(joinPolicy)) {
-            bindingResult.rejectValue(
-                    "joinPolicy",
-                    "host.validation.joinPolicy.privateRequiresApproval",
-                    "Private events must be approval-required");
         }
     }
 

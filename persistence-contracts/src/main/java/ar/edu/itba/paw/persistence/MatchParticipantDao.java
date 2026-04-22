@@ -26,4 +26,20 @@ public interface MatchParticipantDao {
     boolean cancelJoinRequest(Long matchId, Long userId);
 
     List<Long> findPendingMatchIds(Long userId);
+
+    // Invite-only flow
+
+    boolean inviteUser(Long matchId, Long userId);
+
+    boolean hasInvitation(Long matchId, Long userId);
+
+    boolean acceptInvite(Long matchId, Long userId);
+
+    boolean declineInvite(Long matchId, Long userId);
+
+    List<User> findInvitedUsers(Long matchId);
+
+    List<User> findDeclinedInvitees(Long matchId);
+
+    List<Long> findInvitedMatchIds(Long userId);
 }

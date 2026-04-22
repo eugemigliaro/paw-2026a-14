@@ -5,18 +5,23 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.InviteParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PendingRequestViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.RosterParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
@@ -49,13 +54,16 @@ public class HostParticipationController {
         final List<User> participants =
                 matchParticipationService.findConfirmedParticipants(resolvedMatchId, hostUserId);
 
+        final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
         final ModelAndView mav = new ModelAndView("host/participation/roster");
         mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
         mav.addObject("match", match);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("participants", toRosterViewModels(participants, resolvedMatchId));
         mav.addObject("emptyMessage", messageSource.getMessage("host.roster.empty", null, locale));
+        mav.addObject("isPrivateEvent", isPrivateEvent);
         mav.addObject("requestsUrl", "/host/matches/" + resolvedMatchId + "/requests");
+        mav.addObject("invitesUrl", "/host/matches/" + resolvedMatchId + "/invites");
         return mav;
     }
 
@@ -118,6 +126,101 @@ public class HostParticipationController {
         }
     }
 
+    @ModelAttribute("inviteForm")
+    public InviteForm inviteForm() {
+        return new InviteForm();
+    }
+
+    @GetMapping("/host/matches/{matchId}/invites")
+    public ModelAndView showInvitePage(
+            @PathVariable("matchId") final String matchId, final Locale locale) {
+        final long hostUserId = requireAuthenticatedUserId();
+        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
+        final Match match = requireHostMatch(resolvedMatchId, hostUserId);
+
+        if (!"private".equalsIgnoreCase(match.getVisibility())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        return buildInviteView(match, resolvedMatchId, hostUserId, new InviteForm(), null, locale);
+    }
+
+    @PostMapping("/host/matches/{matchId}/invites")
+    public ModelAndView sendInvite(
+            @PathVariable("matchId") final String matchId,
+            @Valid @ModelAttribute("inviteForm") final InviteForm inviteForm,
+            final BindingResult bindingResult,
+            final Locale locale) {
+        final long hostUserId = requireAuthenticatedUserId();
+        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
+        final Match match = requireHostMatch(resolvedMatchId, hostUserId);
+
+        if (!"private".equalsIgnoreCase(match.getVisibility())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        if (bindingResult.hasErrors()) {
+            return buildInviteView(match, resolvedMatchId, hostUserId, inviteForm, null, locale);
+        }
+
+        try {
+            matchParticipationService.inviteUser(
+                    resolvedMatchId, hostUserId, inviteForm.getEmail());
+            return new ModelAndView(
+                    "redirect:/host/matches/" + resolvedMatchId + "/invites?action=invited");
+        } catch (final MatchParticipationException e) {
+            final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
+            return buildInviteView(
+                    match, resolvedMatchId, hostUserId, inviteForm, errorMsg, locale);
+        }
+    }
+
+    private ModelAndView buildInviteView(
+            final Match match,
+            final long matchId,
+            final long hostUserId,
+            final InviteForm form,
+            final String inviteError,
+            final Locale locale) {
+        final List<User> pending = matchParticipationService.findInvitedUsers(matchId, hostUserId);
+        final List<User> accepted =
+                matchParticipationService.findConfirmedParticipants(matchId, hostUserId);
+        final List<User> declined =
+                matchParticipationService.findDeclinedInvitees(matchId, hostUserId);
+
+        final ModelAndView mav = new ModelAndView("host/participation/invites");
+        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("match", match);
+        mav.addObject("matchId", matchId);
+        mav.addObject("inviteForm", form);
+        mav.addObject("inviteError", inviteError);
+        mav.addObject("pendingInvites", toInviteParticipantViewModels(pending));
+        mav.addObject("acceptedParticipants", toRosterViewModels(accepted, matchId));
+        mav.addObject("declinedInvites", toInviteParticipantViewModels(declined));
+        mav.addObject("rosterUrl", "/host/matches/" + matchId + "/participants");
+        return mav;
+    }
+
+    private String inviteErrorMessage(final String code, final String email, final Locale locale) {
+        switch (code) {
+            case "user_not_found":
+                return messageSource.getMessage(
+                        "host.invite.error.userNotFound", new Object[] {email}, locale);
+            case "already_joined":
+                return messageSource.getMessage("host.invite.error.alreadyJoined", null, locale);
+            case "already_invited":
+                return messageSource.getMessage("host.invite.error.alreadyInvited", null, locale);
+            case "full":
+                return messageSource.getMessage("host.invite.error.full", null, locale);
+            case "is_host":
+                return messageSource.getMessage("host.invite.error.isHost", null, locale);
+            case "closed":
+                return messageSource.getMessage("host.invite.error.closed", null, locale);
+            default:
+                return messageSource.getMessage("host.invite.error.generic", null, locale);
+        }
+    }
+
     @PostMapping("/host/matches/{matchId}/participants/{userId}/remove")
     public ModelAndView removeParticipant(
             @PathVariable("matchId") final String matchId,
@@ -153,6 +256,15 @@ public class HostParticipationController {
                                                 + "/participants/"
                                                 + u.getId()
                                                 + "/remove"))
+                .toList();
+    }
+
+    private List<InviteParticipantViewModel> toInviteParticipantViewModels(final List<User> users) {
+        return users.stream()
+                .map(
+                        u ->
+                                new InviteParticipantViewModel(
+                                        u.getUsername(), avatarLabel(u.getUsername())))
                 .toList();
     }
 

@@ -320,6 +320,37 @@ class PawUiRouteTest {
                     public List<Match> findPendingRequestMatches(final Long userId) {
                         return List.of();
                     }
+
+                    @Override
+                    public void inviteUser(
+                            final Long matchId, final Long hostUserId, final String email) {}
+
+                    @Override
+                    public void acceptInvite(final Long matchId, final Long userId) {}
+
+                    @Override
+                    public void declineInvite(final Long matchId, final Long userId) {}
+
+                    @Override
+                    public boolean hasInvitation(final Long matchId, final Long userId) {
+                        return false;
+                    }
+
+                    @Override
+                    public List<User> findInvitedUsers(final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public List<User> findDeclinedInvitees(
+                            final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public List<Match> findInvitedMatches(final Long userId) {
+                        return List.of();
+                    }
                 };
 
         final UserService userService =
@@ -700,8 +731,7 @@ class PawUiRouteTest {
     }
 
     @Test
-    void postHostPublishWithPrivateAndDirectJoinRerendersFormWithJoinPolicyError()
-            throws Exception {
+    void postHostPublishWithPrivateEventSucceedsRegardlessOfJoinPolicy() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
@@ -716,9 +746,7 @@ class PawUiRouteTest {
                                 .param("eventTime", "18:00")
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("host/create-match"))
-                .andExpect(model().attributeHasFieldErrors("createEventForm", "joinPolicy"));
+                .andExpect(status().is3xxRedirection());
     }
 
     @Test

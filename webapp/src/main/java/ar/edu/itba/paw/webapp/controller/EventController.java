@@ -64,6 +64,8 @@ public class EventController {
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
             @RequestParam(value = "join", required = false) final String joinStatus,
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
+            @RequestParam(value = "invite", required = false) final String inviteStatus,
+            @RequestParam(value = "inviteError", required = false) final String inviteErrorCode,
             final Locale locale) {
         return showRealEventDetails(
                 parseEventIdOrThrowNotFound(eventId),
@@ -71,6 +73,8 @@ public class EventController {
                 null,
                 joinStatus,
                 joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
+                inviteStatus,
+                inviteErrorCode == null ? null : inviteErrorMessage(inviteErrorCode, locale),
                 locale);
     }
 
@@ -92,6 +96,8 @@ public class EventController {
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     null,
+                    null,
+                    null,
                     locale);
         }
     }
@@ -102,6 +108,8 @@ public class EventController {
             final String reservationError,
             final String joinStatus,
             final String joinError,
+            final String inviteStatus,
+            final String inviteError,
             final Locale locale) {
         final Match match =
                 matchService
@@ -121,8 +129,13 @@ public class EventController {
                 currentUserId != null
                         && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
                         && matchParticipationService.hasPendingRequest(eventId, currentUserId);
+        final boolean isInvitedPlayer =
+                currentUserId != null
+                        && "invite_only".equalsIgnoreCase(match.getJoinPolicy())
+                        && matchParticipationService.hasInvitation(eventId, currentUserId);
         final boolean isHostViewer =
                 currentUserId != null && currentUserId.equals(match.getHostUserId());
+        final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
@@ -142,8 +155,17 @@ public class EventController {
         mav.addObject("joinRequested", "requested".equalsIgnoreCase(joinStatus));
         mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
         mav.addObject("joinError", joinError);
+
+        mav.addObject("isInvitedPlayer", isInvitedPlayer);
+        mav.addObject("acceptInvitePath", "/matches/" + eventId + "/invites/accept");
+        mav.addObject("declineInvitePath", "/matches/" + eventId + "/invites/decline");
+        mav.addObject("inviteAccepted", "accepted".equalsIgnoreCase(inviteStatus));
+        mav.addObject("inviteError", inviteError);
+
         mav.addObject("hostViewer", isHostViewer);
+        mav.addObject("isPrivateEvent", isPrivateEvent);
         mav.addObject("hostRequestsPath", "/host/matches/" + eventId + "/requests");
+        mav.addObject("hostInvitesPath", "/host/matches/" + eventId + "/invites");
         mav.addObject("hostParticipantsPath", "/host/matches/" + eventId + "/participants");
         return mav;
     }
@@ -379,6 +401,10 @@ public class EventController {
                     && matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
                 return true;
             }
+            if (currentUserId != null
+                    && matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+                return true;
+            }
             return false;
         }
 
@@ -420,6 +446,23 @@ public class EventController {
             case "not_found":
             default:
                 return messageSource.getMessage("join.error.notFound", null, locale);
+        }
+    }
+
+    private String inviteErrorMessage(final String code, final Locale locale) {
+        if (code == null) {
+            return null;
+        }
+        switch (code) {
+            case "closed":
+                return messageSource.getMessage("invite.error.closed", null, locale);
+            case "started":
+                return messageSource.getMessage("invite.error.started", null, locale);
+            case "no_invitation":
+                return messageSource.getMessage("invite.error.noInvitation", null, locale);
+            case "not_found":
+            default:
+                return messageSource.getMessage("invite.error.notFound", null, locale);
         }
     }
 }

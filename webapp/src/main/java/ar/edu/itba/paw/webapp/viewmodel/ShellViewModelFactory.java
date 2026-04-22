@@ -47,7 +47,11 @@ public final class ShellViewModelFactory {
                             new NavItemViewModel(
                                     ms.getMessage("nav.player.pendingRequests", null, locale),
                                     withLang("/player/matches/requests", locale),
-                                    "/player/matches/requests".equals(activePath)));
+                                    "/player/matches/requests".equals(activePath)),
+                            new NavItemViewModel(
+                                    ms.getMessage("nav.player.invites", null, locale),
+                                    withLang("/player/matches/invites", locale),
+                                    "/player/matches/invites".equals(activePath)));
         }
 
         return new ShellViewModel(

@@ -50,7 +50,7 @@ public class MatchJdbcDao implements MatchDao {
             " FROM matches m"
                     + " LEFT JOIN match_participants mp"
                     + " ON mp.match_id = m.id"
-                    + " AND mp.status IN ('joined', 'checked_in') ";
+                    + " AND mp.status IN ('joined', 'checked_in', 'invited') ";
 
     private static final String BASE_GROUP_BY = " GROUP BY m.id";
 

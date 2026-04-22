@@ -564,6 +564,49 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class InviteParticipantViewModel {
+        private final String username;
+        private final String avatarLabel;
+
+        public InviteParticipantViewModel(final String username, final String avatarLabel) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+    }
+
+    public static final class InvitedMatchViewModel {
+        private final EventCardViewModel card;
+        private final String acceptUrl;
+        private final String declineUrl;
+
+        public InvitedMatchViewModel(
+                final EventCardViewModel card, final String acceptUrl, final String declineUrl) {
+            this.card = card;
+            this.acceptUrl = acceptUrl;
+            this.declineUrl = declineUrl;
+        }
+
+        public EventCardViewModel getCard() {
+            return card;
+        }
+
+        public String getAcceptUrl() {
+            return acceptUrl;
+        }
+
+        public String getDeclineUrl() {
+            return declineUrl;
+        }
+    }
+
     public static final class EventDetailPageViewModel {
         private final EventCardViewModel event;
         private final String heroSubtitle;
