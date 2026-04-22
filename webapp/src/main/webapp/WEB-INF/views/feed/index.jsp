@@ -62,7 +62,8 @@
 							<form
 								method="get"
 								action="${feedFormAction}"
-								class="filter-rail__form">
+								class="filter-rail__form"
+								novalidate="novalidate">
 								<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
@@ -156,7 +157,8 @@
 								method="get"
 								action="${feedFormAction}"
 								modelAttribute="feedSearchForm"
-								cssClass="search-panel__form">
+								cssClass="search-panel__form"
+								novalidate="novalidate">
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 								</c:forEach>

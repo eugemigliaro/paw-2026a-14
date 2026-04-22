@@ -18,6 +18,7 @@ import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchCancellationFailureReason;
+import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
@@ -366,6 +367,90 @@ class PawUiRouteTest {
                     }
                 };
 
+        final MatchParticipationService matchParticipationService =
+                new MatchParticipationService() {
+                    @Override
+                    public void requestToJoin(final Long matchId, final Long userId) {
+                        // No-op for route rendering tests.
+                    }
+
+                    @Override
+                    public void cancelJoinRequest(final Long matchId, final Long userId) {
+                        // No-op for route rendering tests.
+                    }
+
+                    @Override
+                    public boolean hasPendingRequest(final Long matchId, final Long userId) {
+                        return false;
+                    }
+
+                    @Override
+                    public void approveRequest(
+                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                        // No-op for route rendering tests.
+                    }
+
+                    @Override
+                    public void rejectRequest(
+                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                        // No-op for route rendering tests.
+                    }
+
+                    @Override
+                    public void removeParticipant(
+                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                        // No-op for route rendering tests.
+                    }
+
+                    @Override
+                    public List<User> findPendingRequests(
+                            final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public List<User> findConfirmedParticipants(
+                            final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public List<Match> findPendingRequestMatches(final Long userId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public void inviteUser(
+                            final Long matchId, final Long hostUserId, final String email) {}
+
+                    @Override
+                    public void acceptInvite(final Long matchId, final Long userId) {}
+
+                    @Override
+                    public void declineInvite(final Long matchId, final Long userId) {}
+
+                    @Override
+                    public boolean hasInvitation(final Long matchId, final Long userId) {
+                        return false;
+                    }
+
+                    @Override
+                    public List<User> findInvitedUsers(final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public List<User> findDeclinedInvitees(
+                            final Long matchId, final Long hostUserId) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public List<Match> findInvitedMatches(final Long userId) {
+                        return List.of();
+                    }
+                };
+
         final UserService userService =
                 new UserService() {
                     private User currentUser =
@@ -616,6 +701,7 @@ class PawUiRouteTest {
                                 new EventController(
                                         matchService,
                                         matchReservationService,
+                                        matchParticipationService,
                                         userService,
                                         messageSource),
                                 new PublicProfileController(userService, messageSource),
@@ -904,6 +990,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-10")
@@ -923,6 +1011,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-10")
@@ -943,6 +1033,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "other")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-10")
@@ -963,6 +1055,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-10")
@@ -984,6 +1078,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-10")
@@ -1005,6 +1101,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-10")
@@ -1078,6 +1176,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-10")
@@ -1098,6 +1198,8 @@ class PawUiRouteTest {
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
                                 .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
                                 .param("eventDate", "2099-04-10")
                                 .param("eventTime", "18:00")
                                 .param("endDate", "2099-04-11")
@@ -1128,6 +1230,27 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "endTime"));
+    }
+
+    @Test
+    void postHostPublishWithPrivateEventSucceedsRegardlessOfJoinPolicy() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "private")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection());
     }
 
     @Test

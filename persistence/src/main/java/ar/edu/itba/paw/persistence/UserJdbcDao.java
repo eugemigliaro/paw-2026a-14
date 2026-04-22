@@ -14,11 +14,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class UserJdbcDao implements UserDao {
 
+    @NonNull
     private static final RowMapper<User> USER_ROW_MAPPER =
             (ResultSet rs, int rowNum) ->
                     new User(
@@ -31,6 +33,8 @@ public class UserJdbcDao implements UserDao {
                             rs.getObject("profile_image_id") == null
                                     ? null
                                     : rs.getLong("profile_image_id"));
+
+    @NonNull
     private static final RowMapper<UserAccount> USER_ACCOUNT_ROW_MAPPER =
             (ResultSet rs, int rowNum) -> {
                 final Timestamp emailVerifiedAt = rs.getTimestamp("email_verified_at");
@@ -53,7 +57,7 @@ public class UserJdbcDao implements UserDao {
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
-    public UserJdbcDao(final DataSource dataSource) {
+    public UserJdbcDao(@NonNull final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)

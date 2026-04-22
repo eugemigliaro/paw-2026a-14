@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,14 +63,14 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final MessageSource messageSource,
             final PasswordEncoder passwordEncoder,
             final Clock clock) {
-        this.userDao = userDao;
-        this.emailActionRequestDao = emailActionRequestDao;
-        this.mailProperties = mailProperties;
-        this.mailDispatchService = mailDispatchService;
-        this.templateRenderer = templateRenderer;
-        this.messageSource = messageSource;
-        this.passwordEncoder = passwordEncoder;
-        this.clock = clock;
+        this.userDao = Objects.requireNonNull(userDao);
+        this.emailActionRequestDao = Objects.requireNonNull(emailActionRequestDao);
+        this.mailProperties = Objects.requireNonNull(mailProperties);
+        this.mailDispatchService = Objects.requireNonNull(mailDispatchService);
+        this.templateRenderer = Objects.requireNonNull(templateRenderer);
+        this.messageSource = Objects.requireNonNull(messageSource);
+        this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
+        this.clock = Objects.requireNonNull(clock);
     }
 
     @Override
@@ -480,7 +481,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     }
 
     private String message(final String code, final Object[] args, final Locale locale) {
-        return messageSource.getMessage(code, args, code, locale);
+        return messageSource.getMessage(
+                Objects.requireNonNull(code), args, code, Objects.requireNonNull(locale));
     }
 
     private static Locale currentLocale() {

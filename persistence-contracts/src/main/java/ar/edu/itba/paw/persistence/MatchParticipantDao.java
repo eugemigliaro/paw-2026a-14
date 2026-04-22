@@ -10,4 +10,36 @@ public interface MatchParticipantDao {
     boolean createReservationIfSpace(Long matchId, Long userId);
 
     List<User> findConfirmedParticipants(Long matchId);
+
+    boolean hasPendingRequest(Long matchId, Long userId);
+
+    boolean createJoinRequest(Long matchId, Long userId);
+
+    List<User> findPendingRequests(Long matchId);
+
+    boolean approveRequest(Long matchId, Long userId);
+
+    boolean rejectRequest(Long matchId, Long userId);
+
+    boolean removeParticipant(Long matchId, Long userId);
+
+    boolean cancelJoinRequest(Long matchId, Long userId);
+
+    List<Long> findPendingMatchIds(Long userId);
+
+    // Invite-only flow
+
+    boolean inviteUser(Long matchId, Long userId);
+
+    boolean hasInvitation(Long matchId, Long userId);
+
+    boolean acceptInvite(Long matchId, Long userId);
+
+    boolean declineInvite(Long matchId, Long userId);
+
+    List<User> findInvitedUsers(Long matchId);
+
+    List<User> findDeclinedInvitees(Long matchId);
+
+    List<Long> findInvitedMatchIds(Long userId);
 }

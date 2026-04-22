@@ -25,8 +25,40 @@ public interface MatchDao {
             BigDecimal pricePerPlayer,
             Sport sport,
             String visibility,
+            String joinPolicy,
             String status,
             Long bannerImageId);
+
+    default Match createMatch(
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String status,
+            final Long bannerImageId) {
+        final String defaultJoinPolicy =
+                "public".equalsIgnoreCase(visibility) ? "direct" : "approval_required";
+        return createMatch(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                defaultJoinPolicy,
+                status,
+                bannerImageId);
+    }
 
     boolean updateMatch(
             Long matchId,

@@ -330,58 +330,173 @@
 								</c:forEach>
 							</dl>
 
-							<spring:message var="joiningLabel" code="event.booking.joining" />
-							<c:choose>
-								<c:when test="${reservationRequiresLogin}">
-									<c:choose>
-										<c:when test="${reservationEnabled}">
-											<spring:message var="signInToReserveLabel" code="event.booking.signIn" />
-											<c:url var="loginToReserveHref" value="/login" />
-											<ui:button
-												label="${signInToReserveLabel}"
-												href="${loginToReserveHref}"
-												fullWidth="${true}"
-											/>
-											<p class="booking-panel__note">
-												<spring:message code="event.booking.signInNote" />
-											</p>
-										</c:when>
-										<c:otherwise>
-											<ui:button
-												label="${eventPage.ctaLabel}"
-												type="button"
-												fullWidth="${true}"
-												disabled="${true}"
-											/>
-											<p class="booking-panel__note">
-												<spring:message code="event.booking.note" />
-											</p>
-										</c:otherwise>
-									</c:choose>
-								</c:when>
-								<c:otherwise>
-									<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
-									<form
-										method="post"
-										action="${reservationRequestAction}"
-										data-submit-guard="true"
-										data-submit-loading-label="${joiningLabel}"
-										class="booking-panel__request-form"
-									>
-										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<ui:button
-											label="${eventPage.ctaLabel}"
-											type="submit"
-											fullWidth="${true}"
-											disabled="${not reservationEnabled}"
-										/>
-									</form>
+							<c:if test="${joinRequested}">
+								<p class="booking-panel__notice booking-panel__notice--success">
+									<spring:message code="event.joinRequest.requested" />
+								</p>
+							</c:if>
+							<c:if test="${joinCancelled}">
+								<p class="booking-panel__notice booking-panel__notice--info">
+									<spring:message code="event.joinRequest.cancelled" />
+								</p>
+							</c:if>
+							<c:if test="${not empty joinError}">
+								<p class="booking-panel__notice booking-panel__notice--error">
+									<c:out value="${joinError}" />
+								</p>
+							</c:if>
 
-									<p class="booking-panel__note">
-										<spring:message code="event.booking.note" />
-									</p>
-								</c:otherwise>
-							</c:choose>
+							<spring:message var="joiningLabel" code="event.booking.joining" />
+							<c:if test="${hostViewer}">
+								<c:choose>
+									<c:when test="${isInviteOnly}">
+										<c:url var="hostInvitesHref" value="${hostInvitesPath}" />
+										<spring:message var="hostInvitesLabel" code="event.host.invites" />
+										<ui:button label="${hostInvitesLabel}" href="${hostInvitesHref}" fullWidth="${true}" />
+									</c:when>
+									<c:when test="${isApprovalRequired}">
+										<c:url var="hostRequestsHref" value="${hostRequestsPath}" />
+										<spring:message var="hostRequestsLabel" code="event.host.requests" />
+										<ui:button label="${hostRequestsLabel}" href="${hostRequestsHref}" fullWidth="${true}" />
+									</c:when>
+								</c:choose>
+								<c:url var="hostParticipantsHref" value="${hostParticipantsPath}" />
+								<spring:message var="hostParticipantsLabel" code="event.host.participants" />
+								<ui:button label="${hostParticipantsLabel}" href="${hostParticipantsHref}" fullWidth="${true}" variant="secondary" />
+							</c:if>
+
+							<spring:message var="joiningLabel" code="event.booking.joining" />
+							<c:if test="${not (hostViewer and isPrivateEvent) or isConfirmedParticipant or isInvitedPlayer}">
+								<c:choose>
+									<%-- Already a confirmed participant --%>
+									<c:when test="${isConfirmedParticipant}">
+										<p class="booking-panel__notice booking-panel__notice--success">
+											<spring:message code="event.booking.confirmed" />
+										</p>
+									</c:when>
+									<%-- Not logged in --%>
+									<c:when test="${reservationRequiresLogin}">
+										<c:choose>
+											<c:when test="${reservationEnabled}">
+												<spring:message var="signInToReserveLabel" code="event.booking.signIn" />
+												<c:url var="loginHref" value="/login" />
+												<ui:button label="${signInToReserveLabel}" href="${loginHref}" fullWidth="${true}" />
+												<p class="booking-panel__note"><spring:message code="event.booking.signInNote" /></p>
+											</c:when>
+											<c:when test="${joinRequestEnabled}">
+												<spring:message var="signInToRequestLabel" code="event.joinRequest.signIn" />
+												<c:url var="loginHref" value="/login" />
+												<ui:button label="${signInToRequestLabel}" href="${loginHref}" fullWidth="${true}" />
+												<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
+											</c:when>
+											<c:otherwise>
+												<ui:button label="${eventPage.ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+												<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
+											</c:otherwise>
+										</c:choose>
+									</c:when>
+									<%-- Player already has a pending request --%>
+									<c:when test="${hasPendingJoinRequest}">
+										<c:url var="cancelJoinAction" value="${cancelJoinRequestPath}" />
+										<spring:message var="cancellingLabel" code="event.joinRequest.cancelling" />
+										<p class="booking-panel__notice booking-panel__notice--info">
+											<spring:message code="event.joinRequest.pendingLabel" />
+										</p>
+										<form
+											method="post"
+											action="${cancelJoinAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${cancellingLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="cancelRequestLabel" code="event.joinRequest.cancelRequest" />
+											<ui:button label="${cancelRequestLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+										</form>
+										<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
+									</c:when>
+									<%-- Invite-only: player can request --%>
+									<c:when test="${joinRequestEnabled}">
+										<c:url var="joinRequestAction" value="${joinRequestPath}" />
+										<spring:message var="requestingLabel" code="event.joinRequest.requesting" />
+										<form
+											method="post"
+											action="${joinRequestAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${requestingLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="requestToJoinLabel" code="event.joinRequest.requestToJoin" />
+											<ui:button label="${requestToJoinLabel}" type="submit" fullWidth="${true}" />
+										</form>
+										<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
+									</c:when>
+									<%-- Public event: standard reservation --%>
+									<c:when test="${reservationEnabled}">
+										<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
+										<form
+											method="post"
+											action="${reservationRequestAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${joiningLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<ui:button label="${eventPage.ctaLabel}" type="submit" fullWidth="${true}" />
+										</form>
+										<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
+									</c:when>
+									<%-- Invited player: can accept or decline --%>
+									<c:when test="${isInvitedPlayer}">
+										<c:if test="${inviteAccepted}">
+											<p class="booking-panel__notice booking-panel__notice--success">
+												<spring:message code="event.invite.accepted" />
+											</p>
+										</c:if>
+										<c:if test="${not empty inviteError}">
+											<p class="booking-panel__notice booking-panel__notice--error">
+												<c:out value="${inviteError}" />
+											</p>
+										</c:if>
+										<p class="booking-panel__notice booking-panel__notice--info">
+											<spring:message code="event.invite.pendingLabel" />
+										</p>
+										<c:url var="acceptInviteAction" value="${acceptInvitePath}" />
+										<spring:message var="acceptingInviteLabel" code="event.invite.accepting" />
+										<form
+											method="post"
+											action="${acceptInviteAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${acceptingInviteLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="acceptInviteLabel" code="event.invite.accept" />
+											<ui:button label="${acceptInviteLabel}" type="submit" fullWidth="${true}" />
+										</form>
+										<c:url var="declineInviteAction" value="${declineInvitePath}" />
+										<spring:message var="decliningInviteLabel" code="event.invite.declining" />
+										<form
+											method="post"
+											action="${declineInviteAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${decliningInviteLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="declineInviteLabel" code="event.invite.decline" />
+											<ui:button label="${declineInviteLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+										</form>
+										<p class="booking-panel__note"><spring:message code="event.invite.note" /></p>
+									</c:when>
+									<%-- Fallback: disabled --%>
+									<c:otherwise>
+										<ui:button label="${eventPage.ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+										<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
+									</c:otherwise>
+								</c:choose>
+							</c:if>
 						</article>
 					</aside>
 				</section>

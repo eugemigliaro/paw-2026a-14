@@ -38,6 +38,12 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class HostController {
 
+    private static final String VISIBILITY_PUBLIC = "public";
+    private static final String VISIBILITY_PRIVATE = "private";
+    private static final String JOIN_POLICY_DIRECT = "direct";
+    private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
+    private static final String JOIN_POLICY_INVITE_ONLY = "invite_only";
+
     private final MatchService matchService;
     private final ImageService imageService;
     private final Clock clock;
@@ -70,9 +76,12 @@ public class HostController {
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
             final Locale locale) {
+
         final Long actingUserId = requireAuthenticatedUserId();
         final HostFormConfig formConfig = createFormConfig(locale);
+
         applyScheduleValidation(createEventForm, bindingResult, locale);
+        validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -102,6 +111,12 @@ public class HostController {
                     formConfig);
         }
 
+        final String resolvedVisibility = normalize(createEventForm.getVisibility());
+        final String resolvedJoinPolicy =
+                VISIBILITY_PRIVATE.equals(resolvedVisibility)
+                        ? JOIN_POLICY_INVITE_ONLY
+                        : normalize(createEventForm.getJoinPolicy());
+
         final CreateMatchRequest request =
                 new CreateMatchRequest(
                         actingUserId,
@@ -113,7 +128,8 @@ public class HostController {
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        "public",
+                        resolvedVisibility,
+                        resolvedJoinPolicy,
                         "open",
                         bannerImageId);
 
@@ -414,6 +430,54 @@ public class HostController {
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
         }
+    }
+
+    private void validateVisibilityAndJoinPolicy(
+            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
+        if (bindingResult.hasFieldErrors("visibility")) {
+            return;
+        }
+
+        final String visibility = normalize(form.getVisibility());
+
+        final boolean validVisibility =
+                VISIBILITY_PUBLIC.equals(visibility) || VISIBILITY_PRIVATE.equals(visibility);
+
+        if (!validVisibility) {
+            bindingResult.rejectValue(
+                    "visibility",
+                    "host.validation.visibility.invalid",
+                    messageSource.getMessage("host.validation.visibility.invalid", null, locale));
+            return;
+        }
+
+        if (VISIBILITY_PRIVATE.equals(visibility)) {
+            // Private events are always invite_only; no join policy selection needed.
+            return;
+        }
+
+        if (bindingResult.hasFieldErrors("joinPolicy")) {
+            return;
+        }
+
+        final String joinPolicy = normalize(form.getJoinPolicy());
+
+        if (joinPolicy.isEmpty()) {
+            bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.required");
+            return;
+        }
+
+        final boolean validJoinPolicy =
+                JOIN_POLICY_DIRECT.equals(joinPolicy)
+                        || JOIN_POLICY_APPROVAL_REQUIRED.equals(joinPolicy);
+
+        if (!validJoinPolicy) {
+            bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.invalid");
+        }
+    }
+
+    private static String normalize(final String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
     private record HostFormConfig(

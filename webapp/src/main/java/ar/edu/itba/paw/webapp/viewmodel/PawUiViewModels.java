@@ -503,6 +503,126 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class RosterParticipantViewModel {
+        private final String username;
+        private final String avatarLabel;
+        private final String removeUrl;
+
+        public RosterParticipantViewModel(
+                final String username, final String avatarLabel, final String removeUrl) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+            this.removeUrl = removeUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+
+        public String getRemoveUrl() {
+            return removeUrl;
+        }
+    }
+
+    public static final class PendingRequestViewModel {
+        private final String username;
+        private final String avatarLabel;
+        private final String approveUrl;
+        private final String rejectUrl;
+
+        public PendingRequestViewModel(
+                final String username,
+                final String avatarLabel,
+                final String approveUrl,
+                final String rejectUrl) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+            this.approveUrl = approveUrl;
+            this.rejectUrl = rejectUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+
+        public String getApproveUrl() {
+            return approveUrl;
+        }
+
+        public String getRejectUrl() {
+            return rejectUrl;
+        }
+    }
+
+    public static final class PendingJoinMatchViewModel {
+        private final EventCardViewModel card;
+        private final String cancelUrl;
+
+        public PendingJoinMatchViewModel(final EventCardViewModel card, final String cancelUrl) {
+            this.card = card;
+            this.cancelUrl = cancelUrl;
+        }
+
+        public EventCardViewModel getCard() {
+            return card;
+        }
+
+        public String getCancelUrl() {
+            return cancelUrl;
+        }
+    }
+
+    public static final class InviteParticipantViewModel {
+        private final String username;
+        private final String avatarLabel;
+
+        public InviteParticipantViewModel(final String username, final String avatarLabel) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+    }
+
+    public static final class InvitedMatchViewModel {
+        private final EventCardViewModel card;
+        private final String acceptUrl;
+        private final String declineUrl;
+
+        public InvitedMatchViewModel(
+                final EventCardViewModel card, final String acceptUrl, final String declineUrl) {
+            this.card = card;
+            this.acceptUrl = acceptUrl;
+            this.declineUrl = declineUrl;
+        }
+
+        public EventCardViewModel getCard() {
+            return card;
+        }
+
+        public String getAcceptUrl() {
+            return acceptUrl;
+        }
+
+        public String getDeclineUrl() {
+            return declineUrl;
+        }
+    }
+
     public static final class EventDetailPageViewModel {
         private final EventCardViewModel event;
         private final String heroSubtitle;

@@ -18,11 +18,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class EmailActionRequestJdbcDao implements EmailActionRequestDao {
 
+    @NonNull
     private static final RowMapper<EmailActionRequest> EMAIL_ACTION_REQUEST_ROW_MAPPER =
             (rs, rowNum) -> mapRow(rs);
 
@@ -31,7 +33,8 @@ public class EmailActionRequestJdbcDao implements EmailActionRequestDao {
     private final Clock clock;
 
     @Autowired
-    public EmailActionRequestJdbcDao(final DataSource dataSource, final Clock clock) {
+    public EmailActionRequestJdbcDao(
+            @NonNull final DataSource dataSource, @NonNull final Clock clock) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)

@@ -288,6 +288,7 @@ public class MatchServiceImplTest {
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
                                 "public",
+                                "direct",
                                 "open",
                                 null))
                 .thenReturn(expectedMatch);

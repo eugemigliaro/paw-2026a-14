@@ -26,6 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -42,7 +43,7 @@ public class MatchJdbcDao implements MatchDao {
     private static final String MATCH_SELECT_WITH_JOINED_PLAYERS =
             "SELECT m.id, m.sport, m.host_user_id, m.address, m.title, m.description,"
                     + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
-                    + " m.visibility, "
+                    + " m.visibility, m.join_policy, "
                     + DERIVED_STATUS_SQL
                     + " AS status, m.banner_image_id, COUNT(mp.id) AS joined_players";
 
@@ -50,10 +51,11 @@ public class MatchJdbcDao implements MatchDao {
             " FROM matches m"
                     + " LEFT JOIN match_participants mp"
                     + " ON mp.match_id = m.id"
-                    + " AND mp.status IN ('joined', 'checked_in') ";
+                    + " AND mp.status IN ('joined', 'checked_in', 'invited') ";
 
     private static final String BASE_GROUP_BY = " GROUP BY m.id";
 
+    @NonNull
     private static final RowMapper<Match> MATCH_ROW_MAPPER =
             (ResultSet rs, int rowNum) -> {
                 final Timestamp startsAt = rs.getTimestamp("starts_at");
@@ -72,6 +74,7 @@ public class MatchJdbcDao implements MatchDao {
                         rs.getInt("max_players"),
                         price,
                         rs.getString("visibility"),
+                        rs.getString("join_policy"),
                         rs.getString("status"),
                         rs.getInt("joined_players"),
                         rs.getObject("banner_image_id") == null
@@ -83,7 +86,7 @@ public class MatchJdbcDao implements MatchDao {
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
-    public MatchJdbcDao(final DataSource dataSource) {
+    public MatchJdbcDao(@NonNull final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
@@ -103,6 +106,7 @@ public class MatchJdbcDao implements MatchDao {
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final String visibility,
+            final String joinPolicy,
             final String status,
             final Long bannerImageId) {
         final Map<String, Object> values = new HashMap<>();
@@ -116,6 +120,7 @@ public class MatchJdbcDao implements MatchDao {
         values.put("price_per_player", pricePerPlayer);
         values.put("sport", new SqlParameterValue(Types.OTHER, sport.getDbValue()));
         values.put("visibility", new SqlParameterValue(Types.OTHER, visibility));
+        values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy));
         values.put("status", new SqlParameterValue(Types.OTHER, status));
         values.put("banner_image_id", bannerImageId);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
@@ -135,6 +140,7 @@ public class MatchJdbcDao implements MatchDao {
                 maxPlayers,
                 pricePerPlayer,
                 visibility,
+                joinPolicy,
                 status,
                 0,
                 bannerImageId);

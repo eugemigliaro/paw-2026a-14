@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.lang.NonNull;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -30,7 +31,7 @@ public class MatchJdbcDaoTest {
 
     @Autowired private MatchDao matchDao;
 
-    @Autowired private DataSource dataSource;
+    @Autowired @NonNull private DataSource dataSource;
 
     private JdbcTemplate jdbcTemplate;
     private long hostUserId;
@@ -110,6 +111,54 @@ public class MatchJdbcDaoTest {
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals("Morning Football", result.get(0).getTitle());
+    }
+
+    @Test
+    public void testFindPublicEventsIncludesApprovalRequiredVisibility() {
+        matchDao.createMatch(
+                hostUserId,
+                "Test Address",
+                "Approval Required Match",
+                "Description",
+                ZonedDateTime.now().plusDays(1).toInstant(),
+                null,
+                10,
+                BigDecimal.ZERO,
+                Sport.FOOTBALL,
+                "public",
+                "approval_required",
+                "open",
+                null);
+
+        insertMatchWithStatus(
+                "Legacy Invite Only Match",
+                "open",
+                ZonedDateTime.now().plusDays(1),
+                hostUserId,
+                "invite_only");
+        insertMatchWithStatus(
+                "Private Match", "open", ZonedDateTime.now().plusDays(1), hostUserId, "private");
+
+        final List<Match> result =
+                matchDao.findPublicMatches(
+                        null,
+                        List.of(),
+                        EventTimeFilter.WEEK,
+                        null,
+                        null,
+                        MatchSort.SOONEST,
+                        ZoneId.systemDefault(),
+                        0,
+                        20);
+
+        Assertions.assertTrue(
+                result.stream()
+                        .anyMatch(match -> "Approval Required Match".equals(match.getTitle())));
+        Assertions.assertTrue(
+                result.stream()
+                        .noneMatch(match -> "Legacy Invite Only Match".equals(match.getTitle())));
+        Assertions.assertTrue(
+                result.stream().noneMatch(match -> "Private Match".equals(match.getTitle())));
     }
 
     @Test

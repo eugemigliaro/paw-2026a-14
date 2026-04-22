@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
+import ar.edu.itba.paw.webapp.utils.UrlUtils;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.NavItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
 import java.util.List;
@@ -26,22 +27,30 @@ public final class ShellViewModelFactory {
                 List.of(
                         new NavItemViewModel(
                                 ms.getMessage("nav.explore", null, locale),
-                                "/",
+                                UrlUtils.withLang("/", locale),
                                 "/".equals(activePath)));
         if (isAuthenticated()) {
             navItems =
                     List.of(
                             new NavItemViewModel(
                                     ms.getMessage("nav.explore", null, locale),
-                                    "/",
+                                    UrlUtils.withLang("/", locale),
                                     "/".equals(activePath)),
                             new NavItemViewModel(
                                     ms.getMessage("nav.player.upcomingEvents", null, locale),
-                                    "/player/matches/upcoming",
+                                    UrlUtils.withLang("/player/matches/upcoming", locale),
                                     "/player/matches/upcoming".equals(activePath)),
                             new NavItemViewModel(
+                                    ms.getMessage("nav.player.pendingRequests", null, locale),
+                                    UrlUtils.withLang("/player/matches/requests", locale),
+                                    "/player/matches/requests".equals(activePath)),
+                            new NavItemViewModel(
+                                    ms.getMessage("nav.player.invites", null, locale),
+                                    UrlUtils.withLang("/player/matches/invites", locale),
+                                    "/player/matches/invites".equals(activePath)),
+                            new NavItemViewModel(
                                     ms.getMessage("nav.player.pastEvents", null, locale),
-                                    "/player/matches/past",
+                                    UrlUtils.withLang("/player/matches/past", locale),
                                     "/player/matches/past".equals(activePath)));
         }
 
@@ -50,7 +59,7 @@ public final class ShellViewModelFactory {
                 isAuthenticated()
                         ? new NavItemViewModel(
                                 ms.getMessage("nav.switchToHosting", null, locale),
-                                "/host/matches/new",
+                                UrlUtils.withLang("/host/matches/new", locale),
                                 false)
                         : null,
                 navItems);
@@ -67,28 +76,31 @@ public final class ShellViewModelFactory {
                 List.of(
                         new NavItemViewModel(
                                 ms.getMessage("nav.host.createMatch", null, locale),
-                                "/host/matches/new",
+                                UrlUtils.withLang("/host/matches/new", locale),
                                 "/host/matches/new".equals(activePath)));
         if (isAuthenticated()) {
             navItems =
                     List.of(
                             new NavItemViewModel(
                                     ms.getMessage("nav.host.createMatch", null, locale),
-                                    "/host/matches/new",
+                                    UrlUtils.withLang("/host/matches/new", locale),
                                     "/host/matches/new".equals(activePath)),
                             new NavItemViewModel(
                                     ms.getMessage("nav.host.upcomingEvents", null, locale),
-                                    "/host/matches",
+                                    UrlUtils.withLang("/host/matches", locale),
                                     "/host/matches".equals(activePath)),
                             new NavItemViewModel(
                                     ms.getMessage("nav.host.finishedEvents", null, locale),
-                                    "/host/matches/finished",
+                                    UrlUtils.withLang("/host/matches/finished", locale),
                                     "/host/matches/finished".equals(activePath)));
         }
 
         return new ShellViewModel(
                 ms.getMessage("app.brand", null, locale),
-                new NavItemViewModel(ms.getMessage("nav.switchToPlayer", null, locale), "/", false),
+                new NavItemViewModel(
+                        ms.getMessage("nav.switchToPlayer", null, locale),
+                        UrlUtils.withLang("/", locale),
+                        false),
                 navItems);
     }
 

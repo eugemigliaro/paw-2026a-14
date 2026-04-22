@@ -66,7 +66,6 @@
 			<groupId>ar.edu.itba.paw</groupId>
 			<artifactId>services</artifactId>
 			<version>${project.version}</version>
-			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>javax.servlet</groupId>

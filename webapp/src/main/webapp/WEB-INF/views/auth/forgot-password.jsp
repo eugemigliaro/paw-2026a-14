@@ -28,7 +28,8 @@
 						method="post"
 						action="${forgotPasswordAction}"
 						modelAttribute="forgotPasswordForm"
-						cssClass="auth-form">
+						cssClass="auth-form"
+						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<label class="field" for="forgot-password-email">
 							<span class="field__label"><spring:message code="form.email.label" /></span>

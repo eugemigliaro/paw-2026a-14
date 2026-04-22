@@ -30,6 +30,12 @@
 					<spring:message var="sportFootball" code="sport.football" />
 					<spring:message var="sportTennis" code="sport.tennis" />
 					<spring:message var="sportBasketball" code="sport.basketball" />
+					<spring:message var="visibilityPlaceholder" code="host.form.visibility.placeholder" />
+					<spring:message var="visibilityPublic" code="host.form.visibility.public" />
+					<spring:message var="visibilityPrivate" code="host.form.visibility.private" />
+					<spring:message var="joinPolicyPlaceholder" code="host.form.joinPolicy.placeholder" />
+					<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
+					<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
 					<spring:message var="sportOther" code="sport.other" />
 					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
 					<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
@@ -46,6 +52,7 @@
 						data-submit-guard="true"
 						data-submit-loading-label="${submitLoadingLabel}"
 						cssClass="create-form"
+						novalidate="novalidate"
 					>
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<input
@@ -273,6 +280,48 @@
 										element="span"
 									/>
 								</label>
+
+								<label class="field" for="match-visibility">
+									<span class="field__label"><spring:message code="host.form.visibility" /></span>
+									<span class="field__select-wrap">
+										<form:select
+											path="visibility"
+											id="match-visibility"
+											cssClass="field__control field__control--select"
+											required="required"
+										>
+											<form:option value="" label="${visibilityPlaceholder}" />
+											<form:option value="public" label="${visibilityPublic}" />
+											<form:option value="private" label="${visibilityPrivate}" />
+										</form:select>
+									</span>
+									<form:errors
+										path="visibility"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
+
+								<label class="field" for="match-join-policy" id="join-policy-field">
+									<span class="field__label"><spring:message code="host.form.joinPolicy" /></span>
+									<span class="field__select-wrap">
+										<form:select
+											path="joinPolicy"
+											id="match-join-policy"
+											cssClass="field__control field__control--select"
+											required="required"
+										>
+											<form:option value="" label="${joinPolicyPlaceholder}" />
+											<form:option value="direct" label="${joinPolicyDirect}" />
+											<form:option value="approval_required" label="${joinPolicyApproval}" />
+										</form:select>
+									</span>
+									<form:errors
+										path="joinPolicy"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
 							</div>
 						</article>
 
@@ -323,6 +372,25 @@
 		</div>
 		<script>
 			(function () {
+				var visibilitySelect = document.getElementById('match-visibility');
+				var joinPolicyField = document.getElementById('join-policy-field');
+				var joinPolicySelect = document.getElementById('match-join-policy');
+
+				if (visibilitySelect && joinPolicyField && joinPolicySelect) {
+
+		function updateJoinPolicyVisibility() {
+			var isPrivate = visibilitySelect.value === 'private';
+			joinPolicyField.style.display = isPrivate ? 'none' : '';
+
+			if (isPrivate) {
+				joinPolicySelect.value = '';
+			}
+		}
+
+		visibilitySelect.addEventListener('change', updateJoinPolicyVisibility);
+		updateJoinPolicyVisibility();
+	}
+
 				var presetInputs = document.querySelectorAll('input[name="durationPresetUi"]');
 				var startDateInput = document.getElementById('match-date');
 				var startTimeInput = document.getElementById('match-time');

@@ -1,0 +1,110 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.hostRoster" />
+<!DOCTYPE html>
+<html lang="${pageContext.response.locale.language}">
+	<head>
+		<%@ include file="/WEB-INF/views/includes/head.jspf" %>
+	</head>
+	<body>
+		<div class="app-shell">
+			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
+
+			<main class="page-shell page-shell--participation">
+
+				<header class="page-heading">
+					<h1 class="page-heading__title">
+						<spring:message code="host.roster.title" />
+					</h1>
+					<p class="page-heading__description">
+						<c:out value="${match.title}" /> &mdash;
+						<spring:message code="host.roster.description" />
+					</p>
+				</header>
+
+				<c:if test="${param.action eq 'removed'}">
+					<div class="notice notice--success">
+						<spring:message code="host.roster.removed" />
+					</div>
+				</c:if>
+				<c:if test="${not empty param.error}">
+					<div class="notice notice--error">
+						<c:choose>
+							<c:when test="${param.error eq 'not_participant'}">
+								<spring:message code="host.roster.error.notParticipant" />
+							</c:when>
+							<c:otherwise>
+								<spring:message code="host.roster.error.notParticipant" />
+							</c:otherwise>
+						</c:choose>
+					</div>
+				</c:if>
+
+				<div class="participation-layout">
+					<div class="participation-nav">
+						<c:url var="backToEventHref" value="/matches/${matchId}" />
+						<a class="section-link" href="${backToEventHref}">
+							<spring:message code="participation.backToEvent" />
+						</a>
+						<c:choose>
+							<c:when test="${isPrivateEvent}">
+								<c:url var="invitesHref" value="${invitesUrl}" />
+								<a class="section-link" href="${invitesHref}">
+									<spring:message code="host.roster.viewInvites" />
+								</a>
+							</c:when>
+							<c:when test="${isApprovalRequired}">
+								<c:url var="requestsHref" value="${requestsUrl}" />
+								<a class="section-link" href="${requestsHref}">
+									<spring:message code="host.roster.viewRequests" />
+								</a>
+							</c:when>
+						</c:choose>
+					</div>
+
+					<section class="panel participation-panel">
+						<c:choose>
+							<c:when test="${empty participants}">
+								<p class="participation-empty-state">
+									<c:out value="${emptyMessage}" />
+								</p>
+							</c:when>
+							<c:otherwise>
+								<ul class="participant-manage-list">
+									<c:forEach var="p" items="${participants}">
+										<li class="participant-manage-list__item">
+											<div class="participant-manage-list__info">
+												<span class="participant-list__avatar" aria-hidden="true">
+													<c:out value="${p.avatarLabel}" />
+												</span>
+												<strong class="participant-manage-list__name">
+													<c:out value="${p.username}" />
+												</strong>
+											</div>
+											<c:url var="removeAction" value="${p.removeUrl}" />
+											<spring:message var="removingLabel" code="host.roster.removing" />
+											<form
+												method="post"
+												action="${removeAction}"
+												data-submit-guard="true"
+												data-submit-loading-label="${removingLabel}"
+												class="participant-manage-list__action-form"
+											>
+												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+												<spring:message var="removeLabel" code="host.roster.remove" />
+												<ui:button label="${removeLabel}" type="submit" variant="danger" />
+											</form>
+										</li>
+									</c:forEach>
+								</ul>
+							</c:otherwise>
+						</c:choose>
+					</section>
+				</div>
+
+			</main>
+		</div>
+	</body>
+</html>

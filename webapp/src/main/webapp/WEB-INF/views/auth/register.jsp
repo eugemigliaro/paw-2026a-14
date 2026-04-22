@@ -35,7 +35,7 @@
 					<spring:message var="hidePasswordLabel" code="form.password.hide" text="Hide password" />
 					<spring:message var="registerSubmitLabel" code="auth.register.submit" />
 					<c:url var="registerAction" value="/register" />
-					<form:form method="post" action="${registerAction}" modelAttribute="registerForm" cssClass="auth-form">
+					<form:form method="post" action="${registerAction}" modelAttribute="registerForm" cssClass="auth-form" novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<label class="field" for="register-email">
 							<span class="field__label"><spring:message code="form.email.label" /></span>
