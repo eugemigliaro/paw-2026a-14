@@ -81,7 +81,7 @@ public class HostController {
         final HostFormConfig formConfig = createFormConfig(locale);
 
         applyScheduleValidation(createEventForm, bindingResult, locale);
-        validateVisibilityAndJoinPolicy(createEventForm, bindingResult);
+        validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -432,8 +432,8 @@ public class HostController {
         }
     }
 
-    private static void validateVisibilityAndJoinPolicy(
-            final CreateEventForm form, final BindingResult bindingResult) {
+    private void validateVisibilityAndJoinPolicy(
+            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
         if (bindingResult.hasFieldErrors("visibility")) {
             return;
         }
@@ -447,7 +447,7 @@ public class HostController {
             bindingResult.rejectValue(
                     "visibility",
                     "host.validation.visibility.invalid",
-                    "Choose a valid visibility");
+                    messageSource.getMessage("host.validation.visibility.invalid", null, locale));
             return;
         }
 
