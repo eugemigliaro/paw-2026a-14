@@ -55,6 +55,8 @@ public class HostParticipationController {
                 matchParticipationService.findConfirmedParticipants(resolvedMatchId, hostUserId);
 
         final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
+        final boolean isApprovalRequired =
+                "approval_required".equalsIgnoreCase(match.getJoinPolicy());
         final ModelAndView mav = new ModelAndView("host/participation/roster");
         mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
         mav.addObject("match", match);
@@ -62,6 +64,7 @@ public class HostParticipationController {
         mav.addObject("participants", toRosterViewModels(participants, resolvedMatchId));
         mav.addObject("emptyMessage", messageSource.getMessage("host.roster.empty", null, locale));
         mav.addObject("isPrivateEvent", isPrivateEvent);
+        mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("requestsUrl", "/host/matches/" + resolvedMatchId + "/requests");
         mav.addObject("invitesUrl", "/host/matches/" + resolvedMatchId + "/invites");
         return mav;

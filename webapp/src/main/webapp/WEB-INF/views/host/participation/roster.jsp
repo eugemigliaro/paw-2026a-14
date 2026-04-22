@@ -55,12 +55,12 @@
 									<spring:message code="host.roster.viewInvites" />
 								</a>
 							</c:when>
-							<c:otherwise>
+							<c:when test="${isApprovalRequired}">
 								<c:url var="requestsHref" value="${requestsUrl}" />
 								<a class="section-link" href="${requestsHref}">
 									<spring:message code="host.roster.viewRequests" />
 								</a>
-							</c:otherwise>
+							</c:when>
 						</c:choose>
 					</div>
 
