@@ -19,8 +19,7 @@ public class LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
             throws IOException, ServletException {
         final String errorCode = resolveErrorCode(exception);
         final UriComponentsBuilder builder =
-                UriComponentsBuilder.fromPath(request.getContextPath() + "/login")
-                        .queryParam("error", errorCode);
+                UriComponentsBuilder.fromPath("/login").queryParam("error", errorCode);
 
         final String email = request.getParameter("email");
         if (email != null && !email.isBlank()) {
