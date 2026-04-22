@@ -147,6 +147,9 @@ public class EventController {
                 currentUserId != null
                         && matchReservationService.hasActiveReservation(
                                 match.getId(), currentUserId);
+        final boolean isApprovalRequired =
+                "approval_required".equalsIgnoreCase(match.getJoinPolicy());
+        final boolean isInviteOnly = "invite_only".equalsIgnoreCase(match.getJoinPolicy());
         final boolean isHostViewer =
                 currentUserId != null && currentUserId.equals(match.getHostUserId());
         final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
@@ -155,6 +158,8 @@ public class EventController {
         final ModelAndView mav = new ModelAndView("matches/detail");
         final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
+        mav.addObject("isApprovalRequired", isApprovalRequired);
+        mav.addObject("isInviteOnly", isInviteOnly);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));

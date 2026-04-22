@@ -74,6 +74,10 @@ public class HostParticipationController {
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
+        if (!"approval_required".equalsIgnoreCase(match.getJoinPolicy())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
         final List<User> pending =
                 matchParticipationService.findPendingRequests(resolvedMatchId, hostUserId);
 
@@ -96,6 +100,11 @@ public class HostParticipationController {
         final long hostUserId = requireAuthenticatedUserId();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final long targetUserId = parseUserIdOrThrow(userId);
+        final Match match = requireHostMatch(resolvedMatchId, hostUserId);
+
+        if (!"approval_required".equalsIgnoreCase(match.getJoinPolicy())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         try {
             matchParticipationService.approveRequest(resolvedMatchId, hostUserId, targetUserId);
@@ -115,6 +124,11 @@ public class HostParticipationController {
         final long hostUserId = requireAuthenticatedUserId();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final long targetUserId = parseUserIdOrThrow(userId);
+        final Match match = requireHostMatch(resolvedMatchId, hostUserId);
+
+        if (!"approval_required".equalsIgnoreCase(match.getJoinPolicy())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         try {
             matchParticipationService.rejectRequest(resolvedMatchId, hostUserId, targetUserId);
@@ -138,7 +152,7 @@ public class HostParticipationController {
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
-        if (!"private".equalsIgnoreCase(match.getVisibility())) {
+        if (!"invite_only".equalsIgnoreCase(match.getJoinPolicy())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -155,7 +169,7 @@ public class HostParticipationController {
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
-        if (!"private".equalsIgnoreCase(match.getVisibility())) {
+        if (!"invite_only".equalsIgnoreCase(match.getJoinPolicy())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 

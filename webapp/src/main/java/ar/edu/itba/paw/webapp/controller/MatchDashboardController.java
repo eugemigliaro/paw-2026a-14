@@ -460,10 +460,14 @@ public class MatchDashboardController {
 
         final String cardHref;
         if (hostDashboardView) {
-            cardHref =
-                    "private".equalsIgnoreCase(match.getVisibility())
-                            ? "/host/matches/" + match.getId() + "/invites"
-                            : "/host/matches/" + match.getId() + "/requests";
+            final String joinPolicy = match.getJoinPolicy();
+            if ("invite_only".equalsIgnoreCase(joinPolicy)) {
+                cardHref = "/host/matches/" + match.getId() + "/invites";
+            } else if ("approval_required".equalsIgnoreCase(joinPolicy)) {
+                cardHref = "/host/matches/" + match.getId() + "/requests";
+            } else {
+                cardHref = "/host/matches/" + match.getId() + "/participants";
+            }
         } else {
             cardHref = "/matches/" + match.getId();
         }
