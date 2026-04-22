@@ -102,7 +102,6 @@
 										<c:param name="q" value="${listControls.searchQuery}" />
 										<c:param name="sort" value="${selectedSort}" />
 										<c:param name="tz" value="${selectedTimezone}" />
-										<c:param name="lang" value="${pageContext.response.locale.language}" />
 									</c:url>
 									<spring:message var="clearAllLabel" code="filter.clearAll" />
 									<ui:button

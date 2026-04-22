@@ -60,7 +60,30 @@ public interface MatchDao {
                 bannerImageId);
     }
 
-    Optional<Match> findMatchById(Long matchId);
+    boolean updateMatch(
+            Long matchId,
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            String visibility,
+            String status,
+            Long bannerImageId);
+
+    boolean cancelMatch(Long matchId, Long hostUserId);
+
+    Optional<Match> findById(Long matchId);
+
+    Optional<Match> findPublicMatchById(Long matchId);
+
+    default Optional<Match> findMatchById(final Long matchId) {
+        return findById(matchId);
+    }
 
     List<Match> findPublicMatches(
             String query,

@@ -13,54 +13,95 @@
 
 			<main class="page-shell account-shell">
 				<section class="panel account-panel">
+					<ui:returnButton />
 					<h1 class="page-heading__title account-panel__title"><c:out value="${accountTitle}" /></h1>
-					<p class="page-heading__description account-panel__description">
-						<c:out value="${accountDescription}" />
-					</p>
+					<div class="account-panel__header">
+						<p class="page-heading__description account-panel__description">
+							<c:out value="${accountDescription}" />
+						</p>
+						<div class="account-actions account-actions--top">
+							<c:url var="accountEditHref" value="/account/edit" />
+							<ui:button label="${accountEditLabel}" href="${accountEditHref}" variant="secondary" />
+						</div>
+					</div>
+					<c:if test="${not empty accountUpdated}">
+						<p class="auth-notice auth-notice--success"><c:out value="${accountUpdated}" /></p>
+					</c:if>
+					<spring:message code="account.phone.empty" var="accountPhoneEmptyLabel" />
+					<c:set var="accountPhoneValue" value="${empty accountProfile.phone ? accountPhoneEmptyLabel : accountProfile.phone}" />
+					<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
 
 					<div class="account-summary">
-						<label class="field" for="account-username">
-							<span class="field__label"><c:out value="${accountUsernameLabel}" /></span>
-							<div class="account-locked-field">
-								<input
-									id="account-username"
-									type="text"
-									class="field__control account-locked-field__control"
-									value="<c:out value='${username}' />"
-									readonly="readonly"
-									aria-readonly="true" />
-								<span class="account-locked-field__icon" aria-hidden="true">
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
-										<rect x="6.5" y="10" width="11" height="9" rx="2.2" />
-									</svg>
-								</span>
-							</div>
-						</label>
 						<label class="field" for="account-email">
-							<span class="field__label"><c:out value="${accountEmailLabel}" /></span>
-							<div class="account-locked-field">
-								<input
-									id="account-email"
-									type="text"
-									class="field__control account-locked-field__control"
-									value="<c:out value='${email}' />"
-									readonly="readonly"
-									aria-readonly="true" />
-								<span class="account-locked-field__icon" aria-hidden="true">
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
-										<rect x="6.5" y="10" width="11" height="9" rx="2.2" />
-									</svg>
-								</span>
-							</div>
+							<span class="field__label"><spring:message code="form.email.label" /></span>
+							<input
+								id="account-email"
+								type="email"
+								class="field__control account-readonly-control"
+								value="<c:out value='${accountProfile.email}' />"
+								readonly="readonly"
+								aria-readonly="true" />
+						</label>
+						<label class="field" for="account-username">
+							<span class="field__label"><spring:message code="form.username.label" /></span>
+							<input
+								id="account-username"
+								type="text"
+								class="field__control account-readonly-control"
+								value="<c:out value='${accountProfile.username}' />"
+								readonly="readonly"
+								aria-readonly="true" />
+						</label>
+						<label class="field" for="account-name">
+							<span class="field__label"><spring:message code="form.name.label" /></span>
+							<input
+								id="account-name"
+								type="text"
+								class="field__control account-readonly-control"
+								value="<c:out value='${accountProfile.name}' />"
+								readonly="readonly"
+								aria-readonly="true" />
+						</label>
+						<label class="field" for="account-last-name">
+							<span class="field__label"><spring:message code="form.lastName.label" /></span>
+							<input
+								id="account-last-name"
+								type="text"
+								class="field__control account-readonly-control"
+								value="<c:out value='${accountProfile.lastName}' />"
+								readonly="readonly"
+								aria-readonly="true" />
+						</label>
+						<label class="field" for="account-phone">
+							<span class="field__label"><spring:message code="form.phone.label" /></span>
+							<input
+								id="account-phone"
+								type="tel"
+								class="field__control account-readonly-control"
+								value="<c:out value='${accountPhoneValue}' />"
+								readonly="readonly"
+								aria-readonly="true" />
 						</label>
 					</div>
 
+					<div class="field">
+						<span class="field__label">
+							<spring:message code="account.profileImage.field" />
+						</span>
+						<section class="account-profile-media" aria-label="<c:out value='${accountProfileImageAlt}' />">
+							<img
+								class="account-profile-media__image"
+								src="${accountProfileImageSrc}"
+								alt="<c:out value='${accountProfileImageAlt}' />"
+								loading="eager"
+								decoding="async" />
+						</section>
+					</div>
+
 					<c:url var="logoutAction" value="/logout" />
-					<form method="post" action="${logoutAction}" class="account-actions">
+					<form method="post" action="${logoutAction}" class="account-logout">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-						<ui:button label="${logoutLabel}" type="submit" variant="secondary" />
+						<ui:button label="${logoutLabel}" type="submit" variant="danger" />
 					</form>
 				</section>
 			</main>

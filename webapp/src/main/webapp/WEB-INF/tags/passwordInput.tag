@@ -20,10 +20,14 @@
 <c:set var="escapedValue" value="${fn:escapeXml(value)}" />
 <c:set var="escapedPlaceholder" value="${fn:escapeXml(placeholder)}" />
 <c:set var="escapedAutocomplete" value="${fn:escapeXml(autocomplete)}" />
+<c:set var="fieldClass" value="field" />
+<c:if test="${required}">
+  <c:set var="fieldClass" value="field field--required" />
+</c:if>
 <c:set var="escapedShowLabel" value="${fn:escapeXml(showLabel)}" />
 <c:set var="escapedHideLabel" value="${fn:escapeXml(hideLabel)}" />
 
-<label class="field" for="${resolvedId}">
+<label class="${fieldClass}" for="${resolvedId}">
   <span class="field__label"><c:out value="${label}" /></span>
   <div class="password-field" data-password-visibility="true">
     <c:choose>

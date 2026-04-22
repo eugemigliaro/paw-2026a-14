@@ -16,6 +16,18 @@ public class RegisterForm {
     @Pattern(regexp = "^[a-z0-9_]{3,50}$", message = "{RegisterForm.username.Pattern}")
     private String username = "";
 
+    @NotBlank(message = "{RegisterForm.name.NotBlank}")
+    @Size(max = 150, message = "{RegisterForm.name.Size}")
+    private String name = "";
+
+    @NotBlank(message = "{RegisterForm.lastName.NotBlank}")
+    @Size(max = 150, message = "{RegisterForm.lastName.Size}")
+    private String lastName = "";
+
+    @Size(max = 50, message = "{RegisterForm.phone.Size}")
+    @Pattern(regexp = "^$|^[0-9+()\\-\\s]{6,50}$", message = "{RegisterForm.phone.Pattern}")
+    private String phone = "";
+
     @NotBlank(message = "{RegisterForm.password.NotBlank}")
     @Size(min = 8, max = 72, message = "{RegisterForm.password.Size}")
     private String password = "";
@@ -37,6 +49,30 @@ public class RegisterForm {
 
     public void setUsername(final String username) {
         this.username = username;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(final String name) {
+        this.name = name;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(final String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(final String phone) {
+        this.phone = phone;
     }
 
     public String getPassword() {

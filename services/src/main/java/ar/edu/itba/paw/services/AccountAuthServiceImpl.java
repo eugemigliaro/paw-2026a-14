@@ -9,6 +9,7 @@ import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.PasswordResetException;
+import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
@@ -77,6 +78,10 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Locale locale = currentLocale();
         final String normalizedEmail = normalizeEmail(request.getEmail());
         final String normalizedUsername = normalizeUsername(request.getUsername(), locale);
+        final String normalizedName = normalizeRequiredText(request.getName(), 150, "name", locale);
+        final String normalizedLastName =
+                normalizeRequiredText(request.getLastName(), 150, "lastName", locale);
+        final String normalizedPhone = normalizeRequiredPhone(request.getPhone(), locale);
         validatePassword(request.getPassword(), locale);
 
         final Optional<UserAccount> existingAccount = userDao.findAccountByEmail(normalizedEmail);
@@ -100,6 +105,9 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                     userDao.createAccount(
                             normalizedEmail,
                             normalizedUsername,
+                            normalizedName,
+                            normalizedLastName,
+                            normalizedPhone,
                             passwordEncoder.encode(request.getPassword()),
                             UserRole.USER,
                             null);
@@ -419,6 +427,45 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             throw new PasswordResetException(
                     "password_invalid", message("auth.registration.error.passwordInvalid", locale));
         }
+    }
+
+    private String normalizeRequiredText(
+            final String value, final int maxLength, final String fieldCode, final Locale locale) {
+        if (value == null) {
+            throw new AccountRegistrationException(
+                    fieldCode + "_invalid",
+                    message("auth.registration.error." + fieldCode + "Invalid", locale));
+        }
+
+        final String normalized = value.trim();
+        if (normalized.isBlank() || normalized.length() > maxLength) {
+            throw new AccountRegistrationException(
+                    fieldCode + "_invalid",
+                    message("auth.registration.error." + fieldCode + "Invalid", locale));
+        }
+        return normalized;
+    }
+
+    private String normalizeRequiredPhone(final String phone, final Locale locale) {
+        if (phone == null) {
+            return null;
+        }
+
+        final String normalized = phone.trim();
+        if (normalized.isBlank()) {
+            return null;
+        }
+
+        if (normalized.length() > 50) {
+            throw new AccountRegistrationException(
+                    "phone_invalid", message("auth.registration.error.phoneInvalid", locale));
+        }
+
+        if (!normalized.matches("^[0-9+()\\-\\s]{6,50}$")) {
+            throw new AccountRegistrationException(
+                    "phone_invalid", message("auth.registration.error.phoneInvalid", locale));
+        }
+        return normalized;
     }
 
     private static boolean isPasswordLengthInvalid(final String password) {

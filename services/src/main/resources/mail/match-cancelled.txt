@@ -1,0 +1,15 @@
+Match Point
+[[${mailEyebrow}]]
+
+[[${title}]]
+
+[[${summary}]]
+
+[[${requestedForLabel}]]: [[${recipientEmail}]]
+
+[[${detailsLabel}]]:
+[# th:each="detail : ${details}"]
+- [[${detail.label}]]: [[${detail.value}]]
+[/]
+
+[[${notice}]]

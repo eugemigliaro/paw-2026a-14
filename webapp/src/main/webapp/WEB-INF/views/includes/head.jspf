@@ -19,7 +19,9 @@
 <c:url var="cssMatchListsHref" value="/css/match-lists.css" />
 <c:url var="cssAuthHref" value="/css/auth.css" />
 <c:url var="cssParticipationHref" value="/css/participation.css" />
+<c:url var="cssProfileHref" value="/css/profile.css" />
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
+<c:url var="accountEditFormHref" value="/js/account-edit-form.js" />
 <c:url var="passwordToggleHref" value="/js/password-visibility-toggle.js" />
 <c:url var="timezoneFieldHref" value="/js/timezone-field.js" />
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
@@ -35,7 +37,9 @@
 <link rel="stylesheet" href="${cssMatchListsHref}" />
 <link rel="stylesheet" href="${cssAuthHref}" />
 <link rel="stylesheet" href="${cssParticipationHref}" />
+<link rel="stylesheet" href="${cssProfileHref}" />
 <script defer src="${formSubmitGuardHref}"></script>
+<script defer src="${accountEditFormHref}"></script>
 <script defer src="${passwordToggleHref}"></script>
 <script defer src="${timezoneFieldHref}"></script>
 <script defer src="${hostJoinPolicyGuardHref}"></script>

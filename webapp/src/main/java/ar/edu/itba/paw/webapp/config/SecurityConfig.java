@@ -31,6 +31,8 @@ public class SecurityConfig {
                                                 new AntPathRequestMatcher("/css/**"),
                                                 new AntPathRequestMatcher("/js/**"),
                                                 new AntPathRequestMatcher("/assets/**"),
+                                                new AntPathRequestMatcher(
+                                                        "/users/**", HttpMethod.GET.name()),
                                                 new AntPathRequestMatcher("/errors/**"),
                                                 new AntPathRequestMatcher("/login"),
                                                 new AntPathRequestMatcher("/register"),

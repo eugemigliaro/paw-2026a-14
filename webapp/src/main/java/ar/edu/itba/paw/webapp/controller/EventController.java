@@ -1,7 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_URL;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
@@ -24,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -62,6 +66,8 @@ public class EventController {
     public ModelAndView showEventDetails(
             @PathVariable("eventId") final String eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
+            @RequestParam(value = "reservationError", required = false) final String reservationError,
+            @RequestParam(value = "hostAction", required = false) final String hostAction,
             @RequestParam(value = "join", required = false) final String joinStatus,
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
             @RequestParam(value = "invite", required = false) final String inviteStatus,
@@ -70,7 +76,8 @@ public class EventController {
         return showRealEventDetails(
                 parseEventIdOrThrowNotFound(eventId),
                 reservationStatus,
-                null,
+                hostAction,
+                reservationError,
                 joinStatus,
                 joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
                 inviteStatus,
@@ -93,6 +100,7 @@ public class EventController {
             return showRealEventDetails(
                     matchId,
                     null,
+                    null,
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     null,
@@ -105,6 +113,7 @@ public class EventController {
     private ModelAndView showRealEventDetails(
             final Long eventId,
             final String reservationStatus,
+            final String hostAction,
             final String reservationError,
             final String joinStatus,
             final String joinError,
@@ -139,6 +148,7 @@ public class EventController {
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final ModelAndView mav = new ModelAndView("matches/detail");
+        final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
@@ -167,23 +177,30 @@ public class EventController {
         mav.addObject("hostRequestsPath", "/host/matches/" + eventId + "/requests");
         mav.addObject("hostInvitesPath", "/host/matches/" + eventId + "/invites");
         mav.addObject("hostParticipantsPath", "/host/matches/" + eventId + "/participants");
+        mav.addObject("hostCanManage", hostCanManage);
+        mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
+        mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
+        mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
+        mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
+        mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
         return mav;
     }
 
     private EventDetailPageViewModel buildRealEventPage(
             final Match match, final List<User> confirmedParticipants, final Locale locale) {
+        final Optional<User> host = userService.findById(match.getHostUserId());
         return new EventDetailPageViewModel(
                 toCard(match, locale),
                 null,
                 null,
-                userService
-                        .findById(match.getHostUserId())
-                        .map(User::getUsername)
+                host.map(User::getUsername)
                         .orElse(
                                 messageSource.getMessage(
                                         "event.detail.unknownHost",
                                         new Object[] {match.getHostUserId()},
                                         locale)),
+                host.map(this::profileHrefFor).orElse(null),
+                host.map(user -> profileUrlFor(user)).orElse(DEFAULT_PROFILE_IMAGE_URL),
                 toParticipantViewModels(confirmedParticipants),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
@@ -245,8 +262,18 @@ public class EventController {
                         participant ->
                                 new ParticipantViewModel(
                                         participant.getUsername(),
-                                        avatarLabelForUsername(participant.getUsername())))
+                                        avatarLabelForUsername(participant.getUsername()),
+                                        profileHrefFor(participant),
+                                        profileImageUrlForParticipant(participant)))
                 .toList();
+    }
+
+    private String profileImageUrlForParticipant(final User participant) {
+        return profileUrlFor(participant);
+    }
+
+    private String profileHrefFor(final User user) {
+        return "/users/" + user.getUsername();
     }
 
     private List<EventCardViewModel> loadNearbyMatches(
@@ -464,5 +491,29 @@ public class EventController {
             default:
                 return messageSource.getMessage("invite.error.notFound", null, locale);
         }
+    private String hostActionNotice(final String hostAction, final Locale locale) {
+        if ("updated".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.updated", null, locale);
+        }
+        if ("cancelled".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.cancelled", null, locale);
+        }
+        return null;
+    }
+
+    private boolean isHost(final Match match, final Long currentUserId) {
+        return currentUserId != null && currentUserId.equals(match.getHostUserId());
+    }
+
+    private boolean canHostEdit(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
+    }
+
+    private boolean canHostCancel(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
     }
 }

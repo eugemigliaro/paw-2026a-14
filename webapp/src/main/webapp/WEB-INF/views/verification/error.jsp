@@ -14,6 +14,7 @@
 
 	<main class="page-shell verification-shell">
 		<section class="panel verification-panel">
+			<ui:returnButton />
 			<p class="eyebrow"><spring:message code="verification.unavailable" /></p>
 			<h1 class="page-heading__title"><c:out value="${title}" /></h1>
 			<p class="page-heading__description"><c:out value="${message}" /></p>

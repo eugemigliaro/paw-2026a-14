@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.utils;
 
-import ar.edu.itba.paw.services.VerificationFailureException;
 import ar.edu.itba.paw.services.VerificationFailureReason;
+import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;

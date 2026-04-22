@@ -15,6 +15,7 @@
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 
 			<main class="page-shell page-shell--detail">
+				<ui:returnButton />
 				<section
 					class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
 				>
@@ -84,15 +85,27 @@
 					<div class="detail-layout__main">
 						<article class="panel host-card">
 							<div class="host-card__main">
-								<div
+								<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
+								<img
 									class="host-card__avatar"
+									src="${hostProfileImageSrc}"
+									alt=""
 									aria-hidden="true"
-								></div>
+									loading="lazy"
+									decoding="async" />
 								<div class="host-card__copy">
 									<span class="detail-label"><spring:message code="event.detail.hostedBy" /></span>
-									<strong class="host-card__name"
-										><c:out value="${eventPage.hostLabel}"
-									/></strong>
+									<c:choose>
+										<c:when test="${not empty eventPage.hostProfileHref}">
+											<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
+											<a class="host-card__name" href="${hostProfileHref}">
+												<c:out value="${eventPage.hostLabel}" />
+											</a>
+										</c:when>
+										<c:otherwise>
+											<strong class="host-card__name"><c:out value="${eventPage.hostLabel}" /></strong>
+										</c:otherwise>
+									</c:choose>
 								</div>
 							</div>
 						</article>
@@ -105,7 +118,6 @@
 								class="section-head section-head--detail-compact"
 							>
 								<div>
-									<span class="detail-label"><spring:message code="event.detail.roster" /></span>
 									<h2
 										id="participant-section-title"
 										class="detail-section__title"
@@ -146,20 +158,24 @@
 											items="${eventPage.participants}"
 										>
 											<li class="participant-list__item">
-												<span
+												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
+												<img
 													class="participant-list__avatar"
+													src="${participantProfileImageSrc}"
+													alt=""
 													aria-hidden="true"
-													><c:out
-														value="${participant.avatarLabel}"
-												/></span>
+													loading="lazy"
+													decoding="async" />
 												<div
 													class="participant-list__copy"
 												>
-													<strong
+													<c:url var="participantProfileHref" value="${participant.profileHref}" />
+													<a
 														class="participant-list__name"
+														href="${participantProfileHref}"
 														><c:out
 															value="${participant.username}"
-													/></strong>
+													/></a>
 												</div>
 											</li>
 										</c:forEach>
@@ -218,6 +234,13 @@
 									<spring:message code="event.booking.confirmed" />
 								</p>
 							</c:if>
+							<c:if test="${not empty hostActionNotice}">
+								<p
+									class="booking-panel__notice booking-panel__notice--success"
+								>
+									<c:out value="${hostActionNotice}" />
+								</p>
+							</c:if>
 							<c:if test="${not empty reservationError}">
 								<p
 									class="booking-panel__notice booking-panel__notice--error"
@@ -241,6 +264,55 @@
 										value="${eventPage.participantCountLabel}"
 								/></span>
 							</div>
+
+							<c:if test="${hostCanManage}">
+								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
+								<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
+								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
+								<div class="booking-panel__details">
+									<div class="booking-panel__detail-row">
+										<dt><spring:message code="host.manage.label" /></dt>
+										<dd><spring:message code="host.manage.detail" /></dd>
+									</div>
+								</div>
+								<c:url var="hostEditHref" value="${hostEditPath}" />
+								<c:choose>
+									<c:when test="${hostCanEdit}">
+										<ui:button
+											label="${hostManageEditLabel}"
+											href="${hostEditHref}"
+											variant="secondary"
+											fullWidth="${true}"
+										/>
+									</c:when>
+									<c:otherwise>
+										<ui:button
+											label="${hostManageEditLabel}"
+											type="button"
+											variant="secondary"
+											fullWidth="${true}"
+											disabled="${true}"
+										/>
+									</c:otherwise>
+								</c:choose>
+								<c:url var="hostCancelAction" value="${hostCancelPath}" />
+								<form
+									method="post"
+									action="${hostCancelAction}"
+									data-submit-guard="true"
+									data-submit-loading-label="${hostManageCancellingLabel}"
+									class="booking-panel__request-form"
+								>
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<ui:button
+										label="${hostManageCancelLabel}"
+										type="submit"
+										variant="danger"
+										disabled="${not hostCanCancel}"
+										fullWidth="${true}"
+									/>
+								</form>
+							</c:if>
 
 							<dl class="booking-panel__details">
 								<c:forEach
@@ -422,7 +494,6 @@
 				<section class="detail-recommendations">
 					<div class="section-head">
 						<div>
-							<span class="detail-label"><spring:message code="event.nearby.label" /></span>
 							<h2
 								class="section-head__title section-head__title--detail"
 							>
@@ -437,7 +508,7 @@
 						>
 					</div>
 
-					<div class="event-grid event-grid--detail">
+					<div class="event-grid">
 						<c:forEach
 							var="event"
 							items="${eventPage.nearbyEvents}"
@@ -464,7 +535,7 @@
 										/>
 									</c:if>
 									<span class="event-card__badge"
-										><c:out value="${event.sport}"
+										><c:out value="${event.badge}"
 									/></span>
 								</div>
 
@@ -485,15 +556,9 @@
 									</div>
 
 									<div class="event-card__footer">
-										<strong class="event-card__price"
-											><c:out
-												value="${event.priceLabel}"
-											/>
-											<spring:message code="event.pricePerPerson" /></strong
-										>
-										<span class="event-card__spots"
-											><c:out value="${event.badge}"
-										/></span>
+										<div class="event-card__cta">
+											<span><c:out value="${event.priceLabel}" /></span>
+										</div>
 									</div>
 								</div>
 							</ui:card>

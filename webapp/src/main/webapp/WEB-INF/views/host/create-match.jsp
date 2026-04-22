@@ -3,7 +3,6 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
-	<spring:message var="pageTitle" code="page.title.hostMode" />
 	<!DOCTYPE html>
 	<html lang="${pageContext.response.locale.language}">
 	<head>
@@ -14,16 +13,16 @@
 			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
 			<main class="page-shell">
+				<ui:returnButton />
 				<section class="create-layout__main">
 					<header class="page-heading">
-						<p class="eyebrow"><spring:message code="host.eyebrow" /></p>
-						<h1 class="page-heading__title"><spring:message code="host.title" /></h1>
+						<p class="eyebrow"><c:out value="${formEyebrow}" /></p>
+						<h1 class="page-heading__title"><c:out value="${formTitle}" /></h1>
 						<p class="page-heading__description">
-							<spring:message code="host.description" />
+							<c:out value="${formDescription}" />
 						</p>
 					</header>
 
-					<spring:message var="publishingLabel" code="host.form.submitting" />
 					<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
 					<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
 					<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
@@ -39,15 +38,21 @@
 					<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
 					<spring:message var="publishLabel" code="host.form.submit" />
 					<c:url var="createMatchAction" value="/host/matches/new" />
+					<spring:message var="sportOther" code="sport.other" />
+					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
+					<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
+					<spring:message var="durationCustom" code="host.form.duration.custom" />
+					<spring:message var="durationLabel" code="host.form.duration" />
+					<c:url var="resolvedFormAction" value="${formAction}" />
 
 					<form:form
 						method="post"
-						action="${createMatchAction}"
+						action="${resolvedFormAction}"
 						modelAttribute="createEventForm"
 						enctype="multipart/form-data"
 						id="create-match-form"
 						data-submit-guard="true"
-						data-submit-loading-label="${publishingLabel}"
+						data-submit-loading-label="${submitLoadingLabel}"
 						cssClass="create-form"
 					>
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
@@ -93,11 +98,13 @@
 											path="sport"
 											id="match-sport"
 											cssClass="field__control field__control--select"
+											required="required"
 										>
 											<form:option value="padel" label="${sportPadel}" />
 											<form:option value="football" label="${sportFootball}" />
 											<form:option value="tennis" label="${sportTennis}" />
 											<form:option value="basketball" label="${sportBasketball}" />
+											<form:option value="other" label="${sportOther}" />
 										</form:select>
 									</span>
 									<form:errors
@@ -155,6 +162,7 @@
 										id="match-date"
 										type="date"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="eventDate"
@@ -170,9 +178,44 @@
 										id="match-time"
 										type="time"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="eventTime"
+										cssClass="field__error"
+										element="span"
+									/>
+								</label>
+
+								<div class="field">
+									<span class="field__label"><spring:message code="host.form.duration" /></span>
+									<div class="duration-options" role="radiogroup" aria-label="${durationLabel}">
+										<label class="chip duration-option" data-duration-minutes="60">
+											<input type="radio" name="durationPresetUi" value="60" class="duration-option__input" />
+											<span>${durationOneHour}</span>
+										</label>
+										<label class="chip duration-option" data-duration-minutes="90">
+											<input type="radio" name="durationPresetUi" value="90" class="duration-option__input" />
+											<span>${durationNinetyMinutes}</span>
+										</label>
+										<label class="chip duration-option" data-duration-minutes="custom">
+											<input type="radio" name="durationPresetUi" value="custom" class="duration-option__input" />
+											<span>${durationCustom}</span>
+										</label>
+									</div>
+								</div>
+
+								<label class="field" for="match-end-date">
+									<span class="field__label"><spring:message code="host.form.endDate" /></span>
+									<form:input
+										path="endDate"
+										id="match-end-date"
+										type="date"
+										cssClass="field__control"
+										required="required"
+									/>
+									<form:errors
+										path="endDate"
 										cssClass="field__error"
 										element="span"
 									/>
@@ -185,6 +228,7 @@
 										id="match-end-time"
 										type="time"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="endTime"
@@ -209,6 +253,7 @@
 										type="number"
 										min="1"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="maxPlayers"
@@ -228,6 +273,7 @@
 										min="0"
 										step="0.01"
 										cssClass="field__control"
+										required="required"
 									/>
 									<form:errors
 										path="pricePerPlayer"
@@ -312,9 +358,9 @@
 
 						<div class="create-layout__actions">
 							<ui:button
-								label="${publishLabel}"
+								label="${submitLabel}"
 								type="submit"
-								id="publish-match-button"
+								id="${submitButtonId}"
 								size="lg"
 								fullWidth="${true}"
 								className="create-layout__submit"
@@ -330,16 +376,134 @@
 				var joinPolicyField = document.getElementById('join-policy-field');
 				var joinPolicySelect = document.getElementById('match-join-policy');
 
-				function updateJoinPolicyVisibility() {
-					var isPrivate = visibilitySelect.value === 'private';
-					joinPolicyField.style.display = isPrivate ? 'none' : '';
-					if (isPrivate) {
-						joinPolicySelect.value = '';
-					}
+				  if (visibilitySelect && joinPolicyField && joinPolicySelect) {
+
+        function updateJoinPolicyVisibility() {
+            var isPrivate = visibilitySelect.value === 'private';
+            joinPolicyField.style.display = isPrivate ? 'none' : '';
+
+            if (isPrivate) {
+                joinPolicySelect.value = '';
+            }
+        }
+
+        visibilitySelect.addEventListener('change', updateJoinPolicyVisibility);
+        updateJoinPolicyVisibility();
+    }
+        
+				var presetInputs = document.querySelectorAll('input[name="durationPresetUi"]');
+				var startDateInput = document.getElementById('match-date');
+				var startTimeInput = document.getElementById('match-time');
+				var endDateInput = document.getElementById('match-end-date');
+				var endTimeInput = document.getElementById('match-end-time');
+				var activeMode = null;
+
+				if (!presetInputs.length || !startDateInput || !startTimeInput || !endDateInput || !endTimeInput) {
+					return;
 				}
 
-				visibilitySelect.addEventListener('change', updateJoinPolicyVisibility);
-				updateJoinPolicyVisibility();
+				function parseLocalDateTime(dateValue, timeValue) {
+					if (!dateValue || !timeValue) {
+						return null;
+					}
+
+					var dateParts = dateValue.split('-').map(Number);
+					var timeParts = timeValue.split(':').map(Number);
+					return new Date(
+						dateParts[0],
+						dateParts[1] - 1,
+						dateParts[2],
+						timeParts[0],
+						timeParts[1],
+						0,
+						0
+					);
+				}
+
+				function pad(value) {
+					return String(value).padStart(2, '0');
+				}
+
+				function setEndFromPreset(durationMinutes) {
+					var start = parseLocalDateTime(startDateInput.value, startTimeInput.value);
+					if (!start) {
+						return;
+					}
+
+					var end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+					endDateInput.value =
+						end.getFullYear() + '-' + pad(end.getMonth() + 1) + '-' + pad(end.getDate());
+					endTimeInput.value = pad(end.getHours()) + ':' + pad(end.getMinutes());
+				}
+
+				function syncPresetUi(activePresetValue) {
+					var explicitValue = activePresetValue == null ? null : String(activePresetValue);
+
+					presetInputs.forEach(function (input) {
+						var chip = input.closest('.duration-option');
+						var isActive = explicitValue != null && input.value === explicitValue;
+						input.checked = isActive;
+						if (chip) {
+							chip.classList.toggle('chip--active', isActive);
+						}
+					});
+				}
+
+				function detectPresetMode() {
+					var start = parseLocalDateTime(startDateInput.value, startTimeInput.value);
+					var end = parseLocalDateTime(endDateInput.value, endTimeInput.value);
+					if (!start || !end) {
+						return 'custom';
+					}
+
+					var diffMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+					if (diffMinutes === 60 || diffMinutes === 90) {
+						return String(diffMinutes);
+					}
+					return 'custom';
+				}
+
+				presetInputs.forEach(function (input) {
+					input.addEventListener('change', function () {
+						if (!input.checked) {
+							return;
+						}
+
+						activeMode = input.value;
+						if (activeMode === 'custom') {
+							syncPresetUi(activeMode);
+							return;
+						}
+
+						setEndFromPreset(Number(activeMode));
+						syncPresetUi(activeMode);
+					});
+				});
+
+				[startDateInput, startTimeInput].forEach(function (input) {
+					input.addEventListener('change', function () {
+						if (activeMode === '60' || activeMode === '90') {
+							setEndFromPreset(Number(activeMode));
+							syncPresetUi(activeMode);
+							return;
+						}
+
+						if (activeMode !== 'custom') {
+							activeMode = detectPresetMode();
+						}
+						syncPresetUi(activeMode);
+					});
+				});
+
+				[endDateInput, endTimeInput].forEach(function (input) {
+					input.addEventListener('change', function () {
+						activeMode = detectPresetMode();
+						syncPresetUi(activeMode);
+					});
+				});
+
+				activeMode = detectPresetMode();
+				syncPresetUi(activeMode);
 			})();
 		</script>
 	</body>

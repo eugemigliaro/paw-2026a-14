@@ -472,10 +472,18 @@ public final class PawUiViewModels {
     public static final class ParticipantViewModel {
         private final String username;
         private final String avatarLabel;
+        private final String profileHref;
+        private final String profileImageUrl;
 
-        public ParticipantViewModel(final String username, final String avatarLabel) {
+        public ParticipantViewModel(
+                final String username,
+                final String avatarLabel,
+                final String profileHref,
+                final String profileImageUrl) {
             this.username = username;
             this.avatarLabel = avatarLabel;
+            this.profileHref = profileHref;
+            this.profileImageUrl = profileImageUrl;
         }
 
         public String getUsername() {
@@ -484,6 +492,14 @@ public final class PawUiViewModels {
 
         public String getAvatarLabel() {
             return avatarLabel;
+        }
+
+        public String getProfileHref() {
+            return profileHref;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
         }
     }
 
@@ -612,6 +628,8 @@ public final class PawUiViewModels {
         private final String heroSubtitle;
         private final String heroMeta;
         private final String hostLabel;
+        private final String hostProfileHref;
+        private final String hostProfileImageUrl;
         private final List<ParticipantViewModel> participants;
         private final String participantCountLabel;
         private final String participantsEmptyState;
@@ -627,6 +645,8 @@ public final class PawUiViewModels {
                 final String heroSubtitle,
                 final String heroMeta,
                 final String hostLabel,
+                final String hostProfileHref,
+                final String hostProfileImageUrl,
                 final List<ParticipantViewModel> participants,
                 final String participantCountLabel,
                 final String participantsEmptyState,
@@ -640,6 +660,8 @@ public final class PawUiViewModels {
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
             this.hostLabel = hostLabel;
+            this.hostProfileHref = hostProfileHref;
+            this.hostProfileImageUrl = hostProfileImageUrl;
             this.participants = participants;
             this.participantCountLabel = participantCountLabel;
             this.participantsEmptyState = participantsEmptyState;
@@ -665,6 +687,14 @@ public final class PawUiViewModels {
 
         public String getHostLabel() {
             return hostLabel;
+        }
+
+        public String getHostProfileHref() {
+            return hostProfileHref;
+        }
+
+        public String getHostProfileImageUrl() {
+            return hostProfileImageUrl;
         }
 
         public List<ParticipantViewModel> getParticipants() {
@@ -701,6 +731,47 @@ public final class PawUiViewModels {
 
         public List<EventCardViewModel> getNearbyEvents() {
             return nearbyEvents;
+        }
+    }
+
+    public static final class PublicProfilePageViewModel {
+        private final String username;
+        private final String name;
+        private final String lastName;
+        private final String phone;
+        private final String profileImageUrl;
+
+        public PublicProfilePageViewModel(
+                final String username,
+                final String name,
+                final String lastName,
+                final String phone,
+                final String profileImageUrl) {
+            this.username = username;
+            this.name = name;
+            this.lastName = lastName;
+            this.phone = phone;
+            this.profileImageUrl = profileImageUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getLastName() {
+            return lastName;
+        }
+
+        public String getPhone() {
+            return phone;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
         }
     }
 }

@@ -31,10 +31,19 @@ public class MatchParticipantJdbcDaoTest {
     public void setUp() {
         jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.update(
-                "INSERT INTO users (id, username, email, created_at, updated_at) VALUES "
-                        + "(1, 'host', 'host@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), "
-                        + "(2, 'player', 'player@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), "
-                        + "(3, 'other', 'other@test.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+                "INSERT INTO images (id, content_type, content_length, content, created_at)"
+                        + " VALUES (20, 'image/png', 3, CAST(X'010203' AS BINARY),"
+                        + " CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO users "
+                        + "(id, username, email, name, last_name, phone, profile_image_id,"
+                        + " created_at, updated_at) VALUES "
+                        + "(1, 'host', 'host@test.com', 'Host', 'User', null, null,"
+                        + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), "
+                        + "(2, 'player', 'player@test.com', 'Player', 'User', '+1 555 123 4567',"
+                        + " 20, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), "
+                        + "(3, 'other', 'other@test.com', 'Other', 'User', null, null,"
+                        + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
         jdbcTemplate.update(
                 "INSERT INTO matches "
                         + "(id, host_user_id, address, title, description, starts_at, max_players, "
@@ -117,6 +126,10 @@ public class MatchParticipantJdbcDaoTest {
 
         Assertions.assertEquals(3, participants.size());
         Assertions.assertEquals(2L, participants.get(0).getId());
+        Assertions.assertEquals("Player", participants.get(0).getName());
+        Assertions.assertEquals("User", participants.get(0).getLastName());
+        Assertions.assertEquals("+1 555 123 4567", participants.get(0).getPhone());
+        Assertions.assertEquals(20L, participants.get(0).getProfileImageId());
         Assertions.assertEquals(1L, participants.get(1).getId());
         Assertions.assertEquals(3L, participants.get(2).getId());
     }

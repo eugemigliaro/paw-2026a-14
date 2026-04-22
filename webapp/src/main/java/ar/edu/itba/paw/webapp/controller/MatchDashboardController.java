@@ -842,10 +842,6 @@ public class MatchDashboardController {
             builder.queryParam("visibility", encodedVisibility);
         }
 
-        if (locale != null && locale.getLanguage() != null && !locale.getLanguage().isBlank()) {
-            builder.queryParam("lang", locale.getLanguage());
-        }
-
         return builder.build().encode().toUriString();
     }
 

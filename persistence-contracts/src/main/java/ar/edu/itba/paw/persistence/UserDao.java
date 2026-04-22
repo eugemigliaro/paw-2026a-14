@@ -13,6 +13,9 @@ public interface UserDao {
     UserAccount createAccount(
             String email,
             String username,
+            String name,
+            String lastName,
+            String phone,
             String passwordHash,
             UserRole role,
             Instant emailVerifiedAt);
@@ -26,6 +29,16 @@ public interface UserDao {
     Optional<UserAccount> findAccountById(Long id);
 
     Optional<User> findByUsername(final String username);
+
+    void updateProfile(
+            Long id,
+            String username,
+            String name,
+            String lastName,
+            String phone,
+            Long profileImageId);
+
+    void updateProfileImage(Long id, Long profileImageId);
 
     void updatePasswordHash(Long id, String passwordHash);
 
