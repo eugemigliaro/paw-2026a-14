@@ -338,9 +338,6 @@ public class FeedController {
         if (email != null && !email.isBlank()) {
             builder.queryParam("email", email);
         }
-        if (locale != null && locale.getLanguage() != null && !locale.getLanguage().isBlank()) {
-            builder.queryParam("lang", locale.getLanguage());
-        }
 
         for (final String sport : filters.selectedSports()) {
             builder.queryParam("sport", sport.toLowerCase(Locale.ROOT));
