@@ -352,17 +352,30 @@
 									<c:when test="${isInviteOnly}">
 										<c:url var="hostInvitesHref" value="${hostInvitesPath}" />
 										<spring:message var="hostInvitesLabel" code="event.host.invites" />
-										<ui:button label="${hostInvitesLabel}" href="${hostInvitesHref}" fullWidth="${true}" />
+										<ui:button
+											label="${hostInvitesLabel}"
+											href="${hostInvitesHref}"
+											fullWidth="${true}"
+											disabled="${not hostCanManageParticipants}" />
 									</c:when>
 									<c:when test="${isApprovalRequired}">
 										<c:url var="hostRequestsHref" value="${hostRequestsPath}" />
 										<spring:message var="hostRequestsLabel" code="event.host.requests" />
-										<ui:button label="${hostRequestsLabel}" href="${hostRequestsHref}" fullWidth="${true}" />
+										<ui:button
+											label="${hostRequestsLabel}"
+											href="${hostRequestsHref}"
+											fullWidth="${true}"
+											disabled="${not hostCanManageParticipants}" />
 									</c:when>
 								</c:choose>
 								<c:url var="hostParticipantsHref" value="${hostParticipantsPath}" />
 								<spring:message var="hostParticipantsLabel" code="event.host.participants" />
-								<ui:button label="${hostParticipantsLabel}" href="${hostParticipantsHref}" fullWidth="${true}" variant="secondary" />
+								<ui:button
+									label="${hostParticipantsLabel}"
+									href="${hostParticipantsHref}"
+									fullWidth="${true}"
+									variant="secondary"
+									disabled="${not hostCanManageParticipants}" />
 							</c:if>
 
 							<spring:message var="joiningLabel" code="event.booking.joining" />
