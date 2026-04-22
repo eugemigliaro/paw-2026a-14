@@ -205,19 +205,19 @@ public class HostParticipationController {
         switch (code) {
             case "user_not_found":
                 return messageSource.getMessage(
-                        "host.invite.error.userNotFound", new Object[] {email}, locale);
+                        "host.invites.error.userNotFound", new Object[] {email}, locale);
             case "already_joined":
-                return messageSource.getMessage("host.invite.error.alreadyJoined", null, locale);
+                return messageSource.getMessage("host.invites.error.alreadyJoined", null, locale);
             case "already_invited":
-                return messageSource.getMessage("host.invite.error.alreadyInvited", null, locale);
+                return messageSource.getMessage("host.invites.error.alreadyInvited", null, locale);
             case "full":
-                return messageSource.getMessage("host.invite.error.full", null, locale);
+                return messageSource.getMessage("host.invites.error.full", null, locale);
             case "is_host":
-                return messageSource.getMessage("host.invite.error.isHost", null, locale);
+                return messageSource.getMessage("host.invites.error.isHost", null, locale);
             case "closed":
-                return messageSource.getMessage("host.invite.error.closed", null, locale);
+                return messageSource.getMessage("host.invites.error.closed", null, locale);
             default:
-                return messageSource.getMessage("host.invite.error.generic", null, locale);
+                return messageSource.getMessage("host.invites.error.generic", null, locale);
         }
     }
 

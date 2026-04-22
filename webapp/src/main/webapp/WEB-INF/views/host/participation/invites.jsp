@@ -33,6 +33,10 @@
 
 				<div class="participation-layout">
 					<div class="participation-nav">
+						<c:url var="backToEventHref" value="/matches/${matchId}" />
+						<a class="section-link" href="${backToEventHref}">
+							<spring:message code="participation.backToEvent" />
+						</a>
 						<c:url var="rosterHref" value="${rosterUrl}" />
 						<a class="section-link" href="${rosterHref}">
 							<spring:message code="host.invites.viewRoster" />
@@ -63,19 +67,21 @@
 							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 							<div class="invite-form__row">
 								<spring:message var="emailPlaceholder" code="form.email.placeholder" />
-								<label class="field invite-form__field" for="invite-email">
+								<label class="field" for="invite-email">
 									<span class="field__label"><spring:message code="form.email.label" /></span>
 									<form:input
 										path="email"
 										id="invite-email"
 										type="email"
-										cssClass="field__control"
+										cssClass="field__control invite-form__email-input"
 										placeholder="${emailPlaceholder}"
 									/>
 									<form:errors path="email" cssClass="field__error" element="span" />
 								</label>
 								<spring:message var="inviteLabel" code="host.invites.invite" />
-								<ui:button label="${inviteLabel}" type="submit" />
+								<div class="invite-form__submit">
+									<ui:button label="${inviteLabel}" type="submit" />
+								</div>
 							</div>
 						</form:form>
 					</section>

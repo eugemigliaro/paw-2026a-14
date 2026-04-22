@@ -44,6 +44,10 @@
 
 				<div class="participation-layout">
 					<div class="participation-nav">
+						<c:url var="backToEventHref" value="/matches/${matchId}" />
+						<a class="section-link" href="${backToEventHref}">
+							<spring:message code="participation.backToEvent" />
+						</a>
 						<c:choose>
 							<c:when test="${isPrivateEvent}">
 								<c:url var="invitesHref" value="${invitesUrl}" />

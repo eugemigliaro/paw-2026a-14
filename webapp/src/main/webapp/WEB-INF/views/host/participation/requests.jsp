@@ -49,6 +49,10 @@
 
 				<div class="participation-layout">
 					<div class="participation-nav">
+						<c:url var="backToEventHref" value="/matches/${matchId}" />
+						<a class="section-link" href="${backToEventHref}">
+							<spring:message code="participation.backToEvent" />
+						</a>
 						<c:url var="rosterHref" value="${rosterUrl}" />
 						<a class="section-link" href="${rosterHref}">
 							<spring:message code="host.requests.viewRoster" />
