@@ -84,7 +84,7 @@ public class HostController {
       validateVisibilityAndJoinPolicy(createEventForm, bindingResult);
 
       if (bindingResult.hasErrors()) {
-          return new ModelAndView("host/create")
+          return new ModelAndView("host/create-match")
               .addObject("createEventForm", createEventForm)
               .addObject("formConfig", formConfig);
       }
