@@ -52,6 +52,7 @@
 						data-submit-guard="true"
 						data-submit-loading-label="${submitLoadingLabel}"
 						cssClass="create-form"
+						novalidate="novalidate"
 					>
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<input

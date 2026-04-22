@@ -63,6 +63,7 @@
 							data-submit-guard="true"
 							data-submit-loading-label="${invitingLabel}"
 							cssClass="invite-form"
+							novalidate="novalidate"
 						>
 							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 							<div class="invite-form__row">

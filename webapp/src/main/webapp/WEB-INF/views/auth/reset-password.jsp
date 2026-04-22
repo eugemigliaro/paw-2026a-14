@@ -39,7 +39,8 @@
 						method="post"
 						action="${resetPasswordAction}"
 						modelAttribute="resetPasswordForm"
-						cssClass="auth-form">
+						cssClass="auth-form"
+						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<label class="field" for="reset-password">
 							<span class="field__label"><spring:message code="form.password.label" /></span>

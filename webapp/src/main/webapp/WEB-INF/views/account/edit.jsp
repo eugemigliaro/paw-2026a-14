@@ -33,7 +33,8 @@
 						cssClass="account-form"
 						id="account-edit-form"
 						data-account-edit-form="true"
-						enctype="multipart/form-data">
+						enctype="multipart/form-data"
+						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
 						<label class="field field--required" for="account-email">
