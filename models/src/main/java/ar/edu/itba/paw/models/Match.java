@@ -16,6 +16,7 @@ public class Match {
     private final int maxPlayers;
     private final BigDecimal pricePerPlayer;
     private final String visibility;
+    private final String joinPolicy;
     private final String status;
     private final int joinedPlayers;
     private final Long bannerImageId;
@@ -35,6 +36,40 @@ public class Match {
             final String status,
             final int joinedPlayers,
             final Long bannerImageId) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                visibility,
+                defaultJoinPolicyForVisibility(visibility),
+                status,
+                joinedPlayers,
+                bannerImageId);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final int joinedPlayers,
+            final Long bannerImageId) {
         this.id = id;
         this.sport = sport;
         this.hostUserId = hostUserId;
@@ -46,9 +81,20 @@ public class Match {
         this.maxPlayers = maxPlayers;
         this.pricePerPlayer = pricePerPlayer;
         this.visibility = visibility;
+        this.joinPolicy = joinPolicy;
         this.status = status;
         this.joinedPlayers = joinedPlayers;
         this.bannerImageId = bannerImageId;
+    }
+
+    private static String defaultJoinPolicyForVisibility(final String visibility) {
+        if ("public".equalsIgnoreCase(visibility)) {
+            return "direct";
+        }
+        if ("private".equalsIgnoreCase(visibility)) {
+            return "invite_only";
+        }
+        return "approval_required";
     }
 
     public Long getId() {
@@ -93,6 +139,10 @@ public class Match {
 
     public String getVisibility() {
         return visibility;
+    }
+
+    public String getJoinPolicy() {
+        return joinPolicy;
     }
 
     public String getStatus() {

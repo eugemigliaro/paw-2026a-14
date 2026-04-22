@@ -108,6 +108,100 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class SelectOptionViewModel {
+        private final String label;
+        private final String href;
+        private final boolean selected;
+
+        public SelectOptionViewModel(
+                final String label, final String href, final boolean selected) {
+            this.label = label;
+            this.href = href;
+            this.selected = selected;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getHref() {
+            return href;
+        }
+
+        public boolean isSelected() {
+            return selected;
+        }
+    }
+
+    public static final class MatchListControlsViewModel {
+        private final String searchAction;
+        private final String searchLabel;
+        private final String searchQuery;
+        private final String searchPlaceholder;
+        private final String searchButtonLabel;
+        private final String sortLabel;
+        private final List<SelectOptionViewModel> sortOptions;
+        private final String filterTitle;
+        private final List<FilterGroupViewModel> filterGroups;
+
+        public MatchListControlsViewModel(
+                final String searchAction,
+                final String searchLabel,
+                final String searchQuery,
+                final String searchPlaceholder,
+                final String searchButtonLabel,
+                final String sortLabel,
+                final List<SelectOptionViewModel> sortOptions,
+                final String filterTitle,
+                final List<FilterGroupViewModel> filterGroups) {
+            this.searchAction = searchAction;
+            this.searchLabel = searchLabel;
+            this.searchQuery = searchQuery;
+            this.searchPlaceholder = searchPlaceholder;
+            this.searchButtonLabel = searchButtonLabel;
+            this.sortLabel = sortLabel;
+            this.sortOptions = sortOptions;
+            this.filterTitle = filterTitle;
+            this.filterGroups = filterGroups;
+        }
+
+        public String getSearchAction() {
+            return searchAction;
+        }
+
+        public String getSearchLabel() {
+            return searchLabel;
+        }
+
+        public String getSearchQuery() {
+            return searchQuery;
+        }
+
+        public String getSearchPlaceholder() {
+            return searchPlaceholder;
+        }
+
+        public String getSearchButtonLabel() {
+            return searchButtonLabel;
+        }
+
+        public String getSortLabel() {
+            return sortLabel;
+        }
+
+        public List<SelectOptionViewModel> getSortOptions() {
+            return sortOptions;
+        }
+
+        public String getFilterTitle() {
+            return filterTitle;
+        }
+
+        public List<FilterGroupViewModel> getFilterGroups() {
+            return filterGroups;
+        }
+    }
+
     public static final class ChipViewModel {
         private final String label;
         private final String href;
@@ -136,6 +230,40 @@ public final class PawUiViewModels {
 
         public String getTone() {
             return tone;
+        }
+    }
+
+    public static final class PaginationItemViewModel {
+        private final String label;
+        private final String href;
+        private final boolean current;
+        private final boolean ellipsis;
+
+        public PaginationItemViewModel(
+                final String label,
+                final String href,
+                final boolean current,
+                final boolean ellipsis) {
+            this.label = label;
+            this.href = href;
+            this.current = current;
+            this.ellipsis = ellipsis;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getHref() {
+            return href;
+        }
+
+        public boolean isCurrent() {
+            return current;
+        }
+
+        public boolean isEllipsis() {
+            return ellipsis;
         }
     }
 
@@ -237,6 +365,7 @@ public final class PawUiViewModels {
         private final List<EventCardViewModel> featuredEvents;
         private final int page;
         private final int totalPages;
+        private final List<PaginationItemViewModel> paginationItems;
         private final String previousPageHref;
         private final String nextPageHref;
 
@@ -251,6 +380,7 @@ public final class PawUiViewModels {
                 final List<EventCardViewModel> featuredEvents,
                 final int page,
                 final int totalPages,
+                final List<PaginationItemViewModel> paginationItems,
                 final String previousPageHref,
                 final String nextPageHref) {
             this.eyebrow = eyebrow;
@@ -263,6 +393,7 @@ public final class PawUiViewModels {
             this.featuredEvents = featuredEvents;
             this.page = page;
             this.totalPages = totalPages;
+            this.paginationItems = paginationItems;
             this.previousPageHref = previousPageHref;
             this.nextPageHref = nextPageHref;
         }
@@ -307,6 +438,10 @@ public final class PawUiViewModels {
             return totalPages;
         }
 
+        public List<PaginationItemViewModel> getPaginationItems() {
+            return paginationItems;
+        }
+
         public String getPreviousPageHref() {
             return previousPageHref;
         }
@@ -337,8 +472,119 @@ public final class PawUiViewModels {
     public static final class ParticipantViewModel {
         private final String username;
         private final String avatarLabel;
+        private final String profileHref;
+        private final String profileImageUrl;
 
-        public ParticipantViewModel(final String username, final String avatarLabel) {
+        public ParticipantViewModel(
+                final String username,
+                final String avatarLabel,
+                final String profileHref,
+                final String profileImageUrl) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+            this.profileHref = profileHref;
+            this.profileImageUrl = profileImageUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+
+        public String getProfileHref() {
+            return profileHref;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
+        }
+    }
+
+    public static final class RosterParticipantViewModel {
+        private final String username;
+        private final String avatarLabel;
+        private final String removeUrl;
+
+        public RosterParticipantViewModel(
+                final String username, final String avatarLabel, final String removeUrl) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+            this.removeUrl = removeUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+
+        public String getRemoveUrl() {
+            return removeUrl;
+        }
+    }
+
+    public static final class PendingRequestViewModel {
+        private final String username;
+        private final String avatarLabel;
+        private final String approveUrl;
+        private final String rejectUrl;
+
+        public PendingRequestViewModel(
+                final String username,
+                final String avatarLabel,
+                final String approveUrl,
+                final String rejectUrl) {
+            this.username = username;
+            this.avatarLabel = avatarLabel;
+            this.approveUrl = approveUrl;
+            this.rejectUrl = rejectUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getAvatarLabel() {
+            return avatarLabel;
+        }
+
+        public String getApproveUrl() {
+            return approveUrl;
+        }
+
+        public String getRejectUrl() {
+            return rejectUrl;
+        }
+    }
+
+    public static final class PendingJoinMatchViewModel {
+        private final EventCardViewModel card;
+        private final String cancelUrl;
+
+        public PendingJoinMatchViewModel(final EventCardViewModel card, final String cancelUrl) {
+            this.card = card;
+            this.cancelUrl = cancelUrl;
+        }
+
+        public EventCardViewModel getCard() {
+            return card;
+        }
+
+        public String getCancelUrl() {
+            return cancelUrl;
+        }
+    }
+
+    public static final class InviteParticipantViewModel {
+        private final String username;
+        private final String avatarLabel;
+
+        public InviteParticipantViewModel(final String username, final String avatarLabel) {
             this.username = username;
             this.avatarLabel = avatarLabel;
         }
@@ -352,11 +598,38 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class InvitedMatchViewModel {
+        private final EventCardViewModel card;
+        private final String acceptUrl;
+        private final String declineUrl;
+
+        public InvitedMatchViewModel(
+                final EventCardViewModel card, final String acceptUrl, final String declineUrl) {
+            this.card = card;
+            this.acceptUrl = acceptUrl;
+            this.declineUrl = declineUrl;
+        }
+
+        public EventCardViewModel getCard() {
+            return card;
+        }
+
+        public String getAcceptUrl() {
+            return acceptUrl;
+        }
+
+        public String getDeclineUrl() {
+            return declineUrl;
+        }
+    }
+
     public static final class EventDetailPageViewModel {
         private final EventCardViewModel event;
         private final String heroSubtitle;
         private final String heroMeta;
         private final String hostLabel;
+        private final String hostProfileHref;
+        private final String hostProfileImageUrl;
         private final List<ParticipantViewModel> participants;
         private final String participantCountLabel;
         private final String participantsEmptyState;
@@ -372,6 +645,8 @@ public final class PawUiViewModels {
                 final String heroSubtitle,
                 final String heroMeta,
                 final String hostLabel,
+                final String hostProfileHref,
+                final String hostProfileImageUrl,
                 final List<ParticipantViewModel> participants,
                 final String participantCountLabel,
                 final String participantsEmptyState,
@@ -385,6 +660,8 @@ public final class PawUiViewModels {
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
             this.hostLabel = hostLabel;
+            this.hostProfileHref = hostProfileHref;
+            this.hostProfileImageUrl = hostProfileImageUrl;
             this.participants = participants;
             this.participantCountLabel = participantCountLabel;
             this.participantsEmptyState = participantsEmptyState;
@@ -410,6 +687,14 @@ public final class PawUiViewModels {
 
         public String getHostLabel() {
             return hostLabel;
+        }
+
+        public String getHostProfileHref() {
+            return hostProfileHref;
+        }
+
+        public String getHostProfileImageUrl() {
+            return hostProfileImageUrl;
         }
 
         public List<ParticipantViewModel> getParticipants() {
@@ -449,28 +734,44 @@ public final class PawUiViewModels {
         }
     }
 
-    public static final class SelectOptionViewModel {
-        private final String value;
-        private final String label;
-        private final boolean selected;
+    public static final class PublicProfilePageViewModel {
+        private final String username;
+        private final String name;
+        private final String lastName;
+        private final String phone;
+        private final String profileImageUrl;
 
-        public SelectOptionViewModel(
-                final String value, final String label, final boolean selected) {
-            this.value = value;
-            this.label = label;
-            this.selected = selected;
+        public PublicProfilePageViewModel(
+                final String username,
+                final String name,
+                final String lastName,
+                final String phone,
+                final String profileImageUrl) {
+            this.username = username;
+            this.name = name;
+            this.lastName = lastName;
+            this.phone = phone;
+            this.profileImageUrl = profileImageUrl;
         }
 
-        public String getValue() {
-            return value;
+        public String getUsername() {
+            return username;
         }
 
-        public String getLabel() {
-            return label;
+        public String getName() {
+            return name;
         }
 
-        public boolean isSelected() {
-            return selected;
+        public String getLastName() {
+            return lastName;
+        }
+
+        public String getPhone() {
+            return phone;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
         }
     }
 }

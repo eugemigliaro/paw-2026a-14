@@ -7,7 +7,8 @@ public enum Sport {
     FOOTBALL("football", "Football"),
     TENNIS("tennis", "Tennis"),
     PADEL("padel", "Padel"),
-    BASKETBALL("basketball", "Basketball");
+    BASKETBALL("basketball", "Basketball"),
+    OTHER("other", "Other");
 
     private final String dbValue;
     private final String displayName;

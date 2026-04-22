@@ -24,7 +24,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
         try {
             mailService.send(recipientEmail, content);
         } catch (final RuntimeException exception) {
-            LOGGER.error("Failed to dispatch verification email to " + recipientEmail, exception);
+            LOGGER.error("Failed to dispatch email to " + recipientEmail, exception);
         }
     }
 }

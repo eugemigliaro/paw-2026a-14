@@ -1,0 +1,252 @@
+/* =========================================================
+Participation pages — host roster, host requests,
+player pending join requests
+========================================================= */
+
+/* Page layout */
+
+.page-shell--participation {
+	display: grid;
+	gap: 2rem;
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.participation-layout {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.participation-nav {
+	display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+/* Panel */
+
+.participation-panel {
+	padding: 0;
+	overflow: hidden;
+}
+
+.participation-empty-panel {
+	padding: 2.5rem 2rem;
+	text-align: center;
+}
+
+.participation-empty-state {
+	color: var(--text-muted);
+	font-size: 0.97rem;
+	line-height: 1.6;
+	margin: 0;
+	padding: 2.5rem 2rem;
+	text-align: center;
+}
+
+/* Participant manage list */
+
+.participant-manage-list {
+	display: grid;
+	gap: 0;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.participant-manage-list__item {
+	align-items: center;
+	border-bottom: 1px solid rgba(19, 52, 48, 0.07);
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+	padding: 1rem 1.5rem;
+}
+
+.participant-manage-list__item:last-child {
+	border-bottom: none;
+}
+
+.participant-manage-list__info {
+	align-items: center;
+	display: flex;
+	gap: 0.85rem;
+	min-width: 0;
+}
+
+.participant-manage-list__name {
+	font-size: 0.95rem;
+	font-weight: 700;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.participant-manage-list__actions {
+	display: flex;
+	flex-shrink: 0;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}
+
+.participant-manage-list__action-form {
+	display: contents;
+}
+
+/* Flash notices (page-level) */
+
+.notice {
+	border-radius: 16px;
+	font-size: 0.95rem;
+	line-height: 1.55;
+	padding: 0.875rem 1.1rem;
+}
+
+.notice--success {
+	background: rgba(15, 118, 110, 0.1);
+	color: #0f766e;
+}
+
+.notice--info {
+	background: rgba(37, 99, 235, 0.08);
+	color: #1d4ed8;
+}
+
+.notice--error {
+	background: rgba(220, 38, 38, 0.09);
+	color: #b91c1c;
+}
+
+/* Booking panel: info modifier (join-request pending state) */
+
+.booking-panel__notice--info {
+	background: rgba(37, 99, 235, 0.08);
+	color: #1d4ed8;
+}
+
+/* Pending join match cards (player pending page) */
+
+.pending-join-card {
+	display: grid;
+	gap: 0;
+}
+
+.pending-join-card__footer {
+	align-items: center;
+	background: var(--bg-muted);
+	border: 1px solid rgba(9, 51, 46, 0.07);
+	border-top: none;
+	border-radius: 0 0 var(--radius-card) var(--radius-card);
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+	padding: 0.85rem 1.1rem;
+}
+
+.pending-join-card .card {
+	border-radius: var(--radius-card) var(--radius-card) 0 0;
+}
+
+.pending-join-card__status {
+	color: #1d4ed8;
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.pending-join-card__cancel-form {
+	flex-shrink: 0;
+}
+
+/* Panel section heading */
+
+.participation-panel__section-title {
+	border-bottom: 1px solid rgba(19, 52, 48, 0.07);
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	margin: 0;
+	padding: 0.875rem 1.5rem;
+	text-transform: uppercase;
+	color: var(--text-muted, #6b7280);
+}
+
+/* Invite form */
+
+.invite-form {
+	padding: 1.5rem;
+}
+
+.invite-form__row {
+	display: flex;
+	align-items: flex-end;
+	gap: 0.75rem;
+	max-width: 28rem;
+	flex-wrap: wrap;
+}
+
+.invite-form__row .field {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+}
+
+.invite-form__email-input {
+	width: 100%;
+}
+
+.invite-form__submit {
+	flex-shrink: 0;
+	padding-bottom: 0;
+}
+
+/* Status badges in participant list */
+
+.participant-manage-list__status {
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	padding: 0.25rem 0.6rem;
+	border-radius: 999px;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.participant-manage-list__status--pending {
+	background: rgba(37, 99, 235, 0.08);
+	color: #1d4ed8;
+}
+
+.participant-manage-list__status--accepted {
+	background: rgba(15, 118, 110, 0.1);
+	color: #0f766e;
+}
+
+.participant-manage-list__status--declined {
+	background: rgba(220, 38, 38, 0.09);
+	color: #b91c1c;
+}
+
+/* Responsive */
+
+@media (max-width: 640px) {
+	.participant-manage-list__item {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+
+	.participant-manage-list__actions {
+		width: 100%;
+	}
+
+	.pending-join-card__footer {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.pending-join-card__cancel-form {
+		width: 100%;
+	}
+}

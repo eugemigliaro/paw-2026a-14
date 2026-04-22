@@ -1,9 +1,12 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.MatchService;
@@ -12,15 +15,19 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,223 +40,252 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class FeedController {
 
     private static final int PAGE_SIZE = 12;
-    private static final DateTimeFormatter SCHEDULE_FORMATTER =
-            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT);
 
     private final MatchService matchService;
+    private final MessageSource messageSource;
 
     @Autowired
-    public FeedController(final MatchService matchService) {
+    public FeedController(final MatchService matchService, final MessageSource messageSource) {
         this.matchService = matchService;
+        this.messageSource = messageSource;
     }
 
     @GetMapping("/")
     public ModelAndView showFeed(
             @Valid @ModelAttribute("feedSearchForm") final FeedSearchForm feedSearchForm,
             final BindingResult bindingResult,
-            @RequestParam(value = "sport", required = false) final String sport,
-            @RequestParam(value = "time", defaultValue = "all") final String time,
+            @RequestParam(value = "email", required = false) final String email,
+            @RequestParam(value = "sport", required = false) final List<String> sports,
+            @RequestParam(value = "startDate", required = false) final String startDate,
+            @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "sort", defaultValue = "soonest") final String sort,
             @RequestParam(value = "page", defaultValue = "1") final int page,
-            @RequestParam(value = "tz", required = false) final String timezone) {
+            @RequestParam(value = "minPrice", required = false) final String minPrice,
+            @RequestParam(value = "maxPrice", required = false) final String maxPrice,
+            @RequestParam(value = "tz", required = false) final String timezone,
+            final Locale locale) {
         final String query =
                 bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
                         ? ""
                         : feedSearchForm.getQ();
-        final PaginatedResult<Match> result =
-                matchService.searchPublicMatches(
-                        query, sport, time, sort, page, PAGE_SIZE, timezone);
+        final FeedFilters filters =
+                normalizeFilters(sports, startDate, endDate, sort, timezone, minPrice, maxPrice);
+        final PaginatedResult<Match> result = searchPublicMatches(query, filters, page);
         final ModelAndView mav = new ModelAndView("feed/index");
-        mav.addObject("shell", ShellViewModelFactory.browseShell());
-        final String safeSort = normalizeSort(sort);
-        mav.addObject("selectedSort", safeSort);
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/"));
+        mav.addObject("selectedSort", filters.selectedSort());
+        mav.addObject("selectedSports", filters.selectedSports());
+        mav.addObject("selectedTimezone", filters.timezone());
+        mav.addObject("selectedMinPrice", filters.minPrice());
+        mav.addObject("selectedMaxPrice", filters.maxPrice());
+        mav.addObject("selectedMinPriceValue", formatNullablePriceValue(filters.minPrice()));
+        mav.addObject("selectedMaxPriceValue", formatNullablePriceValue(filters.maxPrice()));
         mav.addObject(
-                "feedPage", buildFeedPageViewModel(query, sport, time, safeSort, timezone, result));
+                "selectedDateMinValue", LocalDate.now(parseZone(filters.timezone())).toString());
+        mav.addObject("selectedStartDateValue", filters.startDate());
+        mav.addObject("selectedEndDateValue", filters.endDate());
+        mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
         return mav;
     }
 
     private FeedPageViewModel buildFeedPageViewModel(
             final String query,
-            final String selectedSport,
-            final String selectedTime,
-            final String selectedSort,
-            final String timezone,
-            final PaginatedResult<Match> result) {
+            final FeedFilters filters,
+            final PaginatedResult<Match> result,
+            final Locale locale,
+            final String email) {
 
-        final ZoneId zoneId = parseZone(timezone);
-        final String normalizedSport =
-                selectedSport == null
-                        ? ""
-                        : Sport.fromDbValue(selectedSport).map(Sport::getDbValue).orElse("");
-        final String normalizedTime = normalizeTime(selectedTime);
+        final ZoneId zoneId = parseZone(filters.timezone());
 
         return new FeedPageViewModel(
                 "",
-                "Find your next game.",
-                "Discover local sports events, join communities, and get active with "
-                        + "Match Point.",
-                "What sports event are you looking for?",
-                "Find Matches",
+                messageSource.getMessage("feed.hero.title", null, locale),
+                messageSource.getMessage("feed.hero.description", null, locale),
+                messageSource.getMessage("feed.search.placeholder", null, locale),
+                messageSource.getMessage("feed.search.button", null, locale),
                 List.of(),
-                buildFilterGroups(query, normalizedSport, normalizedTime, selectedSort, timezone),
-                result.getItems().stream().map(match -> toCard(match, zoneId)).toList(),
+                buildFilterGroups(query, filters, locale, email),
+                result.getItems().stream().map(match -> toCard(match, zoneId, locale)).toList(),
                 result.getPage(),
                 result.getTotalPages(),
+                buildPaginationItems(
+                        query, filters, result.getPage(), result.getTotalPages(), email, locale),
                 result.hasPrevious()
-                        ? buildUrl(
-                                query,
-                                normalizedSport,
-                                normalizedTime,
-                                selectedSort,
-                                result.getPage() - 1,
-                                timezone)
+                        ? buildUrl(query, filters, result.getPage() - 1, email, locale)
                         : null,
                 result.hasNext()
-                        ? buildUrl(
-                                query,
-                                normalizedSport,
-                                normalizedTime,
-                                selectedSort,
-                                result.getPage() + 1,
-                                timezone)
+                        ? buildUrl(query, filters, result.getPage() + 1, email, locale)
                         : null);
     }
 
-    private static List<FilterGroupViewModel> buildFilterGroups(
+    private PaginatedResult<Match> searchPublicMatches(
+            final String query, final FeedFilters filters, final int page) {
+        final int safePage = page > 0 ? page : 1;
+        final String encodedSports = encodeCsv(filters.selectedSports());
+
+        return matchService.searchPublicMatches(
+                query,
+                encodedSports,
+                filters.startDate(),
+                filters.endDate(),
+                filters.selectedSort(),
+                safePage,
+                PAGE_SIZE,
+                filters.timezone(),
+                filters.minPrice(),
+                filters.maxPrice());
+    }
+
+    private static List<PaginationItemViewModel> buildPaginationItems(
             final String query,
-            final String selectedSport,
-            final String selectedTime,
-            final String selectedSort,
-            final String timezone) {
+            final FeedFilters filters,
+            final int currentPage,
+            final int totalPages,
+            final String email,
+            final Locale locale) {
+        if (totalPages <= 1) {
+            return List.of();
+        }
+
+        final List<PaginationItemViewModel> items = new ArrayList<>();
+        final int startPage = Math.max(2, Math.min(currentPage - 1, totalPages - 3));
+        final int endPage = Math.min(totalPages - 1, Math.max(currentPage + 1, 4));
+
+        items.add(pageItem(1, query, filters, currentPage, email, locale));
+
+        if (startPage > 2) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+
+        for (int page = startPage; page <= endPage; page++) {
+            items.add(pageItem(page, query, filters, currentPage, email, locale));
+        }
+
+        if (endPage < totalPages - 1) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+
+        items.add(pageItem(totalPages, query, filters, currentPage, email, locale));
+
+        return items;
+    }
+
+    private static PaginationItemViewModel pageItem(
+            final int page,
+            final String query,
+            final FeedFilters filters,
+            final int currentPage,
+            final String email,
+            final Locale locale) {
+        return new PaginationItemViewModel(
+                Integer.toString(page),
+                buildUrl(query, filters, page, email, locale),
+                page == currentPage,
+                false);
+    }
+
+    private List<FilterGroupViewModel> buildFilterGroups(
+            final String query,
+            final FeedFilters filters,
+            final Locale locale,
+            final String email) {
+        final List<String> selectedSports = filters.selectedSports();
 
         return List.of(
                 new FilterGroupViewModel(
-                        "Categories",
+                        messageSource.getMessage("filter.categories", null, locale),
                         List.of(
                                 new FilterOptionViewModel(
-                                        "Any sport",
-                                        buildUrl(
-                                                query, "", selectedTime, selectedSort, 1, timezone),
-                                        null,
-                                        selectedSport.isBlank()),
-                                new FilterOptionViewModel(
-                                        "Football",
+                                        messageSource.getMessage("filter.anySport", null, locale),
                                         buildUrl(
                                                 query,
-                                                Sport.FOOTBALL.getDbValue(),
-                                                selectedTime,
-                                                selectedSort,
+                                                filters.withSports(List.of()),
                                                 1,
-                                                timezone),
+                                                email,
+                                                locale),
                                         null,
-                                        Sport.FOOTBALL
-                                                .getDbValue()
-                                                .equalsIgnoreCase(selectedSport)),
+                                        selectedSports.isEmpty()),
                                 new FilterOptionViewModel(
-                                        "Tennis",
+                                        messageSource.getMessage("sport.football", null, locale),
                                         buildUrl(
                                                 query,
-                                                Sport.TENNIS.getDbValue(),
-                                                selectedTime,
-                                                selectedSort,
+                                                filters.withSports(
+                                                        toggleSport(
+                                                                selectedSports, Sport.FOOTBALL)),
                                                 1,
-                                                timezone),
+                                                email,
+                                                locale),
                                         null,
-                                        Sport.TENNIS.getDbValue().equalsIgnoreCase(selectedSport)),
+                                        isSportSelected(selectedSports, Sport.FOOTBALL)),
                                 new FilterOptionViewModel(
-                                        "Basketball",
+                                        messageSource.getMessage("sport.tennis", null, locale),
                                         buildUrl(
                                                 query,
-                                                Sport.BASKETBALL.getDbValue(),
-                                                selectedTime,
-                                                selectedSort,
+                                                filters.withSports(
+                                                        toggleSport(selectedSports, Sport.TENNIS)),
                                                 1,
-                                                timezone),
+                                                email,
+                                                locale),
                                         null,
-                                        Sport.BASKETBALL
-                                                .getDbValue()
-                                                .equalsIgnoreCase(selectedSport)),
+                                        isSportSelected(selectedSports, Sport.TENNIS)),
                                 new FilterOptionViewModel(
-                                        "Padel",
+                                        messageSource.getMessage("sport.basketball", null, locale),
                                         buildUrl(
                                                 query,
-                                                Sport.PADEL.getDbValue(),
-                                                selectedTime,
-                                                selectedSort,
+                                                filters.withSports(
+                                                        toggleSport(
+                                                                selectedSports, Sport.BASKETBALL)),
                                                 1,
-                                                timezone),
+                                                email,
+                                                locale),
                                         null,
-                                        Sport.PADEL.getDbValue().equalsIgnoreCase(selectedSport)))),
-                new FilterGroupViewModel(
-                        "Time",
-                        List.of(
+                                        isSportSelected(selectedSports, Sport.BASKETBALL)),
                                 new FilterOptionViewModel(
-                                        "Any time",
+                                        messageSource.getMessage("sport.padel", null, locale),
                                         buildUrl(
                                                 query,
-                                                selectedSport,
-                                                "all",
-                                                selectedSort,
+                                                filters.withSports(
+                                                        toggleSport(selectedSports, Sport.PADEL)),
                                                 1,
-                                                timezone),
+                                                email,
+                                                locale),
                                         null,
-                                        "all".equalsIgnoreCase(selectedTime)),
-                                new FilterOptionViewModel(
-                                        "Today",
-                                        buildUrl(
-                                                query,
-                                                selectedSport,
-                                                "today",
-                                                selectedSort,
-                                                1,
-                                                timezone),
-                                        null,
-                                        "today".equalsIgnoreCase(selectedTime)),
-                                new FilterOptionViewModel(
-                                        "Tomorrow",
-                                        buildUrl(
-                                                query,
-                                                selectedSport,
-                                                "tomorrow",
-                                                selectedSort,
-                                                1,
-                                                timezone),
-                                        null,
-                                        "tomorrow".equalsIgnoreCase(selectedTime)),
-                                new FilterOptionViewModel(
-                                        "This week",
-                                        buildUrl(
-                                                query,
-                                                selectedSport,
-                                                "week",
-                                                selectedSort,
-                                                1,
-                                                timezone),
-                                        null,
-                                        "week".equalsIgnoreCase(selectedTime)))));
+                                        isSportSelected(selectedSports, Sport.PADEL)))));
     }
 
-    private static EventCardViewModel toCard(final Match match, final ZoneId zoneId) {
-        final String schedule = SCHEDULE_FORMATTER.format(match.getStartsAt().atZone(zoneId));
-        final String priceLabel =
-                match.getPricePerPlayer() == null
-                        ? "Price TBD"
-                        : match.getPricePerPlayer().compareTo(BigDecimal.ZERO) == 0
-                                ? "Free"
-                                : "$" + match.getPricePerPlayer();
+    private EventCardViewModel toCard(final Match match, final ZoneId zoneId, final Locale locale) {
+        final Locale resolvedLocale = resolvedLocale(locale);
+        final String schedule =
+                scheduleFormatter(resolvedLocale).format(match.getStartsAt().atZone(zoneId));
+        final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
-                "/events/" + match.getId(),
-                match.getSport().getDisplayName(),
+                "/matches/" + match.getId(),
+                toSportLabel(match.getSport(), resolvedLocale),
                 match.getTitle(),
                 match.getAddress(),
                 schedule,
                 priceLabel,
-                match.getAvailableSpots() + " spots left",
+                messageSource.getMessage(
+                        "event.spotsLeft", new Object[] {match.getAvailableSpots()}, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
+        if (pricePerPlayer == null) {
+            return messageSource.getMessage("price.tbd", null, locale);
+        }
+        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
+                ? messageSource.getMessage("price.free", null, locale)
+                : messageSource.getMessage("price.amount", new Object[] {pricePerPlayer}, locale);
+    }
+
+    private String toSportLabel(final Sport sport, final Locale locale) {
+        return messageSource.getMessage(
+                "sport." + sport.getDbValue(), null, sport.getDisplayName(), locale);
     }
 
     private static String mediaClassFor(final Sport sport) {
@@ -278,53 +314,193 @@ public class FeedController {
         }
     }
 
+    private static DateTimeFormatter scheduleFormatter(final Locale locale) {
+        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+                .withLocale(resolvedLocale(locale));
+    }
+
+    private static Locale resolvedLocale(final Locale locale) {
+        return locale == null ? Locale.ENGLISH : locale;
+    }
+
     private static String buildUrl(
             final String query,
-            final String sport,
-            final String time,
-            final String sort,
+            final FeedFilters filters,
             final int page,
-            final String timezone) {
-
+            final String email,
+            final Locale locale) {
         final UriComponentsBuilder builder =
                 UriComponentsBuilder.fromPath("/")
                         .queryParam("q", query == null ? "" : query)
-                        .queryParam("time", time == null ? "all" : time)
-                        .queryParam("sort", normalizeSort(sort))
+                        .queryParam("sort", filters.selectedSort())
                         .queryParam("page", page);
 
-        if (sport != null && !sport.isBlank()) {
+        if (email != null && !email.isBlank()) {
+            builder.queryParam("email", email);
+        }
+
+        for (final String sport : filters.selectedSports()) {
             builder.queryParam("sport", sport.toLowerCase(Locale.ROOT));
         }
-        if (timezone != null && !timezone.isBlank()) {
-            builder.queryParam("tz", timezone);
+        if (filters.startDate() != null && !filters.startDate().isBlank()) {
+            builder.queryParam("startDate", filters.startDate());
+        }
+        if (filters.endDate() != null && !filters.endDate().isBlank()) {
+            builder.queryParam("endDate", filters.endDate());
+        }
+        if (filters.timezone() != null && !filters.timezone().isBlank()) {
+            builder.queryParam("tz", filters.timezone());
+        }
+        if (filters.minPrice() != null) {
+            builder.queryParam("minPrice", formatPriceValue(filters.minPrice()));
+        }
+        if (filters.maxPrice() != null) {
+            builder.queryParam("maxPrice", formatPriceValue(filters.maxPrice()));
         }
 
         return builder.build().encode().toUriString();
     }
 
-    private static String normalizeSort(final String sort) {
-        if (sort == null || sort.isBlank()) {
-            return MatchSort.SOONEST.getQueryValue();
+    private static List<String> normalizeSports(final List<String> sports) {
+        final List<String> normalized = normalizeCsvValues(sports);
+        final List<String> validSports = new ArrayList<>();
+        for (final String sport : normalized) {
+            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(validSports::add);
         }
-        return MatchSort.fromQueryValue(sort)
-                .map(MatchSort::getQueryValue)
-                .orElse(MatchSort.SOONEST.getQueryValue());
+
+        return List.copyOf(validSports);
     }
 
-    private static String normalizeTime(final String time) {
-        if (time == null || time.isBlank()) {
-            return "all";
+    private static FeedFilters normalizeFilters(
+            final List<String> sports,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final String timezone,
+            final String minPrice,
+            final String maxPrice) {
+        final String normalizedTimezone = normalizeTimezone(timezone);
+        final PriceRange priceRange = normalizePriceRange(minPrice, maxPrice);
+        final DateRange dateRange = normalizeDateRange(startDate, endDate, normalizedTimezone);
+
+        return new FeedFilters(
+                normalizeSports(sports),
+                dateRange.startDate(),
+                dateRange.endDate(),
+                normalizeSort(sort),
+                normalizedTimezone,
+                priceRange.minPrice(),
+                priceRange.maxPrice());
+    }
+
+    private static DateRange normalizeDateRange(
+            final String rawStartDate, final String rawEndDate, final String timezone) {
+        final LocalDate today = LocalDate.now(parseZone(timezone));
+        LocalDate startDate = parseDate(rawStartDate);
+        LocalDate endDate = parseDate(rawEndDate);
+
+        if (startDate != null && startDate.isBefore(today)) {
+            startDate = today;
         }
-        switch (time.toLowerCase(Locale.ROOT)) {
-            case "today":
-                return "today";
-            case "tomorrow":
-                return "tomorrow";
-            case "week":
-                return "week";
-            default:
-                return "all";
+        if (endDate != null && endDate.isBefore(today)) {
+            endDate = today;
+        }
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return new DateRange(endDate.toString(), startDate.toString());
+        }
+
+        return new DateRange(
+                startDate == null ? null : startDate.toString(),
+                endDate == null ? null : endDate.toString());
+    }
+
+    private static LocalDate parseDate(final String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(rawDate.trim());
+        } catch (final Exception ignored) {
+            return null;
+        }
+    }
+
+    private static String normalizeTimezone(final String timezone) {
+        if (timezone == null || timezone.isBlank()) {
+            return null;
+        }
+        return timezone.trim();
+    }
+
+    private static PriceRange normalizePriceRange(
+            final String rawMinPrice, final String rawMaxPrice) {
+        final BigDecimal minPrice = parseNonNegativePrice(rawMinPrice);
+        final BigDecimal maxPrice = parseNonNegativePrice(rawMaxPrice);
+
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            return new PriceRange(maxPrice, minPrice);
+        }
+
+        return new PriceRange(minPrice, maxPrice);
+    }
+
+    private static BigDecimal parseNonNegativePrice(final String rawPrice) {
+        if (rawPrice == null || rawPrice.isBlank()) {
+            return null;
+        }
+
+        try {
+            final BigDecimal price = new BigDecimal(rawPrice.trim());
+            if (price.compareTo(BigDecimal.ZERO) < 0) {
+                return null;
+            }
+            return price.stripTrailingZeros();
+        } catch (final NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private static boolean isSportSelected(final List<String> selectedSports, final Sport sport) {
+        return normalizeSports(selectedSports).contains(sport.getDbValue());
+    }
+
+    private static List<String> toggleSport(
+            final List<String> selectedSports, final Sport sportToToggle) {
+        return toggleValue(normalizeSports(selectedSports), sportToToggle.getDbValue());
+    }
+
+    private static String formatPriceValue(final BigDecimal price) {
+        return price.stripTrailingZeros().toPlainString();
+    }
+
+    private static String formatNullablePriceValue(final BigDecimal price) {
+        return price == null ? "" : formatPriceValue(price);
+    }
+
+    private record PriceRange(BigDecimal minPrice, BigDecimal maxPrice) {}
+
+    private record DateRange(String startDate, String endDate) {}
+
+    private record FeedFilters(
+            List<String> selectedSports,
+            String startDate,
+            String endDate,
+            String selectedSort,
+            String timezone,
+            BigDecimal minPrice,
+            BigDecimal maxPrice) {
+
+        private FeedFilters withSports(final List<String> sports) {
+            return new FeedFilters(
+                    normalizeSports(sports),
+                    startDate,
+                    endDate,
+                    selectedSort,
+                    timezone,
+                    minPrice,
+                    maxPrice);
         }
     }
 }

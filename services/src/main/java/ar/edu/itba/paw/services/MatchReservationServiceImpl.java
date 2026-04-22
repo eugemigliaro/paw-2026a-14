@@ -34,7 +34,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     @Override
     public void reserveSpot(final Long matchId, final Long userId) {
         final Match match =
-                matchDao.findById(matchId)
+                matchDao.findMatchById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchReservationException(
@@ -58,6 +58,11 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "closed", "The event is not open for reservations.");
         }
 
+        if (!"direct".equalsIgnoreCase(match.getJoinPolicy())) {
+            throw new MatchReservationException(
+                    "closed", "The event requires host approval to join.");
+        }
+
         if (!match.getStartsAt().isAfter(Instant.now(clock))) {
             throw new MatchReservationException("started", "The event has already started.");
         }
@@ -75,14 +80,15 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
     private MatchReservationException buildReservationFailure(
             final Long matchId, final Long userId) {
-        final Match currentMatch = matchDao.findById(matchId).orElse(null);
+        final Match currentMatch = matchDao.findMatchById(matchId).orElse(null);
 
         if (currentMatch == null) {
             return new MatchReservationException("not_found", "The event does not exist.");
         }
 
         if (!"open".equalsIgnoreCase(currentMatch.getStatus())
-                || !"public".equalsIgnoreCase(currentMatch.getVisibility())) {
+                || !"public".equalsIgnoreCase(currentMatch.getVisibility())
+                || !"direct".equalsIgnoreCase(currentMatch.getJoinPolicy())) {
             return new MatchReservationException(
                     "closed", "The event is not open for reservations.");
         }

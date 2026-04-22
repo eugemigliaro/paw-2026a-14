@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services.mail;
 
+import java.util.Objects;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import org.springframework.mail.MailException;
@@ -22,13 +23,16 @@ public class SmtpMailService implements MailService {
         try {
             final MimeMessage mimeMessage = javaMailSender.createMimeMessage();
             final MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom(mailProperties.getFrom());
-            helper.setTo(recipientEmail);
-            helper.setSubject(content.getSubject());
-            helper.setText(content.getTextBody(), content.getHtmlBody());
+            helper.setFrom(Objects.requireNonNull(mailProperties.getFrom()));
+            helper.setTo(Objects.requireNonNull(recipientEmail));
+            helper.setSubject(Objects.requireNonNull(content.getSubject()));
+            helper.setText(
+                    Objects.requireNonNull(content.getTextBody()),
+                    Objects.requireNonNull(content.getHtmlBody()));
+
             javaMailSender.send(mimeMessage);
         } catch (final MessagingException | MailException exception) {
-            throw new IllegalStateException("Failed to send verification email", exception);
+            throw new IllegalStateException("Failed to send email", exception);
         }
     }
 }

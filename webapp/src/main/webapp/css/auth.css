@@ -1,0 +1,348 @@
+.auth-shell {
+	max-width: 760px;
+}
+
+.auth-panel {
+	display: grid;
+	gap: 1.5rem;
+	padding: 2rem;
+}
+
+.auth-panel__main {
+	display: grid;
+	gap: 1.25rem;
+}
+
+.auth-panel__title {
+	font-size: clamp(2.7rem, 5vw, 3.8rem);
+}
+
+.auth-panel__description {
+	max-width: 42rem;
+}
+
+.auth-form {
+	display: grid;
+	gap: 1rem;
+}
+
+.auth-form__support {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: -0.35rem;
+}
+
+.password-field {
+	position: relative;
+}
+
+.password-field__input {
+	padding-right: 3.9rem;
+}
+
+.password-field__input::-ms-reveal,
+.password-field__input::-ms-clear {
+	display: none;
+}
+
+.password-field__input::-webkit-credentials-auto-fill-button,
+.password-field__input::-webkit-textfield-decoration-container {
+	appearance: none;
+	display: none !important;
+	visibility: hidden;
+}
+
+.password-field__toggle {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 10px;
+	color: #54716b;
+	cursor: pointer;
+	display: inline-flex;
+	height: 2.4rem;
+	justify-content: center;
+	padding: 0;
+	position: absolute;
+	right: 0.35rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 2.4rem;
+}
+
+.password-field__toggle:hover {
+	color: #214a44;
+}
+
+.password-field__toggle:focus-visible {
+	outline: 3px solid rgba(10, 105, 95, 0.14);
+	outline-offset: 2px;
+}
+
+.password-field__icon {
+	display: inline-flex;
+	height: 1.2rem;
+	width: 1.2rem;
+}
+
+.password-field__icon svg {
+	fill: none;
+	height: 100%;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+	width: 100%;
+}
+
+.password-field.is-visible .password-field__icon--show,
+.password-field__icon--hide {
+	display: none;
+}
+
+.password-field.is-visible .password-field__icon--hide {
+	display: inline-flex;
+}
+
+.field__error {
+	color: #8a1f1f;
+	display: block;
+	font-size: 0.85rem;
+	margin-top: 0.35rem;
+}
+
+.auth-notice {
+	border-radius: 16px;
+	font-size: 0.95rem;
+	font-weight: 600;
+	line-height: 1.5;
+	margin: 0;
+	padding: 0.9rem 1rem;
+}
+
+.auth-notice--success {
+	background: rgba(9, 120, 95, 0.08);
+	border: 1px solid rgba(9, 120, 95, 0.16);
+	color: #0f5c4c;
+}
+
+.auth-notice--error {
+	background: rgba(164, 57, 40, 0.08);
+	border: 1px solid rgba(164, 57, 40, 0.16);
+	color: #8a2c1d;
+}
+
+.auth-links {
+	display: grid;
+	gap: 0.55rem;
+}
+
+.auth-links__meta,
+.auth-support__copy,
+.auth-summary__item {
+	color: var(--text-secondary);
+	font-size: 0.95rem;
+	line-height: 1.55;
+	margin: 0;
+}
+
+.auth-link {
+	color: var(--accent-strong);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.auth-link:hover {
+	text-decoration: underline;
+}
+
+.auth-link--inline {
+	font-size: 0.92rem;
+}
+
+.auth-link--strong {
+	margin-left: 0.35rem;
+}
+
+.auth-support,
+.auth-summary {
+	background: rgba(0, 100, 90, 0.05);
+	border: 1px solid rgba(0, 100, 90, 0.12);
+	border-radius: 18px;
+	display: grid;
+	gap: 0.75rem;
+	padding: 1rem;
+}
+
+.auth-support__title {
+	font-size: 1rem;
+	margin: 0;
+}
+
+.auth-support__form {
+	display: grid;
+}
+
+.account-shell {
+	max-width: 760px;
+}
+
+.account-panel {
+	display: grid;
+	gap: 1.5rem;
+	padding: 2rem;
+}
+
+.account-panel__title {
+	font-size: clamp(2.5rem, 4.8vw, 3.5rem);
+}
+
+.account-panel__description {
+	max-width: 42rem;
+}
+
+.account-panel__header {
+	align-items: center;
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+}
+
+.account-form,
+.account-summary {
+	display: grid;
+	gap: 1rem;
+}
+
+.account-profile-media {
+	align-items: center;
+	background: rgba(0, 100, 90, 0.05);
+	border: 1px solid rgba(0, 100, 90, 0.12);
+	border-radius: 18px;
+	display: grid;
+	gap: 1rem;
+	justify-items: center;
+	padding: 1.25rem;
+}
+
+.account-profile-media--editable {
+	align-items: stretch;
+	justify-items: stretch;
+}
+
+.account-profile-media__preview {
+	align-items: center;
+	display: grid;
+	gap: 1rem;
+	justify-items: center;
+}
+
+.account-profile-media__image {
+	aspect-ratio: 1;
+	background: #eef3ef;
+	border: 1px solid rgba(28, 46, 43, 0.08);
+	border-radius: 999px;
+	box-shadow: 0 20px 40px -34px rgba(24, 46, 42, 0.35);
+	height: auto;
+	max-width: 180px;
+	width: 100%;
+}
+
+.account-profile-media__copy {
+	display: grid;
+	gap: 0.4rem;
+	justify-items: center;
+	text-align: center;
+}
+
+.account-profile-media__title {
+	font-size: 1.05rem;
+	margin: 0;
+}
+
+.account-profile-media__description {
+	color: var(--text-secondary);
+	line-height: 1.55;
+	margin: 0;
+	max-width: 30rem;
+}
+
+.account-profile-media__form {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.account-actions {
+	display: flex;
+	gap: 0.75rem;
+	justify-content: flex-end;
+	margin-top: 0.5rem;
+}
+
+.account-actions--top {
+	flex-shrink: 0;
+	margin-top: 0;
+}
+
+.account-logout {
+	display: flex;
+	justify-content: flex-end;
+	margin: 0;
+}
+
+.account-readonly-control {
+	color: var(--text-primary);
+	cursor: default;
+}
+
+.account-locked-field {
+	position: relative;
+}
+
+.account-locked-field__control {
+	padding-right: 3rem;
+}
+
+.account-locked-field__icon {
+	align-items: center;
+	color: var(--text-muted);
+	display: inline-flex;
+	height: 1rem;
+	justify-content: center;
+	pointer-events: none;
+	position: absolute;
+	right: 0.95rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1rem;
+}
+
+.account-locked-field__icon svg {
+	fill: none;
+	height: 100%;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+	width: 100%;
+}
+
+@media (max-width: 640px) {
+	.auth-panel {
+		padding: 1.5rem;
+	}
+
+	.account-panel__header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.account-profile-media__preview {
+		justify-items: stretch;
+	}
+
+	.account-profile-media__copy {
+		justify-items: start;
+		text-align: left;
+	}
+}
