@@ -269,49 +269,61 @@
 								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
 								<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
 								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
-								<div class="booking-panel__details">
-									<div class="booking-panel__detail-row">
-										<dt><spring:message code="host.manage.label" /></dt>
-										<dd><spring:message code="host.manage.detail" /></dd>
-									</div>
+								<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
+								<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
+								<ui:overflowMenu
+									ariaLabel="${hostManageMenuTriggerLabel}"
+									menuAriaLabel="${hostManageMenuLabel}"
+									className="booking-panel__overflow-menu">
+									<c:url var="hostEditHref" value="${hostEditPath}" />
+									<c:choose>
+										<c:when test="${hostCanEdit}">
+											<a class="overflow-menu__item" href="${hostEditHref}" role="menuitem">
+												<c:out value="${hostManageEditLabel}" />
+											</a>
+										</c:when>
+										<c:otherwise>
+											<span
+												class="overflow-menu__item overflow-menu__item--disabled"
+												role="menuitem"
+												aria-disabled="true">
+												<c:out value="${hostManageEditLabel}" />
+											</span>
+										</c:otherwise>
+									</c:choose>
+									<c:url var="hostCancelAction" value="${hostCancelPath}" />
+									<form
+										method="post"
+										action="${hostCancelAction}"
+										data-submit-guard="true"
+										data-submit-loading-label="${hostManageCancellingLabel}">
+										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+										<c:choose>
+											<c:when test="${hostCanCancel}">
+												<button
+													class="overflow-menu__item overflow-menu__item--danger"
+													type="submit"
+													role="menuitem">
+													<c:out value="${hostManageCancelLabel}" />
+												</button>
+											</c:when>
+											<c:otherwise>
+												<button
+													class="overflow-menu__item overflow-menu__item--danger"
+													type="submit"
+													role="menuitem"
+													disabled="disabled"
+													aria-disabled="true">
+													<c:out value="${hostManageCancelLabel}" />
+												</button>
+											</c:otherwise>
+										</c:choose>
+									</form>
+								</ui:overflowMenu>
+								<div class="booking-panel__host-note">
+									<p class="detail-label"><spring:message code="host.manage.label" /></p>
+									<p><spring:message code="host.manage.detail" /></p>
 								</div>
-								<c:url var="hostEditHref" value="${hostEditPath}" />
-								<c:choose>
-									<c:when test="${hostCanEdit}">
-										<ui:button
-											label="${hostManageEditLabel}"
-											href="${hostEditHref}"
-											variant="secondary"
-											fullWidth="${true}"
-										/>
-									</c:when>
-									<c:otherwise>
-										<ui:button
-											label="${hostManageEditLabel}"
-											type="button"
-											variant="secondary"
-											fullWidth="${true}"
-											disabled="${true}"
-										/>
-									</c:otherwise>
-								</c:choose>
-								<c:url var="hostCancelAction" value="${hostCancelPath}" />
-								<form
-									method="post"
-									action="${hostCancelAction}"
-									data-submit-guard="true"
-									data-submit-loading-label="${hostManageCancellingLabel}"
-									class="booking-panel__request-form"
-								>
-									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-									<ui:button
-										label="${hostManageCancelLabel}"
-										type="submit"
-										variant="danger"
-										disabled="${not hostCanCancel}"
-										fullWidth="${true}"
-									/>
-								</form>
 							</c:if>
 
 							<dl class="booking-panel__details">

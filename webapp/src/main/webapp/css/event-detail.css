@@ -480,11 +480,40 @@
 	margin: 0;
 }
 
+.booking-panel__host-note {
+	display: grid;
+	gap: 0.28rem;
+	margin-right: 3.4rem;
+}
+
+.booking-panel__host-note .detail-label,
+.booking-panel__host-note p {
+	margin: 0;
+}
+
+.booking-panel__host-note p:last-child {
+	color: var(--text-secondary);
+	font-size: 0.96rem;
+	line-height: 1.5;
+}
+
 .booking-panel__detail-row {
 	align-items: baseline;
 	display: flex;
 	gap: 1rem;
 	justify-content: space-between;
+}
+
+.booking-panel__overflow-menu {
+	position: absolute;
+	right: 1.3rem;
+	top: 1.3rem;
+	z-index: 5;
+}
+
+.booking-panel__overflow-menu .overflow-menu__panel {
+	right: 0;
+	top: calc(100% + 0.35rem);
 }
 
 .booking-panel__detail-row dt,
@@ -610,6 +639,11 @@
 		max-width: none;
 		text-align: left;
 	}
+
+	.booking-panel__overflow-menu .overflow-menu__panel {
+		left: auto;
+		right: 0;
+	}
 }
 
 @media (max-width: 720px) {
@@ -634,6 +668,21 @@
 
 	.booking-panel {
 		padding: 1.15rem;
+	}
+
+	.booking-panel__overflow-menu {
+		right: 1.15rem;
+		top: 1.15rem;
+	}
+
+	.booking-panel__overflow-menu .overflow-menu__panel {
+		left: auto;
+		min-width: min(12rem, calc(100vw - 4rem));
+		right: 0;
+	}
+
+	.booking-panel__host-note {
+		margin-right: 3.1rem;
 	}
 }
 
