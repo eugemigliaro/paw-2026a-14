@@ -15,204 +15,73 @@
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 
 			<main class="page-shell page-shell--detail">
-				<ui:returnButton />
-				<section
-					class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
-				>
-					<c:if test="${not empty eventPage.event.bannerImageUrl}">
-						<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
-						<img
-							class="event-hero__image"
-							src="${eventHeroBannerSrc}"
-							alt=""
-							loading="eager"
-							decoding="async"
-						/>
-					</c:if>
-					<div class="event-hero__content">
-						<span class="event-hero__badge"
-							><c:out value="${eventPage.event.sport}"
-						/></span>
-						<div class="event-hero__copy">
-							<c:if test="${not empty eventPage.heroSubtitle}">
-								<p class="event-hero__eyebrow">
-									<c:out value="${eventPage.heroSubtitle}" />
-								</p>
-							</c:if>
-							<h1 class="event-hero__title">
-								<c:out value="${eventPage.event.title}" />
-							</h1>
-							<c:if test="${not empty eventPage.heroMeta}">
-								<p class="event-hero__meta">
-									<c:out value="${eventPage.heroMeta}" />
-								</p>
-							</c:if>
+				<section class="detail-top">
+					<section
+						class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
+					>
+						<c:if test="${not empty eventPage.event.bannerImageUrl}">
+							<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
+							<img
+								class="event-hero__image"
+								src="${eventHeroBannerSrc}"
+								alt=""
+								loading="eager"
+								decoding="async"
+							/>
+						</c:if>
+						<div class="event-hero__content">
+							<span class="event-hero__badge"
+								><c:out value="${eventPage.event.sport}"
+							/></span>
+							<div class="event-hero__copy">
+								<c:if test="${not empty eventPage.heroSubtitle}">
+									<p class="event-hero__eyebrow">
+										<c:out value="${eventPage.heroSubtitle}" />
+									</p>
+								</c:if>
+								<h1 class="event-hero__title">
+									<c:out value="${eventPage.event.title}" />
+								</h1>
+								<c:if test="${not empty eventPage.heroMeta}">
+									<p class="event-hero__meta">
+										<c:out value="${eventPage.heroMeta}" />
+									</p>
+								</c:if>
+							</div>
+							<ul
+								class="event-hero__status-list"
+								aria-label="${eventSummaryAria}"
+							>
+								<li class="event-hero__status-item">
+									<span class="detail-label"><spring:message code="event.detail.when" /></span>
+									<strong
+										><c:out value="${eventPage.event.schedule}"
+									/></strong>
+								</li>
+								<li class="event-hero__status-item">
+									<span class="detail-label"><spring:message code="event.detail.where" /></span>
+									<strong
+										><c:out value="${eventPage.event.venue}"
+									/></strong>
+								</li>
+								<li class="event-hero__status-item">
+									<span class="detail-label"><spring:message code="event.detail.group" /></span>
+									<strong
+										><c:out
+											value="${eventPage.participantCountLabel}"
+									/></strong>
+								</li>
+								<li class="event-hero__status-item">
+									<span class="detail-label"><spring:message code="event.detail.entry" /></span>
+									<strong
+										><c:out value="${eventPage.bookingPrice}"
+									/></strong>
+								</li>
+							</ul>
 						</div>
-						<ul
-							class="event-hero__status-list"
-							aria-label="${eventSummaryAria}"
-						>
-							<li class="event-hero__status-item">
-								<span class="detail-label"><spring:message code="event.detail.when" /></span>
-								<strong
-									><c:out value="${eventPage.event.schedule}"
-								/></strong>
-							</li>
-							<li class="event-hero__status-item">
-								<span class="detail-label"><spring:message code="event.detail.where" /></span>
-								<strong
-									><c:out value="${eventPage.event.venue}"
-								/></strong>
-							</li>
-							<li class="event-hero__status-item">
-								<span class="detail-label"><spring:message code="event.detail.group" /></span>
-								<strong
-									><c:out
-										value="${eventPage.participantCountLabel}"
-								/></strong>
-							</li>
-							<li class="event-hero__status-item">
-								<span class="detail-label"><spring:message code="event.detail.entry" /></span>
-								<strong
-									><c:out value="${eventPage.bookingPrice}"
-								/></strong>
-							</li>
-						</ul>
-					</div>
-				</section>
+					</section>
 
-				<section class="detail-layout">
-					<div class="detail-layout__main">
-						<article class="panel host-card">
-							<div class="host-card__main">
-								<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
-								<img
-									class="host-card__avatar"
-									src="${hostProfileImageSrc}"
-									alt=""
-									aria-hidden="true"
-									loading="lazy"
-									decoding="async" />
-								<div class="host-card__copy">
-									<span class="detail-label"><spring:message code="event.detail.hostedBy" /></span>
-									<c:choose>
-										<c:when test="${not empty eventPage.hostProfileHref}">
-											<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
-											<a class="host-card__name" href="${hostProfileHref}">
-												<c:out value="${eventPage.hostLabel}" />
-											</a>
-										</c:when>
-										<c:otherwise>
-											<strong class="host-card__name"><c:out value="${eventPage.hostLabel}" /></strong>
-										</c:otherwise>
-									</c:choose>
-								</div>
-							</div>
-						</article>
-
-						<section
-							class="detail-section detail-section--participants"
-							aria-labelledby="participant-section-title"
-						>
-							<div
-								class="section-head section-head--detail-compact"
-							>
-								<div>
-									<h2
-										id="participant-section-title"
-										class="detail-section__title"
-									>
-										<spring:message code="event.detail.whosJoining" />
-									</h2>
-								</div>
-								<span class="detail-section__meta"
-									><c:out
-										value="${eventPage.participantCountLabel}"
-								/></span>
-							</div>
-
-							<c:choose>
-								<c:when test="${empty eventPage.participants}">
-									<div class="panel participant-empty-state">
-										<p
-											class="participant-empty-state__title"
-										>
-											<spring:message code="event.detail.noPlayers" />
-										</p>
-										<p
-											class="participant-empty-state__copy"
-										>
-											<c:out
-												value="${eventPage.participantsEmptyState}"
-											/>
-										</p>
-									</div>
-								</c:when>
-								<c:otherwise>
-									<ul
-										class="participant-list"
-										aria-label="${participantsAria}"
-									>
-										<c:forEach
-											var="participant"
-											items="${eventPage.participants}"
-										>
-											<li class="participant-list__item">
-												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
-												<img
-													class="participant-list__avatar"
-													src="${participantProfileImageSrc}"
-													alt=""
-													aria-hidden="true"
-													loading="lazy"
-													decoding="async" />
-												<div
-													class="participant-list__copy"
-												>
-													<c:url var="participantProfileHref" value="${participant.profileHref}" />
-													<a
-														class="participant-list__name"
-														href="${participantProfileHref}"
-														><c:out
-															value="${participant.username}"
-													/></a>
-												</div>
-											</li>
-										</c:forEach>
-									</ul>
-								</c:otherwise>
-							</c:choose>
-						</section>
-
-						<section
-							class="detail-section detail-section--about"
-							aria-labelledby="about-event-title"
-						>
-							<div
-								class="section-head section-head--detail-compact"
-							>
-								<div>
-									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
-									<h2
-										id="about-event-title"
-										class="detail-section__title"
-									>
-										<spring:message code="event.detail.aboutEvent" />
-									</h2>
-								</div>
-							</div>
-							<div class="detail-stack">
-								<c:forEach
-									var="paragraph"
-									items="${eventPage.aboutParagraphs}"
-								>
-									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
-								</c:forEach>
-							</div>
-						</section>
-					</div>
-
-					<aside class="detail-layout__sidebar">
+					<aside class="detail-top__sidebar">
 						<article class="panel booking-panel">
 							<div class="booking-panel__header">
 								<div class="booking-panel__header-copy">
@@ -393,13 +262,11 @@
 							<spring:message var="joiningLabel" code="event.booking.joining" />
 							<c:if test="${not (hostViewer and isPrivateEvent) or isConfirmedParticipant or isInvitedPlayer}">
 								<c:choose>
-									<%-- Already a confirmed participant --%>
 									<c:when test="${isConfirmedParticipant}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
 										</p>
 									</c:when>
-									<%-- Not logged in --%>
 									<c:when test="${reservationRequiresLogin}">
 										<c:choose>
 											<c:when test="${reservationEnabled}">
@@ -420,7 +287,6 @@
 											</c:otherwise>
 										</c:choose>
 									</c:when>
-									<%-- Player already has a pending request --%>
 									<c:when test="${hasPendingJoinRequest}">
 										<c:url var="cancelJoinAction" value="${cancelJoinRequestPath}" />
 										<spring:message var="cancellingLabel" code="event.joinRequest.cancelling" />
@@ -440,7 +306,6 @@
 										</form>
 										<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
 									</c:when>
-									<%-- Invite-only: player can request --%>
 									<c:when test="${joinRequestEnabled}">
 										<c:url var="joinRequestAction" value="${joinRequestPath}" />
 										<spring:message var="requestingLabel" code="event.joinRequest.requesting" />
@@ -457,7 +322,6 @@
 										</form>
 										<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
 									</c:when>
-									<%-- Public event: standard reservation --%>
 									<c:when test="${reservationEnabled}">
 										<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
 										<form
@@ -472,7 +336,6 @@
 										</form>
 										<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 									</c:when>
-									<%-- Invited player: can accept or decline --%>
 									<c:when test="${isInvitedPlayer}">
 										<c:if test="${inviteAccepted}">
 											<p class="booking-panel__notice booking-panel__notice--success">
@@ -515,7 +378,6 @@
 										</form>
 										<p class="booking-panel__note"><spring:message code="event.invite.note" /></p>
 									</c:when>
-									<%-- Fallback: disabled --%>
 									<c:otherwise>
 										<ui:button label="${eventPage.ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
 										<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
@@ -524,6 +386,139 @@
 							</c:if>
 						</article>
 					</aside>
+				</section>
+
+				<section class="detail-layout">
+					<div class="detail-layout__main">
+						<article class="panel host-card">
+							<div class="host-card__main">
+								<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
+								<img
+									class="host-card__avatar"
+									src="${hostProfileImageSrc}"
+									alt=""
+									aria-hidden="true"
+									loading="lazy"
+									decoding="async" />
+								<div class="host-card__copy">
+									<span class="detail-label"><spring:message code="event.detail.hostedBy" /></span>
+									<c:choose>
+										<c:when test="${not empty eventPage.hostProfileHref}">
+											<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
+											<a class="host-card__name" href="${hostProfileHref}">
+												<c:out value="${eventPage.hostLabel}" />
+											</a>
+										</c:when>
+										<c:otherwise>
+											<strong class="host-card__name"><c:out value="${eventPage.hostLabel}" /></strong>
+										</c:otherwise>
+									</c:choose>
+								</div>
+							</div>
+						</article>
+
+						<section
+							class="detail-section detail-section--participants"
+							aria-labelledby="participant-section-title"
+						>
+							<div
+								class="section-head section-head--detail-compact"
+							>
+								<div>
+									<h2
+										id="participant-section-title"
+										class="detail-section__title"
+									>
+										<spring:message code="event.detail.whosJoining" />
+									</h2>
+								</div>
+								<span class="detail-section__meta"
+									><c:out
+										value="${eventPage.participantCountLabel}"
+								/></span>
+							</div>
+
+							<c:choose>
+								<c:when test="${empty eventPage.participants}">
+									<div class="panel participant-empty-state">
+										<p
+											class="participant-empty-state__title"
+										>
+											<spring:message code="event.detail.noPlayers" />
+										</p>
+										<p
+											class="participant-empty-state__copy"
+										>
+											<c:out
+												value="${eventPage.participantsEmptyState}"
+											/>
+										</p>
+									</div>
+								</c:when>
+								<c:otherwise>
+									<ul
+										class="participant-list"
+										aria-label="${participantsAria}"
+									>
+										<c:forEach
+											var="participant"
+											items="${eventPage.participants}"
+										>
+											<li class="participant-list__item">
+												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
+												<img
+													class="participant-list__avatar"
+													src="${participantProfileImageSrc}"
+													alt=""
+													aria-hidden="true"
+													loading="lazy"
+													decoding="async" />
+												<div
+													class="participant-list__copy"
+												>
+													<c:url var="participantProfileHref" value="${participant.profileHref}" />
+													<a
+														class="participant-list__name"
+														href="${participantProfileHref}"
+														><c:out
+															value="${participant.username}"
+													/></a>
+												</div>
+											</li>
+										</c:forEach>
+									</ul>
+								</c:otherwise>
+							</c:choose>
+						</section>
+
+						<section
+							class="detail-section detail-section--about"
+							aria-labelledby="about-event-title"
+						>
+							<div
+								class="section-head section-head--detail-compact"
+							>
+								<div>
+									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
+									<h2
+										id="about-event-title"
+										class="detail-section__title"
+									>
+										<spring:message code="event.detail.aboutEvent" />
+									</h2>
+								</div>
+							</div>
+							<div class="detail-stack">
+								<c:forEach
+									var="paragraph"
+									items="${eventPage.aboutParagraphs}"
+								>
+									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
+								</c:forEach>
+							</div>
+						</section>
+					</div>
+
 				</section>
 
 				<section class="detail-recommendations">

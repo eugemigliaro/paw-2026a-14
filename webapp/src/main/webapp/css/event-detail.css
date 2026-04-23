@@ -1,7 +1,14 @@
 .page-shell--detail {
-	display: grid;
+	display: flex;
+	flex-direction: column;
 	gap: 2rem;
 	padding-top: 1rem;
+}
+
+.detail-top {
+	align-items: stretch;
+	display: flex;
+	gap: 1.8rem;
 }
 
 .event-hero {
@@ -9,11 +16,21 @@
 	border-radius: 32px;
 	color: #f7fcfa;
 	display: grid;
+	flex: 1 1 0;
 	isolation: isolate;
-	min-height: clamp(28rem, 62vh, 36rem);
+	min-height: clamp(20rem, 42vh, 27rem);
 	overflow: hidden;
-	padding: 2rem 1.5rem 2rem;
+	padding: 1.6rem 1.35rem 1.6rem;
 	position: relative;
+}
+
+.detail-top__sidebar {
+	display: flex;
+	flex: 0 0 24rem;
+}
+
+.detail-top__sidebar .booking-panel {
+	width: 100%;
 }
 
 .event-hero__image {
@@ -186,7 +203,7 @@
 .event-hero__title {
 	color: #ffffff;
 	font-family: "Plus Jakarta Sans", sans-serif;
-	font-size: clamp(3rem, 5vw, 4.7rem);
+	font-size: clamp(2.6rem, 4.2vw, 4rem);
 	font-weight: 800;
 	letter-spacing: -0.075em;
 	line-height: 0.92;
@@ -233,10 +250,7 @@
 }
 
 .detail-layout {
-	align-items: start;
-	display: grid;
-	gap: 2rem;
-	grid-template-columns: minmax(0, 1.42fr) minmax(320px, 0.82fr);
+	display: block;
 }
 
 .detail-layout__main,
@@ -610,12 +624,16 @@
 }
 
 @media (max-width: 1180px) {
-	.detail-layout {
-		grid-template-columns: 1fr;
+	.detail-top {
+		flex-direction: column;
 	}
 
 	.booking-panel {
 		position: static;
+	}
+
+	.detail-top__sidebar {
+		flex-basis: auto;
 	}
 }
 
