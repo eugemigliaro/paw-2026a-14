@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.config;
 
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.webapp.security.AccountAuthenticationProvider;
+import ar.edu.itba.paw.webapp.security.ContinueFlagLoginEntryPoint;
 import ar.edu.itba.paw.webapp.security.LoginFailureHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
@@ -22,6 +24,9 @@ public class SecurityConfig {
             final AccountAuthenticationProvider accountAuthenticationProvider,
             final LoginFailureHandler loginFailureHandler)
             throws Exception {
+        final HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
+        requestCache.setMatchingRequestParameterName("continue");
+
         http.authenticationProvider(accountAuthenticationProvider)
                 .authorizeHttpRequests(
                         authorize ->
@@ -77,7 +82,10 @@ public class SecurityConfig {
                         logout ->
                                 logout.logoutUrl("/logout")
                                         .logoutSuccessUrl("/login?logout=1")
-                                        .permitAll());
+                                        .permitAll())
+                .exceptionHandling(
+                        ex -> ex.authenticationEntryPoint(new ContinueFlagLoginEntryPoint()))
+                .requestCache(cache -> cache.requestCache(requestCache));
 
         return http.build();
     }

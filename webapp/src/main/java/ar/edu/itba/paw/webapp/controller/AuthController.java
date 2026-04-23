@@ -54,6 +54,7 @@ public class AuthController {
             @RequestParam(value = "verified", required = false) final String verified,
             @RequestParam(value = "reset", required = false) final String reset,
             @RequestParam(value = "logout", required = false) final String logout,
+            @RequestParam(value = "continue", required = false) final String continueFlag,
             final Locale locale) {
         if (CurrentAuthenticatedUser.get().isPresent()) {
             return new ModelAndView("redirect:/");
@@ -67,6 +68,7 @@ public class AuthController {
         mav.addObject("verificationConfirmed", "1".equals(verified));
         mav.addObject("passwordResetCompleted", "1".equals(reset));
         mav.addObject("loggedOut", "1".equals(logout));
+        mav.addObject("loginContinue", continueFlag != null);
         return mav;
     }
 
