@@ -21,6 +21,8 @@
 		<maven.compiler.release>21</maven.compiler.release>
 		<spring.version>5.3.33</spring.version>
 		<spring.security.version>5.8.16</spring.security.version>
+		<slf4j.version>2.0.17</slf4j.version>
+		<logback.version>1.5.18</logback.version>
 		<org.postgresql.version>42.2.5</org.postgresql.version>
 		<flyway.version>12.1.1</flyway.version>
 		<mockito.version>5.23.0</mockito.version>
@@ -85,6 +87,16 @@
 				<artifactId>spring-security-test</artifactId>
 				<version>${spring.security.version}</version>
 				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>${logback.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.postgresql</groupId>

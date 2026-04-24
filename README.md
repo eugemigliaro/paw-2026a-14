@@ -35,6 +35,14 @@ The repository includes example files for both environments:
 
 Do not commit the real `config/local.properties` or `config/pampero.properties` files.
 
+### Logging
+
+This repository uses **SLF4J + Logback** for application logging.
+
+- Runtime Logback config: `webapp/src/main/resources/logback.xml`
+- Test Logback config: `webapp/src/test/resources/logback-test.xml`
+- Logging rules and examples: `docs/logging.md`
+
 ### Run locally
 
 Create `config/local.properties` from `config/local.example.properties`, then run:

@@ -3,6 +3,8 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.User;
 import java.util.List;
 import javax.sql.DataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class MatchParticipantJdbcDao implements MatchParticipantDao {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MatchParticipantJdbcDao.class);
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -32,6 +35,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
 
     @Override
     public boolean createReservationIfSpace(final Long matchId, final Long userId) {
+        LOGGER.debug("Attempting reservation insert matchId={} userId={}", matchId, userId);
         final int insertedRows =
                 jdbcTemplate.update(
                         "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
@@ -54,6 +58,9 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         userId,
                         matchId,
                         userId);
+        if (insertedRows != 1) {
+            LOGGER.debug("Reservation insert rejected matchId={} userId={}", matchId, userId);
+        }
         return insertedRows == 1;
     }
 

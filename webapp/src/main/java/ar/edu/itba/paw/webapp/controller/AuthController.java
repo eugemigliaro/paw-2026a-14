@@ -14,6 +14,8 @@ import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Optional;
 import javax.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
@@ -27,6 +29,7 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class AuthController {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
     private final AccountAuthService accountAuthService;
     private final MessageSource messageSource;
 
@@ -57,6 +60,7 @@ public class AuthController {
             @RequestParam(value = "continue", required = false) final String continueFlag,
             final Locale locale) {
         if (CurrentAuthenticatedUser.get().isPresent()) {
+            LOGGER.debug("Authenticated user redirected from /login");
             return new ModelAndView("redirect:/");
         }
 
@@ -75,6 +79,7 @@ public class AuthController {
     @GetMapping("/register")
     public ModelAndView showRegister(final Locale locale) {
         if (CurrentAuthenticatedUser.get().isPresent()) {
+            LOGGER.debug("Authenticated user redirected from /register");
             return new ModelAndView("redirect:/");
         }
         return registerView(new RegisterForm(), locale);
@@ -108,6 +113,7 @@ public class AuthController {
                                     registerForm.getLastName(),
                                     registerForm.getPhone(),
                                     registerForm.getPassword()));
+            LOGGER.info("Registration verification requested locale={}", locale);
             return checkEmailView(
                     locale,
                     messageSource.getMessage(
@@ -119,6 +125,7 @@ public class AuthController {
                     messageSource.getMessage("auth.registration.requested", null, locale),
                     result.getExpiresAt());
         } catch (final AccountRegistrationException exception) {
+            LOGGER.warn("Registration rejected code={}", exception.getCode());
             applyRegistrationError(bindingResult, exception);
             return registerView(registerForm, locale);
         }
@@ -132,8 +139,10 @@ public class AuthController {
         try {
             if (email != null && !email.isBlank()) {
                 result = accountAuthService.resendVerification(email);
+                LOGGER.info("Resend verification requested locale={}", locale);
             }
         } catch (final IllegalArgumentException ignored) {
+            LOGGER.warn("Resend verification rejected due to invalid email format");
             result = Optional.empty();
         }
 
@@ -149,6 +158,7 @@ public class AuthController {
     @GetMapping("/forgot-password")
     public ModelAndView showForgotPassword(final Locale locale) {
         if (CurrentAuthenticatedUser.get().isPresent()) {
+            LOGGER.debug("Authenticated user redirected from /forgot-password");
             return new ModelAndView("redirect:/");
         }
         return forgotPasswordView(new ForgotPasswordForm(), locale);
@@ -166,6 +176,7 @@ public class AuthController {
 
         final Optional<VerificationRequestResult> result =
                 accountAuthService.requestPasswordReset(forgotPasswordForm.getEmail());
+        LOGGER.info("Password reset requested locale={}", locale);
         return checkEmailView(
                 locale,
                 messageSource.getMessage("auth.checkEmail.passwordReset.summary", null, locale),
