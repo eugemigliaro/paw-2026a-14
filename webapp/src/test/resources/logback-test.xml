@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<property name="defaultPattern" value="%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg %nopex%n"/>
+
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>${defaultPattern:-}</pattern>
+		</encoder>
+	</appender>
+
+	<logger name="ar.edu.itba.paw" level="WARN"/>
+	<logger name="org.springframework.test" level="WARN"/>
+	<logger name="org.springframework" level="WARN"/>
+	<logger name="org.flywaydb" level="WARN"/>
+
+	<root level="WARN">
+		<appender-ref ref="console"/>
+	</root>
+</configuration>
