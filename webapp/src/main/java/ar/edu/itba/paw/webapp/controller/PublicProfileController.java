@@ -49,7 +49,9 @@ public class PublicProfileController {
 
     @GetMapping("/users/{username}")
     public ModelAndView showPublicProfile(
-            @PathVariable("username") final String username, final Locale locale) {
+            @PathVariable("username") final String username,
+            @RequestParam(value = "reviewForm", required = false) final String reviewForm,
+            final Locale locale) {
         final User user =
                 userService
                         .findByUsername(username)
@@ -72,7 +74,7 @@ public class PublicProfileController {
                         user.getLastName(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, locale);
+        addReviewModel(mav, user, reviewForm, locale);
         mav.addObject(
                 "profileEyebrow",
                 messageSource.getMessage(
@@ -154,7 +156,8 @@ public class PublicProfileController {
         }
     }
 
-    private void addReviewModel(final ModelAndView mav, final User user, final Locale locale) {
+    private void addReviewModel(
+            final ModelAndView mav, final User user, final String reviewForm, final Locale locale) {
         final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user.getId());
         final List<PlayerReviewViewModel> reviews =
                 playerReviewService
@@ -170,17 +173,20 @@ public class PublicProfileController {
                 currentUserId == null
                         ? Optional.empty()
                         : playerReviewService.findReviewByPair(currentUserId, user.getId());
+        final boolean reviewCanSubmit =
+                currentUserId != null
+                        && !currentUserId.equals(user.getId())
+                        && playerReviewService.canReview(currentUserId, user.getId());
+        final String profilePath = "/users/" + user.getUsername();
 
         mav.addObject("reviewSummary", summary);
         mav.addObject("profileReviews", reviews);
-        mav.addObject(
-                "reviewFormVisible",
-                currentUserId != null
-                        && !currentUserId.equals(user.getId())
-                        && playerReviewService.canReview(currentUserId, user.getId()));
+        mav.addObject("reviewCanSubmit", reviewCanSubmit);
+        mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
         mav.addObject("viewerReview", viewerReview.orElse(null));
-        mav.addObject("reviewActionPath", "/users/" + user.getUsername() + "/reviews");
-        mav.addObject("reviewDeletePath", "/users/" + user.getUsername() + "/reviews/delete");
+        mav.addObject("reviewActionPath", profilePath + "/reviews");
+        mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
+        mav.addObject("reviewFormPath", profilePath + "?reviewForm=open#reviews");
     }
 
     private PlayerReviewViewModel toReviewViewModel(
@@ -242,6 +248,7 @@ public class PublicProfileController {
         } else if (status != null) {
             redirect.append("?review=").append(status);
         }
+        redirect.append("#reviews");
         return new ModelAndView(redirect.toString());
     }
 }

@@ -70,23 +70,26 @@
 .public-profile-review-stats {
 	display: grid;
 	gap: 1rem;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .public-profile-review-stat {
 	background: var(--bg-muted);
 	border: 1px solid rgba(28, 46, 43, 0.08);
-	border-radius: 16px;
+	border-radius: 12px;
 	display: grid;
 	gap: 0.25rem;
 	padding: 1rem;
 }
 
 .public-profile-review-stat__value {
+	align-items: center;
 	color: var(--text-primary);
+	display: inline-flex;
 	font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
 	font-size: 1.65rem;
 	font-weight: 700;
+	gap: 0.5rem;
 	line-height: 1;
 }
 
@@ -97,10 +100,97 @@
 	text-transform: uppercase;
 }
 
+.public-profile-review-icon {
+	display: inline-flex;
+	flex: 0 0 auto;
+	height: 1.05rem;
+	width: 1.05rem;
+}
+
+.public-profile-review-icon svg {
+	display: block;
+	fill: currentColor;
+	height: 100%;
+	width: 100%;
+}
+
+.public-profile-review-icon--like,
+.public-profile-review-stat--like .public-profile-review-stat__value,
+.public-profile-review-quick-action--like {
+	color: #15803d;
+}
+
+.public-profile-review-icon--dislike,
+.public-profile-review-stat--dislike .public-profile-review-stat__value,
+.public-profile-review-quick-action--dislike {
+	color: #b91c1c;
+}
+
+.public-profile-review-actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	justify-content: space-between;
+}
+
+.public-profile-review-quick-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.65rem;
+}
+
+.public-profile-review-quick-form {
+	margin: 0;
+}
+
+.public-profile-review-quick-action {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid rgba(28, 46, 43, 0.1);
+	border-radius: 999px;
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 800;
+	gap: 0.45rem;
+	min-height: 2.65rem;
+	padding: 0.7rem 1rem;
+	transition:
+		background 0.18s ease,
+		border-color 0.18s ease,
+		box-shadow 0.18s ease,
+		transform 0.18s ease;
+}
+
+.public-profile-review-quick-action:hover,
+.public-profile-review-quick-action:focus-visible {
+	background: var(--bg-muted);
+	border-color: rgba(28, 46, 43, 0.18);
+	box-shadow: 0 16px 32px -28px rgba(18, 45, 40, 0.46);
+	outline: none;
+	transform: translateY(-1px);
+}
+
+.public-profile-review-quick-action.is-selected {
+	background: rgba(21, 128, 61, 0.1);
+	border-color: rgba(21, 128, 61, 0.24);
+}
+
+.public-profile-review-quick-action--dislike.is-selected {
+	background: rgba(185, 28, 28, 0.09);
+	border-color: rgba(185, 28, 28, 0.24);
+}
+
+.public-profile-review-menu .overflow-menu__panel {
+	right: 0;
+}
+
 .public-profile-review-form-panel {
 	background: #fbfbf9;
 	border: 1px solid rgba(28, 46, 43, 0.08);
-	border-radius: 18px;
+	border-radius: 12px;
 	display: grid;
 	gap: 1rem;
 	padding: 1.25rem;
@@ -157,7 +247,7 @@
 
 .public-profile-review-list__item {
 	border: 1px solid rgba(28, 46, 43, 0.08);
-	border-radius: 16px;
+	border-radius: 12px;
 	display: grid;
 	gap: 0.6rem;
 	padding: 1rem;
@@ -181,9 +271,12 @@
 }
 
 .public-profile-review-list__reaction {
+	align-items: center;
 	border-radius: 999px;
+	display: inline-flex;
 	font-size: 0.78rem;
 	font-weight: 800;
+	gap: 0.35rem;
 	padding: 0.25rem 0.55rem;
 }
 
@@ -216,5 +309,22 @@
 
 	.public-profile-review-stats {
 		grid-template-columns: 1fr;
+	}
+
+	.public-profile-review-actions {
+		align-items: stretch;
+	}
+
+	.public-profile-review-quick-actions {
+		flex: 1 1 100%;
+	}
+
+	.public-profile-review-quick-form,
+	.public-profile-review-quick-action {
+		flex: 1 1 0;
+	}
+
+	.public-profile-review-quick-action {
+		justify-content: center;
 	}
 }

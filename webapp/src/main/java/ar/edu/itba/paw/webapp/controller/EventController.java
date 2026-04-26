@@ -298,7 +298,7 @@ public class EventController {
                 || !playerReviewService.canReview(currentUserId, participant.getId())) {
             return null;
         }
-        return profileHrefFor(participant);
+        return profileHrefFor(participant) + "?reviewForm=open#reviews";
     }
 
     private String profileImageUrlForParticipant(final User participant) {

@@ -944,7 +944,7 @@ class PawUiRouteTest {
                                                         Matchers.hasProperty(
                                                                 "reviewHref",
                                                                 Matchers.is(
-                                                                        "/users/second-player"))))));
+                                                                        "/users/second-player?reviewForm=open#reviews"))))));
     }
 
     @Test
@@ -1642,18 +1642,34 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getPublicProfileRouteShowsReviewFormForEligibleAuthenticatedViewer() throws Exception {
+    void getPublicProfileRouteShowsReviewActionsForEligibleAuthenticatedViewer() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
-                .andExpect(model().attribute("reviewFormVisible", true))
+                .andExpect(model().attribute("reviewCanSubmit", true))
+                .andExpect(model().attribute("reviewFormVisible", false))
+                .andExpect(
+                        model().attribute(
+                                        "reviewFormPath",
+                                        "/users/second-player?reviewForm=open#reviews"))
                 .andExpect(model().attributeExists("viewerReview"))
                 .andExpect(
                         model().attribute(
                                         "reviewSummary",
                                         Matchers.hasProperty("reviewCount", Matchers.is(1L))));
+    }
+
+    @Test
+    void getPublicProfileRouteOpensReviewFormWhenRequested() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewForm", "open"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("reviewCanSubmit", true))
+                .andExpect(model().attribute("reviewFormVisible", true));
     }
 
     @Test
@@ -1665,7 +1681,7 @@ class PawUiRouteTest {
                                 .param("reaction", "dislike")
                                 .param("comment", "Arrived late"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/second-player?review=saved"));
+                .andExpect(redirectedUrl("/users/second-player?review=saved#reviews"));
     }
 
     @Test
@@ -1674,7 +1690,7 @@ class PawUiRouteTest {
 
         mockMvc.perform(post("/users/second-player/reviews/delete"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/second-player?review=deleted"));
+                .andExpect(redirectedUrl("/users/second-player?review=deleted#reviews"));
     }
 
     @Test
