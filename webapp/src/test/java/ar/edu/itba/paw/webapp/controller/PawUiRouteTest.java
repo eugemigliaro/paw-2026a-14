@@ -1610,6 +1610,8 @@ class PawUiRouteTest {
                 .andExpect(model().attributeExists("profilePage"))
                 .andExpect(model().attributeExists("reviewSummary"))
                 .andExpect(model().attributeExists("profileReviews"))
+                .andExpect(model().attribute("reviewLikeLabel", "Likes"))
+                .andExpect(model().attribute("reviewDislikeLabel", "Dislikes"))
                 .andExpect(model().attribute("reviewFormVisible", false))
                 .andExpect(
                         model().attribute(
@@ -1650,6 +1652,8 @@ class PawUiRouteTest {
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attribute("reviewCanSubmit", true))
                 .andExpect(model().attribute("reviewFormVisible", false))
+                .andExpect(model().attribute("reviewLikeLabel", "Like"))
+                .andExpect(model().attribute("reviewDislikeLabel", "Dislikes"))
                 .andExpect(
                         model().attribute(
                                         "reviewFormPath",

@@ -135,145 +135,173 @@
 					</c:if>
 
 					<spring:message var="reviewSummaryAria" code="profile.reviews.summaryAria" />
-					<div class="public-profile-review-stats" aria-label="${reviewSummaryAria}">
-						<div class="public-profile-review-stat public-profile-review-stat--like">
-							<span class="public-profile-review-stat__value">
-								<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
-									</svg>
-								</span>
-								<c:out value="${reviewSummary.likeCount}" />
-							</span>
-							<span class="public-profile-review-stat__label"><spring:message code="profile.reviews.likes" /></span>
-						</div>
-						<div class="public-profile-review-stat public-profile-review-stat--dislike">
-							<span class="public-profile-review-stat__value">
-								<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
-									</svg>
-								</span>
-								<c:out value="${reviewSummary.dislikeCount}" />
-							</span>
-							<span class="public-profile-review-stat__label"><spring:message code="profile.reviews.dislikes" /></span>
-						</div>
-					</div>
-
 					<c:if test="${reviewCanSubmit}">
 						<c:url var="reviewAction" value="${reviewActionPath}" />
 						<c:url var="reviewFormHref" value="${reviewFormPath}" />
-						<spring:message var="quickReviewAria" code="profile.reviews.quick.aria" />
+						<c:url var="reviewSectionHref" value="${reviewSectionPath}" />
 						<spring:message var="quickLikeLabel" code="profile.reviews.quick.like" />
 						<spring:message var="quickDislikeLabel" code="profile.reviews.quick.dislike" />
-						<spring:message var="leaveReviewLabel" code="profile.reviews.form.open" />
-						<spring:message var="editReviewLabel" code="profile.reviews.form.edit" />
+						<spring:message var="addCommentLabel" code="profile.reviews.form.addComment" />
+						<spring:message var="editCommentLabel" code="profile.reviews.form.editComment" />
 						<spring:message var="deleteReviewLabel" code="profile.reviews.form.delete" />
 						<spring:message var="reviewMenuAria" code="profile.reviews.menu.aria" />
 						<spring:message var="reviewMenuLabel" code="profile.reviews.menu.label" />
-						<div class="public-profile-review-actions">
-							<div class="public-profile-review-quick-actions" aria-label="${quickReviewAria}">
-								<form method="post" action="${reviewAction}" class="public-profile-review-quick-form">
+					</c:if>
+					<div class="public-profile-review-stats" aria-label="${reviewSummaryAria}">
+						<c:choose>
+							<c:when test="${reviewCanSubmit}">
+								<form method="post" action="${reviewAction}" class="public-profile-review-stat-form">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 									<input type="hidden" name="reaction" value="like" />
+									<c:if test="${not empty viewerReview.comment}">
+										<input type="hidden" name="comment" value="<c:out value='${viewerReview.comment}' />" />
+									</c:if>
 									<button
 										type="submit"
-										class="public-profile-review-quick-action public-profile-review-quick-action--like ${not empty viewerReview and viewerReview.reaction.dbValue eq 'like' ? 'is-selected' : ''}"
+										class="public-profile-review-stat public-profile-review-stat--like public-profile-review-stat--button ${not empty viewerReview and viewerReview.reaction.dbValue eq 'like' ? 'is-selected' : ''}"
 										aria-label="${quickLikeLabel}">
+										<span class="public-profile-review-stat__value">
+											<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
+												<svg viewBox="0 0 24 24" focusable="false">
+													<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
+												</svg>
+											</span>
+											<c:out value="${reviewSummary.likeCount}" />
+										</span>
+										<span class="public-profile-review-stat__label"><c:out value="${reviewLikeLabel}" /></span>
+									</button>
+								</form>
+							</c:when>
+							<c:otherwise>
+								<div class="public-profile-review-stat public-profile-review-stat--like">
+									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
 											<svg viewBox="0 0 24 24" focusable="false">
 												<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
 											</svg>
 										</span>
-										<span><spring:message code="profile.reviews.reaction.like" /></span>
-									</button>
-								</form>
-								<form method="post" action="${reviewAction}" class="public-profile-review-quick-form">
+										<c:out value="${reviewSummary.likeCount}" />
+									</span>
+									<span class="public-profile-review-stat__label"><c:out value="${reviewLikeLabel}" /></span>
+								</div>
+							</c:otherwise>
+						</c:choose>
+						<c:choose>
+							<c:when test="${reviewCanSubmit}">
+								<form method="post" action="${reviewAction}" class="public-profile-review-stat-form">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 									<input type="hidden" name="reaction" value="dislike" />
+									<c:if test="${not empty viewerReview.comment}">
+										<input type="hidden" name="comment" value="<c:out value='${viewerReview.comment}' />" />
+									</c:if>
 									<button
 										type="submit"
-										class="public-profile-review-quick-action public-profile-review-quick-action--dislike ${not empty viewerReview and viewerReview.reaction.dbValue eq 'dislike' ? 'is-selected' : ''}"
+										class="public-profile-review-stat public-profile-review-stat--dislike public-profile-review-stat--button ${not empty viewerReview and viewerReview.reaction.dbValue eq 'dislike' ? 'is-selected' : ''}"
 										aria-label="${quickDislikeLabel}">
+										<span class="public-profile-review-stat__value">
+											<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
+												<svg viewBox="0 0 24 24" focusable="false">
+													<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
+												</svg>
+											</span>
+											<c:out value="${reviewSummary.dislikeCount}" />
+										</span>
+										<span class="public-profile-review-stat__label"><c:out value="${reviewDislikeLabel}" /></span>
+									</button>
+								</form>
+							</c:when>
+							<c:otherwise>
+								<div class="public-profile-review-stat public-profile-review-stat--dislike">
+									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
 											<svg viewBox="0 0 24 24" focusable="false">
 												<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
 											</svg>
 										</span>
-										<span><spring:message code="profile.reviews.reaction.dislike" /></span>
+										<c:out value="${reviewSummary.dislikeCount}" />
+									</span>
+									<span class="public-profile-review-stat__label"><c:out value="${reviewDislikeLabel}" /></span>
+								</div>
+							</c:otherwise>
+						</c:choose>
+					</div>
+
+					<c:if test="${reviewCanSubmit and not empty viewerReview}">
+						<div class="public-profile-review-actions">
+							<div class="public-profile-review-current">
+								<span class="public-profile-review-current__label"><spring:message code="profile.reviews.form.selectedReaction" /></span>
+								<span class="public-profile-review-list__reaction public-profile-review-list__reaction--${viewerReview.reaction.dbValue}">
+									<span class="public-profile-review-icon public-profile-review-icon--${viewerReview.reaction.dbValue}" aria-hidden="true">
+										<c:choose>
+											<c:when test="${viewerReview.reaction.dbValue eq 'like'}">
+												<svg viewBox="0 0 24 24" focusable="false">
+													<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
+												</svg>
+											</c:when>
+											<c:otherwise>
+												<svg viewBox="0 0 24 24" focusable="false">
+													<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
+												</svg>
+											</c:otherwise>
+										</c:choose>
+									</span>
+									<c:choose>
+										<c:when test="${viewerReview.reaction.dbValue eq 'like'}">
+											<spring:message code="profile.reviews.reaction.like" />
+										</c:when>
+										<c:otherwise>
+											<spring:message code="profile.reviews.reaction.dislike" />
+										</c:otherwise>
+									</c:choose>
+								</span>
+							</div>
+							<ui:overflowMenu
+								ariaLabel="${reviewMenuAria}"
+								menuAriaLabel="${reviewMenuLabel}"
+								className="public-profile-review-menu">
+								<a class="overflow-menu__item" href="${reviewFormHref}" role="menuitem">
+									<c:choose>
+										<c:when test="${empty viewerReview.comment}">
+											<c:out value="${addCommentLabel}" />
+										</c:when>
+										<c:otherwise>
+											<c:out value="${editCommentLabel}" />
+										</c:otherwise>
+									</c:choose>
+								</a>
+								<c:url var="reviewDeleteAction" value="${reviewDeletePath}" />
+								<form method="post" action="${reviewDeleteAction}">
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<button class="overflow-menu__item overflow-menu__item--danger" type="submit" role="menuitem">
+										<c:out value="${deleteReviewLabel}" />
 									</button>
 								</form>
-							</div>
-							<c:choose>
-								<c:when test="${not empty viewerReview}">
-									<ui:overflowMenu
-										ariaLabel="${reviewMenuAria}"
-										menuAriaLabel="${reviewMenuLabel}"
-										className="public-profile-review-menu">
-										<a class="overflow-menu__item" href="${reviewFormHref}" role="menuitem">
-											<c:out value="${editReviewLabel}" />
-										</a>
-										<c:url var="reviewDeleteAction" value="${reviewDeletePath}" />
-										<form method="post" action="${reviewDeleteAction}">
-											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-											<button class="overflow-menu__item overflow-menu__item--danger" type="submit" role="menuitem">
-												<c:out value="${deleteReviewLabel}" />
-											</button>
-										</form>
-									</ui:overflowMenu>
-								</c:when>
-								<c:otherwise>
-									<ui:button label="${leaveReviewLabel}" href="${reviewFormHref}" variant="secondary" />
-								</c:otherwise>
-							</c:choose>
+							</ui:overflowMenu>
 						</div>
 					</c:if>
 
-					<c:if test="${reviewFormVisible}">
+					<c:if test="${reviewFormVisible and empty viewerReview}">
+						<p class="public-profile-review-prompt"><spring:message code="profile.reviews.form.chooseReaction" /></p>
+					</c:if>
+
+					<c:if test="${reviewFormVisible and not empty viewerReview}">
 						<section class="public-profile-review-form-panel" aria-labelledby="review-form-title">
 							<h3 id="review-form-title" class="public-profile-review-form-panel__title">
 								<c:choose>
-									<c:when test="${not empty viewerReview}">
-										<spring:message code="profile.reviews.form.editTitle" />
+									<c:when test="${empty viewerReview.comment}">
+										<spring:message code="profile.reviews.form.addComment" />
 									</c:when>
 									<c:otherwise>
-										<spring:message code="profile.reviews.form.title" />
+										<spring:message code="profile.reviews.form.editComment" />
 									</c:otherwise>
 								</c:choose>
 							</h3>
 							<form method="post" action="${reviewAction}" class="public-profile-review-form">
 								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-								<fieldset class="public-profile-review-form__fieldset">
-									<legend class="field__label"><spring:message code="profile.reviews.form.reaction" /></legend>
-									<label class="public-profile-review-option">
-										<input
-											type="radio"
-											name="reaction"
-											value="like"
-											required="required"
-											${empty viewerReview or viewerReview.reaction.dbValue eq 'like' ? 'checked="checked"' : ''} />
-										<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
-											<svg viewBox="0 0 24 24" focusable="false">
-												<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
-											</svg>
-										</span>
-										<span><spring:message code="profile.reviews.reaction.like" /></span>
-									</label>
-									<label class="public-profile-review-option">
-										<input
-											type="radio"
-											name="reaction"
-											value="dislike"
-											required="required"
-											${not empty viewerReview and viewerReview.reaction.dbValue eq 'dislike' ? 'checked="checked"' : ''} />
-										<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
-											<svg viewBox="0 0 24 24" focusable="false">
-												<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
-											</svg>
-										</span>
-										<span><spring:message code="profile.reviews.reaction.dislike" /></span>
-									</label>
-								</fieldset>
+								<input
+									type="hidden"
+									name="reaction"
+									value="${not empty viewerReview ? viewerReview.reaction.dbValue : 'like'}" />
 								<label class="field" for="player-review-comment">
 									<span class="field__label"><spring:message code="profile.reviews.form.comment" /></span>
 									<textarea
@@ -285,6 +313,8 @@
 								</label>
 								<div class="public-profile-review-form__actions">
 									<spring:message var="saveReviewLabel" code="profile.reviews.form.save" />
+									<spring:message var="cancelReviewLabel" code="profile.reviews.form.cancel" />
+									<ui:button label="${cancelReviewLabel}" href="${reviewSectionHref}" variant="secondary" />
 									<ui:button label="${saveReviewLabel}" type="submit" />
 								</div>
 							</form>

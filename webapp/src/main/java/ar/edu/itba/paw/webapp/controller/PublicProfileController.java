@@ -180,6 +180,20 @@ public class PublicProfileController {
         final String profilePath = "/users/" + user.getUsername();
 
         mav.addObject("reviewSummary", summary);
+        mav.addObject(
+                "reviewLikeLabel",
+                reviewCountLabel(
+                        summary.getLikeCount(),
+                        "profile.reviews.like",
+                        "profile.reviews.likes",
+                        locale));
+        mav.addObject(
+                "reviewDislikeLabel",
+                reviewCountLabel(
+                        summary.getDislikeCount(),
+                        "profile.reviews.dislike",
+                        "profile.reviews.dislikes",
+                        locale));
         mav.addObject("profileReviews", reviews);
         mav.addObject("reviewCanSubmit", reviewCanSubmit);
         mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
@@ -187,6 +201,7 @@ public class PublicProfileController {
         mav.addObject("reviewActionPath", profilePath + "/reviews");
         mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
         mav.addObject("reviewFormPath", profilePath + "?reviewForm=open#reviews");
+        mav.addObject("reviewSectionPath", profilePath + "#reviews");
     }
 
     private PlayerReviewViewModel toReviewViewModel(
@@ -218,6 +233,14 @@ public class PublicProfileController {
                 null,
                 reaction.getDbValue(),
                 locale);
+    }
+
+    private String reviewCountLabel(
+            final long count,
+            final String singularCode,
+            final String pluralCode,
+            final Locale locale) {
+        return messageSource.getMessage(count == 1L ? singularCode : pluralCode, null, locale);
     }
 
     private static String updatedAtLabel(final PlayerReview review, final Locale locale) {
