@@ -13,7 +13,6 @@ public interface PlayerReviewService {
     PlayerReview submitReview(
             Long reviewerUserId,
             Long reviewedUserId,
-            Long originMatchId,
             PlayerReviewReaction reaction,
             String comment);
 
@@ -25,5 +24,5 @@ public interface PlayerReviewService {
 
     List<PlayerReview> findRecentReviewsForUser(Long reviewedUserId, int limit, int offset);
 
-    boolean canReview(Long reviewerUserId, Long reviewedUserId, Long matchId);
+    boolean canReview(Long reviewerUserId, Long reviewedUserId);
 }

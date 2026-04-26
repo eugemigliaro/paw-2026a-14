@@ -31,16 +31,16 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testSubmitReviewCreatesValidReview() {
         final PlayerReview persisted =
-                review(1L, 2L, 3L, 10L, PlayerReviewReaction.LIKE, "Great teammate", null);
-        Mockito.when(playerReviewDao.canReview(2L, 3L, 10L)).thenReturn(true);
+                review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great teammate", null);
+        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
         Mockito.when(
                         playerReviewDao.upsertReview(
-                                2L, 3L, 10L, PlayerReviewReaction.LIKE, "Great teammate"))
+                                2L, 3L, PlayerReviewReaction.LIKE, "Great teammate"))
                 .thenReturn(persisted);
 
         final PlayerReview review =
                 playerReviewService.submitReview(
-                        2L, 3L, 10L, PlayerReviewReaction.LIKE, "  Great teammate  ");
+                        2L, 3L, PlayerReviewReaction.LIKE, "  Great teammate  ");
 
         Assertions.assertEquals(persisted, review);
         Assertions.assertEquals("Great teammate", review.getComment());
@@ -48,19 +48,15 @@ public class PlayerReviewServiceImplTest {
 
     @Test
     public void testSubmitReviewAllowsOnceEverEditableBehavior() {
-        final PlayerReview updated =
-                review(1L, 2L, 3L, 11L, PlayerReviewReaction.DISLIKE, "Late", null);
-        Mockito.when(playerReviewDao.canReview(2L, 3L, 11L)).thenReturn(true);
-        Mockito.when(
-                        playerReviewDao.upsertReview(
-                                2L, 3L, 11L, PlayerReviewReaction.DISLIKE, "Late"))
+        final PlayerReview updated = review(1L, 2L, 3L, PlayerReviewReaction.DISLIKE, "Late", null);
+        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
+        Mockito.when(playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late"))
                 .thenReturn(updated);
 
         final PlayerReview review =
-                playerReviewService.submitReview(2L, 3L, 11L, PlayerReviewReaction.DISLIKE, "Late");
+                playerReviewService.submitReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
 
         Assertions.assertEquals(1L, review.getId());
-        Assertions.assertEquals(11L, review.getOriginMatchId());
         Assertions.assertEquals(PlayerReviewReaction.DISLIKE, review.getReaction());
     }
 
@@ -71,21 +67,21 @@ public class PlayerReviewServiceImplTest {
                         PlayerReviewException.class,
                         () ->
                                 playerReviewService.submitReview(
-                                        2L, 2L, 10L, PlayerReviewReaction.LIKE, "Great"));
+                                        2L, 2L, PlayerReviewReaction.LIKE, "Great"));
 
         Assertions.assertEquals(PlayerReviewException.SELF_REVIEW, exception.getCode());
     }
 
     @Test
     public void testSubmitReviewRejectsIneligibleUsers() {
-        Mockito.when(playerReviewDao.canReview(2L, 3L, 10L)).thenReturn(false);
+        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(false);
 
         final PlayerReviewException exception =
                 Assertions.assertThrows(
                         PlayerReviewException.class,
                         () ->
                                 playerReviewService.submitReview(
-                                        2L, 3L, 10L, PlayerReviewReaction.LIKE, "Great"));
+                                        2L, 3L, PlayerReviewReaction.LIKE, "Great"));
 
         Assertions.assertEquals(PlayerReviewException.NOT_ELIGIBLE, exception.getCode());
     }
@@ -95,28 +91,27 @@ public class PlayerReviewServiceImplTest {
         final PlayerReviewException exception =
                 Assertions.assertThrows(
                         PlayerReviewException.class,
-                        () -> playerReviewService.submitReview(2L, 3L, 10L, null, "Great"));
+                        () -> playerReviewService.submitReview(2L, 3L, null, "Great"));
 
         Assertions.assertEquals(PlayerReviewException.INVALID_REACTION, exception.getCode());
     }
 
     @Test
     public void testSubmitReviewStoresBlankCommentAsNull() {
-        final PlayerReview persisted =
-                review(1L, 2L, 3L, 10L, PlayerReviewReaction.LIKE, null, null);
-        Mockito.when(playerReviewDao.canReview(2L, 3L, 10L)).thenReturn(true);
-        Mockito.when(playerReviewDao.upsertReview(2L, 3L, 10L, PlayerReviewReaction.LIKE, null))
+        final PlayerReview persisted = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, null, null);
+        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
+        Mockito.when(playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, null))
                 .thenReturn(persisted);
 
         final PlayerReview review =
-                playerReviewService.submitReview(2L, 3L, 10L, PlayerReviewReaction.LIKE, "   ");
+                playerReviewService.submitReview(2L, 3L, PlayerReviewReaction.LIKE, "   ");
 
         Assertions.assertNull(review.getComment());
     }
 
     @Test
     public void testSubmitReviewRejectsTooLongComment() {
-        Mockito.when(playerReviewDao.canReview(2L, 3L, 10L)).thenReturn(true);
+        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
         final String tooLongComment = "a".repeat(PlayerReviewService.MAX_COMMENT_LENGTH + 1);
 
         final PlayerReviewException exception =
@@ -124,7 +119,7 @@ public class PlayerReviewServiceImplTest {
                         PlayerReviewException.class,
                         () ->
                                 playerReviewService.submitReview(
-                                        2L, 3L, 10L, PlayerReviewReaction.LIKE, tooLongComment));
+                                        2L, 3L, PlayerReviewReaction.LIKE, tooLongComment));
 
         Assertions.assertEquals(PlayerReviewException.COMMENT_TOO_LONG, exception.getCode());
     }
@@ -143,8 +138,7 @@ public class PlayerReviewServiceImplTest {
 
     @Test
     public void testFindMethodsDelegateToDaoResults() {
-        final PlayerReview review =
-                review(1L, 2L, 3L, 10L, PlayerReviewReaction.LIKE, "Great", null);
+        final PlayerReview review = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great", null);
         final PlayerReviewSummary summary = new PlayerReviewSummary(3L, 1, 0, 1);
         Mockito.when(playerReviewDao.findByPair(2L, 3L)).thenReturn(Optional.of(review));
         Mockito.when(playerReviewDao.getSummaryForUser(3L)).thenReturn(summary);
@@ -160,7 +154,6 @@ public class PlayerReviewServiceImplTest {
             final Long id,
             final Long reviewerUserId,
             final Long reviewedUserId,
-            final Long originMatchId,
             final PlayerReviewReaction reaction,
             final String comment,
             final Instant deletedAt) {
@@ -168,7 +161,6 @@ public class PlayerReviewServiceImplTest {
                 id,
                 reviewerUserId,
                 reviewedUserId,
-                originMatchId,
                 reaction,
                 comment,
                 Instant.parse("2026-04-01T18:00:00Z"),

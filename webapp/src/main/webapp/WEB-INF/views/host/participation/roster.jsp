@@ -79,9 +79,19 @@
 												<span class="participant-list__avatar" aria-hidden="true">
 													<c:out value="${p.avatarLabel}" />
 												</span>
-												<strong class="participant-manage-list__name">
-													<c:out value="${p.username}" />
-												</strong>
+												<c:choose>
+													<c:when test="${not empty p.profileHref}">
+														<c:url var="participantProfileHref" value="${p.profileHref}" />
+														<a class="participant-manage-list__name" href="${participantProfileHref}">
+															<c:out value="${p.username}" />
+														</a>
+													</c:when>
+													<c:otherwise>
+														<strong class="participant-manage-list__name">
+															<c:out value="${p.username}" />
+														</strong>
+													</c:otherwise>
+												</c:choose>
 											</div>
 											<c:url var="removeAction" value="${p.removeUrl}" />
 											<spring:message var="removingLabel" code="host.roster.removing" />

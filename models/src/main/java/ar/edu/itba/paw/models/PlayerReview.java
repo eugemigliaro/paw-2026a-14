@@ -7,7 +7,6 @@ public class PlayerReview {
     private final Long id;
     private final Long reviewerUserId;
     private final Long reviewedUserId;
-    private final Long originMatchId;
     private final PlayerReviewReaction reaction;
     private final String comment;
     private final Instant createdAt;
@@ -18,7 +17,6 @@ public class PlayerReview {
             final Long id,
             final Long reviewerUserId,
             final Long reviewedUserId,
-            final Long originMatchId,
             final PlayerReviewReaction reaction,
             final String comment,
             final Instant createdAt,
@@ -27,7 +25,6 @@ public class PlayerReview {
         this.id = id;
         this.reviewerUserId = reviewerUserId;
         this.reviewedUserId = reviewedUserId;
-        this.originMatchId = originMatchId;
         this.reaction = reaction;
         this.comment = comment;
         this.createdAt = createdAt;
@@ -45,10 +42,6 @@ public class PlayerReview {
 
     public Long getReviewedUserId() {
         return reviewedUserId;
-    }
-
-    public Long getOriginMatchId() {
-        return originMatchId;
     }
 
     public PlayerReviewReaction getReaction() {

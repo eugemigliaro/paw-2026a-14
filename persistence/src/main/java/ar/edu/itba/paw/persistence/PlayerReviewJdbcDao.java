@@ -3,7 +3,6 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.User;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -33,7 +32,6 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                             rs.getLong("id"),
                             rs.getLong("reviewer_user_id"),
                             rs.getLong("reviewed_user_id"),
-                            rs.getLong("origin_match_id"),
                             PlayerReviewReaction.fromDbValue(rs.getString("reaction"))
                                     .orElseThrow(
                                             () ->
@@ -55,7 +53,6 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
     public PlayerReview upsertReview(
             final Long reviewerUserId,
             final Long reviewedUserId,
-            final Long originMatchId,
             final PlayerReviewReaction reaction,
             final String comment) {
         final Optional<PlayerReview> existing =
@@ -64,10 +61,9 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
         if (existing.isPresent()) {
             jdbcTemplate.update(
                     "UPDATE player_reviews"
-                            + " SET origin_match_id = ?, reaction = ?, comment = ?,"
+                            + " SET reaction = ?, comment = ?,"
                             + " updated_at = CURRENT_TIMESTAMP, deleted_at = NULL"
                             + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?",
-                    originMatchId,
                     reactionParameter(reaction),
                     comment,
                     reviewerUserId,
@@ -75,12 +71,11 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
         } else {
             jdbcTemplate.update(
                     "INSERT INTO player_reviews"
-                            + " (reviewer_user_id, reviewed_user_id, origin_match_id, reaction,"
-                            + " comment, created_at, updated_at)"
-                            + " VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            + " (reviewer_user_id, reviewed_user_id, reaction, comment,"
+                            + " created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                     reviewerUserId,
                     reviewedUserId,
-                    originMatchId,
                     reactionParameter(reaction),
                     comment);
         }
@@ -107,7 +102,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
     public Optional<PlayerReview> findByPair(final Long reviewerUserId, final Long reviewedUserId) {
         return jdbcTemplate
                 .query(
-                        "SELECT id, reviewer_user_id, reviewed_user_id, origin_match_id,"
+                        "SELECT id, reviewer_user_id, reviewed_user_id,"
                                 + " reaction, comment, created_at, updated_at, deleted_at"
                                 + " FROM player_reviews"
                                 + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?"
@@ -144,7 +139,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
     public List<PlayerReview> findRecentReviewsForUser(
             final Long reviewedUserId, final int limit, final int offset) {
         return jdbcTemplate.query(
-                "SELECT id, reviewer_user_id, reviewed_user_id, origin_match_id,"
+                "SELECT id, reviewer_user_id, reviewed_user_id,"
                         + " reaction, comment, created_at, updated_at, deleted_at"
                         + " FROM player_reviews"
                         + " WHERE reviewed_user_id = ? AND deleted_at IS NULL"
@@ -157,8 +152,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
     }
 
     @Override
-    public boolean canReview(
-            final Long reviewerUserId, final Long reviewedUserId, final Long matchId) {
+    public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
         if (reviewerUserId == null || reviewerUserId.equals(reviewedUserId)) {
             return false;
         }
@@ -175,54 +169,19 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                                 + " ON reviewed.match_id = m.id"
                                 + " AND reviewed.user_id = ?"
                                 + " AND reviewed.status IN ('joined', 'checked_in')"
-                                + " WHERE m.id = ? AND "
+                                + " WHERE "
                                 + COMPLETED_MATCH_SQL,
                         Integer.class,
                         reviewerUserId,
-                        reviewedUserId,
-                        matchId);
+                        reviewedUserId);
         return count != null && count > 0;
-    }
-
-    @Override
-    public List<User> findEligibleReviewTargets(final Long reviewerUserId, final Long matchId) {
-        return jdbcTemplate.query(
-                "SELECT u.id, u.email, u.username, u.name, u.last_name, u.phone,"
-                        + " u.profile_image_id"
-                        + " FROM matches m"
-                        + " JOIN match_participants reviewer"
-                        + " ON reviewer.match_id = m.id"
-                        + " AND reviewer.user_id = ?"
-                        + " AND reviewer.status IN ('joined', 'checked_in')"
-                        + " JOIN match_participants reviewed"
-                        + " ON reviewed.match_id = m.id"
-                        + " AND reviewed.user_id <> ?"
-                        + " AND reviewed.status IN ('joined', 'checked_in')"
-                        + " JOIN users u ON u.id = reviewed.user_id"
-                        + " WHERE m.id = ? AND "
-                        + COMPLETED_MATCH_SQL
-                        + " ORDER BY u.username ASC",
-                (rs, rowNum) ->
-                        new User(
-                                rs.getLong("id"),
-                                rs.getString("email"),
-                                rs.getString("username"),
-                                rs.getString("name"),
-                                rs.getString("last_name"),
-                                rs.getString("phone"),
-                                rs.getObject("profile_image_id") == null
-                                        ? null
-                                        : rs.getLong("profile_image_id")),
-                reviewerUserId,
-                reviewerUserId,
-                matchId);
     }
 
     private Optional<PlayerReview> findByPairIncludingDeleted(
             final Long reviewerUserId, final Long reviewedUserId) {
         return jdbcTemplate
                 .query(
-                        "SELECT id, reviewer_user_id, reviewed_user_id, origin_match_id,"
+                        "SELECT id, reviewer_user_id, reviewed_user_id,"
                                 + " reaction, comment, created_at, updated_at, deleted_at"
                                 + " FROM player_reviews"
                                 + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?",

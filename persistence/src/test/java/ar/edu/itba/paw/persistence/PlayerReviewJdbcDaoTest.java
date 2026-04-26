@@ -3,7 +3,6 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.User;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -61,13 +60,11 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 3L, "joined");
 
         final PlayerReview review =
-                playerReviewDao.upsertReview(
-                        2L, 3L, 10L, PlayerReviewReaction.LIKE, "Good teammate");
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
 
         Assertions.assertNotNull(review.getId());
         Assertions.assertEquals(2L, review.getReviewerUserId());
         Assertions.assertEquals(3L, review.getReviewedUserId());
-        Assertions.assertEquals(10L, review.getOriginMatchId());
         Assertions.assertEquals(PlayerReviewReaction.LIKE, review.getReaction());
         Assertions.assertEquals("Good teammate", review.getComment());
         Assertions.assertFalse(review.isDeleted());
@@ -78,12 +75,10 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
         final PlayerReview initial =
-                playerReviewDao.upsertReview(
-                        2L, 3L, 10L, PlayerReviewReaction.LIKE, "Good teammate");
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
 
         final PlayerReview updated =
-                playerReviewDao.upsertReview(
-                        2L, 3L, 10L, PlayerReviewReaction.DISLIKE, "Arrived late");
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Arrived late");
 
         Assertions.assertEquals(initial.getId(), updated.getId());
         Assertions.assertEquals(PlayerReviewReaction.DISLIKE, updated.getReaction());
@@ -95,12 +90,11 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
         final PlayerReview initial =
-                playerReviewDao.upsertReview(
-                        2L, 3L, 10L, PlayerReviewReaction.LIKE, "Good teammate");
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
         Assertions.assertTrue(playerReviewDao.softDeleteReview(2L, 3L));
 
         final PlayerReview restored =
-                playerReviewDao.upsertReview(2L, 3L, 10L, PlayerReviewReaction.LIKE, "Played well");
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Played well");
 
         Assertions.assertEquals(initial.getId(), restored.getId());
         Assertions.assertFalse(restored.isDeleted());
@@ -111,7 +105,7 @@ public class PlayerReviewJdbcDaoTest {
     public void testSoftDeleteExcludesReviewFromSummary() {
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
-        playerReviewDao.upsertReview(2L, 3L, 10L, PlayerReviewReaction.LIKE, "Good teammate");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
 
         Assertions.assertTrue(playerReviewDao.softDeleteReview(2L, 3L));
         final PlayerReviewSummary summary = playerReviewDao.getSummaryForUser(3L);
@@ -125,8 +119,8 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
-        playerReviewDao.upsertReview(1L, 3L, 10L, PlayerReviewReaction.LIKE, "Great");
-        playerReviewDao.upsertReview(2L, 3L, 10L, PlayerReviewReaction.DISLIKE, null);
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "Great");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, null);
 
         final PlayerReviewSummary summary = playerReviewDao.getSummaryForUser(3L);
 
@@ -141,8 +135,8 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
-        playerReviewDao.upsertReview(1L, 3L, 10L, PlayerReviewReaction.LIKE, "First");
-        playerReviewDao.upsertReview(2L, 3L, 10L, PlayerReviewReaction.LIKE, "Second");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "First");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Second");
 
         final List<PlayerReview> reviews = playerReviewDao.findRecentReviewsForUser(3L, 10, 0);
 
@@ -156,7 +150,7 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "checked_in");
 
-        Assertions.assertTrue(playerReviewDao.canReview(2L, 3L, 10L));
+        Assertions.assertTrue(playerReviewDao.canReview(2L, 3L));
     }
 
     @Test
@@ -164,22 +158,19 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(11L, 2L, "joined");
         joinMatch(11L, 3L, "joined");
 
-        Assertions.assertTrue(playerReviewDao.canReview(2L, 3L, 11L));
+        Assertions.assertTrue(playerReviewDao.canReview(2L, 3L));
     }
 
     @Test
     public void testCanReviewRejectsInvalidCases() {
-        joinMatch(10L, 2L, "joined");
-        joinMatch(10L, 3L, "joined");
         joinMatch(12L, 2L, "joined");
         joinMatch(12L, 3L, "joined");
         joinMatch(13L, 2L, "joined");
         joinMatch(13L, 3L, "joined");
 
-        Assertions.assertFalse(playerReviewDao.canReview(2L, 2L, 10L));
-        Assertions.assertFalse(playerReviewDao.canReview(2L, 4L, 10L));
-        Assertions.assertFalse(playerReviewDao.canReview(2L, 3L, 12L));
-        Assertions.assertFalse(playerReviewDao.canReview(2L, 3L, 13L));
+        Assertions.assertFalse(playerReviewDao.canReview(2L, 2L));
+        Assertions.assertFalse(playerReviewDao.canReview(2L, 4L));
+        Assertions.assertFalse(playerReviewDao.canReview(2L, 3L));
     }
 
     @Test
@@ -187,21 +178,7 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "cancelled");
 
-        Assertions.assertFalse(playerReviewDao.canReview(2L, 3L, 10L));
-    }
-
-    @Test
-    public void testFindEligibleReviewTargets() {
-        joinMatch(10L, 2L, "joined");
-        joinMatch(10L, 1L, "joined");
-        joinMatch(10L, 3L, "checked_in");
-        joinMatch(10L, 4L, "cancelled");
-
-        final List<User> targets = playerReviewDao.findEligibleReviewTargets(2L, 10L);
-
-        Assertions.assertEquals(2, targets.size());
-        Assertions.assertEquals(1L, targets.get(0).getId());
-        Assertions.assertEquals(3L, targets.get(1).getId());
+        Assertions.assertFalse(playerReviewDao.canReview(2L, 3L));
     }
 
     private void insertMatch(final Long id, final String status, final Instant startsAt) {

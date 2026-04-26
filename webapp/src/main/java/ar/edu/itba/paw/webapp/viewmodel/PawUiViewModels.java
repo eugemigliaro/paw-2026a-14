@@ -474,16 +474,19 @@ public final class PawUiViewModels {
         private final String avatarLabel;
         private final String profileHref;
         private final String profileImageUrl;
+        private final String reviewHref;
 
         public ParticipantViewModel(
                 final String username,
                 final String avatarLabel,
                 final String profileHref,
-                final String profileImageUrl) {
+                final String profileImageUrl,
+                final String reviewHref) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.profileHref = profileHref;
             this.profileImageUrl = profileImageUrl;
+            this.reviewHref = reviewHref;
         }
 
         public String getUsername() {
@@ -501,18 +504,27 @@ public final class PawUiViewModels {
         public String getProfileImageUrl() {
             return profileImageUrl;
         }
+
+        public String getReviewHref() {
+            return reviewHref;
+        }
     }
 
     public static final class RosterParticipantViewModel {
         private final String username;
         private final String avatarLabel;
         private final String removeUrl;
+        private final String profileHref;
 
         public RosterParticipantViewModel(
-                final String username, final String avatarLabel, final String removeUrl) {
+                final String username,
+                final String avatarLabel,
+                final String removeUrl,
+                final String profileHref) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.removeUrl = removeUrl;
+            this.profileHref = profileHref;
         }
 
         public String getUsername() {
@@ -526,6 +538,10 @@ public final class PawUiViewModels {
         public String getRemoveUrl() {
             return removeUrl;
         }
+
+        public String getProfileHref() {
+            return profileHref;
+        }
     }
 
     public static final class PendingRequestViewModel {
@@ -533,16 +549,19 @@ public final class PawUiViewModels {
         private final String avatarLabel;
         private final String approveUrl;
         private final String rejectUrl;
+        private final String profileHref;
 
         public PendingRequestViewModel(
                 final String username,
                 final String avatarLabel,
                 final String approveUrl,
-                final String rejectUrl) {
+                final String rejectUrl,
+                final String profileHref) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.approveUrl = approveUrl;
             this.rejectUrl = rejectUrl;
+            this.profileHref = profileHref;
         }
 
         public String getUsername() {
@@ -559,6 +578,10 @@ public final class PawUiViewModels {
 
         public String getRejectUrl() {
             return rejectUrl;
+        }
+
+        public String getProfileHref() {
+            return profileHref;
         }
     }
 
@@ -583,10 +606,13 @@ public final class PawUiViewModels {
     public static final class InviteParticipantViewModel {
         private final String username;
         private final String avatarLabel;
+        private final String profileHref;
 
-        public InviteParticipantViewModel(final String username, final String avatarLabel) {
+        public InviteParticipantViewModel(
+                final String username, final String avatarLabel, final String profileHref) {
             this.username = username;
             this.avatarLabel = avatarLabel;
+            this.profileHref = profileHref;
         }
 
         public String getUsername() {
@@ -595,6 +621,10 @@ public final class PawUiViewModels {
 
         public String getAvatarLabel() {
             return avatarLabel;
+        }
+
+        public String getProfileHref() {
+            return profileHref;
         }
     }
 
@@ -772,6 +802,54 @@ public final class PawUiViewModels {
 
         public String getProfileImageUrl() {
             return profileImageUrl;
+        }
+    }
+
+    public static final class PlayerReviewViewModel {
+        private final String reviewerUsername;
+        private final String reviewerProfileHref;
+        private final String reaction;
+        private final String reactionLabel;
+        private final String comment;
+        private final String updatedAtLabel;
+
+        public PlayerReviewViewModel(
+                final String reviewerUsername,
+                final String reviewerProfileHref,
+                final String reaction,
+                final String reactionLabel,
+                final String comment,
+                final String updatedAtLabel) {
+            this.reviewerUsername = reviewerUsername;
+            this.reviewerProfileHref = reviewerProfileHref;
+            this.reaction = reaction;
+            this.reactionLabel = reactionLabel;
+            this.comment = comment;
+            this.updatedAtLabel = updatedAtLabel;
+        }
+
+        public String getReviewerUsername() {
+            return reviewerUsername;
+        }
+
+        public String getReviewerProfileHref() {
+            return reviewerProfileHref;
+        }
+
+        public String getReaction() {
+            return reaction;
+        }
+
+        public String getReactionLabel() {
+            return reactionLabel;
+        }
+
+        public String getComment() {
+            return comment;
+        }
+
+        public String getUpdatedAtLabel() {
+            return updatedAtLabel;
         }
     }
 }

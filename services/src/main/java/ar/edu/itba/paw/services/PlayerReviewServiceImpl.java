@@ -27,13 +27,12 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     public PlayerReview submitReview(
             final Long reviewerUserId,
             final Long reviewedUserId,
-            final Long originMatchId,
             final PlayerReviewReaction reaction,
             final String comment) {
-        validateReviewRequest(reviewerUserId, reviewedUserId, originMatchId, reaction);
+        validateReviewRequest(reviewerUserId, reviewedUserId, reaction);
         final String normalizedComment = normalizeComment(comment);
         return playerReviewDao.upsertReview(
-                reviewerUserId, reviewedUserId, originMatchId, reaction, normalizedComment);
+                reviewerUserId, reviewedUserId, reaction, normalizedComment);
     }
 
     @Override
@@ -64,19 +63,16 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
-    public boolean canReview(
-            final Long reviewerUserId, final Long reviewedUserId, final Long matchId) {
+    public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
         return reviewerUserId != null
                 && reviewedUserId != null
-                && matchId != null
                 && !reviewerUserId.equals(reviewedUserId)
-                && playerReviewDao.canReview(reviewerUserId, reviewedUserId, matchId);
+                && playerReviewDao.canReview(reviewerUserId, reviewedUserId);
     }
 
     private void validateReviewRequest(
             final Long reviewerUserId,
             final Long reviewedUserId,
-            final Long originMatchId,
             final PlayerReviewReaction reaction) {
         if (reaction == null) {
             throw new PlayerReviewException(
@@ -86,7 +82,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
             throw new PlayerReviewException(
                     PlayerReviewException.SELF_REVIEW, "Users cannot review themselves.");
         }
-        if (!canReview(reviewerUserId, reviewedUserId, originMatchId)) {
+        if (!canReview(reviewerUserId, reviewedUserId)) {
             throw new PlayerReviewException(
                     PlayerReviewException.NOT_ELIGIBLE,
                     "Users must share a completed match to review each other.");
