@@ -805,6 +805,7 @@ class PawUiRouteTest {
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
+                        .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .setValidator(validator)
                         .setConversionService(new DefaultFormattingConversionService())
                         .build();
