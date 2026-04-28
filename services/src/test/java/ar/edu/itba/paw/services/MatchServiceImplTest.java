@@ -1037,6 +1037,62 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testCancelMatchPersistsRecurringOccurrenceCancellation() {
+        // Arrange
+        final Match existingMatch =
+                new Match(
+                        47L,
+                        Sport.PADEL,
+                        1L,
+                        "Test Address",
+                        "Weekly Padel",
+                        "Second occurrence",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        600L,
+                        2);
+        final Match cancelledMatch =
+                new Match(
+                        47L,
+                        Sport.PADEL,
+                        1L,
+                        "Test Address",
+                        "Weekly Padel",
+                        "Second occurrence",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        10,
+                        BigDecimal.ZERO,
+                        "public",
+                        "direct",
+                        "cancelled",
+                        0,
+                        null,
+                        600L,
+                        2);
+        Mockito.when(matchDao.findById(47L))
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(cancelledMatch));
+        Mockito.when(matchDao.cancelMatch(47L, 1L)).thenReturn(true);
+
+        // Exercise
+        final Match result = matchService.cancelMatch(47L, 1L);
+
+        // Assert
+        Assertions.assertEquals(47L, result.getId());
+        Assertions.assertEquals("cancelled", result.getStatus());
+        Assertions.assertEquals(600L, result.getSeriesId());
+        Assertions.assertEquals(2, result.getSeriesOccurrenceIndex());
+    }
+
+    @Test
     public void testCancelMatchReturnsExistingMatchWhenAlreadyCancelled() {
         final Match existingMatch =
                 new Match(

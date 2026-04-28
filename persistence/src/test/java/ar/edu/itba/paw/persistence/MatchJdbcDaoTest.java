@@ -633,6 +633,67 @@ public class MatchJdbcDaoTest {
     }
 
     @Test
+    public void testCancelMatchCancelsOnlySelectedRecurringOccurrence() {
+        // Arrange
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        hostUserId,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+        final Match firstOccurrence =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Weekly Padel",
+                        "First occurrence",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        1);
+        final Match secondOccurrence =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Weekly Padel",
+                        "Second occurrence",
+                        startsAt.plusWeeks(1).toInstant(),
+                        endsAt.plusWeeks(1).toInstant(),
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        2);
+
+        // Exercise
+        final boolean cancelled = matchDao.cancelMatch(secondOccurrence.getId(), hostUserId);
+
+        // Assert
+        final List<Match> occurrences = matchDao.findSeriesOccurrences(seriesId);
+        Assertions.assertTrue(cancelled);
+        Assertions.assertEquals(firstOccurrence.getId(), occurrences.get(0).getId());
+        Assertions.assertEquals("open", occurrences.get(0).getStatus());
+        Assertions.assertEquals(secondOccurrence.getId(), occurrences.get(1).getId());
+        Assertions.assertEquals("cancelled", occurrences.get(1).getStatus());
+    }
+
+    @Test
     public void testCancelMatchRejectsWrongHostUserId() {
         final Match created =
                 matchDao.createMatch(

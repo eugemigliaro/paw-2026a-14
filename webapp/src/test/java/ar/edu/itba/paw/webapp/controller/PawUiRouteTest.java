@@ -81,6 +81,8 @@ class PawUiRouteTest {
     private AtomicReference<String> lastSportsFilter;
     private AtomicReference<Long> lastReservedMatchId;
     private AtomicReference<Long> lastReservedUserId;
+    private AtomicReference<Long> lastHostCancelledMatchId;
+    private AtomicReference<Long> lastHostCancelledUserId;
     private AtomicReference<Long> lastCancelledSeriesMatchId;
     private AtomicReference<Long> lastCancelledSeriesUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
@@ -103,6 +105,8 @@ class PawUiRouteTest {
         lastSportsFilter = new AtomicReference<>();
         lastReservedMatchId = new AtomicReference<>();
         lastReservedUserId = new AtomicReference<>();
+        lastHostCancelledMatchId = new AtomicReference<>();
+        lastHostCancelledUserId = new AtomicReference<>();
         lastCancelledSeriesMatchId = new AtomicReference<>();
         lastCancelledSeriesUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
@@ -401,7 +405,7 @@ class PawUiRouteTest {
 
                     @Override
                     public Match cancelMatch(final Long matchId, final Long actingUserId) {
-                        if (matchId != 42L) {
+                        if (matchId != 42L && matchId != 47L) {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                     "Missing match");
@@ -410,6 +414,8 @@ class PawUiRouteTest {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.FORBIDDEN, "Forbidden");
                         }
+                        lastHostCancelledMatchId.set(matchId);
+                        lastHostCancelledUserId.set(actingUserId);
                         return new Match(
                                 matchId,
                                 Sport.PADEL,
@@ -422,9 +428,12 @@ class PawUiRouteTest {
                                 8,
                                 BigDecimal.TEN,
                                 "public",
+                                "direct",
                                 "cancelled",
                                 2,
-                                null);
+                                null,
+                                matchId == 47L ? 600L : null,
+                                matchId == 47L ? 2 : null);
                     }
 
                     @Override
@@ -1770,6 +1779,19 @@ class PawUiRouteTest {
         mockMvc.perform(post("/host/matches/42/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42?hostAction=cancelled"));
+    }
+
+    @Test
+    void postHostCancelRecurringOccurrenceRedirectsToSelectedOccurrence() throws Exception {
+        // Arrange
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        // Exercise and Assert
+        mockMvc.perform(post("/host/matches/47/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/47?hostAction=cancelled"));
+        Assertions.assertEquals(47L, lastHostCancelledMatchId.get());
+        Assertions.assertEquals(7L, lastHostCancelledUserId.get());
     }
 
     @Test

@@ -96,6 +96,25 @@ public class MatchReservationServiceImplTest {
     }
 
     @Test
+    public void testReserveSpotRejectsCancelledMatch() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        "public", "cancelled", FIXED_NOW.plusSeconds(3600), 4, 1)));
+
+        // Exercise
+        final MatchReservationException exception =
+                Assertions.assertThrows(
+                        MatchReservationException.class,
+                        () -> matchReservationService.reserveSpot(10L, 20L));
+
+        // Assert
+        Assertions.assertEquals("closed", exception.getCode());
+    }
+
+    @Test
     public void testReserveSpotRejectsMissingMatch() {
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.empty());
 

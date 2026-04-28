@@ -141,7 +141,16 @@
 
 							<c:if test="${hostCanManage}">
 								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
-								<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
+								<c:choose>
+									<c:when test="${not empty eventPage.occurrences}">
+										<spring:message var="hostManageCancelLabel" code="host.manage.cancelOccurrence" />
+										<spring:message var="hostManageDetailLabel" code="host.manage.detailOccurrence" />
+									</c:when>
+									<c:otherwise>
+										<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
+										<spring:message var="hostManageDetailLabel" code="host.manage.detail" />
+									</c:otherwise>
+								</c:choose>
 								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
 								<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
 								<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
@@ -196,7 +205,7 @@
 								</ui:overflowMenu>
 								<div class="booking-panel__host-note">
 									<p class="detail-label"><spring:message code="host.manage.label" /></p>
-									<p><spring:message code="host.manage.detail" /></p>
+									<p><c:out value="${hostManageDetailLabel}" /></p>
 								</div>
 							</c:if>
 
