@@ -37,6 +37,10 @@ public final class ShellViewModelFactory {
                                     UrlUtils.withLang("/", locale),
                                     "/".equals(activePath)),
                             new NavItemViewModel(
+                                    ms.getMessage("nav.player.events", null, locale),
+                                    UrlUtils.withLang("/events", locale),
+                                    "/events".equals(activePath)),
+                            new NavItemViewModel(
                                     ms.getMessage("nav.player.upcomingEvents", null, locale),
                                     UrlUtils.withLang("/player/matches/upcoming", locale),
                                     "/player/matches/upcoming".equals(activePath)),

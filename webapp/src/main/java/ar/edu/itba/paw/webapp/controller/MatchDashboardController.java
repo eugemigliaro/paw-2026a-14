@@ -320,6 +320,69 @@ public class MatchDashboardController {
                         messageSource, locale, "/player/matches/upcoming"));
     }
 
+    @GetMapping("/events")
+    public ModelAndView showEventsPage(
+            @RequestParam(value = "q", required = false) final String query,
+            @RequestParam(value = "sort", required = false) final String sort,
+            @RequestParam(value = "startDate", required = false) final String startDate,
+            @RequestParam(value = "endDate", required = false) final String endDate,
+            @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
+            @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
+            @RequestParam(value = "tz", required = false) final String timezone,
+            @RequestParam(value = "sport", required = false) final List<String> sports,
+            @RequestParam(value = "status", required = false) final List<String> statuses,
+            @RequestParam(value = "page", defaultValue = "1") final int page,
+            final Locale locale) {
+        final long userId = requireAuthenticatedUserId();
+        final List<String> selectedSports = normalizeSports(sports);
+        final List<String> selectedStatuses =
+                normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
+        final String selectedSort = normalizeSort(sort);
+        final String searchQuery = normalizeQuery(query);
+        final String selectedTimezone = normalizeTimezone(timezone);
+        final DateRange selectedDateRange =
+                normalizeDateRange(
+                        startDate, endDate, DateRangeContext.UPCOMING, ZoneId.of(selectedTimezone));
+
+        final PaginatedResult<Match> result =
+                matchService.findJoinedMatches(
+                        userId,
+                        Boolean.TRUE,
+                        searchQuery,
+                        encodeCsv(selectedSports),
+                        null,
+                        encodeCsv(selectedStatuses),
+                        selectedDateRange.startDate(),
+                        selectedDateRange.endDate(),
+                        minPrice,
+                        maxPrice,
+                        selectedSort,
+                        selectedTimezone,
+                        page,
+                        PAGE_SIZE);
+
+        return buildListPage(
+                "events/list",
+                "/events",
+                "page.title.events",
+                locale,
+                searchQuery,
+                selectedSort,
+                selectedDateRange.startDate(),
+                selectedDateRange.endDate(),
+                minPrice,
+                maxPrice,
+                selectedTimezone,
+                selectedStatuses,
+                selectedSports,
+                List.of(),
+                result,
+                messageSource.getMessage("events.title", null, locale),
+                messageSource.getMessage("events.description", null, locale),
+                messageSource.getMessage("events.empty", null, locale),
+                ShellViewModelFactory.playerShell(messageSource, locale, "/events"));
+    }
+
     private ModelAndView buildListPage(
             final String view,
             final String path,

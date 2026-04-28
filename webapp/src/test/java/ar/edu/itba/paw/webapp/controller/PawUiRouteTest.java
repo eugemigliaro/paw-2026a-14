@@ -945,7 +945,8 @@ class PawUiRouteTest {
                                                         Matchers.hasProperty(
                                                                 "reviewHref",
                                                                 Matchers.is(
-                                                                        "/users/second-player?reviewForm=open#reviews"))))));
+                                                                        "/users/"
+                                                                                + "second-player?reviewForm=open#reviews"))))));
     }
 
     @Test
@@ -1504,6 +1505,17 @@ class PawUiRouteTest {
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attribute("selectedStartDateValue", today))
                 .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()));
+    }
+
+    @Test
+    void getEventsRouteRendersEventsPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/events"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("events/list"))
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attribute("pageTitleCode", "page.title.events"));
     }
 
     @Test
