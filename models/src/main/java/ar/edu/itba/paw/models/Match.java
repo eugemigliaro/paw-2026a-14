@@ -20,6 +20,8 @@ public class Match {
     private final String status;
     private final int joinedPlayers;
     private final Long bannerImageId;
+    private final Long seriesId;
+    private final Integer seriesOccurrenceIndex;
 
     public Match(
             final Long id,
@@ -51,7 +53,9 @@ public class Match {
                 defaultJoinPolicyForVisibility(visibility),
                 status,
                 joinedPlayers,
-                bannerImageId);
+                bannerImageId,
+                null,
+                null);
     }
 
     public Match(
@@ -70,6 +74,44 @@ public class Match {
             final String status,
             final int joinedPlayers,
             final Long bannerImageId) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                visibility,
+                joinPolicy,
+                status,
+                joinedPlayers,
+                bannerImageId,
+                null,
+                null);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final int joinedPlayers,
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex) {
         this.id = id;
         this.sport = sport;
         this.hostUserId = hostUserId;
@@ -85,6 +127,8 @@ public class Match {
         this.status = status;
         this.joinedPlayers = joinedPlayers;
         this.bannerImageId = bannerImageId;
+        this.seriesId = seriesId;
+        this.seriesOccurrenceIndex = seriesOccurrenceIndex;
     }
 
     private static String defaultJoinPolicyForVisibility(final String visibility) {
@@ -155,6 +199,18 @@ public class Match {
 
     public Long getBannerImageId() {
         return bannerImageId;
+    }
+
+    public Long getSeriesId() {
+        return seriesId;
+    }
+
+    public Integer getSeriesOccurrenceIndex() {
+        return seriesOccurrenceIndex;
+    }
+
+    public boolean isRecurringOccurrence() {
+        return seriesId != null;
     }
 
     public boolean hasBannerImage() {

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
 class ViewTemplateAssetsTest {
@@ -26,6 +27,24 @@ class ViewTemplateAssetsTest {
 
         assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
+    }
+
+    @Test
+    void hostCreateMatchIncludesLocalizedRecurrenceControls() throws IOException {
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(hostCreateMatch.contains("path=\"recurrenceFrequency\""));
+        assertTrue(hostCreateMatch.contains("host.form.recurrence.frequency"));
+        assertTrue(hostCreateMatch.contains("path=\"recurrenceEndMode\""));
+        assertTrue(hostCreateMatch.contains("path=\"recurrenceUntilDate\""));
+        assertTrue(hostCreateMatch.contains("path=\"recurrenceOccurrenceCount\""));
+        assertTrue(hostCreateMatch.contains("host.form.recurrence.endMode"));
+        assertEquals("Repeat every", english.getProperty("host.form.recurrence.frequency"));
+        assertEquals("Repetir cada", spanish.getProperty("host.form.recurrence.frequency"));
+        assertEquals("Series ends", english.getProperty("host.form.recurrence.endMode"));
+        assertEquals("La serie termina", spanish.getProperty("host.form.recurrence.endMode"));
     }
 
     @Test
@@ -74,6 +93,14 @@ class ViewTemplateAssetsTest {
 
     private static String read(final String relativePath) throws IOException {
         return Files.readString(Path.of(relativePath));
+    }
+
+    private static Properties properties(final String relativePath) throws IOException {
+        final Properties properties = new Properties();
+        try (var reader = Files.newBufferedReader(Path.of(relativePath))) {
+            properties.load(reader);
+        }
+        return properties;
     }
 
     private static int countOccurrences(final String input, final String token) {

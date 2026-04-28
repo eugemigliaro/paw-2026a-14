@@ -43,7 +43,7 @@ public class MatchJdbcDao implements MatchDao {
     private static final String MATCH_SELECT_WITH_JOINED_PLAYERS =
             "SELECT m.id, m.sport, m.host_user_id, m.address, m.title, m.description,"
                     + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
-                    + " m.visibility, m.join_policy, "
+                    + " m.visibility, m.join_policy, m.series_id, m.series_occurrence_index, "
                     + DERIVED_STATUS_SQL
                     + " AS status, m.banner_image_id, COUNT(mp.id) AS joined_players";
 
@@ -79,11 +79,16 @@ public class MatchJdbcDao implements MatchDao {
                         rs.getInt("joined_players"),
                         rs.getObject("banner_image_id") == null
                                 ? null
-                                : rs.getLong("banner_image_id"));
+                                : rs.getLong("banner_image_id"),
+                        rs.getObject("series_id") == null ? null : rs.getLong("series_id"),
+                        rs.getObject("series_occurrence_index") == null
+                                ? null
+                                : rs.getInt("series_occurrence_index"));
             };
 
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
+    private final SimpleJdbcInsert seriesJdbcInsert;
 
     @Autowired
     public MatchJdbcDao(@NonNull final DataSource dataSource) {
@@ -91,6 +96,10 @@ public class MatchJdbcDao implements MatchDao {
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
                         .withTableName("matches")
+                        .usingGeneratedKeyColumns("id");
+        this.seriesJdbcInsert =
+                new SimpleJdbcInsert(dataSource)
+                        .withTableName("match_series")
                         .usingGeneratedKeyColumns("id");
     }
 
@@ -108,7 +117,9 @@ public class MatchJdbcDao implements MatchDao {
             final String visibility,
             final String joinPolicy,
             final String status,
-            final Long bannerImageId) {
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex) {
         final Map<String, Object> values = new HashMap<>();
         values.put("host_user_id", hostUserId);
         values.put("address", address);
@@ -123,6 +134,8 @@ public class MatchJdbcDao implements MatchDao {
         values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy));
         values.put("status", new SqlParameterValue(Types.OTHER, status));
         values.put("banner_image_id", bannerImageId);
+        values.put("series_id", seriesId);
+        values.put("series_occurrence_index", seriesOccurrenceIndex);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
         values.put("updated_at", new Timestamp(System.currentTimeMillis()));
 
@@ -143,7 +156,32 @@ public class MatchJdbcDao implements MatchDao {
                 joinPolicy,
                 status,
                 0,
-                bannerImageId);
+                bannerImageId,
+                seriesId,
+                seriesOccurrenceIndex);
+    }
+
+    @Override
+    public Long createMatchSeries(
+            final Long hostUserId,
+            final String frequency,
+            final Instant startsAt,
+            final Instant endsAt,
+            final String timezone,
+            final LocalDate untilDate,
+            final Integer occurrenceCount) {
+        final Map<String, Object> values = new HashMap<>();
+        values.put("host_user_id", hostUserId);
+        values.put("frequency", new SqlParameterValue(Types.OTHER, frequency));
+        values.put("starts_at", Timestamp.from(startsAt));
+        values.put("ends_at", endsAt == null ? null : Timestamp.from(endsAt));
+        values.put("timezone", timezone);
+        values.put("until_date", untilDate);
+        values.put("occurrence_count", occurrenceCount);
+        values.put("created_at", new Timestamp(System.currentTimeMillis()));
+        values.put("updated_at", new Timestamp(System.currentTimeMillis()));
+
+        return seriesJdbcInsert.executeAndReturnKey(values).longValue();
     }
 
     @Override
@@ -220,6 +258,18 @@ public class MatchJdbcDao implements MatchDao {
                         + " GROUP BY m.id";
 
         return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
+    }
+
+    @Override
+    public List<Match> findSeriesOccurrences(final Long seriesId) {
+        final String sql =
+                MATCH_SELECT_WITH_JOINED_PLAYERS
+                        + BASE_FROM
+                        + " WHERE m.series_id = ?"
+                        + " GROUP BY m.id"
+                        + " ORDER BY m.starts_at ASC, m.series_occurrence_index ASC";
+
+        return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, seriesId);
     }
 
     @Override

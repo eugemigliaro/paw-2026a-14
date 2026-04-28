@@ -19,6 +19,7 @@ import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventDetailPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventOccurrenceViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
@@ -155,6 +156,10 @@ public class EventController {
         final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
+        final List<Match> seriesOccurrences =
+                match.isRecurringOccurrence()
+                        ? matchService.findSeriesOccurrences(match.getSeriesId())
+                        : List.of();
         final ModelAndView mav = new ModelAndView("matches/detail");
         final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
@@ -162,7 +167,9 @@ public class EventController {
         mav.addObject("isInviteOnly", isInviteOnly);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
-        mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
+        mav.addObject(
+                "eventPage",
+                buildRealEventPage(match, confirmedParticipants, seriesOccurrences, locale));
 
         mav.addObject("reservationEnabled", canReserveMatch(match));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
@@ -200,7 +207,10 @@ public class EventController {
     }
 
     private EventDetailPageViewModel buildRealEventPage(
-            final Match match, final List<User> confirmedParticipants, final Locale locale) {
+            final Match match,
+            final List<User> confirmedParticipants,
+            final List<Match> seriesOccurrences,
+            final Locale locale) {
         final Optional<User> host = userService.findById(match.getHostUserId());
         return new EventDetailPageViewModel(
                 toCard(match, locale),
@@ -222,7 +232,8 @@ public class EventController {
                 buildBookingDetails(match, locale),
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
-                loadNearbyMatches(match.getId(), locale));
+                loadNearbyMatches(match.getId(), locale),
+                toOccurrenceViewModels(match, seriesOccurrences, locale));
     }
 
     private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
@@ -315,6 +326,26 @@ public class EventController {
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private List<EventOccurrenceViewModel> toOccurrenceViewModels(
+            final Match currentMatch, final List<Match> occurrences, final Locale locale) {
+        if (occurrences == null || occurrences.size() <= 1) {
+            return List.of();
+        }
+
+        return occurrences.stream()
+                .map(
+                        occurrence ->
+                                new EventOccurrenceViewModel(
+                                        "/matches/" + occurrence.getId(),
+                                        scheduleFormatter(locale)
+                                                .format(
+                                                        occurrence
+                                                                .getStartsAt()
+                                                                .atZone(ZoneId.systemDefault())),
+                                        occurrence.getId().equals(currentMatch.getId())))
+                .toList();
     }
 
     private String buildAvailabilityLabel(final Match match, final Locale locale) {

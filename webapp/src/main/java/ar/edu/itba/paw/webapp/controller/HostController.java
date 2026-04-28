@@ -2,8 +2,11 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.RecurrenceEndMode;
+import ar.edu.itba.paw.models.RecurrenceFrequency;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.CreateMatchRequest;
+import ar.edu.itba.paw.services.CreateRecurrenceRequest;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
@@ -131,9 +134,17 @@ public class HostController {
                         resolvedVisibility,
                         resolvedJoinPolicy,
                         "open",
-                        bannerImageId);
+                        bannerImageId,
+                        toRecurrenceRequest(createEventForm));
 
-        return new ModelAndView("redirect:/matches/" + matchService.createMatch(request).getId());
+        final Match createdMatch;
+        try {
+            createdMatch = matchService.createMatch(request);
+        } catch (final IllegalArgumentException exception) {
+            return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
+        }
+
+        return new ModelAndView("redirect:/matches/" + createdMatch.getId());
     }
 
     @GetMapping("/host/matches/{matchId}/edit")
@@ -430,6 +441,25 @@ public class HostController {
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
         }
+    }
+
+    private static CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {
+        if (!form.isRecurring()) {
+            return null;
+        }
+
+        final RecurrenceFrequency frequency =
+                RecurrenceFrequency.fromValue(form.getRecurrenceFrequency()).orElseThrow();
+        final RecurrenceEndMode endMode =
+                RecurrenceEndMode.fromValue(form.getRecurrenceEndMode()).orElseThrow();
+        return new CreateRecurrenceRequest(
+                frequency,
+                endMode,
+                endMode == RecurrenceEndMode.UNTIL_DATE ? form.getRecurrenceUntilDate() : null,
+                endMode == RecurrenceEndMode.OCCURRENCE_COUNT
+                        ? form.getRecurrenceOccurrenceCount()
+                        : null,
+                resolveZoneId(form.getTz()));
     }
 
     private void validateVisibilityAndJoinPolicy(

@@ -469,6 +469,31 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class EventOccurrenceViewModel {
+        private final String href;
+        private final String schedule;
+        private final boolean current;
+
+        public EventOccurrenceViewModel(
+                final String href, final String schedule, final boolean current) {
+            this.href = href;
+            this.schedule = schedule;
+            this.current = current;
+        }
+
+        public String getHref() {
+            return href;
+        }
+
+        public String getSchedule() {
+            return schedule;
+        }
+
+        public boolean isCurrent() {
+            return current;
+        }
+    }
+
     public static final class ParticipantViewModel {
         private final String username;
         private final String avatarLabel;
@@ -639,6 +664,7 @@ public final class PawUiViewModels {
         private final String availabilityLabel;
         private final String ctaLabel;
         private final List<EventCardViewModel> nearbyEvents;
+        private final List<EventOccurrenceViewModel> occurrences;
 
         public EventDetailPageViewModel(
                 final EventCardViewModel event,
@@ -655,7 +681,8 @@ public final class PawUiViewModels {
                 final List<BookingDetailViewModel> bookingDetails,
                 final String availabilityLabel,
                 final String ctaLabel,
-                final List<EventCardViewModel> nearbyEvents) {
+                final List<EventCardViewModel> nearbyEvents,
+                final List<EventOccurrenceViewModel> occurrences) {
             this.event = event;
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
@@ -671,6 +698,7 @@ public final class PawUiViewModels {
             this.availabilityLabel = availabilityLabel;
             this.ctaLabel = ctaLabel;
             this.nearbyEvents = nearbyEvents;
+            this.occurrences = occurrences;
         }
 
         public EventCardViewModel getEvent() {
@@ -731,6 +759,10 @@ public final class PawUiViewModels {
 
         public List<EventCardViewModel> getNearbyEvents() {
             return nearbyEvents;
+        }
+
+        public List<EventOccurrenceViewModel> getOccurrences() {
+            return occurrences;
         }
     }
 

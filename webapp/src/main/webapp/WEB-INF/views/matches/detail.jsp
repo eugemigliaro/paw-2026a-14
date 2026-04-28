@@ -417,6 +417,34 @@
 							</div>
 						</article>
 
+						<c:if test="${not empty eventPage.occurrences}">
+							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
+								<div class="section-head section-head--detail-compact">
+									<div>
+										<span class="detail-label"><spring:message code="event.recurrence.label" /></span>
+										<h2 id="recurrence-schedule-title" class="detail-section__title">
+											<spring:message code="event.recurrence.title" />
+										</h2>
+									</div>
+								</div>
+								<ul class="recurrence-schedule__list">
+									<c:forEach var="occurrence" items="${eventPage.occurrences}">
+										<li class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}">
+											<c:url var="occurrenceHref" value="${occurrence.href}" />
+											<a class="recurrence-schedule__link" href="${occurrenceHref}">
+												<c:out value="${occurrence.schedule}" />
+											</a>
+											<c:if test="${occurrence.current}">
+												<span class="recurrence-schedule__current">
+													<spring:message code="event.recurrence.current" />
+												</span>
+											</c:if>
+										</li>
+									</c:forEach>
+								</ul>
+							</section>
+						</c:if>
+
 						<section
 							class="detail-section detail-section--participants"
 							aria-labelledby="participant-section-title"

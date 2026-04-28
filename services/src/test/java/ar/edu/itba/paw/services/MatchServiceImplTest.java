@@ -5,6 +5,8 @@ import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.RecurrenceEndMode;
+import ar.edu.itba.paw.models.RecurrenceFrequency;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
@@ -312,6 +314,308 @@ public class MatchServiceImplTest {
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1L, result.getId());
         Assertions.assertEquals("Test Match", result.getTitle());
+    }
+
+    @Test
+    public void testCreateRecurringMatchGeneratesWeeklyOccurrences() {
+        // 1. Arrange
+        final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
+        final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
+        final Match firstOccurrence =
+                new Match(
+                        101L,
+                        Sport.PADEL,
+                        1L,
+                        "Test Address",
+                        "Weekly Padel",
+                        "Test Description",
+                        startsAt,
+                        endsAt,
+                        8,
+                        BigDecimal.ZERO,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        77L,
+                        1);
+        final Match secondOccurrence =
+                new Match(
+                        102L,
+                        Sport.PADEL,
+                        1L,
+                        "Test Address",
+                        "Weekly Padel",
+                        "Test Description",
+                        Instant.parse("2026-04-17T18:00:00Z"),
+                        Instant.parse("2026-04-17T19:30:00Z"),
+                        8,
+                        BigDecimal.ZERO,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        77L,
+                        2);
+        final Match thirdOccurrence =
+                new Match(
+                        103L,
+                        Sport.PADEL,
+                        1L,
+                        "Test Address",
+                        "Weekly Padel",
+                        "Test Description",
+                        Instant.parse("2026-04-24T18:00:00Z"),
+                        Instant.parse("2026-04-24T19:30:00Z"),
+                        8,
+                        BigDecimal.ZERO,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        77L,
+                        3);
+        Mockito.when(matchDao.createMatchSeries(1L, "weekly", startsAt, endsAt, "UTC", null, 3))
+                .thenReturn(77L);
+        Mockito.when(
+                        matchDao.createMatch(
+                                1L,
+                                "Test Address",
+                                "Weekly Padel",
+                                "Test Description",
+                                firstOccurrence.getStartsAt(),
+                                firstOccurrence.getEndsAt(),
+                                8,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                77L,
+                                1))
+                .thenReturn(firstOccurrence);
+        Mockito.when(
+                        matchDao.createMatch(
+                                1L,
+                                "Test Address",
+                                "Weekly Padel",
+                                "Test Description",
+                                secondOccurrence.getStartsAt(),
+                                secondOccurrence.getEndsAt(),
+                                8,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                77L,
+                                2))
+                .thenReturn(secondOccurrence);
+        Mockito.when(
+                        matchDao.createMatch(
+                                1L,
+                                "Test Address",
+                                "Weekly Padel",
+                                "Test Description",
+                                thirdOccurrence.getStartsAt(),
+                                thirdOccurrence.getEndsAt(),
+                                8,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                77L,
+                                3))
+                .thenReturn(thirdOccurrence);
+
+        // 2. Exercise
+        final Match result =
+                matchService.createMatch(
+                        new CreateMatchRequest(
+                                1L,
+                                "Test Address",
+                                "Weekly Padel",
+                                "Test Description",
+                                startsAt,
+                                endsAt,
+                                8,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                new CreateRecurrenceRequest(
+                                        RecurrenceFrequency.WEEKLY,
+                                        RecurrenceEndMode.OCCURRENCE_COUNT,
+                                        null,
+                                        3,
+                                        ZoneId.of("UTC"))));
+
+        // 3. Assert
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(101L, result.getId());
+        Assertions.assertEquals(77L, result.getSeriesId());
+        Assertions.assertEquals(1, result.getSeriesOccurrenceIndex());
+    }
+
+    @Test
+    public void testCreateRecurringMatchGeneratesOccurrencesUntilDate() {
+        // 1. Arrange
+        final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
+        final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
+        final java.time.LocalDate untilDate = java.time.LocalDate.of(2026, 4, 17);
+        final Match firstOccurrence =
+                new Match(
+                        111L,
+                        Sport.PADEL,
+                        1L,
+                        "Test Address",
+                        "Weekly Padel",
+                        "Test Description",
+                        startsAt,
+                        endsAt,
+                        8,
+                        BigDecimal.ZERO,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        88L,
+                        1);
+        final Match secondOccurrence =
+                new Match(
+                        112L,
+                        Sport.PADEL,
+                        1L,
+                        "Test Address",
+                        "Weekly Padel",
+                        "Test Description",
+                        Instant.parse("2026-04-17T18:00:00Z"),
+                        Instant.parse("2026-04-17T19:30:00Z"),
+                        8,
+                        BigDecimal.ZERO,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        88L,
+                        2);
+        Mockito.when(
+                        matchDao.createMatchSeries(
+                                1L, "weekly", startsAt, endsAt, "UTC", untilDate, null))
+                .thenReturn(88L);
+        Mockito.when(
+                        matchDao.createMatch(
+                                1L,
+                                "Test Address",
+                                "Weekly Padel",
+                                "Test Description",
+                                firstOccurrence.getStartsAt(),
+                                firstOccurrence.getEndsAt(),
+                                8,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                88L,
+                                1))
+                .thenReturn(firstOccurrence);
+        Mockito.when(
+                        matchDao.createMatch(
+                                1L,
+                                "Test Address",
+                                "Weekly Padel",
+                                "Test Description",
+                                secondOccurrence.getStartsAt(),
+                                secondOccurrence.getEndsAt(),
+                                8,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                88L,
+                                2))
+                .thenReturn(secondOccurrence);
+
+        // 2. Exercise
+        final Match result =
+                matchService.createMatch(
+                        new CreateMatchRequest(
+                                1L,
+                                "Test Address",
+                                "Weekly Padel",
+                                "Test Description",
+                                startsAt,
+                                endsAt,
+                                8,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                new CreateRecurrenceRequest(
+                                        RecurrenceFrequency.WEEKLY,
+                                        RecurrenceEndMode.UNTIL_DATE,
+                                        untilDate,
+                                        null,
+                                        ZoneId.of("UTC"))));
+
+        // 3. Assert
+        Assertions.assertEquals(111L, result.getId());
+        Assertions.assertEquals(88L, result.getSeriesId());
+        Assertions.assertEquals(1, result.getSeriesOccurrenceIndex());
+    }
+
+    @Test
+    public void testCreateRecurringMatchRejectsUntilDateWithoutRepeatedOccurrence() {
+        // 1. Arrange
+        final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
+        final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
+
+        // 2. Exercise
+        final IllegalArgumentException exception =
+                Assertions.assertThrows(
+                        IllegalArgumentException.class,
+                        () ->
+                                matchService.createMatch(
+                                        new CreateMatchRequest(
+                                                1L,
+                                                "Test Address",
+                                                "Weekly Padel",
+                                                "Test Description",
+                                                startsAt,
+                                                endsAt,
+                                                8,
+                                                BigDecimal.ZERO,
+                                                Sport.PADEL,
+                                                "public",
+                                                "direct",
+                                                "open",
+                                                null,
+                                                new CreateRecurrenceRequest(
+                                                        RecurrenceFrequency.WEEKLY,
+                                                        RecurrenceEndMode.UNTIL_DATE,
+                                                        java.time.LocalDate.of(2026, 4, 12),
+                                                        null,
+                                                        ZoneId.of("UTC")))));
+
+        // 3. Assert
+        Assertions.assertEquals("match.recurrence.error.tooFewOccurrences", exception.getMessage());
     }
 
     @Test

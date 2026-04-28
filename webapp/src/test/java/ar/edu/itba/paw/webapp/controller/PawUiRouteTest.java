@@ -16,6 +16,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
+import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchCancellationFailureReason;
 import ar.edu.itba.paw.services.MatchParticipationService;
@@ -80,6 +81,7 @@ class PawUiRouteTest {
     private AtomicReference<Long> lastReservedMatchId;
     private AtomicReference<Long> lastReservedUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
+    private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
 
     @BeforeEach
     void setUp() {
@@ -95,6 +97,7 @@ class PawUiRouteTest {
         lastReservedMatchId = new AtomicReference<>();
         lastReservedUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
+        lastCreateMatchRequest = new AtomicReference<>();
 
         final Match realMatch =
                 new Match(
@@ -160,12 +163,50 @@ class PawUiRouteTest {
                         "cancelled",
                         2,
                         null);
+        final Match recurringMatch =
+                new Match(
+                        46L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-09T18:00:00Z"),
+                        Instant.parse("2026-04-09T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        1,
+                        null,
+                        600L,
+                        1);
+        final Match recurringSecondOccurrence =
+                new Match(
+                        47L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-16T18:00:00Z"),
+                        Instant.parse("2026-04-16T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        600L,
+                        2);
 
         final MatchService matchService =
                 new MatchService() {
                     @Override
-                    public Match createMatch(
-                            final ar.edu.itba.paw.services.CreateMatchRequest request) {
+                    public Match createMatch(final CreateMatchRequest request) {
+                        lastCreateMatchRequest.set(request);
                         return new Match(
                                 43L,
                                 request.getSport(),
@@ -178,9 +219,12 @@ class PawUiRouteTest {
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
+                                request.getJoinPolicy(),
                                 request.getStatus(),
                                 0,
-                                null);
+                                null,
+                                request.isRecurring() ? 600L : null,
+                                request.isRecurring() ? 1 : null);
                     }
 
                     @Override
@@ -197,12 +241,22 @@ class PawUiRouteTest {
                         if (matchId == 45L) {
                             return Optional.of(cancelledFutureMatch);
                         }
+                        if (matchId == 46L) {
+                            return Optional.of(recurringMatch);
+                        }
                         return Optional.empty();
                     }
 
                     @Override
                     public Optional<Match> findPublicMatchById(final Long matchId) {
                         return findMatchById(matchId);
+                    }
+
+                    @Override
+                    public List<Match> findSeriesOccurrences(final Long seriesId) {
+                        return Long.valueOf(600L).equals(seriesId)
+                                ? List.of(recurringMatch, recurringSecondOccurrence)
+                                : List.of();
                     }
 
                     @Override
@@ -845,6 +899,17 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getRecurringMatchDetailsRouteExposesSeriesOccurrences() throws Exception {
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(2))));
+    }
+
+    @Test
     void getRealMatchDetailsRouteForHostExposesManagementActions() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1021,6 +1086,129 @@ class PawUiRouteTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/43"));
+
+        Assertions.assertNotNull(lastCreateMatchRequest.get());
+        Assertions.assertFalse(lastCreateMatchRequest.get().isRecurring());
+    }
+
+    @Test
+    void postHostPublishCreatesRecurringMatchWithOccurrenceCount() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "weekly")
+                                .param("recurrenceEndMode", "occurrence_count")
+                                .param("recurrenceOccurrenceCount", "3")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        final CreateMatchRequest request = lastCreateMatchRequest.get();
+        Assertions.assertNotNull(request);
+        Assertions.assertTrue(request.isRecurring());
+        Assertions.assertEquals("weekly", request.getRecurrence().getFrequency().getValue());
+        Assertions.assertEquals(3, request.getRecurrence().getOccurrenceCount());
+    }
+
+    @Test
+    void postHostPublishCreatesRecurringMatchWithUntilDate() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "weekly")
+                                .param("recurrenceEndMode", "until_date")
+                                .param("recurrenceUntilDate", "2099-04-24")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        final CreateMatchRequest request = lastCreateMatchRequest.get();
+        Assertions.assertNotNull(request);
+        Assertions.assertTrue(request.isRecurring());
+        Assertions.assertEquals("until_date", request.getRecurrence().getEndMode().getValue());
+        Assertions.assertEquals(LocalDate.of(2099, 4, 24), request.getRecurrence().getUntilDate());
+    }
+
+    @Test
+    void postHostPublishRejectsInvalidRecurrenceFrequency() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "yearly")
+                                .param("recurrenceEndMode", "occurrence_count")
+                                .param("recurrenceOccurrenceCount", "3")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(
+                        model().attributeHasFieldErrors("createEventForm", "recurrenceFrequency"));
+    }
+
+    @Test
+    void postHostPublishRejectsRecurringUntilDateTooSoonForFrequency() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "weekly")
+                                .param("recurrenceEndMode", "until_date")
+                                .param("recurrenceUntilDate", "2099-04-12")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(
+                        model().attributeHasFieldErrors("createEventForm", "recurrenceUntilDate"));
     }
 
     @Test

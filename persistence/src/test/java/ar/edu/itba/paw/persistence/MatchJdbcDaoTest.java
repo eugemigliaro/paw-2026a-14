@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.test.annotation.Rollback;
@@ -78,6 +79,98 @@ public class MatchJdbcDaoTest {
                         20);
         Assertions.assertEquals(1, found.size());
         Assertions.assertEquals(Sport.TENNIS, found.get(0).getSport());
+    }
+
+    @Test
+    public void testCreateRecurringMatchPersistsSeriesOccurrences() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        hostUserId,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+        final Match first =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Stadium A",
+                        "Weekly Tennis",
+                        "Open match",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        1);
+        final Match second =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Stadium A",
+                        "Weekly Tennis",
+                        "Open match",
+                        startsAt.plusWeeks(1).toInstant(),
+                        endsAt.plusWeeks(1).toInstant(),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        2);
+
+        final List<Match> occurrences = matchDao.findSeriesOccurrences(seriesId);
+
+        Assertions.assertEquals(2, occurrences.size());
+        Assertions.assertEquals(first.getId(), occurrences.get(0).getId());
+        Assertions.assertEquals(second.getId(), occurrences.get(1).getId());
+        Assertions.assertEquals(seriesId, occurrences.get(0).getSeriesId());
+        Assertions.assertEquals(1, occurrences.get(0).getSeriesOccurrenceIndex());
+    }
+
+    @Test
+    public void testCreateRecurringMatchRejectsIncompleteSeriesIdentity() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        hostUserId,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+
+        Assertions.assertThrows(
+                DataIntegrityViolationException.class,
+                () ->
+                        matchDao.createMatch(
+                                hostUserId,
+                                "Stadium A",
+                                "Incomplete Weekly Tennis",
+                                "Open match",
+                                startsAt.toInstant(),
+                                endsAt.toInstant(),
+                                4,
+                                BigDecimal.ZERO,
+                                Sport.TENNIS,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                seriesId,
+                                null));
     }
 
     @Test

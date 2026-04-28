@@ -15,6 +15,8 @@ public interface MatchService {
 
     Optional<Match> findPublicMatchById(Long matchId);
 
+    List<Match> findSeriesOccurrences(Long seriesId);
+
     List<User> findConfirmedParticipants(Long matchId);
 
     Match updateMatch(Long matchId, Long actingUserId, UpdateMatchRequest request);
