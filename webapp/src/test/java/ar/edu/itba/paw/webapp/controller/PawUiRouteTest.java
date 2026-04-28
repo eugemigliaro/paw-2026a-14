@@ -82,6 +82,7 @@ class PawUiRouteTest {
     private AtomicReference<Long> lastReservedMatchId;
     private AtomicReference<Long> lastReservedUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
+    private AtomicReference<MatchReservationException> seriesReservationFailure;
     private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
     private AtomicReference<UpdateMatchRequest> lastUpdateMatchRequest;
 
@@ -99,6 +100,7 @@ class PawUiRouteTest {
         lastReservedMatchId = new AtomicReference<>();
         lastReservedUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
+        seriesReservationFailure = new AtomicReference<>();
         lastCreateMatchRequest = new AtomicReference<>();
         lastUpdateMatchRequest = new AtomicReference<>();
 
@@ -416,7 +418,10 @@ class PawUiRouteTest {
 
                     @Override
                     public void reserveSpot(final Long matchId, final Long userId) {
-                        final MatchReservationException failure = reservationFailure.get();
+                        final MatchReservationException failure =
+                                matchId == 46L || matchId == 47L
+                                        ? seriesReservationFailure.get()
+                                        : reservationFailure.get();
                         if (failure != null) {
                             throw failure;
                         }
@@ -762,7 +767,8 @@ class PawUiRouteTest {
                                         matchReservationService,
                                         matchParticipationService,
                                         userService,
-                                        messageSource),
+                                        messageSource,
+                                        fixedClock),
                                 new PublicProfileController(userService, messageSource),
                                 new AccountController(userService, messageSource),
                                 new HostController(
@@ -911,7 +917,12 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(2))));
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(2))))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationPath",
+                                        "/matches/46/series-reservations"));
     }
 
     @Test
@@ -980,6 +991,42 @@ class PawUiRouteTest {
                         model().attribute(
                                         "reservationError",
                                         "Tu cuenta ya tiene una reserva confirmada para este evento."));
+    }
+
+    @Test
+    void postSeriesReservationRequestWithoutAuthenticatedUserReturnsUnauthorized()
+            throws Exception {
+        mockMvc.perform(post("/matches/46/series-reservations"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postSeriesReservationRequestAsAuthenticatedUserRedirectsToConfirmedEvent()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/46/series-reservations"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/46?reservation=seriesConfirmed"));
+
+        Assertions.assertEquals(47L, lastReservedMatchId.get());
+        Assertions.assertEquals(9L, lastReservedUserId.get());
+    }
+
+    @Test
+    void postSeriesReservationRequestWithSpanishLocaleLocalizesReservationErrors()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        seriesReservationFailure.set(
+                new MatchReservationException("series_already_joined", "Already joined"));
+
+        mockMvc.perform(post("/matches/46/series-reservations").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationError",
+                                        "Tu cuenta ya tiene reservas confirmadas para las fechas futuras de esta serie."));
     }
 
     @Test

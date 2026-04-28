@@ -384,6 +384,47 @@
 									</c:otherwise>
 								</c:choose>
 							</c:if>
+
+							<c:if test="${seriesReservationConfirmed}">
+								<p class="booking-panel__notice booking-panel__notice--success">
+									<spring:message code="event.seriesReservation.confirmed" />
+								</p>
+							</c:if>
+							<c:if test="${seriesReservationJoined and not seriesReservationConfirmed}">
+								<p class="booking-panel__notice booking-panel__notice--success">
+									<spring:message code="event.seriesReservation.joined" />
+								</p>
+							</c:if>
+							<c:if test="${not empty seriesReservationError}">
+								<p class="booking-panel__notice booking-panel__notice--error">
+									<c:out value="${seriesReservationError}" />
+								</p>
+							</c:if>
+							<c:if test="${seriesReservationEnabled and not seriesReservationJoined}">
+								<c:choose>
+									<c:when test="${seriesReservationRequiresLogin}">
+										<spring:message var="signInToJoinSeriesLabel" code="event.seriesReservation.signIn" />
+										<c:url var="seriesLoginHref" value="/login" />
+										<ui:button label="${signInToJoinSeriesLabel}" href="${seriesLoginHref}" fullWidth="${true}" variant="secondary" />
+									</c:when>
+									<c:otherwise>
+										<c:url var="seriesReservationAction" value="${seriesReservationPath}" />
+										<spring:message var="joiningSeriesLabel" code="event.seriesReservation.joining" />
+										<form
+											method="post"
+											action="${seriesReservationAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${joiningSeriesLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="joinSeriesLabel" code="event.seriesReservation.cta" />
+											<ui:button label="${joinSeriesLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+										</form>
+									</c:otherwise>
+								</c:choose>
+								<p class="booking-panel__note"><spring:message code="event.seriesReservation.note" /></p>
+							</c:if>
 						</article>
 					</aside>
 				</section>

@@ -23,9 +23,12 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventOccurrenceViewModel
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -48,6 +51,7 @@ public class EventController {
     private final MatchParticipationService matchParticipationService;
     private final UserService userService;
     private final MessageSource messageSource;
+    private final Clock clock;
 
     @Autowired
     public EventController(
@@ -55,12 +59,14 @@ public class EventController {
             final MatchReservationService matchReservationService,
             final MatchParticipationService matchParticipationService,
             final UserService userService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final Clock clock) {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
         this.userService = userService;
         this.messageSource = messageSource;
+        this.clock = clock;
     }
 
     @GetMapping("/matches/{eventId}")
@@ -69,6 +75,8 @@ public class EventController {
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
             @RequestParam(value = "reservationError", required = false)
                     final String reservationError,
+            @RequestParam(value = "seriesReservationError", required = false)
+                    final String seriesReservationErrorCode,
             @RequestParam(value = "hostAction", required = false) final String hostAction,
             @RequestParam(value = "join", required = false) final String joinStatus,
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
@@ -80,6 +88,9 @@ public class EventController {
                 reservationStatus,
                 hostAction,
                 reservationError,
+                seriesReservationErrorCode == null
+                        ? null
+                        : reservationErrorMessage(seriesReservationErrorCode, locale),
                 joinStatus,
                 joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
                 inviteStatus,
@@ -108,6 +119,37 @@ public class EventController {
                     null,
                     null,
                     null,
+                    null,
+                    locale);
+        }
+    }
+
+    @PostMapping("/matches/{eventId}/series-reservations")
+    public ModelAndView requestSeriesReservation(
+            @PathVariable("eventId") final String eventId, final Locale locale) {
+        final Long matchId = parseEventIdOrThrowNotFound(eventId);
+        final AuthenticatedUserPrincipal currentUser =
+                CurrentAuthenticatedUser.get()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+
+        try {
+            for (final Long occurrenceId :
+                    resolveSeriesReservationTargets(matchId, currentUser.getUserId())) {
+                matchReservationService.reserveSpot(occurrenceId, currentUser.getUserId());
+            }
+            return new ModelAndView(
+                    "redirect:/matches/" + matchId + "?reservation=seriesConfirmed");
+        } catch (final MatchReservationException exception) {
+            return showRealEventDetails(
+                    matchId,
+                    null,
+                    null,
+                    null,
+                    reservationErrorMessage(exception.getCode(), locale),
+                    null,
+                    null,
+                    null,
+                    null,
                     locale);
         }
     }
@@ -117,6 +159,7 @@ public class EventController {
             final String reservationStatus,
             final String hostAction,
             final String reservationError,
+            final String seriesReservationError,
             final String joinStatus,
             final String joinError,
             final String inviteStatus,
@@ -160,6 +203,8 @@ public class EventController {
                 match.isRecurringOccurrence()
                         ? matchService.findSeriesOccurrences(match.getSeriesId())
                         : List.of();
+        final SeriesReservationUiState seriesReservationState =
+                buildSeriesReservationUiState(seriesOccurrences, currentUserId);
         final ModelAndView mav = new ModelAndView("matches/detail");
         final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
@@ -175,6 +220,14 @@ public class EventController {
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
+        mav.addObject("seriesReservationPath", "/matches/" + eventId + "/series-reservations");
+        mav.addObject("seriesReservationEnabled", seriesReservationState.available());
+        mav.addObject("seriesReservationJoined", seriesReservationState.joined());
+        mav.addObject("seriesReservationRequiresLogin", currentUserId == null);
+        mav.addObject(
+                "seriesReservationConfirmed",
+                "seriesConfirmed".equalsIgnoreCase(reservationStatus));
+        mav.addObject("seriesReservationError", seriesReservationError);
 
         mav.addObject("joinRequestEnabled", canRequestToJoin(match));
         mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
@@ -348,6 +401,119 @@ public class EventController {
                 .toList();
     }
 
+    private List<Long> resolveSeriesReservationTargets(final Long matchId, final Long userId) {
+        final Match match =
+                matchService
+                        .findMatchById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchReservationException(
+                                                "not_found", "The event does not exist."));
+
+        if (!isMatchVisibleToUser(match, userId)) {
+            throw new MatchReservationException("not_found", "The event does not exist.");
+        }
+
+        if (!match.isRecurringOccurrence()) {
+            throw new MatchReservationException(
+                    "not_recurring", "The event is not part of a recurring series.");
+        }
+
+        final SeriesReservationEvaluation evaluation =
+                evaluateSeriesReservationTargets(
+                        matchService.findSeriesOccurrences(match.getSeriesId()), userId);
+        if (evaluation.targetMatchIds().isEmpty()) {
+            throw buildSeriesReservationFailure(evaluation);
+        }
+        return evaluation.targetMatchIds();
+    }
+
+    private SeriesReservationUiState buildSeriesReservationUiState(
+            final List<Match> occurrences, final Long currentUserId) {
+        final SeriesReservationEvaluation evaluation =
+                evaluateSeriesReservationTargets(occurrences, currentUserId);
+        return new SeriesReservationUiState(
+                !evaluation.targetMatchIds().isEmpty(), evaluation.joined());
+    }
+
+    private SeriesReservationEvaluation evaluateSeriesReservationTargets(
+            final List<Match> occurrences, final Long userId) {
+        final List<Long> targetMatchIds = new ArrayList<>();
+        int futureOccurrenceCount = 0;
+        int futureOpenOccurrenceCount = 0;
+        int joinedFutureOpenOccurrenceCount = 0;
+        int fullOccurrenceCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)) {
+                continue;
+            }
+
+            futureOccurrenceCount++;
+            if (!isSeriesReservationOpenOccurrence(occurrence)) {
+                continue;
+            }
+
+            futureOpenOccurrenceCount++;
+            final boolean alreadyJoined =
+                    userId != null
+                            && matchReservationService.hasActiveReservation(
+                                    occurrence.getId(), userId);
+            if (alreadyJoined) {
+                joinedFutureOpenOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getAvailableSpots() <= 0) {
+                fullOccurrenceCount++;
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        final boolean joined =
+                userId != null
+                        && futureOpenOccurrenceCount > 0
+                        && joinedFutureOpenOccurrenceCount == futureOpenOccurrenceCount;
+        return new SeriesReservationEvaluation(
+                List.copyOf(targetMatchIds),
+                futureOccurrenceCount,
+                futureOpenOccurrenceCount,
+                joined,
+                fullOccurrenceCount);
+    }
+
+    private static boolean isSeriesReservationOpenOccurrence(final Match occurrence) {
+        return "public".equalsIgnoreCase(occurrence.getVisibility())
+                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())
+                && "open".equalsIgnoreCase(occurrence.getStatus());
+    }
+
+    private static MatchReservationException buildSeriesReservationFailure(
+            final SeriesReservationEvaluation evaluation) {
+        if (evaluation.futureOccurrenceCount() == 0) {
+            return new MatchReservationException(
+                    "series_started", "There are no upcoming occurrences left in this series.");
+        }
+        if (evaluation.futureOpenOccurrenceCount() == 0) {
+            return new MatchReservationException(
+                    "series_closed", "The upcoming series occurrences are not open.");
+        }
+        if (evaluation.joined()) {
+            return new MatchReservationException(
+                    "series_already_joined",
+                    "This account already has reservations for the future series.");
+        }
+        if (evaluation.fullOccurrenceCount() > 0) {
+            return new MatchReservationException(
+                    "series_full", "The available future series occurrences are full.");
+        }
+        return new MatchReservationException(
+                "series_closed", "The upcoming series occurrences are not open.");
+    }
+
     private String buildAvailabilityLabel(final Match match, final Locale locale) {
         return messageSource.getMessage(
                 "event.availability",
@@ -395,6 +561,17 @@ public class EventController {
             case "full":
                 return messageSource.getMessage(
                         "reservation.error.fullBeforeConfirm", null, locale);
+            case "not_recurring":
+                return messageSource.getMessage("reservation.error.notRecurring", null, locale);
+            case "series_started":
+                return messageSource.getMessage("reservation.error.seriesStarted", null, locale);
+            case "series_closed":
+                return messageSource.getMessage("reservation.error.seriesClosed", null, locale);
+            case "series_already_joined":
+                return messageSource.getMessage(
+                        "reservation.error.seriesAlreadyJoined", null, locale);
+            case "series_full":
+                return messageSource.getMessage("reservation.error.seriesFull", null, locale);
             case "not_found":
             default:
                 return messageSource.getMessage("reservation.error.notFound", null, locale);
@@ -566,4 +743,13 @@ public class EventController {
     private boolean canHostManageParticipants(final Match match) {
         return canHostEdit(match);
     }
+
+    private record SeriesReservationUiState(boolean available, boolean joined) {}
+
+    private record SeriesReservationEvaluation(
+            List<Long> targetMatchIds,
+            int futureOccurrenceCount,
+            int futureOpenOccurrenceCount,
+            boolean joined,
+            int fullOccurrenceCount) {}
 }

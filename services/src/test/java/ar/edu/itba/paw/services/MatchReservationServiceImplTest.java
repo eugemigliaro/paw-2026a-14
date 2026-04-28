@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -127,6 +128,83 @@ public class MatchReservationServiceImplTest {
         Assertions.assertEquals("full", exception.getCode());
     }
 
+    @Test
+    public void testReserveSeriesSucceedsForFutureEligibleOccurrences() {
+        final Match selectedOccurrence =
+                createRecurringMatch(10L, FIXED_NOW.plusSeconds(3600), 4, 1, 100L, 1);
+        final Match secondOccurrence =
+                createRecurringMatch(11L, FIXED_NOW.plusSeconds(7200), 4, 0, 100L, 2);
+        final Match startedOccurrence =
+                createRecurringMatch(12L, FIXED_NOW.minusSeconds(60), 4, 0, 100L, 3);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(List.of(startedOccurrence, selectedOccurrence, secondOccurrence));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.hasActiveReservation(11L, 20L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.createSeriesReservationsIfSpace(100L, 20L, FIXED_NOW))
+                .thenReturn(2);
+
+        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSeries(10L, 20L));
+    }
+
+    @Test
+    public void testReserveSeriesRejectsDuplicateSeriesMembership() {
+        final Match selectedOccurrence =
+                createRecurringMatch(10L, FIXED_NOW.plusSeconds(3600), 4, 1, 100L, 1);
+        final Match secondOccurrence =
+                createRecurringMatch(11L, FIXED_NOW.plusSeconds(7200), 4, 1, 100L, 2);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(List.of(selectedOccurrence, secondOccurrence));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.hasActiveReservation(11L, 20L)).thenReturn(true);
+
+        final MatchReservationException exception =
+                Assertions.assertThrows(
+                        MatchReservationException.class,
+                        () -> matchReservationService.reserveSeries(10L, 20L));
+
+        Assertions.assertEquals("series_already_joined", exception.getCode());
+    }
+
+    @Test
+    public void testReserveSeriesRejectsFullFutureOccurrences() {
+        final Match selectedOccurrence =
+                createRecurringMatch(10L, FIXED_NOW.plusSeconds(3600), 1, 1, 100L, 1);
+        final Match secondOccurrence =
+                createRecurringMatch(11L, FIXED_NOW.plusSeconds(7200), 1, 1, 100L, 2);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(List.of(selectedOccurrence, secondOccurrence));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.hasActiveReservation(11L, 20L)).thenReturn(false);
+
+        final MatchReservationException exception =
+                Assertions.assertThrows(
+                        MatchReservationException.class,
+                        () -> matchReservationService.reserveSeries(10L, 20L));
+
+        Assertions.assertEquals("series_full", exception.getCode());
+    }
+
+    @Test
+    public void testReserveSeriesRejectsSeriesWithoutUpcomingOccurrences() {
+        final Match selectedOccurrence =
+                createRecurringMatch(10L, FIXED_NOW.minusSeconds(3600), 4, 1, 100L, 1);
+        final Match earlierOccurrence =
+                createRecurringMatch(11L, FIXED_NOW.minusSeconds(7200), 4, 0, 100L, 2);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(List.of(earlierOccurrence, selectedOccurrence));
+
+        final MatchReservationException exception =
+                Assertions.assertThrows(
+                        MatchReservationException.class,
+                        () -> matchReservationService.reserveSeries(10L, 20L));
+
+        Assertions.assertEquals("series_started", exception.getCode());
+    }
+
     private static Match createMatch(
             final String visibility,
             final String status,
@@ -148,5 +226,32 @@ public class MatchReservationServiceImplTest {
                 status,
                 joinedPlayers,
                 null);
+    }
+
+    private static Match createRecurringMatch(
+            final Long id,
+            final Instant startsAt,
+            final int maxPlayers,
+            final int joinedPlayers,
+            final Long seriesId,
+            final int occurrenceIndex) {
+        return new Match(
+                id,
+                Sport.FOOTBALL,
+                1L,
+                "Test Address",
+                "Test Match",
+                "Test Description",
+                startsAt,
+                null,
+                maxPlayers,
+                BigDecimal.ZERO,
+                "public",
+                "direct",
+                "open",
+                joinedPlayers,
+                null,
+                seriesId,
+                occurrenceIndex);
     }
 }

@@ -68,6 +68,71 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testCreateSeriesReservationsIfSpaceInsertsFutureEligibleOccurrences() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 2, "open");
+        insertRecurringMatch(31L, 600L, 2, now.plusSeconds(172800), 2, "open");
+        insertRecurringMatch(32L, 600L, 3, now.minusSeconds(86400), 2, "open");
+        insertRecurringMatch(33L, 600L, 4, now.plusSeconds(259200), 2, "cancelled");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (31, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int insertedRows = matchParticipantDao.createSeriesReservationsIfSpace(600L, 2L, now);
+
+        Assertions.assertEquals(2, insertedRows);
+        final Integer joinedRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND status = 'joined'"
+                                + " AND match_id IN (30, 31)",
+                        Integer.class);
+        Assertions.assertEquals(2, joinedRows);
+        final Integer skippedRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND match_id IN (32, 33)",
+                        Integer.class);
+        Assertions.assertEquals(0, skippedRows);
+    }
+
+    @Test
+    public void testCreateSeriesReservationsIfSpaceRestoresCancelledReservation() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 2, "open");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (30, 2, 'cancelled', CURRENT_TIMESTAMP)");
+
+        final int insertedRows = matchParticipantDao.createSeriesReservationsIfSpace(600L, 2L, now);
+
+        Assertions.assertEquals(1, insertedRows);
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 30 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals("joined", status);
+    }
+
+    @Test
+    public void testCreateSeriesReservationsIfSpaceRejectsFullOccurrences() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 1, "open");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (30, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int insertedRows = matchParticipantDao.createSeriesReservationsIfSpace(600L, 2L, now);
+
+        Assertions.assertEquals(0, insertedRows);
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(30L, 2L));
+    }
+
+    @Test
     public void testCreateReservationIfSpaceRejectsDuplicateReservation() {
         jdbcTemplate.update(
                 "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
@@ -171,5 +236,38 @@ public class MatchParticipantJdbcDaoTest {
                                 + " AND status = 'pending_approval'",
                         Integer.class);
         Assertions.assertEquals(1, pendingRows);
+    }
+
+    private void insertRecurringSeries(final Long seriesId, final Instant startsAt) {
+        jdbcTemplate.update(
+                "INSERT INTO match_series"
+                        + " (id, host_user_id, frequency, starts_at, timezone, occurrence_count,"
+                        + " created_at, updated_at)"
+                        + " VALUES (?, 1, 'weekly', ?, 'UTC', 4, CURRENT_TIMESTAMP,"
+                        + " CURRENT_TIMESTAMP)",
+                seriesId,
+                java.sql.Timestamp.from(startsAt));
+    }
+
+    private void insertRecurringMatch(
+            final Long matchId,
+            final Long seriesId,
+            final int occurrenceIndex,
+            final Instant startsAt,
+            final int maxPlayers,
+            final String status) {
+        jdbcTemplate.update(
+                "INSERT INTO matches "
+                        + "(id, host_user_id, address, title, description, starts_at,"
+                        + " max_players, price_per_player, visibility, status, sport,"
+                        + " series_id, series_occurrence_index, created_at, updated_at) "
+                        + "VALUES (?, 1, 'Address', 'Match', 'Description', ?, ?, 0,"
+                        + " 'public', ?, 'football', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                matchId,
+                java.sql.Timestamp.from(startsAt),
+                maxPlayers,
+                status,
+                seriesId,
+                occurrenceIndex);
     }
 }

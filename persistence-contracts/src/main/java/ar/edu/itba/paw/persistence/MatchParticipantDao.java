@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.User;
+import java.time.Instant;
 import java.util.List;
 
 public interface MatchParticipantDao {
@@ -8,6 +9,8 @@ public interface MatchParticipantDao {
     boolean hasActiveReservation(Long matchId, Long userId);
 
     boolean createReservationIfSpace(Long matchId, Long userId);
+
+    int createSeriesReservationsIfSpace(Long seriesId, Long userId, Instant startsAfter);
 
     List<User> findConfirmedParticipants(Long matchId);
 
