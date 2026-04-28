@@ -139,6 +139,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void removeParticipant(
             final Long matchId, final Long hostUserId, final Long targetUserId) {
         final Match match = requireMatch(matchId);
+
+        if (hostUserId.equals(targetUserId)) {
+            leaveMatch(match, targetUserId);
+            return;
+        }
+
         requireHost(match, hostUserId);
 
         if (!matchParticipantDao.removeParticipant(matchId, targetUserId)) {
@@ -307,6 +313,27 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         if (!match.getHostUserId().equals(userId)) {
             throw new MatchParticipationException(
                     "forbidden", "Only the host can perform this action.");
+        }
+    }
+
+    private void leaveMatch(final Match match, final Long userId) {
+        if (!match.getStartsAt().isAfter(Instant.now(clock))) {
+            throw new MatchParticipationException("started", "The event has already started.");
+        }
+
+        if (!"open".equalsIgnoreCase(match.getStatus())) {
+            throw new MatchParticipationException(
+                    "not_cancellable", "This reservation can no longer be cancelled.");
+        }
+
+        if (!matchParticipantDao.hasActiveReservation(match.getId(), userId)) {
+            throw new MatchParticipationException(
+                    "not_joined", "This account does not have an active reservation.");
+        }
+
+        if (!matchParticipantDao.removeParticipant(match.getId(), userId)) {
+            throw new MatchParticipationException(
+                    "not_cancellable", "This reservation can no longer be cancelled.");
         }
     }
 }

@@ -298,6 +298,39 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testRemoveParticipantCancelsActiveReservation() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'joined', CURRENT_TIMESTAMP)");
+
+        final boolean cancelled = matchParticipantDao.removeParticipant(10L, 2L);
+
+        Assertions.assertTrue(cancelled);
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(10L, 2L));
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals("cancelled", status);
+    }
+
+    @Test
+    public void testRemoveParticipantCancelsPrivateInviteOnlyActiveReservation() {
+        jdbcTemplate.update(
+                "UPDATE matches SET visibility = 'private', join_policy = 'invite_only'"
+                        + " WHERE id = 10");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'joined', CURRENT_TIMESTAMP)");
+
+        final boolean cancelled = matchParticipantDao.removeParticipant(10L, 2L);
+
+        Assertions.assertTrue(cancelled);
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(10L, 2L));
+    }
+
+    @Test
     public void testFindConfirmedParticipantsReturnsJoinedUsersInJoinOrder() {
         jdbcTemplate.update(
                 "INSERT INTO match_participants (match_id, user_id, status, joined_at)"

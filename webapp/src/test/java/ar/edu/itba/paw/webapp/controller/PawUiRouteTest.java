@@ -34,6 +34,7 @@ import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
+import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
@@ -81,13 +82,17 @@ class PawUiRouteTest {
     private AtomicReference<String> lastSportsFilter;
     private AtomicReference<Long> lastReservedMatchId;
     private AtomicReference<Long> lastReservedUserId;
+    private AtomicReference<Long> lastCancelledReservationMatchId;
+    private AtomicReference<Long> lastCancelledReservationUserId;
     private AtomicReference<Long> lastHostCancelledMatchId;
     private AtomicReference<Long> lastHostCancelledUserId;
     private AtomicReference<Long> lastCancelledSeriesMatchId;
     private AtomicReference<Long> lastCancelledSeriesUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
+    private AtomicReference<MatchParticipationException> reservationCancellationFailure;
     private AtomicReference<MatchReservationException> seriesReservationFailure;
     private AtomicReference<MatchReservationException> seriesCancellationFailure;
+    private AtomicReference<Boolean> currentUserHasReservation;
     private AtomicReference<Boolean> currentUserHasSeriesReservation;
     private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
     private AtomicReference<UpdateMatchRequest> lastUpdateMatchRequest;
@@ -105,13 +110,17 @@ class PawUiRouteTest {
         lastSportsFilter = new AtomicReference<>();
         lastReservedMatchId = new AtomicReference<>();
         lastReservedUserId = new AtomicReference<>();
+        lastCancelledReservationMatchId = new AtomicReference<>();
+        lastCancelledReservationUserId = new AtomicReference<>();
         lastHostCancelledMatchId = new AtomicReference<>();
         lastHostCancelledUserId = new AtomicReference<>();
         lastCancelledSeriesMatchId = new AtomicReference<>();
         lastCancelledSeriesUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
+        reservationCancellationFailure = new AtomicReference<>();
         seriesReservationFailure = new AtomicReference<>();
         seriesCancellationFailure = new AtomicReference<>();
+        currentUserHasReservation = new AtomicReference<>(false);
         currentUserHasSeriesReservation = new AtomicReference<>(false);
         lastCreateMatchRequest = new AtomicReference<>();
         lastUpdateMatchRequest = new AtomicReference<>();
@@ -178,6 +187,23 @@ class PawUiRouteTest {
                         BigDecimal.TEN,
                         "public",
                         "cancelled",
+                        2,
+                        null);
+        final Match privateInviteOnlyMatch =
+                new Match(
+                        51L,
+                        Sport.PADEL,
+                        7L,
+                        "Members Club",
+                        "Invite Night Padel",
+                        "Private doubles session",
+                        Instant.parse("2026-04-10T21:00:00Z"),
+                        Instant.parse("2026-04-10T22:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "private",
+                        "invite_only",
+                        "open",
                         2,
                         null);
         final Match recurringMatch =
@@ -314,6 +340,9 @@ class PawUiRouteTest {
                         }
                         if (matchId == 45L) {
                             return Optional.of(cancelledFutureMatch);
+                        }
+                        if (matchId == 51L) {
+                            return Optional.of(privateInviteOnlyMatch);
                         }
                         if (matchId == 46L) {
                             return Optional.of(recurringMatch);
@@ -504,6 +533,11 @@ class PawUiRouteTest {
                 new MatchReservationService() {
                     @Override
                     public boolean hasActiveReservation(final Long matchId, final Long userId) {
+                        if (Boolean.TRUE.equals(currentUserHasReservation.get())
+                                && userId == 9L
+                                && (matchId == 42L || matchId == 51L)) {
+                            return true;
+                        }
                         return Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
                                 && userId == 9L
                                 && (matchId == 46L || matchId == 47L);
@@ -575,7 +609,16 @@ class PawUiRouteTest {
                     @Override
                     public void removeParticipant(
                             final Long matchId, final Long hostUserId, final Long targetUserId) {
-                        // No-op for route rendering tests.
+                        if (hostUserId.equals(targetUserId)) {
+                            final MatchParticipationException failure =
+                                    reservationCancellationFailure.get();
+                            if (failure != null) {
+                                throw failure;
+                            }
+
+                            lastCancelledReservationMatchId.set(matchId);
+                            lastCancelledReservationUserId.set(targetUserId);
+                        }
                     }
 
                     @Override
@@ -1022,6 +1065,39 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getRealMatchDetailsRouteForJoinedUserExposesReservationCancellation() throws Exception {
+        currentUserHasReservation.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "reservationCancelPath",
+                                        "/matches/42/reservations/cancel"));
+    }
+
+    @Test
+    void getPrivateInviteOnlyMatchDetailsForJoinedUserExposesReservationCancellation()
+            throws Exception {
+        currentUserHasReservation.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/51"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "reservationCancelPath",
+                                        "/matches/51/reservations/cancel"));
+    }
+
+    @Test
     void getRecurringMatchDetailsRouteExposesRecurringOccurrenceStates() throws Exception {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
@@ -1155,6 +1231,51 @@ class PawUiRouteTest {
                         model().attribute(
                                         "reservationError",
                                         "Tu cuenta ya tiene una reserva confirmada para este evento."));
+    }
+
+    @Test
+    void postReservationCancelWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/matches/42/reservations/cancel"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postReservationCancelAsAuthenticatedUserRedirectsToCancelledEvent() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/42/reservations/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42?reservation=cancelled"));
+
+        Assertions.assertEquals(42L, lastCancelledReservationMatchId.get());
+        Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+    }
+
+    @Test
+    void postPrivateInviteOnlyReservationCancelRedirectsToUpcomingMatches() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/51/reservations/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/player/matches/upcoming"));
+
+        Assertions.assertEquals(51L, lastCancelledReservationMatchId.get());
+        Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+    }
+
+    @Test
+    void postReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        reservationCancellationFailure.set(
+                new MatchParticipationException("not_joined", "No active reservation"));
+
+        mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "reservationError",
+                                        "No ten\u00e9s una reserva activa para este evento."));
     }
 
     @Test

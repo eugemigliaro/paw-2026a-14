@@ -13,6 +13,7 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
@@ -110,6 +111,38 @@ public class EventController {
             matchReservationService.reserveSpot(matchId, currentUser.getUserId());
             return new ModelAndView("redirect:/matches/" + matchId + "?reservation=confirmed");
         } catch (final MatchReservationException exception) {
+            return showRealEventDetails(
+                    matchId,
+                    null,
+                    null,
+                    reservationErrorMessage(exception.getCode(), locale),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    locale);
+        }
+    }
+
+    @PostMapping("/matches/{eventId}/reservations/cancel")
+    public ModelAndView cancelReservation(
+            @PathVariable("eventId") final String eventId, final Locale locale) {
+        final Long matchId = parseEventIdOrThrowNotFound(eventId);
+        final AuthenticatedUserPrincipal currentUser =
+                CurrentAuthenticatedUser.get()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        final Match cancellationContext = matchService.findMatchById(matchId).orElse(null);
+
+        try {
+            matchParticipationService.removeParticipant(
+                    matchId, currentUser.getUserId(), currentUser.getUserId());
+            if (shouldRedirectToPlayerMatchesAfterCancellation(
+                    cancellationContext, currentUser.getUserId())) {
+                return new ModelAndView("redirect:/player/matches/upcoming");
+            }
+            return new ModelAndView("redirect:/matches/" + matchId + "?reservation=cancelled");
+        } catch (final MatchParticipationException exception) {
             return showRealEventDetails(
                     matchId,
                     null,
@@ -248,8 +281,13 @@ public class EventController {
 
         mav.addObject("reservationEnabled", canReserveMatch(match));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
+        mav.addObject("reservationCancelPath", "/matches/" + eventId + "/reservations/cancel");
+        mav.addObject(
+                "reservationCancellationEnabled",
+                isConfirmedParticipant && canCancelReservation(match));
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
+        mav.addObject("reservationCancelled", "cancelled".equalsIgnoreCase(reservationStatus));
         mav.addObject("seriesReservationPath", "/matches/" + eventId + "/recurring-reservations");
         mav.addObject(
                 "seriesReservationCancelPath",
@@ -592,6 +630,10 @@ public class EventController {
                 return messageSource.getMessage("reservation.error.started", null, locale);
             case "already_joined":
                 return messageSource.getMessage("reservation.error.alreadyJoined", null, locale);
+            case "not_joined":
+                return messageSource.getMessage("reservation.error.notJoined", null, locale);
+            case "not_cancellable":
+                return messageSource.getMessage("reservation.error.notCancellable", null, locale);
             case "full":
                 return messageSource.getMessage(
                         "reservation.error.fullBeforeConfirm", null, locale);
@@ -709,6 +751,17 @@ public class EventController {
                 && "open".equalsIgnoreCase(match.getStatus())
                 && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
+    }
+
+    private boolean canCancelReservation(final Match match) {
+        return "open".equalsIgnoreCase(match.getStatus()) && !hasEventStarted(match);
+    }
+
+    private boolean shouldRedirectToPlayerMatchesAfterCancellation(
+            final Match match, final Long userId) {
+        return match != null
+                && "private".equalsIgnoreCase(match.getVisibility())
+                && !userId.equals(match.getHostUserId());
     }
 
     private String joinErrorMessage(final String code, final Locale locale) {

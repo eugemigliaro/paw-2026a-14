@@ -103,6 +103,13 @@
 									<spring:message code="event.booking.confirmed" />
 								</p>
 							</c:if>
+							<c:if test="${reservationCancelled}">
+								<p
+									class="booking-panel__notice booking-panel__notice--info"
+								>
+									<spring:message code="event.booking.cancelled" />
+								</p>
+							</c:if>
 							<c:if test="${not empty hostActionNotice}">
 								<p
 									class="booking-panel__notice booking-panel__notice--success"
@@ -280,6 +287,21 @@
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
 										</p>
+										<c:if test="${reservationCancellationEnabled}">
+											<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
+											<spring:message var="leavingReservationLabel" code="event.booking.leaving" />
+											<form
+												method="post"
+												action="${reservationCancelAction}"
+												data-submit-guard="true"
+												data-submit-loading-label="${leavingReservationLabel}"
+												class="booking-panel__request-form"
+											>
+												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+												<spring:message var="leaveReservationLabel" code="event.booking.leave" />
+												<ui:button label="${leaveReservationLabel}" type="submit" fullWidth="${true}" variant="danger" />
+											</form>
+										</c:if>
 									</c:when>
 									<c:when test="${reservationRequiresLogin}">
 										<c:choose>
