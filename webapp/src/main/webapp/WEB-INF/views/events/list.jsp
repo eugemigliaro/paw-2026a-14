@@ -152,6 +152,9 @@
 										<c:param name="q" value="${listControls.searchQuery}" />
 										<c:param name="sort" value="${selectedSort}" />
 										<c:param name="tz" value="${selectedTimezone}" />
+										<c:if test="${param.filter eq 'past'}">
+											<c:param name="filter" value="past" />
+										</c:if>
 									</c:url>
 									<spring:message var="clearAllLabel" code="filter.clearAll" />
 									<ui:button
@@ -373,7 +376,11 @@
 				// Navigate with new filter parameter
 				const value = btn.dataset.value;
 				const currentUrl = new URL(window.location);
-				currentUrl.searchParams.set("filter", value);
+				if (value === "past") {
+					currentUrl.searchParams.set("filter", "past");
+				} else {
+					currentUrl.searchParams.delete("filter");
+				}
 				currentUrl.searchParams.set("page", "1"); // Reset to first page when changing filter
 				window.location.href = currentUrl.toString();
 			});

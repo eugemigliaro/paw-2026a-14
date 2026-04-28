@@ -35,6 +35,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -994,6 +996,16 @@ public class MatchDashboardController {
             final int page) {
         final UriComponentsBuilder builder =
                 UriComponentsBuilder.fromPath(path).queryParam("page", page);
+        if ("/events".equals(path)) {
+            final ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                final String filter = attrs.getRequest().getParameter("filter");
+                if ("past".equalsIgnoreCase(filter)) {
+                    builder.queryParam("filter", "past");
+                }
+            }
+        }
         if (searchQuery != null && !searchQuery.isBlank()) {
             builder.queryParam("q", searchQuery);
         }
