@@ -11,6 +11,49 @@
 <html lang="${pageContext.response.locale.language}">
 	<head>
 		<%@ include file="/WEB-INF/views/includes/head.jspf" %>
+		<style>
+			.events-toggle-wrapper {
+				position: relative;
+				display: inline-flex;
+				background: #e5e7eb;
+				border-radius: 999px;
+				padding: 4px;
+				width: 220px;
+				margin: 20px 0;
+			}
+
+			.events-toggle-slider {
+				position: absolute;
+				top: 4px;
+				left: 4px;
+				width: 50%;
+				height: calc(100% - 8px);
+				background: white;
+				border-radius: 999px;
+				transition: transform 0.3s ease;
+				box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+			}
+
+			.events-toggle-slider.right {
+				transform: translateX(100%);
+			}
+
+			.events-toggle-btn {
+				flex: 1;
+				z-index: 1;
+				border: none;
+				background: transparent;
+				cursor: pointer;
+				padding: 10px 0;
+				font-weight: 500;
+				border-radius: 999px;
+				font-size: 14px;
+			}
+
+			.events-toggle-btn:hover {
+				color: #333;
+			}
+		</style>
 	</head>
 	<body>
 		<div class="app-shell">
@@ -26,6 +69,13 @@
 					<h1 class="page-heading__title"><c:out value="${listTitle}" /></h1>
 					<p class="page-heading__description"><c:out value="${listDescription}" /></p>
 				</header>
+
+				<!-- Events Toggle -->
+				<div class="events-toggle-wrapper" id="eventsToggle">
+					<div class="events-toggle-slider" id="eventsSlider"></div>
+					<button class="events-toggle-btn" data-value="upcoming">Upcoming</button>
+					<button class="events-toggle-btn" data-value="past">Past</button>
+				</div>
 
 				<section class="matches-search-sort-panel">
 					<c:if test="${not empty listControls.sortOptions}">
@@ -307,4 +357,23 @@
 			</main>
 		</div>
 	</body>
+	<script>
+		const eventsButtons = document.querySelectorAll(".events-toggle-btn");
+		const eventsSlider = document.getElementById("eventsSlider");
+
+		eventsButtons.forEach((btn, index) => {
+			btn.addEventListener("click", () => {
+				// Move slider
+				if (index === 1) {
+					eventsSlider.classList.add("right");
+				} else {
+					eventsSlider.classList.remove("right");
+				}
+
+				// Log which option was selected (for future implementation)
+				const value = btn.dataset.value;
+				console.log("Selected filter:", value);
+			});
+		});
+	</script>
 </html>
