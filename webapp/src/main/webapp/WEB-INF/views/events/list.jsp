@@ -370,10 +370,20 @@
 					eventsSlider.classList.remove("right");
 				}
 
-				// Log which option was selected (for future implementation)
+				// Navigate with new filter parameter
 				const value = btn.dataset.value;
-				console.log("Selected filter:", value);
+				const currentUrl = new URL(window.location);
+				currentUrl.searchParams.set("filter", value);
+				currentUrl.searchParams.set("page", "1"); // Reset to first page when changing filter
+				window.location.href = currentUrl.toString();
 			});
 		});
+
+		// Set initial slider position based on current filter parameter
+		const urlParams = new URLSearchParams(window.location.search);
+		const currentFilter = urlParams.get("filter") || "upcoming";
+		if (currentFilter === "past") {
+			document.getElementById("eventsSlider").classList.add("right");
+		}
 	</script>
 </html>
