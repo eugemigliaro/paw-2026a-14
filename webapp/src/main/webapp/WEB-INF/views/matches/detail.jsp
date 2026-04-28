@@ -436,33 +436,6 @@
 
 				<section class="detail-layout">
 					<div class="detail-layout__main">
-						<section
-							class="detail-section detail-section--about"
-							aria-labelledby="about-event-title"
-						>
-							<div
-								class="section-head section-head--detail-compact"
-							>
-								<div>
-									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
-									<h2
-										id="about-event-title"
-										class="detail-section__title"
-									>
-										<spring:message code="event.detail.aboutEvent" />
-									</h2>
-								</div>
-							</div>
-							<div class="detail-stack">
-								<c:forEach
-									var="paragraph"
-									items="${eventPage.aboutParagraphs}"
-								>
-									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
-								</c:forEach>
-							</div>
-						</section>
-
 						<article class="panel host-card">
 							<div class="host-card__main">
 								<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
@@ -490,42 +463,32 @@
 							</div>
 						</article>
 
-						<c:if test="${not empty eventPage.occurrences}">
-							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
-								<div class="section-head section-head--detail-compact">
-									<div>
-										<span class="detail-label"><spring:message code="event.recurrence.label" /></span>
-										<h2 id="recurrence-schedule-title" class="detail-section__title">
-											<spring:message code="event.recurrence.title" />
-										</h2>
-									</div>
+						<section
+							class="detail-section detail-section--about"
+							aria-labelledby="about-event-title"
+						>
+							<div
+								class="section-head section-head--detail-compact"
+							>
+								<div>
+									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
+									<h2
+										id="about-event-title"
+										class="detail-section__title"
+									>
+										<spring:message code="event.detail.aboutEvent" />
+									</h2>
 								</div>
-								<ul class="recurrence-schedule__list">
-									<c:forEach var="occurrence" items="${eventPage.occurrences}">
-										<li class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}">
-											<div class="recurrence-schedule__date">
-												<c:url var="occurrenceHref" value="${occurrence.href}" />
-												<a class="recurrence-schedule__link" href="${occurrenceHref}">
-													<c:out value="${occurrence.schedule}" />
-												</a>
-											</div>
-											<div class="recurrence-schedule__badges">
-												<c:if test="${not empty occurrence.statusLabel}">
-													<span class="recurrence-schedule__status recurrence-schedule__status--${occurrence.statusTone}">
-														<c:out value="${occurrence.statusLabel}" />
-													</span>
-												</c:if>
-												<c:if test="${occurrence.current}">
-													<span class="recurrence-schedule__current">
-														<spring:message code="event.recurrence.current" />
-													</span>
-												</c:if>
-											</div>
-										</li>
-									</c:forEach>
-								</ul>
-							</section>
-						</c:if>
+							</div>
+							<div class="detail-stack">
+								<c:forEach
+									var="paragraph"
+									items="${eventPage.aboutParagraphs}"
+								>
+									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
+								</c:forEach>
+							</div>
+						</section>
 
 						<section
 							class="detail-section detail-section--participants"
@@ -600,6 +563,38 @@
 								</c:otherwise>
 							</c:choose>
 						</section>
+
+						<c:if test="${not empty eventPage.occurrences}">
+							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
+								<div class="section-head section-head--detail-compact">
+									<div>
+										<span class="detail-label"><spring:message code="event.recurrence.label" /></span>
+										<h2 id="recurrence-schedule-title" class="detail-section__title">
+											<spring:message code="event.recurrence.title" />
+										</h2>
+									</div>
+								</div>
+								<ul class="recurrence-schedule__list">
+									<c:forEach var="occurrence" items="${eventPage.occurrences}">
+										<li class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}">
+											<div class="recurrence-schedule__date">
+												<c:url var="occurrenceHref" value="${occurrence.href}" />
+												<a class="recurrence-schedule__link" href="${occurrenceHref}">
+													<c:out value="${occurrence.schedule}" />
+												</a>
+											</div>
+											<div class="recurrence-schedule__badges">
+												<c:if test="${not empty occurrence.statusLabel}">
+													<span class="recurrence-schedule__status recurrence-schedule__status--${occurrence.statusTone}">
+														<c:out value="${occurrence.statusLabel}" />
+													</span>
+												</c:if>
+											</div>
+										</li>
+									</c:forEach>
+								</ul>
+							</section>
+						</c:if>
 
 					</div>
 
