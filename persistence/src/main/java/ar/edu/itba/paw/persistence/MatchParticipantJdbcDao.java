@@ -130,6 +130,37 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     }
 
     @Override
+    public int cancelFutureSeriesReservations(
+            final Long seriesId, final Long userId, final Instant startsAfter) {
+        LOGGER.debug(
+                "Attempting future series reservation cancellation seriesId={} userId={} startsAfter={}",
+                seriesId,
+                userId,
+                startsAfter);
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE match_participants"
+                                + " SET status = 'cancelled'"
+                                + " WHERE user_id = ?"
+                                + " AND status IN ('joined', 'checked_in')"
+                                + " AND match_id IN ("
+                                + " SELECT id FROM matches"
+                                + " WHERE series_id = ?"
+                                + " AND starts_at > ?"
+                                + ")",
+                        userId,
+                        seriesId,
+                        Timestamp.from(startsAfter));
+        if (updatedRows == 0) {
+            LOGGER.debug(
+                    "Future series reservation cancellation found no rows seriesId={} userId={}",
+                    seriesId,
+                    userId);
+        }
+        return updatedRows;
+    }
+
+    @Override
     public List<User> findConfirmedParticipants(final Long matchId) {
         return jdbcTemplate.query(
                 "SELECT u.id, u.email, u.username, u.name, u.last_name, u.phone, u.profile_image_id"

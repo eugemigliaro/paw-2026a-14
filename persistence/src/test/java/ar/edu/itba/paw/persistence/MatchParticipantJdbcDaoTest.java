@@ -133,6 +133,46 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testCancelFutureSeriesReservationsCancelsOnlyFutureActiveReservations() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 4, "open");
+        insertRecurringMatch(31L, 600L, 2, now.plusSeconds(172800), 4, "open");
+        insertRecurringMatch(32L, 600L, 0, now.minusSeconds(86400), 4, "open");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (30, 2, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (31, 2, 'checked_in', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (32, 2, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (31, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int cancelledRows = matchParticipantDao.cancelFutureSeriesReservations(600L, 2L, now);
+
+        Assertions.assertEquals(2, cancelledRows);
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(30L, 2L));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(31L, 2L));
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(32L, 2L));
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(31L, 3L));
+    }
+
+    @Test
+    public void testCancelFutureSeriesReservationsReturnsZeroWithoutFutureReservations() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 4, "open");
+
+        final int cancelledRows = matchParticipantDao.cancelFutureSeriesReservations(600L, 2L, now);
+
+        Assertions.assertEquals(0, cancelledRows);
+    }
+
+    @Test
     public void testCreateReservationIfSpaceRejectsDuplicateReservation() {
         jdbcTemplate.update(
                 "INSERT INTO match_participants (match_id, user_id, status, joined_at)"

@@ -12,6 +12,8 @@ public interface MatchParticipantDao {
 
     int createSeriesReservationsIfSpace(Long seriesId, Long userId, Instant startsAfter);
 
+    int cancelFutureSeriesReservations(Long seriesId, Long userId, Instant startsAfter);
+
     List<User> findConfirmedParticipants(Long matchId);
 
     boolean hasPendingRequest(Long matchId, Long userId);

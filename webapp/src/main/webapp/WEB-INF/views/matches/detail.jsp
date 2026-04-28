@@ -395,6 +395,11 @@
 									<spring:message code="event.recurringReservation.confirmed" />
 								</p>
 							</c:if>
+							<c:if test="${seriesReservationCancelled}">
+								<p class="booking-panel__notice booking-panel__notice--info">
+									<spring:message code="event.recurringReservation.cancelled" />
+								</p>
+							</c:if>
 							<c:if test="${seriesReservationJoined and not seriesReservationConfirmed}">
 								<p class="booking-panel__notice booking-panel__notice--success">
 									<spring:message code="event.recurringReservation.joined" />
@@ -429,6 +434,21 @@
 									</c:otherwise>
 								</c:choose>
 								<p class="booking-panel__note"><spring:message code="event.recurringReservation.note" /></p>
+							</c:if>
+							<c:if test="${seriesCancellationEnabled}">
+								<c:url var="recurringReservationCancelAction" value="${seriesReservationCancelPath}" />
+								<spring:message var="leavingRecurringLabel" code="event.recurringReservation.leaving" />
+								<form
+									method="post"
+									action="${recurringReservationCancelAction}"
+									data-submit-guard="true"
+									data-submit-loading-label="${leavingRecurringLabel}"
+									class="booking-panel__request-form"
+								>
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<spring:message var="leaveRecurringLabel" code="event.recurringReservation.leave" />
+									<ui:button label="${leaveRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+								</form>
 							</c:if>
 						</article>
 					</aside>

@@ -67,6 +67,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     }
 
     @Transactional
+    @Override
     public void reserveSeries(final Long matchId, final Long userId) {
         LOGGER.info("Recurring reservation requested matchId={} userId={}", matchId, userId);
         final Match match =
@@ -129,6 +130,74 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 match.getSeriesId(),
                 userId,
                 reservedOccurrences);
+    }
+
+    @Override
+    @Transactional
+    public void cancelSeriesReservations(final Long matchId, final Long userId) {
+        LOGGER.info(
+                "Recurring reservation cancellation requested matchId={} userId={}",
+                matchId,
+                userId);
+        final Match match =
+                matchDao.findMatchById(matchId)
+                        .orElseThrow(
+                                () -> {
+                                    LOGGER.warn(
+                                            "Recurring reservation cancellation rejected code=not_found matchId={} userId={}",
+                                            matchId,
+                                            userId);
+                                    return new MatchReservationException(
+                                            "not_found", "The event does not exist.");
+                                });
+
+        if (!match.isRecurringOccurrence()) {
+            LOGGER.warn(
+                    "Recurring reservation cancellation rejected code=not_recurring matchId={} userId={}",
+                    matchId,
+                    userId);
+            throw new MatchReservationException(
+                    "not_recurring", "The event is not a recurring event.");
+        }
+
+        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeriesId());
+        final SeriesCancellationEvaluation evaluation =
+                evaluateSeriesCancellations(occurrences, userId);
+        if (evaluation.activeFutureReservationCount() == 0) {
+            final MatchReservationException failure = buildSeriesCancellationFailure(evaluation);
+            LOGGER.warn(
+                    "Recurring reservation cancellation rejected code={} matchId={} seriesId={} userId={}",
+                    failure.getCode(),
+                    matchId,
+                    match.getSeriesId(),
+                    userId);
+            throw failure;
+        }
+
+        final int cancelledReservations =
+                matchParticipantDao.cancelFutureSeriesReservations(
+                        match.getSeriesId(), userId, Instant.now(clock));
+        if (cancelledReservations <= 0) {
+            final SeriesCancellationEvaluation currentEvaluation =
+                    evaluateSeriesCancellations(
+                            matchDao.findSeriesOccurrences(match.getSeriesId()), userId);
+            final MatchReservationException failure =
+                    buildSeriesCancellationFailure(currentEvaluation);
+            LOGGER.warn(
+                    "Recurring reservation cancellation rejected code={} matchId={} seriesId={} userId={}",
+                    failure.getCode(),
+                    matchId,
+                    match.getSeriesId(),
+                    userId);
+            throw failure;
+        }
+
+        LOGGER.info(
+                "Recurring reservations cancelled matchId={} seriesId={} userId={} reservations={}",
+                matchId,
+                match.getSeriesId(),
+                userId,
+                cancelledReservations);
     }
 
     private void validateReservable(final Match match, final Long userId) {
@@ -306,10 +375,46 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 "series_closed", "The upcoming recurring dates are not open.");
     }
 
+    private SeriesCancellationEvaluation evaluateSeriesCancellations(
+            final List<Match> occurrences, final Long userId) {
+        int futureOccurrenceCount = 0;
+        int activeFutureReservationCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)) {
+                continue;
+            }
+
+            futureOccurrenceCount++;
+            if (matchParticipantDao.hasActiveReservation(occurrence.getId(), userId)) {
+                activeFutureReservationCount++;
+            }
+        }
+
+        return new SeriesCancellationEvaluation(
+                futureOccurrenceCount, activeFutureReservationCount);
+    }
+
+    private static MatchReservationException buildSeriesCancellationFailure(
+            final SeriesCancellationEvaluation evaluation) {
+        if (evaluation.futureOccurrenceCount() == 0) {
+            return new MatchReservationException(
+                    "series_started", "There are no upcoming dates left in this recurring event.");
+        }
+
+        return new MatchReservationException(
+                "series_not_joined",
+                "This account does not have future reservations for this recurring event.");
+    }
+
     private record SeriesReservationEvaluation(
             int futureOccurrenceCount,
             int futureOpenOccurrenceCount,
             boolean joined,
             int reservableOccurrenceCount,
             int fullOccurrenceCount) {}
+
+    private record SeriesCancellationEvaluation(
+            int futureOccurrenceCount, int activeFutureReservationCount) {}
 }

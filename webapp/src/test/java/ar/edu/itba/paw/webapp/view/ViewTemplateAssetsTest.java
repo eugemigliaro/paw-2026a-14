@@ -82,6 +82,22 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void matchDetailIncludesLocalizedRecurringCancellationControls() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(detailView.contains("seriesReservationCancelPath"));
+        assertTrue(detailView.contains("event.recurringReservation.leave"));
+        assertTrue(detailView.contains("event.recurringReservation.cancelled"));
+        assertEquals(
+                "Leave recurring dates", english.getProperty("event.recurringReservation.leave"));
+        assertEquals(
+                "Dejar fechas recurrentes",
+                spanish.getProperty("event.recurringReservation.leave"));
+    }
+
+    @Test
     void overflowMenuTagExists() {
         assertTrue(Files.exists(Path.of("src/main/webapp/WEB-INF/tags/overflowMenu.tag")));
     }

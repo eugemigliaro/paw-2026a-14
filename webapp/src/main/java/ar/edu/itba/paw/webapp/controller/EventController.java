@@ -136,12 +136,39 @@ public class EventController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
         try {
-            for (final Long occurrenceId :
-                    resolveSeriesReservationTargets(matchId, currentUser.getUserId())) {
-                matchReservationService.reserveSpot(occurrenceId, currentUser.getUserId());
-            }
+            matchReservationService.reserveSeries(matchId, currentUser.getUserId());
             return new ModelAndView(
                     "redirect:/matches/" + matchId + "?reservation=recurringConfirmed");
+        } catch (final MatchReservationException exception) {
+            return showRealEventDetails(
+                    matchId,
+                    null,
+                    null,
+                    null,
+                    reservationErrorMessage(exception.getCode(), locale),
+                    null,
+                    null,
+                    null,
+                    null,
+                    locale);
+        }
+    }
+
+    @PostMapping({
+        "/matches/{eventId}/recurring-reservations/cancel",
+        "/matches/{eventId}/series-reservations/cancel"
+    })
+    public ModelAndView cancelSeriesReservations(
+            @PathVariable("eventId") final String eventId, final Locale locale) {
+        final Long matchId = parseEventIdOrThrowNotFound(eventId);
+        final AuthenticatedUserPrincipal currentUser =
+                CurrentAuthenticatedUser.get()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+
+        try {
+            matchReservationService.cancelSeriesReservations(matchId, currentUser.getUserId());
+            return new ModelAndView(
+                    "redirect:/matches/" + matchId + "?reservation=recurringCancelled");
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
                     matchId,
@@ -224,13 +251,21 @@ public class EventController {
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
         mav.addObject("seriesReservationPath", "/matches/" + eventId + "/recurring-reservations");
+        mav.addObject(
+                "seriesReservationCancelPath",
+                "/matches/" + eventId + "/recurring-reservations/cancel");
         mav.addObject("seriesReservationEnabled", seriesReservationState.available());
         mav.addObject("seriesReservationJoined", seriesReservationState.joined());
+        mav.addObject("seriesCancellationEnabled", seriesReservationState.cancellable());
         mav.addObject("seriesReservationRequiresLogin", currentUserId == null);
         mav.addObject(
                 "seriesReservationConfirmed",
                 "recurringConfirmed".equalsIgnoreCase(reservationStatus)
                         || "seriesConfirmed".equalsIgnoreCase(reservationStatus));
+        mav.addObject(
+                "seriesReservationCancelled",
+                "recurringCancelled".equalsIgnoreCase(reservationStatus)
+                        || "seriesCancelled".equalsIgnoreCase(reservationStatus));
         mav.addObject("seriesReservationError", seriesReservationError);
         mav.addObject("eventStateNotice", eventStateNotice(match, locale));
 
@@ -410,48 +445,22 @@ public class EventController {
                 .toList();
     }
 
-    private List<Long> resolveSeriesReservationTargets(final Long matchId, final Long userId) {
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(
-                                () ->
-                                        new MatchReservationException(
-                                                "not_found", "The event does not exist."));
-
-        if (!isMatchVisibleToUser(match, userId)) {
-            throw new MatchReservationException("not_found", "The event does not exist.");
-        }
-
-        if (!match.isRecurringOccurrence()) {
-            throw new MatchReservationException(
-                    "not_recurring", "The event is not a recurring event.");
-        }
-
-        final SeriesReservationEvaluation evaluation =
-                evaluateSeriesReservationTargets(
-                        matchService.findSeriesOccurrences(match.getSeriesId()), userId);
-        if (evaluation.targetMatchIds().isEmpty()) {
-            throw buildSeriesReservationFailure(evaluation);
-        }
-        return evaluation.targetMatchIds();
-    }
-
     private SeriesReservationUiState buildSeriesReservationUiState(
             final List<Match> occurrences, final Long currentUserId) {
         final SeriesReservationEvaluation evaluation =
                 evaluateSeriesReservationTargets(occurrences, currentUserId);
         return new SeriesReservationUiState(
-                !evaluation.targetMatchIds().isEmpty(), evaluation.joined());
+                !evaluation.targetMatchIds().isEmpty(),
+                evaluation.joined(),
+                evaluation.activeFutureReservationCount() > 0);
     }
 
     private SeriesReservationEvaluation evaluateSeriesReservationTargets(
             final List<Match> occurrences, final Long userId) {
         final List<Long> targetMatchIds = new ArrayList<>();
-        int futureOccurrenceCount = 0;
         int futureOpenOccurrenceCount = 0;
         int joinedFutureOpenOccurrenceCount = 0;
-        int fullOccurrenceCount = 0;
+        int activeFutureReservationCount = 0;
         final Instant now = Instant.now(clock);
 
         for (final Match occurrence : occurrences) {
@@ -459,23 +468,25 @@ public class EventController {
                 continue;
             }
 
-            futureOccurrenceCount++;
+            final boolean alreadyJoined =
+                    userId != null
+                            && matchReservationService.hasActiveReservation(
+                                    occurrence.getId(), userId);
+            if (alreadyJoined) {
+                activeFutureReservationCount++;
+            }
+
             if (!isSeriesReservationOpenOccurrence(occurrence)) {
                 continue;
             }
 
             futureOpenOccurrenceCount++;
-            final boolean alreadyJoined =
-                    userId != null
-                            && matchReservationService.hasActiveReservation(
-                                    occurrence.getId(), userId);
             if (alreadyJoined) {
                 joinedFutureOpenOccurrenceCount++;
                 continue;
             }
 
             if (occurrence.getAvailableSpots() <= 0) {
-                fullOccurrenceCount++;
                 continue;
             }
 
@@ -487,40 +498,13 @@ public class EventController {
                         && futureOpenOccurrenceCount > 0
                         && joinedFutureOpenOccurrenceCount == futureOpenOccurrenceCount;
         return new SeriesReservationEvaluation(
-                List.copyOf(targetMatchIds),
-                futureOccurrenceCount,
-                futureOpenOccurrenceCount,
-                joined,
-                fullOccurrenceCount);
+                List.copyOf(targetMatchIds), joined, activeFutureReservationCount);
     }
 
     private static boolean isSeriesReservationOpenOccurrence(final Match occurrence) {
         return "public".equalsIgnoreCase(occurrence.getVisibility())
                 && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())
                 && "open".equalsIgnoreCase(occurrence.getStatus());
-    }
-
-    private static MatchReservationException buildSeriesReservationFailure(
-            final SeriesReservationEvaluation evaluation) {
-        if (evaluation.futureOccurrenceCount() == 0) {
-            return new MatchReservationException(
-                    "series_started", "There are no upcoming dates left in this recurring event.");
-        }
-        if (evaluation.futureOpenOccurrenceCount() == 0) {
-            return new MatchReservationException(
-                    "series_closed", "The upcoming recurring dates are not open.");
-        }
-        if (evaluation.joined()) {
-            return new MatchReservationException(
-                    "series_already_joined",
-                    "This account already has reservations for the future recurring dates.");
-        }
-        if (evaluation.fullOccurrenceCount() > 0) {
-            return new MatchReservationException(
-                    "series_full", "The available future recurring dates are full.");
-        }
-        return new MatchReservationException(
-                "series_closed", "The upcoming recurring dates are not open.");
     }
 
     private EventDisplayState eventDisplayState(final Match match) {
@@ -622,6 +606,8 @@ public class EventController {
                         "reservation.error.seriesAlreadyJoined", null, locale);
             case "series_full":
                 return messageSource.getMessage("reservation.error.seriesFull", null, locale);
+            case "series_not_joined":
+                return messageSource.getMessage("reservation.error.seriesNotJoined", null, locale);
             case "not_found":
             default:
                 return messageSource.getMessage("reservation.error.notFound", null, locale);
@@ -802,14 +788,11 @@ public class EventController {
         return canHostEdit(match);
     }
 
-    private record SeriesReservationUiState(boolean available, boolean joined) {}
+    private record SeriesReservationUiState(
+            boolean available, boolean joined, boolean cancellable) {}
 
     private record SeriesReservationEvaluation(
-            List<Long> targetMatchIds,
-            int futureOccurrenceCount,
-            int futureOpenOccurrenceCount,
-            boolean joined,
-            int fullOccurrenceCount) {}
+            List<Long> targetMatchIds, boolean joined, int activeFutureReservationCount) {}
 
     private record EventDisplayState(String key, String tone) {}
 }

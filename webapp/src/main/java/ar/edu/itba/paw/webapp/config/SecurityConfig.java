@@ -66,6 +66,12 @@ public class SecurityConfig {
                                                         "/matches/*/series-reservations",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
+                                                        "/matches/*/recurring-reservations/cancel",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/series-reservations/cancel",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
                                                         "/matches/*/join-requests",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
