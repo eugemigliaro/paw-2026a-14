@@ -206,6 +206,63 @@ class PawUiRouteTest {
                         null,
                         600L,
                         2);
+        final Match recurringPastOccurrence =
+                new Match(
+                        48L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-03-26T18:00:00Z"),
+                        Instant.parse("2026-03-26T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        4,
+                        null,
+                        600L,
+                        0);
+        final Match recurringFullOccurrence =
+                new Match(
+                        49L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-23T18:00:00Z"),
+                        Instant.parse("2026-04-23T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        8,
+                        null,
+                        600L,
+                        3);
+        final Match recurringCancelledOccurrence =
+                new Match(
+                        50L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-30T18:00:00Z"),
+                        Instant.parse("2026-04-30T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "cancelled",
+                        0,
+                        null,
+                        600L,
+                        4);
 
         final MatchService matchService =
                 new MatchService() {
@@ -249,6 +306,18 @@ class PawUiRouteTest {
                         if (matchId == 46L) {
                             return Optional.of(recurringMatch);
                         }
+                        if (matchId == 47L) {
+                            return Optional.of(recurringSecondOccurrence);
+                        }
+                        if (matchId == 48L) {
+                            return Optional.of(recurringPastOccurrence);
+                        }
+                        if (matchId == 49L) {
+                            return Optional.of(recurringFullOccurrence);
+                        }
+                        if (matchId == 50L) {
+                            return Optional.of(recurringCancelledOccurrence);
+                        }
                         return Optional.empty();
                     }
 
@@ -260,7 +329,12 @@ class PawUiRouteTest {
                     @Override
                     public List<Match> findSeriesOccurrences(final Long seriesId) {
                         return Long.valueOf(600L).equals(seriesId)
-                                ? List.of(recurringMatch, recurringSecondOccurrence)
+                                ? List.of(
+                                        recurringPastOccurrence,
+                                        recurringMatch,
+                                        recurringSecondOccurrence,
+                                        recurringFullOccurrence,
+                                        recurringCancelledOccurrence)
                                 : List.of();
                     }
 
@@ -910,19 +984,56 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getRecurringMatchDetailsRouteExposesSeriesOccurrences() throws Exception {
+    void getRecurringMatchDetailsRouteExposesRecurringOccurrenceStates() throws Exception {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(2))))
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(5))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("Completed"))))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("Full"))))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("Cancelled"))))))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(
                         model().attribute(
                                         "seriesReservationPath",
-                                        "/matches/46/series-reservations"));
+                                        "/matches/46/recurring-reservations"));
+    }
+
+    @Test
+    void getPastRecurringMatchDetailsRouteExposesCompletedNotice() throws Exception {
+        mockMvc.perform(get("/matches/48"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("reservationEnabled", false))
+                .andExpect(
+                        model().attribute("eventStateNotice", "This event has already occurred."));
     }
 
     @Test
@@ -996,7 +1107,7 @@ class PawUiRouteTest {
     @Test
     void postSeriesReservationRequestWithoutAuthenticatedUserReturnsUnauthorized()
             throws Exception {
-        mockMvc.perform(post("/matches/46/series-reservations"))
+        mockMvc.perform(post("/matches/46/recurring-reservations"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -1005,9 +1116,9 @@ class PawUiRouteTest {
             throws Exception {
         authenticateUser(9L, "player@test.com", "player-account");
 
-        mockMvc.perform(post("/matches/46/series-reservations"))
+        mockMvc.perform(post("/matches/46/recurring-reservations"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/46?reservation=seriesConfirmed"));
+                .andExpect(redirectedUrl("/matches/46?reservation=recurringConfirmed"));
 
         Assertions.assertEquals(47L, lastReservedMatchId.get());
         Assertions.assertEquals(9L, lastReservedUserId.get());
@@ -1020,13 +1131,13 @@ class PawUiRouteTest {
         seriesReservationFailure.set(
                 new MatchReservationException("series_already_joined", "Already joined"));
 
-        mockMvc.perform(post("/matches/46/series-reservations").param("lang", "es"))
+        mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(
                         model().attribute(
                                         "seriesReservationError",
-                                        "Tu cuenta ya tiene reservas confirmadas para las fechas futuras de esta serie."));
+                                        "Tu cuenta ya tiene reservas confirmadas para las fechas futuras recurrentes."));
     }
 
     @Test

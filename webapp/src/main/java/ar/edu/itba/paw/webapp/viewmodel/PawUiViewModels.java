@@ -472,12 +472,20 @@ public final class PawUiViewModels {
     public static final class EventOccurrenceViewModel {
         private final String href;
         private final String schedule;
+        private final String statusLabel;
+        private final String statusTone;
         private final boolean current;
 
         public EventOccurrenceViewModel(
-                final String href, final String schedule, final boolean current) {
+                final String href,
+                final String schedule,
+                final String statusLabel,
+                final String statusTone,
+                final boolean current) {
             this.href = href;
             this.schedule = schedule;
+            this.statusLabel = statusLabel;
+            this.statusTone = statusTone;
             this.current = current;
         }
 
@@ -487,6 +495,14 @@ public final class PawUiViewModels {
 
         public String getSchedule() {
             return schedule;
+        }
+
+        public String getStatusLabel() {
+            return statusLabel;
+        }
+
+        public String getStatusTone() {
+            return statusTone;
         }
 
         public boolean isCurrent() {

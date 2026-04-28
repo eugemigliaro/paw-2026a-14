@@ -117,6 +117,11 @@
 									<c:out value="${reservationError}" />
 								</p>
 							</c:if>
+							<c:if test="${not empty eventStateNotice}">
+								<p class="booking-panel__notice booking-panel__notice--info">
+									<c:out value="${eventStateNotice}" />
+								</p>
+							</c:if>
 
 							<div class="booking-panel__availability">
 								<div>
@@ -387,12 +392,12 @@
 
 							<c:if test="${seriesReservationConfirmed}">
 								<p class="booking-panel__notice booking-panel__notice--success">
-									<spring:message code="event.seriesReservation.confirmed" />
+									<spring:message code="event.recurringReservation.confirmed" />
 								</p>
 							</c:if>
 							<c:if test="${seriesReservationJoined and not seriesReservationConfirmed}">
 								<p class="booking-panel__notice booking-panel__notice--success">
-									<spring:message code="event.seriesReservation.joined" />
+									<spring:message code="event.recurringReservation.joined" />
 								</p>
 							</c:if>
 							<c:if test="${not empty seriesReservationError}">
@@ -403,27 +408,27 @@
 							<c:if test="${seriesReservationEnabled and not seriesReservationJoined}">
 								<c:choose>
 									<c:when test="${seriesReservationRequiresLogin}">
-										<spring:message var="signInToJoinSeriesLabel" code="event.seriesReservation.signIn" />
-										<c:url var="seriesLoginHref" value="/login" />
-										<ui:button label="${signInToJoinSeriesLabel}" href="${seriesLoginHref}" fullWidth="${true}" variant="secondary" />
+										<spring:message var="signInToJoinRecurringLabel" code="event.recurringReservation.signIn" />
+										<c:url var="recurringLoginHref" value="/login" />
+										<ui:button label="${signInToJoinRecurringLabel}" href="${recurringLoginHref}" fullWidth="${true}" variant="secondary" />
 									</c:when>
 									<c:otherwise>
-										<c:url var="seriesReservationAction" value="${seriesReservationPath}" />
-										<spring:message var="joiningSeriesLabel" code="event.seriesReservation.joining" />
+										<c:url var="recurringReservationAction" value="${seriesReservationPath}" />
+										<spring:message var="joiningRecurringLabel" code="event.recurringReservation.joining" />
 										<form
 											method="post"
-											action="${seriesReservationAction}"
+											action="${recurringReservationAction}"
 											data-submit-guard="true"
-											data-submit-loading-label="${joiningSeriesLabel}"
+											data-submit-loading-label="${joiningRecurringLabel}"
 											class="booking-panel__request-form"
 										>
 											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-											<spring:message var="joinSeriesLabel" code="event.seriesReservation.cta" />
-											<ui:button label="${joinSeriesLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+											<spring:message var="joinRecurringLabel" code="event.recurringReservation.cta" />
+											<ui:button label="${joinRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
 										</form>
 									</c:otherwise>
 								</c:choose>
-								<p class="booking-panel__note"><spring:message code="event.seriesReservation.note" /></p>
+								<p class="booking-panel__note"><spring:message code="event.recurringReservation.note" /></p>
 							</c:if>
 						</article>
 					</aside>
@@ -431,6 +436,33 @@
 
 				<section class="detail-layout">
 					<div class="detail-layout__main">
+						<section
+							class="detail-section detail-section--about"
+							aria-labelledby="about-event-title"
+						>
+							<div
+								class="section-head section-head--detail-compact"
+							>
+								<div>
+									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
+									<h2
+										id="about-event-title"
+										class="detail-section__title"
+									>
+										<spring:message code="event.detail.aboutEvent" />
+									</h2>
+								</div>
+							</div>
+							<div class="detail-stack">
+								<c:forEach
+									var="paragraph"
+									items="${eventPage.aboutParagraphs}"
+								>
+									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
+								</c:forEach>
+							</div>
+						</section>
+
 						<article class="panel host-card">
 							<div class="host-card__main">
 								<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
@@ -471,15 +503,24 @@
 								<ul class="recurrence-schedule__list">
 									<c:forEach var="occurrence" items="${eventPage.occurrences}">
 										<li class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}">
-											<c:url var="occurrenceHref" value="${occurrence.href}" />
-											<a class="recurrence-schedule__link" href="${occurrenceHref}">
-												<c:out value="${occurrence.schedule}" />
-											</a>
-											<c:if test="${occurrence.current}">
-												<span class="recurrence-schedule__current">
-													<spring:message code="event.recurrence.current" />
-												</span>
-											</c:if>
+											<div class="recurrence-schedule__date">
+												<c:url var="occurrenceHref" value="${occurrence.href}" />
+												<a class="recurrence-schedule__link" href="${occurrenceHref}">
+													<c:out value="${occurrence.schedule}" />
+												</a>
+											</div>
+											<div class="recurrence-schedule__badges">
+												<c:if test="${not empty occurrence.statusLabel}">
+													<span class="recurrence-schedule__status recurrence-schedule__status--${occurrence.statusTone}">
+														<c:out value="${occurrence.statusLabel}" />
+													</span>
+												</c:if>
+												<c:if test="${occurrence.current}">
+													<span class="recurrence-schedule__current">
+														<spring:message code="event.recurrence.current" />
+													</span>
+												</c:if>
+											</div>
 										</li>
 									</c:forEach>
 								</ul>
@@ -560,32 +601,6 @@
 							</c:choose>
 						</section>
 
-						<section
-							class="detail-section detail-section--about"
-							aria-labelledby="about-event-title"
-						>
-							<div
-								class="section-head section-head--detail-compact"
-							>
-								<div>
-									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
-									<h2
-										id="about-event-title"
-										class="detail-section__title"
-									>
-										<spring:message code="event.detail.aboutEvent" />
-									</h2>
-								</div>
-							</div>
-							<div class="detail-stack">
-								<c:forEach
-									var="paragraph"
-									items="${eventPage.aboutParagraphs}"
-								>
-									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
-								</c:forEach>
-							</div>
-						</section>
 					</div>
 
 				</section>

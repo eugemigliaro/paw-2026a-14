@@ -68,13 +68,13 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
     @Transactional
     public void reserveSeries(final Long matchId, final Long userId) {
-        LOGGER.info("Series reservation requested matchId={} userId={}", matchId, userId);
+        LOGGER.info("Recurring reservation requested matchId={} userId={}", matchId, userId);
         final Match match =
                 matchDao.findMatchById(matchId)
                         .orElseThrow(
                                 () -> {
                                     LOGGER.warn(
-                                            "Series reservation rejected code=not_found matchId={} userId={}",
+                                            "Recurring reservation rejected code=not_found matchId={} userId={}",
                                             matchId,
                                             userId);
                                     return new MatchReservationException(
@@ -83,11 +83,11 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
         if (!match.isRecurringOccurrence()) {
             LOGGER.warn(
-                    "Series reservation rejected code=not_recurring matchId={} userId={}",
+                    "Recurring reservation rejected code=not_recurring matchId={} userId={}",
                     matchId,
                     userId);
             throw new MatchReservationException(
-                    "not_recurring", "The event is not part of a recurring series.");
+                    "not_recurring", "The event is not a recurring event.");
         }
 
         final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeriesId());
@@ -97,7 +97,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             final MatchReservationException failure =
                     buildSeriesReservationFailure(matchId, userId, evaluation);
             LOGGER.warn(
-                    "Series reservation rejected code={} matchId={} seriesId={} userId={}",
+                    "Recurring reservation rejected code={} matchId={} seriesId={} userId={}",
                     failure.getCode(),
                     matchId,
                     match.getSeriesId(),
@@ -115,7 +115,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             final MatchReservationException failure =
                     buildSeriesReservationFailure(matchId, userId, currentEvaluation);
             LOGGER.warn(
-                    "Series reservation rejected code={} matchId={} seriesId={} userId={}",
+                    "Recurring reservation rejected code={} matchId={} seriesId={} userId={}",
                     failure.getCode(),
                     matchId,
                     match.getSeriesId(),
@@ -124,7 +124,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         }
 
         LOGGER.info(
-                "Series reservations created matchId={} seriesId={} userId={} occurrences={}",
+                "Recurring reservations created matchId={} seriesId={} userId={} occurrences={}",
                 matchId,
                 match.getSeriesId(),
                 userId,
@@ -279,31 +279,31 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             final Long matchId, final Long userId, final SeriesReservationEvaluation evaluation) {
         if (evaluation.futureOccurrenceCount() == 0) {
             return new MatchReservationException(
-                    "series_started", "There are no upcoming occurrences left in this series.");
+                    "series_started", "There are no upcoming dates left in this recurring event.");
         }
 
         if (evaluation.futureOpenOccurrenceCount() == 0) {
             return new MatchReservationException(
-                    "series_closed", "The upcoming series occurrences are not open.");
+                    "series_closed", "The upcoming recurring dates are not open.");
         }
 
         if (evaluation.joined()) {
             return new MatchReservationException(
                     "series_already_joined",
-                    "This account already has reservations for the future series.");
+                    "This account already has reservations for the future recurring dates.");
         }
 
         if (evaluation.fullOccurrenceCount() > 0) {
             return new MatchReservationException(
-                    "series_full", "The available future series occurrences are full.");
+                    "series_full", "The available future recurring dates are full.");
         }
 
         LOGGER.warn(
-                "Series reservation rejected code=series_closed matchId={} userId={}",
+                "Recurring reservation rejected code=series_closed matchId={} userId={}",
                 matchId,
                 userId);
         return new MatchReservationException(
-                "series_closed", "The upcoming series occurrences are not open.");
+                "series_closed", "The upcoming recurring dates are not open.");
     }
 
     private record SeriesReservationEvaluation(

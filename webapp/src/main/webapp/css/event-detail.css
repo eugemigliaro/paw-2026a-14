@@ -361,6 +361,7 @@
 	border: 1px solid rgba(0, 100, 90, 0.1);
 	border-radius: 16px;
 	display: flex;
+	flex-wrap: wrap;
 	gap: 0.75rem;
 	justify-content: space-between;
 	padding: 0.75rem 0.85rem;
@@ -379,6 +380,50 @@
 
 .recurrence-schedule__link:hover {
 	text-decoration: underline;
+}
+
+.recurrence-schedule__date {
+	min-width: 0;
+}
+
+.recurrence-schedule__badges {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+	justify-content: flex-end;
+}
+
+.recurrence-schedule__status {
+	border-radius: 999px;
+	font-size: 0.76rem;
+	font-weight: 700;
+	padding: 0.3rem 0.55rem;
+}
+
+.recurrence-schedule__status--open {
+	background: rgba(0, 100, 90, 0.1);
+	color: var(--color-primary);
+}
+
+.recurrence-schedule__status--full {
+	background: rgba(120, 82, 28, 0.13);
+	color: #8a5a13;
+}
+
+.recurrence-schedule__status--completed {
+	background: rgba(78, 91, 88, 0.14);
+	color: #4f5c59;
+}
+
+.recurrence-schedule__status--cancelled {
+	background: rgba(173, 54, 43, 0.13);
+	color: #9e2f25;
+}
+
+.recurrence-schedule__status--draft {
+	background: rgba(70, 92, 130, 0.13);
+	color: #405c8d;
 }
 
 .recurrence-schedule__current {

@@ -124,7 +124,10 @@ public class EventController {
         }
     }
 
-    @PostMapping("/matches/{eventId}/series-reservations")
+    @PostMapping({
+        "/matches/{eventId}/recurring-reservations",
+        "/matches/{eventId}/series-reservations"
+    })
     public ModelAndView requestSeriesReservation(
             @PathVariable("eventId") final String eventId, final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
@@ -138,7 +141,7 @@ public class EventController {
                 matchReservationService.reserveSpot(occurrenceId, currentUser.getUserId());
             }
             return new ModelAndView(
-                    "redirect:/matches/" + matchId + "?reservation=seriesConfirmed");
+                    "redirect:/matches/" + matchId + "?reservation=recurringConfirmed");
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
                     matchId,
@@ -220,14 +223,16 @@ public class EventController {
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationError", reservationError);
         mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
-        mav.addObject("seriesReservationPath", "/matches/" + eventId + "/series-reservations");
+        mav.addObject("seriesReservationPath", "/matches/" + eventId + "/recurring-reservations");
         mav.addObject("seriesReservationEnabled", seriesReservationState.available());
         mav.addObject("seriesReservationJoined", seriesReservationState.joined());
         mav.addObject("seriesReservationRequiresLogin", currentUserId == null);
         mav.addObject(
                 "seriesReservationConfirmed",
-                "seriesConfirmed".equalsIgnoreCase(reservationStatus));
+                "recurringConfirmed".equalsIgnoreCase(reservationStatus)
+                        || "seriesConfirmed".equalsIgnoreCase(reservationStatus));
         mav.addObject("seriesReservationError", seriesReservationError);
+        mav.addObject("eventStateNotice", eventStateNotice(match, locale));
 
         mav.addObject("joinRequestEnabled", canRequestToJoin(match));
         mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
@@ -389,15 +394,19 @@ public class EventController {
 
         return occurrences.stream()
                 .map(
-                        occurrence ->
-                                new EventOccurrenceViewModel(
-                                        "/matches/" + occurrence.getId(),
-                                        scheduleFormatter(locale)
-                                                .format(
-                                                        occurrence
-                                                                .getStartsAt()
-                                                                .atZone(ZoneId.systemDefault())),
-                                        occurrence.getId().equals(currentMatch.getId())))
+                        occurrence -> {
+                            final EventDisplayState state = eventDisplayState(occurrence);
+                            return new EventOccurrenceViewModel(
+                                    "/matches/" + occurrence.getId(),
+                                    scheduleFormatter(locale)
+                                            .format(
+                                                    occurrence
+                                                            .getStartsAt()
+                                                            .atZone(ZoneId.systemDefault())),
+                                    eventStateLabel(state, locale),
+                                    state.tone(),
+                                    occurrence.getId().equals(currentMatch.getId()));
+                        })
                 .toList();
     }
 
@@ -416,7 +425,7 @@ public class EventController {
 
         if (!match.isRecurringOccurrence()) {
             throw new MatchReservationException(
-                    "not_recurring", "The event is not part of a recurring series.");
+                    "not_recurring", "The event is not a recurring event.");
         }
 
         final SeriesReservationEvaluation evaluation =
@@ -495,23 +504,64 @@ public class EventController {
             final SeriesReservationEvaluation evaluation) {
         if (evaluation.futureOccurrenceCount() == 0) {
             return new MatchReservationException(
-                    "series_started", "There are no upcoming occurrences left in this series.");
+                    "series_started", "There are no upcoming dates left in this recurring event.");
         }
         if (evaluation.futureOpenOccurrenceCount() == 0) {
             return new MatchReservationException(
-                    "series_closed", "The upcoming series occurrences are not open.");
+                    "series_closed", "The upcoming recurring dates are not open.");
         }
         if (evaluation.joined()) {
             return new MatchReservationException(
                     "series_already_joined",
-                    "This account already has reservations for the future series.");
+                    "This account already has reservations for the future recurring dates.");
         }
         if (evaluation.fullOccurrenceCount() > 0) {
             return new MatchReservationException(
-                    "series_full", "The available future series occurrences are full.");
+                    "series_full", "The available future recurring dates are full.");
         }
         return new MatchReservationException(
-                "series_closed", "The upcoming series occurrences are not open.");
+                "series_closed", "The upcoming recurring dates are not open.");
+    }
+
+    private EventDisplayState eventDisplayState(final Match match) {
+        final Optional<EventStatus> status = EventStatus.fromDbValue(match.getStatus());
+        if (status.filter(EventStatus.CANCELLED::equals).isPresent()) {
+            return new EventDisplayState("cancelled", "cancelled");
+        }
+        if (status.filter(EventStatus.COMPLETED::equals).isPresent() || hasEventEnded(match)) {
+            return new EventDisplayState("completed", "completed");
+        }
+        if (status.filter(EventStatus.DRAFT::equals).isPresent()) {
+            return new EventDisplayState("draft", "draft");
+        }
+        if (match.getAvailableSpots() <= 0) {
+            return new EventDisplayState("full", "full");
+        }
+        return new EventDisplayState("open", "open");
+    }
+
+    private String eventStateLabel(final EventDisplayState state, final Locale locale) {
+        return messageSource.getMessage("match.status." + state.key(), null, locale);
+    }
+
+    private String eventStateNotice(final Match match, final Locale locale) {
+        final EventDisplayState state = eventDisplayState(match);
+        if ("completed".equals(state.key())) {
+            return messageSource.getMessage("event.state.completedNotice", null, locale);
+        }
+        if ("cancelled".equals(state.key())) {
+            return messageSource.getMessage("event.state.cancelledNotice", null, locale);
+        }
+        return null;
+    }
+
+    private boolean hasEventEnded(final Match match) {
+        final Instant endsAt = match.getEndsAt() == null ? match.getStartsAt() : match.getEndsAt();
+        return !endsAt.isAfter(Instant.now(clock));
+    }
+
+    private boolean hasEventStarted(final Match match) {
+        return !match.getStartsAt().isAfter(Instant.now(clock));
     }
 
     private String buildAvailabilityLabel(final Match match, final Locale locale) {
@@ -663,6 +713,7 @@ public class EventController {
         return "public".equalsIgnoreCase(match.getVisibility())
                 && "direct".equalsIgnoreCase(match.getJoinPolicy())
                 && "open".equalsIgnoreCase(match.getStatus())
+                && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
     }
 
@@ -670,6 +721,7 @@ public class EventController {
         return "public".equalsIgnoreCase(match.getVisibility())
                 && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
                 && "open".equalsIgnoreCase(match.getStatus())
+                && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
     }
 
@@ -729,12 +781,18 @@ public class EventController {
     }
 
     private boolean canHostEdit(final Match match) {
+        if (hasEventEnded(match)) {
+            return false;
+        }
         return EventStatus.fromDbValue(match.getStatus())
                 .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
                 .orElse(true);
     }
 
     private boolean canHostCancel(final Match match) {
+        if (hasEventEnded(match)) {
+            return false;
+        }
         return EventStatus.fromDbValue(match.getStatus())
                 .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
                 .orElse(true);
@@ -752,4 +810,6 @@ public class EventController {
             int futureOpenOccurrenceCount,
             boolean joined,
             int fullOccurrenceCount) {}
+
+    private record EventDisplayState(String key, String tone) {}
 }

@@ -43,8 +43,8 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("host.form.recurrence.endMode"));
         assertEquals("Repeat every", english.getProperty("host.form.recurrence.frequency"));
         assertEquals("Repetir cada", spanish.getProperty("host.form.recurrence.frequency"));
-        assertEquals("Series ends", english.getProperty("host.form.recurrence.endMode"));
-        assertEquals("La serie termina", spanish.getProperty("host.form.recurrence.endMode"));
+        assertEquals("Recurrence ends", english.getProperty("host.form.recurrence.endMode"));
+        assertEquals("La recurrencia termina", spanish.getProperty("host.form.recurrence.endMode"));
     }
 
     @Test
