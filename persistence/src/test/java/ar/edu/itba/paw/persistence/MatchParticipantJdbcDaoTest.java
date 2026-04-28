@@ -68,6 +68,52 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testCreateReservationIfSpaceRestoresInactiveParticipantRow() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'cancelled', CURRENT_TIMESTAMP)");
+
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(10L, 2L);
+
+        Assertions.assertTrue(inserted);
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals("joined", status);
+        final Integer rows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        Integer.class);
+        Assertions.assertEquals(1, rows);
+    }
+
+    @Test
+    public void testCreateReservationIfSpaceRejectsInactiveParticipantRowWhenFull() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 1, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'cancelled', CURRENT_TIMESTAMP)");
+
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(10L, 2L);
+
+        Assertions.assertFalse(inserted);
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals("cancelled", status);
+    }
+
+    @Test
     public void testCreateSeriesReservationsIfSpaceInsertsFutureEligibleOccurrences() {
         final Instant now = Instant.parse("2026-04-05T00:00:00Z");
         insertRecurringSeries(600L, now.plusSeconds(86400));
@@ -115,6 +161,42 @@ public class MatchParticipantJdbcDaoTest {
                                 + " WHERE match_id = 30 AND user_id = 2",
                         String.class);
         Assertions.assertEquals("joined", status);
+    }
+
+    @Test
+    public void testCreateReservationIfSpaceRestoresOccurrenceAfterSeriesCancellation() {
+        final Instant startsAfter = Instant.now().minusSeconds(3600);
+        insertRecurringSeries(600L, startsAfter.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, startsAfter.plusSeconds(86400), 2, "open");
+        insertRecurringMatch(31L, 600L, 2, startsAfter.plusSeconds(172800), 2, "open");
+        final int seriesRows =
+                matchParticipantDao.createSeriesReservationsIfSpace(600L, 2L, startsAfter);
+        final int cancelledRows =
+                matchParticipantDao.cancelFutureSeriesReservations(600L, 2L, startsAfter);
+
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(30L, 2L);
+
+        Assertions.assertEquals(2, seriesRows);
+        Assertions.assertEquals(2, cancelledRows);
+        Assertions.assertTrue(inserted);
+        final String selectedOccurrenceStatus =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 30 AND user_id = 2",
+                        String.class);
+        final String otherOccurrenceStatus =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 31 AND user_id = 2",
+                        String.class);
+        final Integer rows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND match_id IN (30, 31)",
+                        Integer.class);
+        Assertions.assertEquals("joined", selectedOccurrenceStatus);
+        Assertions.assertEquals("cancelled", otherOccurrenceStatus);
+        Assertions.assertEquals(2, rows);
     }
 
     @Test

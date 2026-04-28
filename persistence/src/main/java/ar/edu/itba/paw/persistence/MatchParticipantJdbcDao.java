@@ -8,6 +8,7 @@ import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -38,28 +39,63 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     @Override
     public boolean createReservationIfSpace(final Long matchId, final Long userId) {
         LOGGER.debug("Attempting reservation insert matchId={} userId={}", matchId, userId);
-        final int insertedRows =
+        final int restoredRows =
                 jdbcTemplate.update(
-                        "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
-                                + " SELECT m.id, ?, 'joined', CURRENT_TIMESTAMP"
+                        "UPDATE match_participants"
+                                + " SET status = 'joined', joined_at = CURRENT_TIMESTAMP"
+                                + " WHERE match_id = ? AND user_id = ?"
+                                + " AND status NOT IN ('joined', 'checked_in')"
+                                + " AND match_id IN ("
+                                + " SELECT m.id"
                                 + " FROM matches m"
-                                + " LEFT JOIN match_participants mp"
-                                + " ON mp.match_id = m.id"
-                                + " AND mp.status IN ('joined', 'checked_in')"
+                                + " LEFT JOIN match_participants active"
+                                + " ON active.match_id = m.id"
+                                + " AND active.status IN ('joined', 'checked_in')"
                                 + " WHERE m.id = ?"
                                 + " AND m.visibility = 'public'"
                                 + " AND m.join_policy = 'direct'"
                                 + " AND m.status = 'open'"
                                 + " AND m.starts_at > CURRENT_TIMESTAMP"
-                                + " AND NOT EXISTS ("
-                                + " SELECT 1 FROM match_participants existing"
-                                + " WHERE existing.match_id = m.id AND existing.user_id = ?"
-                                + " AND existing.status IN ('joined', 'checked_in'))"
                                 + " GROUP BY m.id, m.max_players"
-                                + " HAVING COUNT(mp.id) < MAX(m.max_players)",
-                        userId,
+                                + " HAVING COUNT(active.id) < MAX(m.max_players)"
+                                + ")",
                         matchId,
-                        userId);
+                        userId,
+                        matchId);
+        if (restoredRows == 1) {
+            return true;
+        }
+
+        final int insertedRows;
+        try {
+            insertedRows =
+                    jdbcTemplate.update(
+                            "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                                    + " SELECT m.id, ?, 'joined', CURRENT_TIMESTAMP"
+                                    + " FROM matches m"
+                                    + " LEFT JOIN match_participants mp"
+                                    + " ON mp.match_id = m.id"
+                                    + " AND mp.status IN ('joined', 'checked_in')"
+                                    + " WHERE m.id = ?"
+                                    + " AND m.visibility = 'public'"
+                                    + " AND m.join_policy = 'direct'"
+                                    + " AND m.status = 'open'"
+                                    + " AND m.starts_at > CURRENT_TIMESTAMP"
+                                    + " AND NOT EXISTS ("
+                                    + " SELECT 1 FROM match_participants existing"
+                                    + " WHERE existing.match_id = m.id AND existing.user_id = ?)"
+                                    + " GROUP BY m.id, m.max_players"
+                                    + " HAVING COUNT(mp.id) < MAX(m.max_players)",
+                            userId,
+                            matchId,
+                            userId);
+        } catch (final DuplicateKeyException e) {
+            LOGGER.debug(
+                    "Reservation insert hit duplicate participant row matchId={} userId={}",
+                    matchId,
+                    userId);
+            return false;
+        }
         if (insertedRows != 1) {
             LOGGER.debug("Reservation insert rejected matchId={} userId={}", matchId, userId);
         }
