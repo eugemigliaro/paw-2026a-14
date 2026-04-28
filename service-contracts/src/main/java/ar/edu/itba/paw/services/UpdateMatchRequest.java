@@ -15,6 +15,7 @@ public class UpdateMatchRequest {
     private final BigDecimal pricePerPlayer;
     private final Sport sport;
     private final String visibility;
+    private final String joinPolicy;
     private final String status;
     private final Long bannerImageId;
 
@@ -30,6 +31,34 @@ public class UpdateMatchRequest {
             final String visibility,
             final String status,
             final Long bannerImageId) {
+        this(
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                defaultJoinPolicyForVisibility(visibility),
+                status,
+                bannerImageId);
+    }
+
+    public UpdateMatchRequest(
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final Long bannerImageId) {
         this.address = address;
         this.title = title;
         this.description = description;
@@ -39,8 +68,13 @@ public class UpdateMatchRequest {
         this.pricePerPlayer = pricePerPlayer;
         this.sport = sport;
         this.visibility = visibility;
+        this.joinPolicy = joinPolicy;
         this.status = status;
         this.bannerImageId = bannerImageId;
+    }
+
+    private static String defaultJoinPolicyForVisibility(final String visibility) {
+        return "private".equalsIgnoreCase(visibility) ? "invite_only" : "direct";
     }
 
     public String getAddress() {
@@ -77,6 +111,10 @@ public class UpdateMatchRequest {
 
     public String getVisibility() {
         return visibility;
+    }
+
+    public String getJoinPolicy() {
+        return joinPolicy;
     }
 
     public String getStatus() {

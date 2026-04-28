@@ -197,6 +197,7 @@ public class MatchJdbcDao implements MatchDao {
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final String visibility,
+            final String joinPolicy,
             final String status,
             final Long bannerImageId) {
         final int updatedRows =
@@ -204,7 +205,7 @@ public class MatchJdbcDao implements MatchDao {
                         "UPDATE matches"
                                 + " SET address = ?, title = ?, description = ?, starts_at = ?,"
                                 + " ends_at = ?, max_players = ?, price_per_player = ?, sport = ?,"
-                                + " visibility = ?, status = ?, banner_image_id = ?,"
+                                + " visibility = ?, join_policy = ?, status = ?, banner_image_id = ?,"
                                 + " updated_at = CURRENT_TIMESTAMP"
                                 + " WHERE id = ? AND host_user_id = ?",
                         address,
@@ -216,6 +217,7 @@ public class MatchJdbcDao implements MatchDao {
                         pricePerPlayer,
                         new SqlParameterValue(Types.OTHER, sport.getDbValue()),
                         new SqlParameterValue(Types.OTHER, visibility),
+                        new SqlParameterValue(Types.OTHER, joinPolicy),
                         new SqlParameterValue(Types.OTHER, status),
                         bannerImageId,
                         matchId,

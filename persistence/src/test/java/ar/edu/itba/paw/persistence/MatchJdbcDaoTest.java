@@ -543,7 +543,8 @@ public class MatchJdbcDaoTest {
                         10,
                         new BigDecimal("15"),
                         Sport.TENNIS,
-                        "public",
+                        "private",
+                        "invite_only",
                         "open",
                         null);
 
@@ -554,6 +555,8 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Updated Title", found.getTitle());
         Assertions.assertEquals("Updated Description", found.getDescription());
         Assertions.assertEquals(Sport.TENNIS, found.getSport());
+        Assertions.assertEquals("private", found.getVisibility());
+        Assertions.assertEquals("invite_only", found.getJoinPolicy());
         Assertions.assertEquals(10, found.getMaxPlayers());
         Assertions.assertEquals(new BigDecimal("15.00"), found.getPricePerPlayer());
     }

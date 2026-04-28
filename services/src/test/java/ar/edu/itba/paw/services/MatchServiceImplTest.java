@@ -853,6 +853,7 @@ public class MatchServiceImplTest {
                         12,
                         BigDecimal.ONE,
                         "public",
+                        "approval_required",
                         "open",
                         0,
                         null);
@@ -873,6 +874,7 @@ public class MatchServiceImplTest {
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
                                 "public",
+                                "approval_required",
                                 "open",
                                 null))
                 .thenReturn(true);
@@ -891,12 +893,14 @@ public class MatchServiceImplTest {
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
                                 "public",
+                                "approval_required",
                                 "open",
                                 null));
 
         Assertions.assertEquals("Updated Title", result.getTitle());
         Assertions.assertEquals(Sport.TENNIS, result.getSport());
         Assertions.assertEquals("Updated Address", result.getAddress());
+        Assertions.assertEquals("approval_required", result.getJoinPolicy());
         Mockito.verify(matchNotificationService).notifyMatchUpdated(updatedMatch);
     }
 
@@ -918,6 +922,7 @@ public class MatchServiceImplTest {
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
                                 "public",
+                                "direct",
                                 "open",
                                 null))
                 .thenReturn(false);
@@ -1093,6 +1098,7 @@ public class MatchServiceImplTest {
                                 BigDecimal.ONE,
                                 Sport.FOOTBALL,
                                 "public",
+                                "direct",
                                 "open",
                                 null))
                 .thenReturn(true);

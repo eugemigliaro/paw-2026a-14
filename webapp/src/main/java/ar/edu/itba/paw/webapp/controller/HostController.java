@@ -168,6 +168,7 @@ public class HostController {
                 findOwnedEditableMatchOrThrowNotFound(parsedMatchId, actingUserId);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
+        validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -197,6 +198,12 @@ public class HostController {
                     formConfig);
         }
 
+        final String resolvedVisibility = normalize(createEventForm.getVisibility());
+        final String resolvedJoinPolicy =
+                VISIBILITY_PRIVATE.equals(resolvedVisibility)
+                        ? JOIN_POLICY_INVITE_ONLY
+                        : normalize(createEventForm.getJoinPolicy());
+
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
                         createEventForm.getAddress(),
@@ -207,7 +214,8 @@ public class HostController {
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        existingMatch.getVisibility(),
+                        resolvedVisibility,
+                        resolvedJoinPolicy,
                         existingMatch.getStatus(),
                         bannerImageId);
 
@@ -367,6 +375,8 @@ public class HostController {
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
         form.setSport(match.getSport().getDbValue());
+        form.setVisibility(match.getVisibility());
+        form.setJoinPolicy(match.getJoinPolicy());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
         final LocalDateTime endsAt =

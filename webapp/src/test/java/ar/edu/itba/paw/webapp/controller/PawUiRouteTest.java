@@ -25,6 +25,7 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
+import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureReason;
@@ -82,6 +83,7 @@ class PawUiRouteTest {
     private AtomicReference<Long> lastReservedUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
     private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
+    private AtomicReference<UpdateMatchRequest> lastUpdateMatchRequest;
 
     @BeforeEach
     void setUp() {
@@ -98,6 +100,7 @@ class PawUiRouteTest {
         lastReservedUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
         lastCreateMatchRequest = new AtomicReference<>();
+        lastUpdateMatchRequest = new AtomicReference<>();
 
         final Match realMatch =
                 new Match(
@@ -279,7 +282,7 @@ class PawUiRouteTest {
                     public Match updateMatch(
                             final Long matchId,
                             final Long actingUserId,
-                            final ar.edu.itba.paw.services.UpdateMatchRequest request) {
+                            final UpdateMatchRequest request) {
                         if (matchId != 42L) {
                             throw new MatchUpdateException(
                                     MatchUpdateFailureReason.MATCH_NOT_FOUND, "Missing match");
@@ -293,6 +296,7 @@ class PawUiRouteTest {
                                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
                                     "Capacity too low");
                         }
+                        lastUpdateMatchRequest.set(request);
                         return new Match(
                                 matchId,
                                 request.getSport(),
@@ -305,6 +309,7 @@ class PawUiRouteTest {
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
+                                request.getJoinPolicy(),
                                 request.getStatus(),
                                 0,
                                 request.getBannerImageId());
@@ -1321,6 +1326,10 @@ class PawUiRouteTest {
                                         "createEventForm",
                                         Matchers.allOf(
                                                 Matchers.hasProperty(
+                                                        "visibility", Matchers.is("public")),
+                                                Matchers.hasProperty(
+                                                        "joinPolicy", Matchers.is("direct")),
+                                                Matchers.hasProperty(
                                                         "endDate",
                                                         Matchers.is(LocalDate.of(2026, 4, 6))),
                                                 Matchers.hasProperty(
@@ -1374,6 +1383,33 @@ class PawUiRouteTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+    }
+
+    @Test
+    void postHostEditPersistsPrivateVisibilityAsInviteOnly() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/42/edit")
+                                .param("title", "Updated Private Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "private")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+
+        final UpdateMatchRequest request = lastUpdateMatchRequest.get();
+        Assertions.assertNotNull(request);
+        Assertions.assertEquals("private", request.getVisibility());
+        Assertions.assertEquals("invite_only", request.getJoinPolicy());
     }
 
     @Test
