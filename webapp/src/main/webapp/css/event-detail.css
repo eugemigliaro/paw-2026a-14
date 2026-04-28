@@ -355,6 +355,14 @@
 	padding: 0;
 }
 
+.recurrence-schedule__toggle {
+	justify-self: start;
+}
+
+.recurrence-schedule__item[hidden] {
+	display: none;
+}
+
 .recurrence-schedule__item {
 	align-items: center;
 	background: rgba(242, 242, 240, 0.74);

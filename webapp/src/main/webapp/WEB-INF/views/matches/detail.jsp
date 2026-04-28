@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="pageTitle" code="page.title.eventDetail" arguments="${eventPage.event.title}" />
@@ -616,6 +617,8 @@
 						</section>
 
 						<c:if test="${not empty eventPage.occurrences}">
+							<c:set var="recurrencePreviewLimit" value="3" />
+							<c:set var="recurrenceScheduleCollapsed" value="${fn:length(eventPage.occurrences) > recurrencePreviewLimit}" />
 							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
 								<div class="section-head section-head--detail-compact">
 									<div>
@@ -625,9 +628,14 @@
 										</h2>
 									</div>
 								</div>
-								<ul class="recurrence-schedule__list">
-									<c:forEach var="occurrence" items="${eventPage.occurrences}">
-										<li class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}">
+								<ul id="recurrence-schedule-list" class="recurrence-schedule__list">
+									<c:forEach var="occurrence" items="${eventPage.occurrences}" varStatus="occurrenceStatus">
+										<li
+											class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}"
+											<c:if test="${recurrenceScheduleCollapsed and occurrenceStatus.index >= recurrencePreviewLimit}">
+												hidden="hidden"
+												data-recurrence-extra-date="true"
+											</c:if>>
 											<div class="recurrence-schedule__date">
 												<c:url var="occurrenceHref" value="${occurrence.href}" />
 												<a class="recurrence-schedule__link" href="${occurrenceHref}">
@@ -644,6 +652,20 @@
 										</li>
 									</c:forEach>
 								</ul>
+								<c:if test="${recurrenceScheduleCollapsed}">
+									<spring:message var="showMoreRecurringDatesLabel" code="event.recurrence.showMore" />
+									<spring:message var="showLessRecurringDatesLabel" code="event.recurrence.showLess" />
+									<button
+										type="button"
+										class="btn btn--secondary btn--sm recurrence-schedule__toggle"
+										data-recurrence-toggle="true"
+										data-show-more-label="${showMoreRecurringDatesLabel}"
+										data-show-less-label="${showLessRecurringDatesLabel}"
+										aria-controls="recurrence-schedule-list"
+										aria-expanded="false">
+										<c:out value="${showMoreRecurringDatesLabel}" />
+									</button>
+								</c:if>
 							</section>
 						</c:if>
 

@@ -19,6 +19,7 @@ class ViewTemplateAssetsTest {
         assertTrue(head.contains("/js/timezone-field.js"));
         assertTrue(head.contains("/css/auth.css"));
         assertTrue(head.contains("/js/overflow-menu.js"));
+        assertTrue(head.contains("/js/recurrence-schedule.js"));
     }
 
     @Test
@@ -95,6 +96,29 @@ class ViewTemplateAssetsTest {
         assertEquals(
                 "Dejar fechas recurrentes",
                 spanish.getProperty("event.recurringReservation.leave"));
+    }
+
+    @Test
+    void matchDetailCollapsesLongRecurringSchedule() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+        final String eventDetailCss = read("src/main/webapp/css/event-detail.css");
+        final String recurrenceScript = read("src/main/webapp/js/recurrence-schedule.js");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(detailView.contains("var=\"recurrencePreviewLimit\" value=\"3\""));
+        assertTrue(detailView.contains("data-recurrence-extra-date=\"true\""));
+        assertTrue(detailView.contains("hidden=\"hidden\""));
+        assertTrue(detailView.contains("data-recurrence-toggle=\"true\""));
+        assertTrue(detailView.contains("event.recurrence.showMore"));
+        assertTrue(detailView.contains("event.recurrence.showLess"));
+        assertTrue(eventDetailCss.contains(".recurrence-schedule__item[hidden]"));
+        assertTrue(recurrenceScript.contains("data-recurrence-toggle"));
+        assertTrue(recurrenceScript.contains("aria-expanded"));
+        assertEquals("Show more", english.getProperty("event.recurrence.showMore"));
+        assertEquals("Show less", english.getProperty("event.recurrence.showLess"));
+        assertEquals("Ver m\u00e1s", spanish.getProperty("event.recurrence.showMore"));
+        assertEquals("Ver menos", spanish.getProperty("event.recurrence.showLess"));
     }
 
     @Test
