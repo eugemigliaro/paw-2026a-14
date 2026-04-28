@@ -538,7 +538,9 @@ public class MatchDashboardController {
                         .filter(match -> belongsToContext(match, context, today, timezone))
                         .toList();
         final List<Match> invitedMatches =
-                isUpcoming ? matchParticipationService.findInvitedMatches(userId) : List.of();
+                matchParticipationService.findInvitedMatches(userId).stream()
+                        .filter(match -> belongsToContext(match, context, today, timezone))
+                        .toList();
 
         // Fetch joined and hosted matches with pagination
         // We fetch with a larger page size to ensure we get reasonable results even

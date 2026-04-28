@@ -123,6 +123,9 @@
 								data-browser-timezone-field="true" />
 							<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 							<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
+							<c:if test="${param.filter eq 'past'}">
+								<input type="hidden" name="filter" value="past" />
+							</c:if>
 							<div class="search-panel__row">
 								<div class="search-panel__input">
 									<span class="search-panel__icon" aria-hidden="true"></span>
@@ -202,6 +205,9 @@
 										<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
 											<input type="hidden" name="visibility" value="<c:out value='${selectedVisibilityItem}' />" />
 										</c:forEach>
+										<c:if test="${param.filter eq 'past'}">
+											<input type="hidden" name="filter" value="past" />
+										</c:if>
 										<div class="filter-rail__field-group">
 											<div class="field filter-rail__field">
 												<label class="field__label" for="list-start-date"><spring:message code="filter.date.from" /></label>
