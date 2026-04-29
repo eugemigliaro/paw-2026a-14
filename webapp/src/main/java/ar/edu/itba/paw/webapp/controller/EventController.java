@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -267,7 +268,8 @@ public class EventController {
                         ? matchService.findSeriesOccurrences(match.getSeriesId())
                         : List.of();
         final SeriesReservationUiState seriesReservationState =
-                buildSeriesReservationUiState(seriesOccurrences, currentUserId);
+                buildSeriesReservationUiState(
+                        match.getSeriesId(), seriesOccurrences, currentUserId);
         final ModelAndView mav = new ModelAndView("matches/detail");
         final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
@@ -501,9 +503,18 @@ public class EventController {
     }
 
     private SeriesReservationUiState buildSeriesReservationUiState(
-            final List<Match> occurrences, final Long currentUserId) {
+            final Long seriesId, final List<Match> occurrences, final Long currentUserId) {
+        if (occurrences == null || occurrences.isEmpty()) {
+            return new SeriesReservationUiState(false, false, false);
+        }
+        final Set<Long> activeFutureReservationMatchIds =
+                currentUserId == null || seriesId == null
+                        ? Set.of()
+                        : matchReservationService.findActiveFutureReservationMatchIdsForSeries(
+                                seriesId, currentUserId);
         final SeriesReservationEvaluation evaluation =
-                evaluateSeriesReservationTargets(occurrences, currentUserId);
+                evaluateSeriesReservationTargets(
+                        occurrences, currentUserId, activeFutureReservationMatchIds);
         return new SeriesReservationUiState(
                 !evaluation.targetMatchIds().isEmpty(),
                 evaluation.joined(),
@@ -511,7 +522,9 @@ public class EventController {
     }
 
     private SeriesReservationEvaluation evaluateSeriesReservationTargets(
-            final List<Match> occurrences, final Long userId) {
+            final List<Match> occurrences,
+            final Long userId,
+            final Set<Long> activeFutureReservationMatchIds) {
         final List<Long> targetMatchIds = new ArrayList<>();
         int futureOpenOccurrenceCount = 0;
         int joinedFutureOpenOccurrenceCount = 0;
@@ -524,9 +537,7 @@ public class EventController {
             }
 
             final boolean alreadyJoined =
-                    userId != null
-                            && matchReservationService.hasActiveReservation(
-                                    occurrence.getId(), userId);
+                    activeFutureReservationMatchIds.contains(occurrence.getId());
             if (alreadyJoined) {
                 activeFutureReservationCount++;
             }

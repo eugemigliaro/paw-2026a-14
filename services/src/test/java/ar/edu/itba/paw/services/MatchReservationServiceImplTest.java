@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,22 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDao.createReservationIfSpace(10L, 20L)).thenReturn(true);
 
         Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSpot(10L, 20L));
+    }
+
+    @Test
+    public void testFindActiveFutureReservationMatchIdsForSeriesUsesCurrentClock() {
+        // Arrange
+        Mockito.when(
+                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                100L, 20L, FIXED_NOW))
+                .thenReturn(List.of(10L, 11L));
+
+        // Exercise
+        final Set<Long> matchIds =
+                matchReservationService.findActiveFutureReservationMatchIdsForSeries(100L, 20L);
+
+        // Assert
+        Assertions.assertEquals(Set.of(10L, 11L), matchIds);
     }
 
     @Test

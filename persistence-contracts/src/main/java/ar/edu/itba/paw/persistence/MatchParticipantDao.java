@@ -8,6 +8,9 @@ public interface MatchParticipantDao {
 
     boolean hasActiveReservation(Long matchId, Long userId);
 
+    List<Long> findActiveFutureReservationMatchIdsForSeries(
+            Long seriesId, Long userId, Instant startsAfter);
+
     boolean createReservationIfSpace(Long matchId, Long userId);
 
     int createSeriesReservationsIfSpace(Long seriesId, Long userId, Instant startsAfter);

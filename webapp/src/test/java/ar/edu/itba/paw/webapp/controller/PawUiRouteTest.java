@@ -53,6 +53,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -626,6 +627,17 @@ class PawUiRouteTest {
                         return Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
                                 && userId == 9L
                                 && (matchId == 46L || matchId == 47L);
+                    }
+
+                    @Override
+                    public Set<Long> findActiveFutureReservationMatchIdsForSeries(
+                            final Long seriesId, final Long userId) {
+                        if (Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
+                                && userId == 9L
+                                && seriesId == 600L) {
+                            return Set.of(46L, 47L);
+                        }
+                        return Set.of();
                     }
 
                     @Override

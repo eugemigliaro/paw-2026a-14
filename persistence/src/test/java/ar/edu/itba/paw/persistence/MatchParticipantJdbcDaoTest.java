@@ -230,6 +230,41 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testFindActiveFutureReservationMatchIdsForSeriesReturnsOnlyMatchingActiveRows() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringSeries(601L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 4, "open");
+        insertRecurringMatch(31L, 600L, 2, now.plusSeconds(172800), 4, "open");
+        insertRecurringMatch(32L, 600L, 3, now.plusSeconds(259200), 4, "open");
+        insertRecurringMatch(33L, 600L, 0, now.minusSeconds(86400), 4, "open");
+        insertRecurringMatch(34L, 601L, 1, now.plusSeconds(86400), 4, "open");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (30, 2, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (31, 2, 'checked_in', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (32, 2, 'cancelled', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (33, 2, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (34, 2, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (30, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final List<Long> matchIds =
+                matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(600L, 2L, now);
+
+        Assertions.assertEquals(List.of(30L, 31L), matchIds);
+    }
+
+    @Test
     public void testCreateReservationIfSpaceRestoresOccurrenceAfterSeriesCancellation() {
         final Instant startsAfter = Instant.now().minusSeconds(3600);
         insertRecurringSeries(600L, startsAfter.plusSeconds(86400));
