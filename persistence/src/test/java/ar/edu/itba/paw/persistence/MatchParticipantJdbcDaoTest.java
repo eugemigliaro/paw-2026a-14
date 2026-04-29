@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.time.Instant;
 import java.util.List;
@@ -250,6 +251,113 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testCreateSeriesJoinRequestIfSpaceInsertsSingleSeriesRequest() {
+        final Instant now = Instant.now();
+        insertRecurringSeries(601L, now.plusSeconds(86400));
+        insertRecurringMatch(40L, 601L, 1, now.plusSeconds(86400), 2, "open", "approval_required");
+        insertRecurringMatch(41L, 601L, 2, now.plusSeconds(172800), 2, "open", "approval_required");
+        insertRecurringMatch(42L, 601L, 0, now.minusSeconds(86400), 2, "open", "approval_required");
+        insertRecurringMatch(43L, 601L, 3, now.plusSeconds(259200), 2, "open", "direct");
+        insertRecurringMatch(
+                44L, 601L, 4, now.plusSeconds(345600), 2, "cancelled", "approval_required");
+        insertRecurringMatch(45L, 601L, 5, now.plusSeconds(432000), 1, "open", "approval_required");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (45, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final boolean requested = matchParticipantDao.createSeriesJoinRequestIfSpace(40L, 2L);
+
+        Assertions.assertTrue(requested);
+        final Integer pendingRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND status = 'pending_approval'"
+                                + " AND series_request = TRUE"
+                                + " AND match_id IN (40, 41)",
+                        Integer.class);
+        final Integer skippedRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND match_id IN (41, 42, 43, 44, 45)",
+                        Integer.class);
+        final List<PendingJoinRequest> hostRequests =
+                matchParticipantDao.findPendingRequestsForHost(1L);
+        Assertions.assertEquals(1, pendingRows);
+        Assertions.assertEquals(0, skippedRows);
+        Assertions.assertEquals(1, hostRequests.size());
+        Assertions.assertTrue(hostRequests.get(0).isSeriesRequest());
+        Assertions.assertEquals(40L, hostRequests.get(0).getMatch().getId());
+        Assertions.assertEquals(2L, hostRequests.get(0).getUser().getId());
+    }
+
+    @Test
+    public void testCreateSeriesJoinRequestIfSpaceRestoresCancelledRequest() {
+        final Instant now = Instant.now();
+        insertRecurringSeries(601L, now.plusSeconds(86400));
+        insertRecurringMatch(40L, 601L, 1, now.plusSeconds(86400), 2, "open", "approval_required");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (40, 2, 'cancelled', CURRENT_TIMESTAMP)");
+
+        final boolean requested = matchParticipantDao.createSeriesJoinRequestIfSpace(40L, 2L);
+
+        Assertions.assertTrue(requested);
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 40 AND user_id = 2",
+                        String.class);
+        final Boolean seriesRequest =
+                jdbcTemplate.queryForObject(
+                        "SELECT series_request FROM match_participants"
+                                + " WHERE match_id = 40 AND user_id = 2",
+                        Boolean.class);
+        Assertions.assertEquals("pending_approval", status);
+        Assertions.assertTrue(seriesRequest);
+    }
+
+    @Test
+    public void testApproveSeriesJoinRequestExpandsOnePendingRequestToFutureOccurrences() {
+        final Instant now = Instant.now();
+        insertRecurringSeries(601L, now.plusSeconds(86400));
+        insertRecurringMatch(40L, 601L, 1, now.plusSeconds(86400), 2, "open", "approval_required");
+        insertRecurringMatch(41L, 601L, 2, now.plusSeconds(172800), 2, "open", "approval_required");
+        insertRecurringMatch(42L, 601L, 3, now.plusSeconds(259200), 1, "open", "approval_required");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (40, 2, 'pending_approval', CURRENT_TIMESTAMP, TRUE)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (42, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int approvedRows =
+                matchParticipantDao.approveSeriesJoinRequest(601L, 2L, now.minusSeconds(60));
+
+        Assertions.assertEquals(2, approvedRows);
+        final Integer joinedRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND status = 'joined'"
+                                + " AND series_request = FALSE"
+                                + " AND match_id IN (40, 41)",
+                        Integer.class);
+        final Integer pendingRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND status = 'pending_approval'",
+                        Integer.class);
+        final Integer skippedRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND match_id = 42",
+                        Integer.class);
+        Assertions.assertEquals(2, joinedRows);
+        Assertions.assertEquals(0, pendingRows);
+        Assertions.assertEquals(0, skippedRows);
+    }
+
+    @Test
     public void testCancelFutureSeriesReservationsCancelsOnlyFutureActiveReservations() {
         final Instant now = Instant.parse("2026-04-05T00:00:00Z");
         insertRecurringSeries(600L, now.plusSeconds(86400));
@@ -446,16 +554,29 @@ public class MatchParticipantJdbcDaoTest {
             final Instant startsAt,
             final int maxPlayers,
             final String status) {
+        insertRecurringMatch(
+                matchId, seriesId, occurrenceIndex, startsAt, maxPlayers, status, "direct");
+    }
+
+    private void insertRecurringMatch(
+            final Long matchId,
+            final Long seriesId,
+            final int occurrenceIndex,
+            final Instant startsAt,
+            final int maxPlayers,
+            final String status,
+            final String joinPolicy) {
         jdbcTemplate.update(
                 "INSERT INTO matches "
                         + "(id, host_user_id, address, title, description, starts_at,"
-                        + " max_players, price_per_player, visibility, status, sport,"
+                        + " max_players, price_per_player, visibility, join_policy, status, sport,"
                         + " series_id, series_occurrence_index, created_at, updated_at) "
-                        + "VALUES (?, 1, 'Address', 'Match', 'Description', ?, ?, 0,"
-                        + " 'public', ?, 'football', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        + "VALUES (?, 1, 'Address', 'Match', 'Description', ?, ?, 0, "
+                        + "'public', ?, ?, 'football', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 matchId,
                 java.sql.Timestamp.from(startsAt),
                 maxPlayers,
+                joinPolicy,
                 status,
                 seriesId,
                 occurrenceIndex);

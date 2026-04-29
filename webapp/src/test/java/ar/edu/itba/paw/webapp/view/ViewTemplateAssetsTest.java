@@ -110,6 +110,40 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void matchDetailIncludesLocalizedRecurringJoinRequestControls() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(detailView.contains("seriesJoinRequestPath"));
+        assertTrue(detailView.contains("event.joinRequest.requestThisOccurrence"));
+        assertTrue(detailView.contains("event.recurringJoinRequest.cta"));
+        assertTrue(detailView.contains("event.recurringJoinRequest.requested"));
+        assertEquals(
+                "Request all recurring dates",
+                english.getProperty("event.recurringJoinRequest.cta"));
+        assertEquals(
+                "Solicitar todas las fechas recurrentes",
+                spanish.getProperty("event.recurringJoinRequest.cta"));
+    }
+
+    @Test
+    void hostRequestsIncludesAggregateRecurringRequestCopy() throws IOException {
+        final String requestView =
+                read("src/main/webapp/WEB-INF/views/host/participation/requests.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(requestView.contains("aggregateRequests"));
+        assertTrue(requestView.contains("host.requests.all.description"));
+        assertTrue(requestView.contains("host.requests.seriesBadge"));
+        assertEquals("Join requests", english.getProperty("nav.host.joinRequests"));
+        assertEquals("Recurring dates", english.getProperty("host.requests.seriesBadge"));
+        assertEquals("Solicitudes de ingreso", spanish.getProperty("nav.host.joinRequests"));
+        assertEquals("Fechas recurrentes", spanish.getProperty("host.requests.seriesBadge"));
+    }
+
+    @Test
     void matchDetailCollapsesLongRecurringSchedule() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final String eventDetailCss = read("src/main/webapp/css/event-detail.css");

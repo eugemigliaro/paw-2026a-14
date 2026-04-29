@@ -268,6 +268,8 @@ public class EventController {
                         : List.of();
         final SeriesReservationUiState seriesReservationState =
                 buildSeriesReservationUiState(seriesOccurrences, currentUserId);
+        final SeriesJoinRequestUiState seriesJoinRequestState =
+                buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUserId);
         final ModelAndView mav = new ModelAndView("matches/detail");
         final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
@@ -307,11 +309,18 @@ public class EventController {
         mav.addObject("seriesReservationError", seriesReservationError);
         mav.addObject("eventStateNotice", eventStateNotice(match, locale));
 
-        mav.addObject("joinRequestEnabled", canRequestToJoin(match));
+        mav.addObject(
+                "joinRequestEnabled", canRequestToJoin(match) && !seriesJoinRequestState.pending());
         mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
+        mav.addObject("seriesJoinRequestPath", "/matches/" + eventId + "/recurring-join-requests");
+        mav.addObject("seriesJoinRequestEnabled", seriesJoinRequestState.available());
+        mav.addObject("seriesJoinRequestPending", seriesJoinRequestState.pending());
+        mav.addObject("seriesJoinRequestRequiresLogin", currentUserId == null);
         mav.addObject("cancelJoinRequestPath", "/matches/" + eventId + "/join-requests/cancel");
-        mav.addObject("hasPendingJoinRequest", hasPendingRequest);
+        mav.addObject(
+                "hasPendingJoinRequest", hasPendingRequest && !seriesJoinRequestState.pending());
         mav.addObject("joinRequested", "requested".equalsIgnoreCase(joinStatus));
+        mav.addObject("seriesJoinRequested", "recurringRequested".equalsIgnoreCase(joinStatus));
         mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
         mav.addObject("joinError", joinError);
 
@@ -553,6 +562,73 @@ public class EventController {
                 && "open".equalsIgnoreCase(occurrence.getStatus());
     }
 
+    private SeriesJoinRequestUiState buildSeriesJoinRequestUiState(
+            final Match match, final List<Match> occurrences, final Long currentUserId) {
+        if (currentUserId != null
+                && match.isRecurringOccurrence()
+                && matchParticipationService.hasPendingSeriesRequest(
+                        match.getId(), currentUserId)) {
+            return new SeriesJoinRequestUiState(false, true);
+        }
+
+        final SeriesJoinRequestEvaluation evaluation =
+                evaluateSeriesJoinRequestTargets(occurrences, currentUserId);
+        return new SeriesJoinRequestUiState(
+                !evaluation.targetMatchIds().isEmpty(), evaluation.pending());
+    }
+
+    private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
+            final List<Match> occurrences, final Long userId) {
+        final List<Long> targetMatchIds = new ArrayList<>();
+        int futureOpenApprovalOccurrenceCount = 0;
+        int pendingFutureOpenApprovalOccurrenceCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)
+                    || !isSeriesJoinRequestOpenOccurrence(occurrence)) {
+                continue;
+            }
+
+            futureOpenApprovalOccurrenceCount++;
+            final boolean alreadyJoined =
+                    userId != null
+                            && matchReservationService.hasActiveReservation(
+                                    occurrence.getId(), userId);
+            if (alreadyJoined) {
+                continue;
+            }
+
+            final boolean alreadyPending =
+                    userId != null
+                            && matchParticipationService.hasPendingRequest(
+                                    occurrence.getId(), userId);
+            if (alreadyPending) {
+                pendingFutureOpenApprovalOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getAvailableSpots() <= 0) {
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        final boolean pending =
+                userId != null
+                        && futureOpenApprovalOccurrenceCount > 0
+                        && pendingFutureOpenApprovalOccurrenceCount
+                                == futureOpenApprovalOccurrenceCount;
+        return new SeriesJoinRequestEvaluation(List.copyOf(targetMatchIds), pending);
+    }
+
+    private static boolean isSeriesJoinRequestOpenOccurrence(final Match occurrence) {
+        return "public".equalsIgnoreCase(occurrence.getVisibility())
+                && "approval_required".equalsIgnoreCase(occurrence.getJoinPolicy())
+                && "open".equalsIgnoreCase(occurrence.getStatus());
+    }
+
     private EventDisplayState eventDisplayState(final Match match) {
         final Optional<EventStatus> status = EventStatus.fromDbValue(match.getStatus());
         if (status.filter(EventStatus.CANCELLED::equals).isPresent()) {
@@ -790,6 +866,18 @@ public class EventController {
                 return messageSource.getMessage("join.error.notInviteOnly", null, locale);
             case "no_pending_request":
                 return messageSource.getMessage("join.error.noPendingRequest", null, locale);
+            case "not_recurring":
+                return messageSource.getMessage("join.error.notRecurring", null, locale);
+            case "series_started":
+                return messageSource.getMessage("join.error.seriesStarted", null, locale);
+            case "series_closed":
+                return messageSource.getMessage("join.error.seriesClosed", null, locale);
+            case "series_already_joined":
+                return messageSource.getMessage("join.error.seriesAlreadyJoined", null, locale);
+            case "series_already_pending":
+                return messageSource.getMessage("join.error.seriesAlreadyPending", null, locale);
+            case "series_full":
+                return messageSource.getMessage("join.error.seriesFull", null, locale);
             case "not_found":
             default:
                 return messageSource.getMessage("join.error.notFound", null, locale);
@@ -860,6 +948,10 @@ public class EventController {
 
     private record SeriesReservationEvaluation(
             List<Long> targetMatchIds, boolean joined, int activeFutureReservationCount) {}
+
+    private record SeriesJoinRequestUiState(boolean available, boolean pending) {}
+
+    private record SeriesJoinRequestEvaluation(List<Long> targetMatchIds, boolean pending) {}
 
     private record EventDisplayState(String key, String tone) {}
 }

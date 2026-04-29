@@ -78,6 +78,12 @@ public class SecurityConfig {
                                                         "/matches/*/join-requests",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
+                                                        "/matches/*/recurring-join-requests",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/series-join-requests",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
                                                         "/matches/*/join-requests/cancel",
                                                         HttpMethod.POST.name()))
                                         .hasAnyRole("USER", "ADMIN_MOD")

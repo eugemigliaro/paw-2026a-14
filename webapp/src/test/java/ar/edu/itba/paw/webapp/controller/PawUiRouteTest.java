@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
@@ -92,12 +93,16 @@ class PawUiRouteTest {
     private AtomicReference<Long> lastHostSeriesCancelledUserId;
     private AtomicReference<Long> lastCancelledSeriesMatchId;
     private AtomicReference<Long> lastCancelledSeriesUserId;
+    private AtomicReference<Long> lastSeriesJoinRequestMatchId;
+    private AtomicReference<Long> lastSeriesJoinRequestUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
     private AtomicReference<MatchParticipationException> reservationCancellationFailure;
     private AtomicReference<MatchReservationException> seriesReservationFailure;
     private AtomicReference<MatchReservationException> seriesCancellationFailure;
+    private AtomicReference<MatchParticipationException> seriesJoinRequestFailure;
     private AtomicReference<Boolean> currentUserHasReservation;
     private AtomicReference<Boolean> currentUserHasSeriesReservation;
+    private AtomicReference<Boolean> currentUserHasSeriesJoinRequest;
     private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
     private AtomicReference<UpdateMatchRequest> lastUpdateMatchRequest;
 
@@ -124,12 +129,16 @@ class PawUiRouteTest {
         lastHostSeriesCancelledUserId = new AtomicReference<>();
         lastCancelledSeriesMatchId = new AtomicReference<>();
         lastCancelledSeriesUserId = new AtomicReference<>();
+        lastSeriesJoinRequestMatchId = new AtomicReference<>();
+        lastSeriesJoinRequestUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
         reservationCancellationFailure = new AtomicReference<>();
         seriesReservationFailure = new AtomicReference<>();
         seriesCancellationFailure = new AtomicReference<>();
+        seriesJoinRequestFailure = new AtomicReference<>();
         currentUserHasReservation = new AtomicReference<>(false);
         currentUserHasSeriesReservation = new AtomicReference<>(false);
+        currentUserHasSeriesJoinRequest = new AtomicReference<>(false);
         lastCreateMatchRequest = new AtomicReference<>();
         lastUpdateMatchRequest = new AtomicReference<>();
 
@@ -309,6 +318,63 @@ class PawUiRouteTest {
                         null,
                         600L,
                         4);
+        final Match approvalRecurringMatch =
+                new Match(
+                        52L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Approval Weekly Padel",
+                        "Recurring session with host approval",
+                        Instant.parse("2026-04-09T20:00:00Z"),
+                        Instant.parse("2026-04-09T21:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "approval_required",
+                        "open",
+                        1,
+                        null,
+                        700L,
+                        1);
+        final Match approvalRecurringSecondOccurrence =
+                new Match(
+                        53L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Approval Weekly Padel",
+                        "Recurring session with host approval",
+                        Instant.parse("2026-04-16T20:00:00Z"),
+                        Instant.parse("2026-04-16T21:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "approval_required",
+                        "open",
+                        0,
+                        null,
+                        700L,
+                        2);
+        final Match approvalRecurringPastOccurrence =
+                new Match(
+                        54L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Approval Weekly Padel",
+                        "Recurring session with host approval",
+                        Instant.parse("2026-03-26T20:00:00Z"),
+                        Instant.parse("2026-03-26T21:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "approval_required",
+                        "open",
+                        4,
+                        null,
+                        700L,
+                        0);
 
         final MatchService matchService =
                 new MatchService() {
@@ -367,6 +433,15 @@ class PawUiRouteTest {
                         if (matchId == 50L) {
                             return Optional.of(recurringCancelledOccurrence);
                         }
+                        if (matchId == 52L) {
+                            return Optional.of(approvalRecurringMatch);
+                        }
+                        if (matchId == 53L) {
+                            return Optional.of(approvalRecurringSecondOccurrence);
+                        }
+                        if (matchId == 54L) {
+                            return Optional.of(approvalRecurringPastOccurrence);
+                        }
                         return Optional.empty();
                     }
 
@@ -377,14 +452,21 @@ class PawUiRouteTest {
 
                     @Override
                     public List<Match> findSeriesOccurrences(final Long seriesId) {
-                        return Long.valueOf(600L).equals(seriesId)
-                                ? List.of(
-                                        recurringPastOccurrence,
-                                        recurringMatch,
-                                        recurringSecondOccurrence,
-                                        recurringFullOccurrence,
-                                        recurringCancelledOccurrence)
-                                : List.of();
+                        if (Long.valueOf(600L).equals(seriesId)) {
+                            return List.of(
+                                    recurringPastOccurrence,
+                                    recurringMatch,
+                                    recurringSecondOccurrence,
+                                    recurringFullOccurrence,
+                                    recurringCancelledOccurrence);
+                        }
+                        if (Long.valueOf(700L).equals(seriesId)) {
+                            return List.of(
+                                    approvalRecurringPastOccurrence,
+                                    approvalRecurringMatch,
+                                    approvalRecurringSecondOccurrence);
+                        }
+                        return List.of();
                     }
 
                     @Override
@@ -670,13 +752,33 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public void requestToJoinSeries(final Long matchId, final Long userId) {
+                        final MatchParticipationException failure = seriesJoinRequestFailure.get();
+                        if (failure != null) {
+                            throw failure;
+                        }
+
+                        lastSeriesJoinRequestMatchId.set(matchId);
+                        lastSeriesJoinRequestUserId.set(userId);
+                    }
+
+                    @Override
                     public void cancelJoinRequest(final Long matchId, final Long userId) {
                         // No-op for route rendering tests.
                     }
 
                     @Override
                     public boolean hasPendingRequest(final Long matchId, final Long userId) {
-                        return false;
+                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
+                                && userId == 9L
+                                && (matchId == 52L || matchId == 53L);
+                    }
+
+                    @Override
+                    public boolean hasPendingSeriesRequest(final Long matchId, final Long userId) {
+                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
+                                && userId == 9L
+                                && (matchId == 52L || matchId == 53L);
                     }
 
                     @Override
@@ -710,6 +812,16 @@ class PawUiRouteTest {
                     public List<User> findPendingRequests(
                             final Long matchId, final Long hostUserId) {
                         return List.of();
+                    }
+
+                    @Override
+                    public List<PendingJoinRequest> findPendingRequestsForHost(
+                            final Long hostUserId) {
+                        return List.of(
+                                new PendingJoinRequest(
+                                        approvalRecurringMatch,
+                                        new User(9L, "player@test.com", "player-account"),
+                                        true));
                     }
 
                     @Override
@@ -1010,9 +1122,13 @@ class PawUiRouteTest {
                                         messageSource,
                                         fixedClock),
                                 new PublicProfileController(userService, messageSource),
+                                new PlayerParticipationController(
+                                        matchParticipationService, messageSource),
                                 new AccountController(userService, messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
+                                new HostParticipationController(
+                                        matchService, matchParticipationService, messageSource),
                                 new MatchDashboardController(matchService, messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(accountAuthService, messageSource))
@@ -1223,6 +1339,39 @@ class PawUiRouteTest {
                         model().attribute(
                                         "seriesReservationPath",
                                         "/matches/46/recurring-reservations"));
+    }
+
+    @Test
+    void getRecurringApprovalRequiredMatchDetailsRouteExposesSingleAndSeriesJoinRequests()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/52"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("joinRequestEnabled", true))
+                .andExpect(model().attribute("joinRequestPath", "/matches/52/join-requests"))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", true))
+                .andExpect(model().attribute("seriesJoinRequestPending", false))
+                .andExpect(
+                        model().attribute(
+                                        "seriesJoinRequestPath",
+                                        "/matches/52/recurring-join-requests"));
+    }
+
+    @Test
+    void getRecurringApprovalRequiredMatchDetailsRouteShowsSeriesJoinPendingNotice()
+            throws Exception {
+        currentUserHasSeriesJoinRequest.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/52"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("hasPendingJoinRequest", false))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestPending", true));
     }
 
     @Test
@@ -1478,6 +1627,36 @@ class PawUiRouteTest {
                         model().attribute(
                                         "seriesReservationError",
                                         "No ten\u00e9s reservas futuras para este evento recurrente."));
+    }
+
+    @Test
+    void postSeriesJoinRequestWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/matches/52/recurring-join-requests"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postSeriesJoinRequestAsAuthenticatedUserRedirectsToRecurringRequestedEvent()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/52/recurring-join-requests"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/52?join=recurringRequested"));
+
+        Assertions.assertEquals(52L, lastSeriesJoinRequestMatchId.get());
+        Assertions.assertEquals(9L, lastSeriesJoinRequestUserId.get());
+    }
+
+    @Test
+    void postSeriesJoinRequestFailureRedirectsWithJoinErrorCode() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        seriesJoinRequestFailure.set(
+                new MatchParticipationException("series_already_pending", "Already requested"));
+
+        mockMvc.perform(post("/matches/52/recurring-join-requests"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/52?joinError=series_already_pending"));
     }
 
     @Test
@@ -2133,6 +2312,18 @@ class PawUiRouteTest {
                 .andExpect(view().name("matches/list"))
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attributeExists("listTitle"));
+    }
+
+    @Test
+    void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/requests"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/participation/requests"))
+                .andExpect(model().attribute("aggregateRequests", true))
+                .andExpect(model().attributeExists("pendingRequests"))
+                .andExpect(model().attribute("matchesUrl", "/host/matches"));
     }
 
     @Test

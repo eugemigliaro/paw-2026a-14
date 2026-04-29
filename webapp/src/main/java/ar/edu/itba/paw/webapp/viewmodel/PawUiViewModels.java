@@ -574,16 +574,33 @@ public final class PawUiViewModels {
         private final String avatarLabel;
         private final String approveUrl;
         private final String rejectUrl;
+        private final String matchTitle;
+        private final String matchHref;
+        private final boolean seriesRequest;
 
         public PendingRequestViewModel(
                 final String username,
                 final String avatarLabel,
                 final String approveUrl,
                 final String rejectUrl) {
+            this(username, avatarLabel, approveUrl, rejectUrl, null, null, false);
+        }
+
+        public PendingRequestViewModel(
+                final String username,
+                final String avatarLabel,
+                final String approveUrl,
+                final String rejectUrl,
+                final String matchTitle,
+                final String matchHref,
+                final boolean seriesRequest) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.approveUrl = approveUrl;
             this.rejectUrl = rejectUrl;
+            this.matchTitle = matchTitle;
+            this.matchHref = matchHref;
+            this.seriesRequest = seriesRequest;
         }
 
         public String getUsername() {
@@ -600,6 +617,18 @@ public final class PawUiViewModels {
 
         public String getRejectUrl() {
             return rejectUrl;
+        }
+
+        public String getMatchTitle() {
+            return matchTitle;
+        }
+
+        public String getMatchHref() {
+            return matchHref;
+        }
+
+        public boolean isSeriesRequest() {
+            return seriesRequest;
         }
     }
 

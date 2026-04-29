@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.time.Instant;
 import java.util.List;
@@ -20,9 +21,19 @@ public interface MatchParticipantDao {
 
     boolean createJoinRequest(Long matchId, Long userId);
 
+    boolean createSeriesJoinRequestIfSpace(Long matchId, Long userId);
+
     List<User> findPendingRequests(Long matchId);
 
+    List<PendingJoinRequest> findPendingRequestsForHost(Long hostUserId);
+
     boolean approveRequest(Long matchId, Long userId);
+
+    int approveSeriesJoinRequest(Long seriesId, Long userId, Instant startsAfter);
+
+    boolean isSeriesJoinRequest(Long matchId, Long userId);
+
+    boolean hasPendingSeriesRequest(Long seriesId, Long userId);
 
     boolean rejectRequest(Long matchId, Long userId);
 

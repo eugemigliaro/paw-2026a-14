@@ -420,7 +420,14 @@
 											class="booking-panel__request-form"
 										>
 											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-											<spring:message var="requestToJoinLabel" code="event.joinRequest.requestToJoin" />
+											<c:choose>
+												<c:when test="${not empty eventPage.occurrences}">
+													<spring:message var="requestToJoinLabel" code="event.joinRequest.requestThisOccurrence" />
+												</c:when>
+												<c:otherwise>
+													<spring:message var="requestToJoinLabel" code="event.joinRequest.requestToJoin" />
+												</c:otherwise>
+											</c:choose>
 											<ui:button label="${requestToJoinLabel}" type="submit" fullWidth="${true}" />
 										</form>
 										<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
@@ -486,6 +493,42 @@
 										<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 									</c:otherwise>
 								</c:choose>
+							</c:if>
+
+							<c:if test="${seriesJoinRequested}">
+								<p class="booking-panel__notice booking-panel__notice--success">
+									<spring:message code="event.recurringJoinRequest.requested" />
+								</p>
+							</c:if>
+							<c:if test="${seriesJoinRequestPending and not seriesJoinRequested}">
+								<p class="booking-panel__notice booking-panel__notice--info">
+									<spring:message code="event.recurringJoinRequest.pending" />
+								</p>
+							</c:if>
+							<c:if test="${seriesJoinRequestEnabled and not seriesJoinRequestPending}">
+								<c:choose>
+									<c:when test="${seriesJoinRequestRequiresLogin}">
+										<spring:message var="signInToRequestRecurringLabel" code="event.recurringJoinRequest.signIn" />
+										<c:url var="recurringJoinRequestLoginHref" value="/login" />
+										<ui:button label="${signInToRequestRecurringLabel}" href="${recurringJoinRequestLoginHref}" fullWidth="${true}" variant="secondary" />
+									</c:when>
+									<c:otherwise>
+										<c:url var="recurringJoinRequestAction" value="${seriesJoinRequestPath}" />
+										<spring:message var="requestingRecurringJoinLabel" code="event.recurringJoinRequest.requesting" />
+										<form
+											method="post"
+											action="${recurringJoinRequestAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${requestingRecurringJoinLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="requestRecurringJoinLabel" code="event.recurringJoinRequest.cta" />
+											<ui:button label="${requestRecurringJoinLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+										</form>
+									</c:otherwise>
+								</c:choose>
+								<p class="booking-panel__note"><spring:message code="event.recurringJoinRequest.note" /></p>
 							</c:if>
 
 							<c:if test="${seriesReservationConfirmed}">

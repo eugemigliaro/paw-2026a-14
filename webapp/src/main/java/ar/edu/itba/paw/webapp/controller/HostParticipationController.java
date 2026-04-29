@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -85,13 +86,31 @@ public class HostParticipationController {
                 matchParticipationService.findPendingRequests(resolvedMatchId, hostUserId);
 
         final ModelAndView mav = new ModelAndView("host/participation/requests");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject(
+                "shell", ShellViewModelFactory.hostShell(messageSource, locale, "/host/requests"));
         mav.addObject("match", match);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("pendingRequests", toPendingRequestViewModels(pending, resolvedMatchId));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("host.requests.empty", null, locale));
         mav.addObject("rosterUrl", "/host/matches/" + resolvedMatchId + "/participants");
+        return mav;
+    }
+
+    @GetMapping("/host/requests")
+    public ModelAndView showAllPendingRequests(final Locale locale) {
+        final long hostUserId = requireAuthenticatedUserId();
+        final List<PendingJoinRequest> pending =
+                matchParticipationService.findPendingRequestsForHost(hostUserId);
+
+        final ModelAndView mav = new ModelAndView("host/participation/requests");
+        mav.addObject(
+                "shell", ShellViewModelFactory.hostShell(messageSource, locale, "/host/requests"));
+        mav.addObject("aggregateRequests", true);
+        mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
+        mav.addObject(
+                "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
+        mav.addObject("matchesUrl", "/host/matches");
         return mav;
     }
 
@@ -303,6 +322,34 @@ public class HostParticipationController {
                                                 + "/requests/"
                                                 + u.getId()
                                                 + "/reject"))
+                .toList();
+    }
+
+    private List<PendingRequestViewModel> toHostPendingRequestViewModels(
+            final List<PendingJoinRequest> requests) {
+        return requests.stream()
+                .map(
+                        request -> {
+                            final User user = request.getUser();
+                            final Match match = request.getMatch();
+                            final Long matchId = match.getId();
+                            return new PendingRequestViewModel(
+                                    user.getUsername(),
+                                    avatarLabel(user.getUsername()),
+                                    "/host/matches/"
+                                            + matchId
+                                            + "/requests/"
+                                            + user.getId()
+                                            + "/approve",
+                                    "/host/matches/"
+                                            + matchId
+                                            + "/requests/"
+                                            + user.getId()
+                                            + "/reject",
+                                    match.getTitle(),
+                                    "/matches/" + matchId,
+                                    request.isSeriesRequest());
+                        })
                 .toList();
     }
 

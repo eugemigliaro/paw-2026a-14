@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
@@ -80,6 +81,38 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     @Override
     @Transactional
+    public void requestToJoinSeries(final Long matchId, final Long userId) {
+        final Match match = requireMatch(matchId);
+
+        if (!match.isRecurringOccurrence()) {
+            throw new MatchParticipationException(
+                    "not_recurring", "The event is not a recurring event.");
+        }
+
+        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeriesId());
+        final SeriesJoinRequestEvaluation evaluation =
+                evaluateSeriesJoinRequestTargets(occurrences, userId);
+        if (matchParticipantDao.hasPendingSeriesRequest(match.getSeriesId(), userId)) {
+            throw buildSeriesJoinRequestFailure(evaluation.asPending());
+        }
+        if (evaluation.requestableOccurrenceCount() == 0) {
+            throw buildSeriesJoinRequestFailure(evaluation);
+        }
+
+        final Long requestMatchId =
+                matchParticipantDao.hasPendingRequest(matchId, userId)
+                        ? matchId
+                        : evaluation.targetMatchIds().get(0);
+        if (!matchParticipantDao.createSeriesJoinRequestIfSpace(requestMatchId, userId)) {
+            final SeriesJoinRequestEvaluation currentEvaluation =
+                    evaluateSeriesJoinRequestTargets(
+                            matchDao.findSeriesOccurrences(match.getSeriesId()), userId);
+            throw buildSeriesJoinRequestFailure(currentEvaluation);
+        }
+    }
+
+    @Override
+    @Transactional
     public void cancelJoinRequest(final Long matchId, final Long userId) {
         if (!matchParticipantDao.hasPendingRequest(matchId, userId)) {
             throw new MatchParticipationException(
@@ -97,6 +130,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         return matchParticipantDao.hasPendingRequest(matchId, userId);
     }
 
+    @Override
+    public boolean hasPendingSeriesRequest(final Long matchId, final Long userId) {
+        final Match match = requireMatch(matchId);
+        return match.isRecurringOccurrence()
+                && matchParticipantDao.hasPendingSeriesRequest(match.getSeriesId(), userId);
+    }
+
     // -------------------------------------------------------------------------
     // Host actions
     // -------------------------------------------------------------------------
@@ -109,6 +149,18 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
         if (!"open".equalsIgnoreCase(match.getStatus())) {
             throw new MatchParticipationException("closed", "The event is not open.");
+        }
+
+        if (match.isRecurringOccurrence()
+                && matchParticipantDao.isSeriesJoinRequest(matchId, targetUserId)) {
+            final int approvedRows =
+                    matchParticipantDao.approveSeriesJoinRequest(
+                            match.getSeriesId(), targetUserId, Instant.now(clock));
+            if (approvedRows <= 0) {
+                throw new MatchParticipationException(
+                        "full", "The event is full; cannot approve more participants.");
+            }
+            return;
         }
 
         if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
@@ -163,6 +215,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         requireHost(match, hostUserId);
         return matchParticipantDao.findPendingRequests(matchId);
+    }
+
+    @Override
+    public List<PendingJoinRequest> findPendingRequestsForHost(final Long hostUserId) {
+        return matchParticipantDao.findPendingRequestsForHost(hostUserId);
     }
 
     @Override
@@ -334,6 +391,129 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         if (!matchParticipantDao.removeParticipant(match.getId(), userId)) {
             throw new MatchParticipationException(
                     "not_cancellable", "This reservation can no longer be cancelled.");
+        }
+    }
+
+    private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
+            final List<Match> occurrences, final Long userId) {
+        int futureOccurrenceCount = 0;
+        int futureOpenApprovalOccurrenceCount = 0;
+        int joinedFutureOpenApprovalOccurrenceCount = 0;
+        int pendingFutureOpenApprovalOccurrenceCount = 0;
+        final java.util.ArrayList<Long> targetMatchIds = new java.util.ArrayList<>();
+        int fullOccurrenceCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)) {
+                continue;
+            }
+
+            futureOccurrenceCount++;
+            if (!isSeriesJoinRequestableOccurrence(occurrence)) {
+                continue;
+            }
+
+            futureOpenApprovalOccurrenceCount++;
+            if (matchParticipantDao.hasActiveReservation(occurrence.getId(), userId)) {
+                joinedFutureOpenApprovalOccurrenceCount++;
+                continue;
+            }
+
+            if (matchParticipantDao.hasPendingRequest(occurrence.getId(), userId)) {
+                pendingFutureOpenApprovalOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getJoinedPlayers() >= occurrence.getMaxPlayers()) {
+                fullOccurrenceCount++;
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        final boolean joined =
+                futureOpenApprovalOccurrenceCount > 0
+                        && joinedFutureOpenApprovalOccurrenceCount
+                                == futureOpenApprovalOccurrenceCount;
+        final boolean pending =
+                futureOpenApprovalOccurrenceCount > 0
+                        && pendingFutureOpenApprovalOccurrenceCount
+                                == futureOpenApprovalOccurrenceCount;
+        final boolean alreadyCovered =
+                futureOpenApprovalOccurrenceCount > 0
+                        && joinedFutureOpenApprovalOccurrenceCount
+                                        + pendingFutureOpenApprovalOccurrenceCount
+                                == futureOpenApprovalOccurrenceCount;
+        return new SeriesJoinRequestEvaluation(
+                futureOccurrenceCount,
+                futureOpenApprovalOccurrenceCount,
+                joined,
+                pending || alreadyCovered,
+                List.copyOf(targetMatchIds),
+                fullOccurrenceCount);
+    }
+
+    private static boolean isSeriesJoinRequestableOccurrence(final Match occurrence) {
+        return "open".equalsIgnoreCase(occurrence.getStatus())
+                && "public".equalsIgnoreCase(occurrence.getVisibility())
+                && "approval_required".equalsIgnoreCase(occurrence.getJoinPolicy());
+    }
+
+    private static MatchParticipationException buildSeriesJoinRequestFailure(
+            final SeriesJoinRequestEvaluation evaluation) {
+        if (evaluation.futureOccurrenceCount() == 0) {
+            return new MatchParticipationException(
+                    "series_started", "There are no upcoming dates left in this recurring event.");
+        }
+
+        if (evaluation.futureOpenApprovalOccurrenceCount() == 0) {
+            return new MatchParticipationException(
+                    "series_closed", "The upcoming recurring dates are not open.");
+        }
+
+        if (evaluation.joined()) {
+            return new MatchParticipationException(
+                    "series_already_joined",
+                    "You are already confirmed for the future recurring dates.");
+        }
+
+        if (evaluation.pending()) {
+            return new MatchParticipationException(
+                    "series_already_pending",
+                    "You already have pending join requests for the future recurring dates.");
+        }
+
+        if (evaluation.fullOccurrenceCount() > 0) {
+            return new MatchParticipationException(
+                    "series_full", "The available future recurring dates are full.");
+        }
+
+        return new MatchParticipationException(
+                "series_closed", "The upcoming recurring dates are not open.");
+    }
+
+    private record SeriesJoinRequestEvaluation(
+            int futureOccurrenceCount,
+            int futureOpenApprovalOccurrenceCount,
+            boolean joined,
+            boolean pending,
+            List<Long> targetMatchIds,
+            int fullOccurrenceCount) {
+
+        private int requestableOccurrenceCount() {
+            return targetMatchIds.size();
+        }
+
+        private SeriesJoinRequestEvaluation asPending() {
+            return new SeriesJoinRequestEvaluation(
+                    futureOccurrenceCount,
+                    futureOpenApprovalOccurrenceCount,
+                    joined,
+                    true,
+                    targetMatchIds,
+                    fullOccurrenceCount);
         }
     }
 }

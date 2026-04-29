@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.util.List;
 
@@ -10,9 +11,13 @@ public interface MatchParticipationService {
 
     void requestToJoin(Long matchId, Long userId);
 
+    void requestToJoinSeries(Long matchId, Long userId);
+
     void cancelJoinRequest(Long matchId, Long userId);
 
     boolean hasPendingRequest(Long matchId, Long userId);
+
+    boolean hasPendingSeriesRequest(Long matchId, Long userId);
 
     // Host actions (public approval-required events)
 
@@ -25,6 +30,8 @@ public interface MatchParticipationService {
     // Queries (public approval-required events)
 
     List<User> findPendingRequests(Long matchId, Long hostUserId);
+
+    List<PendingJoinRequest> findPendingRequestsForHost(Long hostUserId);
 
     List<User> findConfirmedParticipants(Long matchId, Long hostUserId);
 

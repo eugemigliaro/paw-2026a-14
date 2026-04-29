@@ -77,6 +77,25 @@ public class PlayerParticipationController {
         }
     }
 
+    @PostMapping({
+        "/matches/{matchId}/recurring-join-requests",
+        "/matches/{matchId}/series-join-requests"
+    })
+    public ModelAndView requestToJoinSeries(
+            @PathVariable("matchId") final String matchId, final Locale locale) {
+        final long userId = requireAuthenticatedUserId();
+        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
+
+        try {
+            matchParticipationService.requestToJoinSeries(resolvedMatchId, userId);
+            return new ModelAndView(
+                    "redirect:/matches/" + resolvedMatchId + "?join=recurringRequested");
+        } catch (final MatchParticipationException e) {
+            return new ModelAndView(
+                    "redirect:/matches/" + resolvedMatchId + "?joinError=" + e.getCode());
+        }
+    }
+
     @PostMapping("/matches/{matchId}/join-requests/cancel")
     public ModelAndView cancelJoinRequest(
             @PathVariable("matchId") final String matchId, final Locale locale) {

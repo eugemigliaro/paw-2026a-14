@@ -81,6 +81,23 @@ player pending join requests
 	white-space: nowrap;
 }
 
+.participant-manage-list__details {
+	display: grid;
+	gap: 0.3rem;
+	min-width: 0;
+}
+
+.participant-manage-list__meta-link {
+	color: var(--text-muted);
+	font-size: 0.86rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.participant-manage-list__meta-link:hover {
+	color: #0f766e;
+}
+
 .participant-manage-list__actions {
 	display: flex;
 	flex-shrink: 0;
