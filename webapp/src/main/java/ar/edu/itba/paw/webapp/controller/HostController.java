@@ -260,7 +260,7 @@ public class HostController {
         mav.addObject("pageTitle", formConfig.pageTitle());
         mav.addObject(
                 "shell",
-                ShellViewModelFactory.hostShell(messageSource, locale, "/host/matches/new"));
+                ShellViewModelFactory.playerShell(messageSource, locale, "/host/matches/new"));
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         mav.addObject("formEyebrow", formConfig.eyebrow());

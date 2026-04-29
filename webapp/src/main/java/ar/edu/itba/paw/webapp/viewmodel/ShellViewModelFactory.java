@@ -60,61 +60,13 @@ public final class ShellViewModelFactory {
 
         return new ShellViewModel(
                 ms.getMessage("app.brand", null, locale),
-                isAuthenticated()
-                        ? new NavItemViewModel(
-                                ms.getMessage("nav.switchToHosting", null, locale),
-                                UrlUtils.withLang("/host/matches/new", locale),
-                                false)
-                        : null,
+                null,
                 isAuthenticated()
                         ? new NavItemViewModel(
                                 ms.getMessage("nav.hostAMatch", null, locale),
                                 UrlUtils.withLang("/host/matches/new", locale),
-                                false)
+                                "/host/matches/new".equals(activePath))
                         : null,
-                navItems);
-    }
-
-    public static ShellViewModel hostShell(final MessageSource ms, final Locale locale) {
-        return hostShell(ms, locale, "/host/matches/new");
-    }
-
-    public static ShellViewModel hostShell(
-            final MessageSource ms, final Locale locale, final String activePath) {
-
-        List<NavItemViewModel> navItems =
-                List.of(
-                        new NavItemViewModel(
-                                ms.getMessage("nav.host.createMatch", null, locale),
-                                UrlUtils.withLang("/host/matches/new", locale),
-                                "/host/matches/new".equals(activePath)));
-        if (isAuthenticated()) {
-            navItems =
-                    List.of(
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.host.createMatch", null, locale),
-                                    UrlUtils.withLang("/host/matches/new", locale),
-                                    "/host/matches/new".equals(activePath)),
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.host.upcomingEvents", null, locale),
-                                    UrlUtils.withLang("/host/matches", locale),
-                                    "/host/matches".equals(activePath)),
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.host.finishedEvents", null, locale),
-                                    UrlUtils.withLang("/host/matches/finished", locale),
-                                    "/host/matches/finished".equals(activePath)));
-        }
-
-        return new ShellViewModel(
-                ms.getMessage("app.brand", null, locale),
-                new NavItemViewModel(
-                        ms.getMessage("nav.switchToPlayer", null, locale),
-                        UrlUtils.withLang("/", locale),
-                        false),
-                new NavItemViewModel(
-                        ms.getMessage("nav.hostAMatch", null, locale),
-                        UrlUtils.withLang("/host/matches/new", locale),
-                        false),
                 navItems);
     }
 

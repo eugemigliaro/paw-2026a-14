@@ -130,7 +130,7 @@ public class MatchDashboardController {
                 messageSource.getMessage("host.dashboard.title", null, locale),
                 messageSource.getMessage("host.dashboard.description", null, locale),
                 messageSource.getMessage("host.dashboard.empty", null, locale),
-                ShellViewModelFactory.hostShell(messageSource, locale, "/host/matches"));
+                ShellViewModelFactory.playerShell(messageSource, locale));
     }
 
     @GetMapping("/host/matches/finished")
@@ -197,7 +197,7 @@ public class MatchDashboardController {
                 messageSource.getMessage("host.finished.title", null, locale),
                 messageSource.getMessage("host.finished.description", null, locale),
                 messageSource.getMessage("host.finished.empty", null, locale),
-                ShellViewModelFactory.hostShell(messageSource, locale, "/host/matches/finished"));
+                ShellViewModelFactory.playerShell(messageSource, locale));
     }
 
     @GetMapping("/player/matches/past")

@@ -58,7 +58,7 @@ public class HostParticipationController {
         final boolean isApprovalRequired =
                 "approval_required".equalsIgnoreCase(match.getJoinPolicy());
         final ModelAndView mav = new ModelAndView("host/participation/roster");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("participants", toRosterViewModels(participants, resolvedMatchId));
@@ -85,7 +85,7 @@ public class HostParticipationController {
                 matchParticipationService.findPendingRequests(resolvedMatchId, hostUserId);
 
         final ModelAndView mav = new ModelAndView("host/participation/requests");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("pendingRequests", toPendingRequestViewModels(pending, resolvedMatchId));
@@ -206,7 +206,7 @@ public class HostParticipationController {
                 matchParticipationService.findDeclinedInvitees(matchId, hostUserId);
 
         final ModelAndView mav = new ModelAndView("host/participation/invites");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
         mav.addObject("matchId", matchId);
         mav.addObject("inviteForm", form);
