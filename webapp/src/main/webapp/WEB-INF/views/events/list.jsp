@@ -12,14 +12,52 @@
 	<head>
 		<%@ include file="/WEB-INF/views/includes/head.jspf" %>
 		<style>
+			.events-header-container {
+				display: flex;
+				align-items: center;
+				gap: 24px;
+				margin-bottom: 24px;
+			}
+
+			.events-header-title {
+				flex-shrink: 0;
+			}
+
+			.events-header-search {
+				flex: 1;
+				min-width: 200px;
+			}
+
+			.events-header-search .search-panel__form {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+			}
+
+			.events-header-search .search-panel__row {
+				display: flex;
+				gap: 8px;
+				flex: 1;
+			}
+
+			.events-header-search .search-panel__input {
+				flex: 1;
+			}
+
+			.events-header-search .search-panel__control {
+				font-size: 13px;
+				padding: 6px 10px;
+				height: 36px;
+			}
+
 			.events-toggle-wrapper {
 				position: relative;
 				display: inline-flex;
 				background: #e5e7eb;
 				border-radius: 999px;
 				padding: 4px;
-				width: 220px;
-				margin: 20px 0;
+				width: 200px;
+				flex-shrink: 0;
 			}
 
 			.events-toggle-slider {
@@ -44,10 +82,11 @@
 				border: none;
 				background: transparent;
 				cursor: pointer;
-				padding: 10px 0;
-				font-weight: 500;
+				padding: 8px 0;
+				font-weight: 400;
 				border-radius: 999px;
-				font-size: 14px;
+				font-size: 13px;
+				font-family: inherit;
 			}
 
 			.events-toggle-btn:hover {
@@ -65,40 +104,12 @@
 
 			<main class="page-shell page-shell--matches-list">
 
-				<header class="page-heading">
-					<h1 class="page-heading__title"><c:out value="${listTitle}" /></h1>
-					<p class="page-heading__description"><c:out value="${listDescription}" /></p>
-				</header>
+				<!-- Header with Title, Search, and Toggle in one row -->
+				<div class="events-header-container">
+					<h1 class="page-heading__title events-header-title"><c:out value="${listTitle}" /></h1>
 
-				<!-- Events Toggle -->
-				<div class="events-toggle-wrapper" id="eventsToggle">
-					<div class="events-toggle-slider" id="eventsSlider"></div>
-					<button class="events-toggle-btn" data-value="upcoming">Upcoming</button>
-					<button class="events-toggle-btn" data-value="past">Past</button>
-				</div>
-
-				<section class="matches-search-sort-panel">
-					<c:if test="${not empty listControls.sortOptions}">
-						<form method="get" action="${listControls.searchAction}" class="sort-panel" aria-label="${sortAriaLabel}">
-							<label class="field sort-panel__field" for="sort-select">
-								<span class="field__label"><c:out value="${listControls.sortLabel}" /></span>
-								<select
-									id="sort-select"
-									name="sort"
-									class="field__control field__control--select sort-panel__select"
-									onchange="if(this.value){window.location.href=this.value;}">
-									<c:forEach var="option" items="${listControls.sortOptions}">
-										<c:url var="optionHref" value="${option.href}" />
-										<option value="${optionHref}" ${option.selected ? 'selected="selected"' : ''}>
-											<c:out value="${option.label}" />
-										</option>
-									</c:forEach>
-								</select>
-							</label>
-						</form>
-					</c:if>
-
-					<section class="search-panel matches-search-panel" aria-label="${searchAriaLabel}">
+					<!-- Search Bar -->
+					<div class="events-header-search" aria-label="${searchAriaLabel}">
 						<form:form
 							method="get"
 							action="${listControls.searchAction}"
@@ -138,7 +149,36 @@
 							</div>
 							<form:errors path="q" cssClass="search-panel__error" element="p" />
 						</form:form>
-					</section>
+					</div>
+
+					<!-- Toggle -->
+					<div class="events-toggle-wrapper" id="eventsToggle">
+						<div class="events-toggle-slider" id="eventsSlider"></div>
+						<button class="events-toggle-btn" data-value="upcoming">Upcoming</button>
+						<button class="events-toggle-btn" data-value="past">Past</button>
+					</div>
+				</div>
+
+				<section class="matches-search-sort-panel">
+					<c:if test="${not empty listControls.sortOptions}">
+						<form method="get" action="${listControls.searchAction}" class="sort-panel" aria-label="${sortAriaLabel}">
+							<label class="field sort-panel__field" for="sort-select">
+								<span class="field__label"><c:out value="${listControls.sortLabel}" /></span>
+								<select
+									id="sort-select"
+									name="sort"
+									class="field__control field__control--select sort-panel__select"
+									onchange="if(this.value){window.location.href=this.value;}">
+									<c:forEach var="option" items="${listControls.sortOptions}">
+										<c:url var="optionHref" value="${option.href}" />
+										<option value="${optionHref}" ${option.selected ? 'selected="selected"' : ''}>
+											<c:out value="${option.label}" />
+										</option>
+									</c:forEach>
+								</select>
+							</label>
+						</form>
+					</c:if>
 				</section>
 
 				<c:if test="${not empty listControls}">
