@@ -1,0 +1,3 @@
+
+- agregar paginacion a las reviews
+- usar mcp de playright para ver que onda con la app, que toquetee en todos lados

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
@@ -10,6 +11,7 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PlayerReviewViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PublicProfilePageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -51,6 +53,7 @@ public class PublicProfileController {
     public ModelAndView showPublicProfile(
             @PathVariable("username") final String username,
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
+            @RequestParam(value = "reviewFilter", required = false) final String reviewFilter,
             final Locale locale) {
         final User user =
                 userService
@@ -74,7 +77,7 @@ public class PublicProfileController {
                         user.getLastName(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, reviewForm, locale);
+        addReviewModel(mav, user, reviewForm, reviewFilter, locale);
         mav.addObject(
                 "profileEyebrow",
                 messageSource.getMessage(
@@ -157,11 +160,18 @@ public class PublicProfileController {
     }
 
     private void addReviewModel(
-            final ModelAndView mav, final User user, final String reviewForm, final Locale locale) {
+            final ModelAndView mav,
+            final User user,
+            final String reviewForm,
+            final String reviewFilter,
+            final Locale locale) {
         final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user.getId());
+        final PlayerReviewFilter selectedFilter =
+                PlayerReviewFilter.fromQueryValueOrDefault(reviewFilter);
         final List<PlayerReviewViewModel> reviews =
                 playerReviewService
-                        .findRecentReviewsForUser(user.getId(), RECENT_REVIEW_LIMIT, 0)
+                        .findRecentReviewsForUser(
+                                user.getId(), selectedFilter, RECENT_REVIEW_LIMIT, 0)
                         .stream()
                         .map(review -> toReviewViewModel(review, locale))
                         .toList();
@@ -195,6 +205,8 @@ public class PublicProfileController {
                         "profile.reviews.dislikes",
                         locale));
         mav.addObject("profileReviews", reviews);
+        mav.addObject("reviewFilterOptions", reviewFilterOptions(user, selectedFilter, locale));
+        mav.addObject("selectedReviewFilter", selectedFilter.getQueryValue());
         mav.addObject("reviewCanSubmit", reviewCanSubmit);
         mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
         mav.addObject("viewerReview", viewerReview.orElse(null));
@@ -202,6 +214,33 @@ public class PublicProfileController {
         mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
         mav.addObject("reviewFormPath", profilePath + "?reviewForm=open#reviews");
         mav.addObject("reviewSectionPath", profilePath + "#reviews");
+    }
+
+    private List<FilterOptionViewModel> reviewFilterOptions(
+            final User user, final PlayerReviewFilter selectedFilter, final Locale locale) {
+        return List.of(
+                reviewFilterOption(user, PlayerReviewFilter.BOTH, selectedFilter, locale),
+                reviewFilterOption(user, PlayerReviewFilter.POSITIVE, selectedFilter, locale),
+                reviewFilterOption(user, PlayerReviewFilter.BAD, selectedFilter, locale));
+    }
+
+    private FilterOptionViewModel reviewFilterOption(
+            final User user,
+            final PlayerReviewFilter filter,
+            final PlayerReviewFilter selectedFilter,
+            final Locale locale) {
+        final String label =
+                messageSource.getMessage(
+                        "profile.reviews.filter." + filter.getQueryValue(), null, locale);
+        return new FilterOptionViewModel(
+                label,
+                "/users/"
+                        + user.getUsername()
+                        + "?reviewFilter="
+                        + filter.getQueryValue()
+                        + "#reviews",
+                null,
+                filter == selectedFilter);
     }
 
     private PlayerReviewViewModel toReviewViewModel(

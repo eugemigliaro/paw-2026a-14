@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import java.sql.ResultSet;
@@ -137,18 +138,38 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
 
     @Override
     public List<PlayerReview> findRecentReviewsForUser(
-            final Long reviewedUserId, final int limit, final int offset) {
+            final Long reviewedUserId,
+            final PlayerReviewFilter filter,
+            final int limit,
+            final int offset) {
+        final StringBuilder sql =
+                new StringBuilder(
+                        "SELECT id, reviewer_user_id, reviewed_user_id,"
+                                + " reaction, comment, created_at, updated_at, deleted_at"
+                                + " FROM player_reviews"
+                                + " WHERE reviewed_user_id = ? AND deleted_at IS NULL");
+
+        final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
+        final Optional<PlayerReviewReaction> reaction = safeFilter.getReaction();
+
+        if (reaction.isPresent()) {
+            sql.append(" AND reaction = ?");
+        }
+
+        sql.append(" ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?");
+
+        if (reaction.isPresent()) {
+            return jdbcTemplate.query(
+                    sql.toString(),
+                    PLAYER_REVIEW_ROW_MAPPER,
+                    reviewedUserId,
+                    reactionParameter(reaction.get()),
+                    limit,
+                    offset);
+        }
+
         return jdbcTemplate.query(
-                "SELECT id, reviewer_user_id, reviewed_user_id,"
-                        + " reaction, comment, created_at, updated_at, deleted_at"
-                        + " FROM player_reviews"
-                        + " WHERE reviewed_user_id = ? AND deleted_at IS NULL"
-                        + " ORDER BY updated_at DESC, id DESC"
-                        + " LIMIT ? OFFSET ?",
-                PLAYER_REVIEW_ROW_MAPPER,
-                reviewedUserId,
-                limit,
-                offset);
+                sql.toString(), PLAYER_REVIEW_ROW_MAPPER, reviewedUserId, limit, offset);
     }
 
     @Override

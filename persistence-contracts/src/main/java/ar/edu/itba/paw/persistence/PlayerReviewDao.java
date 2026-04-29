@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import java.util.List;
@@ -20,7 +21,8 @@ public interface PlayerReviewDao {
 
     PlayerReviewSummary getSummaryForUser(Long reviewedUserId);
 
-    List<PlayerReview> findRecentReviewsForUser(Long reviewedUserId, int limit, int offset);
+    List<PlayerReview> findRecentReviewsForUser(
+            Long reviewedUserId, PlayerReviewFilter filter, int limit, int offset);
 
     boolean canReview(Long reviewerUserId, Long reviewedUserId);
 }

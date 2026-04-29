@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
@@ -56,10 +57,15 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     @Override
     public List<PlayerReview> findRecentReviewsForUser(
-            final Long reviewedUserId, final int limit, final int offset) {
+            final Long reviewedUserId,
+            final PlayerReviewFilter filter,
+            final int limit,
+            final int offset) {
         final int safeLimit = limit <= 0 ? DEFAULT_RECENT_LIMIT : Math.min(limit, MAX_RECENT_LIMIT);
         final int safeOffset = Math.max(offset, 0);
-        return playerReviewDao.findRecentReviewsForUser(reviewedUserId, safeLimit, safeOffset);
+        final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
+        return playerReviewDao.findRecentReviewsForUser(
+                reviewedUserId, safeFilter, safeLimit, safeOffset);
     }
 
     @Override

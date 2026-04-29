@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
@@ -142,12 +143,32 @@ public class PlayerReviewServiceImplTest {
         final PlayerReviewSummary summary = new PlayerReviewSummary(3L, 1, 0, 1);
         Mockito.when(playerReviewDao.findByPair(2L, 3L)).thenReturn(Optional.of(review));
         Mockito.when(playerReviewDao.getSummaryForUser(3L)).thenReturn(summary);
-        Mockito.when(playerReviewDao.findRecentReviewsForUser(3L, 10, 0))
+        Mockito.when(playerReviewDao.findRecentReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 0))
                 .thenReturn(List.of(review));
 
         Assertions.assertTrue(playerReviewService.findReviewByPair(2L, 3L).isPresent());
         Assertions.assertEquals(summary, playerReviewService.findSummaryForUser(3L));
-        Assertions.assertEquals(1, playerReviewService.findRecentReviewsForUser(3L, 0, -10).size());
+        Assertions.assertEquals(
+                1,
+                playerReviewService
+                        .findRecentReviewsForUser(3L, PlayerReviewFilter.BOTH, 0, -10)
+                        .size());
+    }
+
+    @Test
+    public void testFindRecentReviewsNormalizesFilterLimitAndOffset() {
+        final PlayerReview review = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great", null);
+        Mockito.when(
+                        playerReviewDao.findRecentReviewsForUser(
+                                3L, PlayerReviewFilter.POSITIVE, 10, 0))
+                .thenReturn(List.of(review));
+
+        final List<PlayerReview> reviews =
+                playerReviewService.findRecentReviewsForUser(
+                        3L, PlayerReviewFilter.POSITIVE, 0, -10);
+
+        Assertions.assertEquals(1, reviews.size());
+        Assertions.assertEquals(PlayerReviewReaction.LIKE, reviews.get(0).getReaction());
     }
 
     private static PlayerReview review(

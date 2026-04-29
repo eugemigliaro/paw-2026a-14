@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.Sport;
@@ -664,8 +665,16 @@ class PawUiRouteTest {
 
                     @Override
                     public List<PlayerReview> findRecentReviewsForUser(
-                            final Long reviewedUserId, final int limit, final int offset) {
+                            final Long reviewedUserId,
+                            final PlayerReviewFilter filter,
+                            final int limit,
+                            final int offset) {
                         if (reviewedUserId.equals(3L) && viewerReview != null) {
+                            if (filter != null
+                                    && filter.getReaction().isPresent()
+                                    && filter.getReaction().get() != viewerReview.getReaction()) {
+                                return List.of();
+                            }
                             return List.of(viewerReview);
                         }
                         return List.of();
@@ -1664,6 +1673,32 @@ class PawUiRouteTest {
                         model().attribute(
                                         "reviewSummary",
                                         Matchers.hasProperty("reviewCount", Matchers.is(1L))));
+    }
+
+    @Test
+    void getPublicProfileRouteFiltersPositiveReviews() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewFilter", "positive"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("selectedReviewFilter", "positive"))
+                .andExpect(model().attribute("profileReviews", Matchers.hasSize(1)))
+                .andExpect(
+                        model().attribute(
+                                        "profileReviews",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "reaction", Matchers.is("like")))))
+                .andExpect(
+                        model().attribute(
+                                        "reviewFilterOptions",
+                                        Matchers.hasItem(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "label", Matchers.is("Positive")),
+                                                        Matchers.hasProperty(
+                                                                "active", Matchers.is(true))))));
     }
 
     @Test

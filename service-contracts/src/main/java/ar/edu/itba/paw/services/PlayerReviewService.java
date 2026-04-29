@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import java.util.List;
@@ -22,7 +23,13 @@ public interface PlayerReviewService {
 
     PlayerReviewSummary findSummaryForUser(Long reviewedUserId);
 
-    List<PlayerReview> findRecentReviewsForUser(Long reviewedUserId, int limit, int offset);
+    default List<PlayerReview> findRecentReviewsForUser(
+            final Long reviewedUserId, final int limit, final int offset) {
+        return findRecentReviewsForUser(reviewedUserId, PlayerReviewFilter.BOTH, limit, offset);
+    }
+
+    List<PlayerReview> findRecentReviewsForUser(
+            Long reviewedUserId, PlayerReviewFilter filter, int limit, int offset);
 
     boolean canReview(Long reviewerUserId, Long reviewedUserId);
 }

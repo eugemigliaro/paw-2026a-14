@@ -321,9 +321,36 @@
 						</section>
 					</c:if>
 
+					<c:if test="${not empty reviewFilterOptions}">
+						<spring:message var="reviewFilterAria" code="profile.reviews.filter.aria" />
+						<nav class="public-profile-review-filter" aria-label="${reviewFilterAria}">
+							<span class="public-profile-review-filter__label"><spring:message code="profile.reviews.filter.label" /></span>
+							<div class="public-profile-review-filter__options">
+								<c:forEach var="option" items="${reviewFilterOptions}">
+									<c:url var="reviewFilterHref" value="${option.href}" />
+									<a
+										class="public-profile-review-filter__option ${option.active ? 'is-active' : ''}"
+										href="${reviewFilterHref}"
+										aria-current="${option.active ? 'true' : 'false'}">
+										<c:out value="${option.label}" />
+									</a>
+								</c:forEach>
+							</div>
+						</nav>
+					</c:if>
+
 					<c:choose>
 						<c:when test="${empty profileReviews}">
-							<p class="public-profile-reviews__empty"><spring:message code="profile.reviews.empty" /></p>
+							<p class="public-profile-reviews__empty">
+								<c:choose>
+									<c:when test="${selectedReviewFilter ne 'both'}">
+										<spring:message code="profile.reviews.emptyFiltered" />
+									</c:when>
+									<c:otherwise>
+										<spring:message code="profile.reviews.empty" />
+									</c:otherwise>
+								</c:choose>
+							</p>
 						</c:when>
 						<c:otherwise>
 							<ul class="public-profile-review-list">
