@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
@@ -15,8 +16,6 @@ import org.springframework.stereotype.Service;
 public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     private static final int DEFAULT_RECENT_LIMIT = 10;
-    private static final int MAX_RECENT_LIMIT = 50;
-
     private final PlayerReviewDao playerReviewDao;
 
     @Autowired
@@ -61,11 +60,31 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
             final PlayerReviewFilter filter,
             final int limit,
             final int offset) {
-        final int safeLimit = limit <= 0 ? DEFAULT_RECENT_LIMIT : Math.min(limit, MAX_RECENT_LIMIT);
+        final int safeLimit = limit <= 0 ? DEFAULT_RECENT_LIMIT : limit;
         final int safeOffset = Math.max(offset, 0);
         final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
         return playerReviewDao.findRecentReviewsForUser(
                 reviewedUserId, safeFilter, safeLimit, safeOffset);
+    }
+
+    @Override
+    public PaginatedResult<PlayerReview> findReviewsForUser(
+            final Long reviewedUserId,
+            final PlayerReviewFilter filter,
+            final int page,
+            final int pageSize) {
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_RECENT_LIMIT;
+        final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
+        final int totalCount = playerReviewDao.countReviewsForUser(reviewedUserId, safeFilter);
+        final int totalPages =
+                totalCount == 0 ? 1 : (int) Math.ceil((double) totalCount / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int offset = (clampedPage - 1) * safePageSize;
+        final List<PlayerReview> items =
+                playerReviewDao.findRecentReviewsForUser(
+                        reviewedUserId, safeFilter, safePageSize, offset);
+        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
     }
 
     @Override

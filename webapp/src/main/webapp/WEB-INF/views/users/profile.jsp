@@ -395,6 +395,62 @@
 									</li>
 								</c:forEach>
 							</ul>
+							<c:if test="${reviewTotalPages > 1}">
+								<spring:message var="previousLabel" code="pagination.previous" />
+								<spring:message var="nextLabel" code="pagination.next" />
+								<section class="feed-pagination" aria-label="${reviewFilterAria}">
+									<nav class="feed-pagination__nav" aria-label="${reviewFilterAria}">
+										<c:choose>
+											<c:when test="${not empty reviewPreviousPageHref}">
+												<c:url var="reviewPrevHref" value="${reviewPreviousPageHref}" />
+												<a class="feed-pagination__control" href="${reviewPrevHref}">
+													${previousLabel}
+												</a>
+											</c:when>
+											<c:otherwise>
+												<span class="feed-pagination__control feed-pagination__control--disabled">
+													${previousLabel}
+												</span>
+											</c:otherwise>
+										</c:choose>
+
+										<div class="feed-pagination__pages">
+											<c:forEach var="item" items="${reviewPaginationItems}">
+												<c:choose>
+													<c:when test="${item.ellipsis}">
+														<span class="feed-pagination__ellipsis" aria-hidden="true">${item.label}</span>
+													</c:when>
+													<c:when test="${item.current}">
+														<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">
+															${item.label}
+														</span>
+													</c:when>
+													<c:otherwise>
+														<c:url var="reviewPageHref" value="${item.href}" />
+														<a class="feed-pagination__page" href="${reviewPageHref}">
+															${item.label}
+														</a>
+													</c:otherwise>
+												</c:choose>
+											</c:forEach>
+										</div>
+
+										<c:choose>
+											<c:when test="${not empty reviewNextPageHref}">
+												<c:url var="reviewNextHref" value="${reviewNextPageHref}" />
+												<a class="feed-pagination__control" href="${reviewNextHref}">
+													${nextLabel}
+												</a>
+											</c:when>
+											<c:otherwise>
+												<span class="feed-pagination__control feed-pagination__control--disabled">
+													${nextLabel}
+												</span>
+											</c:otherwise>
+										</c:choose>
+									</nav>
+								</section>
+							</c:if>
 						</c:otherwise>
 					</c:choose>
 				</section>

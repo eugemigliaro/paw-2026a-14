@@ -681,6 +681,32 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public PaginatedResult<PlayerReview> findReviewsForUser(
+                            final Long reviewedUserId,
+                            final PlayerReviewFilter filter,
+                            final int page,
+                            final int pageSize) {
+                        final List<PlayerReview> reviews =
+                                findRecentReviewsForUser(
+                                        reviewedUserId,
+                                        filter,
+                                        pageSize,
+                                        (Math.max(page, 1) - 1) * pageSize);
+                        final int totalCount =
+                                reviewedUserId.equals(3L)
+                                                && filter == PlayerReviewFilter.BOTH
+                                                && viewerReview != null
+                                        ? 21
+                                        : reviews.size();
+                        final int totalPages =
+                                totalCount == 0
+                                        ? 1
+                                        : (int) Math.ceil((double) totalCount / pageSize);
+                        final int safePage = Math.min(Math.max(page, 1), totalPages);
+                        return new PaginatedResult<>(reviews, totalCount, safePage, pageSize);
+                    }
+
+                    @Override
                     public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
                         return reviewerUserId != null
                                 && reviewedUserId != null
@@ -1667,7 +1693,7 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "reviewFormPath",
-                                        "/users/second-player?reviewForm=open#reviews"))
+                                        "/users/second-player?reviewFilter=both&reviewPage=1&reviewForm=open#reviews"))
                 .andExpect(model().attributeExists("viewerReview"))
                 .andExpect(
                         model().attribute(
@@ -1698,18 +1724,70 @@ class PawUiRouteTest {
                                                         Matchers.hasProperty(
                                                                 "label", Matchers.is("Positive")),
                                                         Matchers.hasProperty(
+                                                                "href",
+                                                                Matchers.is(
+                                                                        "/users/second-player?reviewFilter=positive&reviewPage=1#reviews")),
+                                                        Matchers.hasProperty(
                                                                 "active", Matchers.is(true))))));
+    }
+
+    @Test
+    void getPublicProfileRoutePaginatesReviews() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewPage", "2"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("reviewTotalPages", 3))
+                .andExpect(
+                        model().attribute(
+                                        "reviewPreviousPageHref",
+                                        "/users/second-player?reviewFilter=both&reviewPage=1#reviews"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewNextPageHref",
+                                        "/users/second-player?reviewFilter=both&reviewPage=3#reviews"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewPaginationItems",
+                                        Matchers.hasItem(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "label", Matchers.is("2")),
+                                                        Matchers.hasProperty(
+                                                                "current", Matchers.is(true))))));
+    }
+
+    @Test
+    void getPublicProfileRouteFallsBackForInvalidReviewPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewPage", "bad"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewNextPageHref",
+                                        "/users/second-player?reviewFilter=both&reviewPage=2#reviews"));
     }
 
     @Test
     void getPublicProfileRouteOpensReviewFormWhenRequested() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/users/second-player").param("reviewForm", "open"))
+        mockMvc.perform(
+                        get("/users/second-player")
+                                .param("reviewFilter", "positive")
+                                .param("reviewPage", "2")
+                                .param("reviewForm", "open"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attribute("reviewCanSubmit", true))
-                .andExpect(model().attribute("reviewFormVisible", true));
+                .andExpect(model().attribute("reviewFormVisible", true))
+                .andExpect(
+                        model().attribute(
+                                        "reviewSectionPath",
+                                        "/users/second-player?reviewFilter=positive&reviewPage=1#reviews"));
     }
 
     @Test

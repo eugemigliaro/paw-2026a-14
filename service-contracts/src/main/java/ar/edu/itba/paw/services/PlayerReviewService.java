@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
@@ -30,6 +31,9 @@ public interface PlayerReviewService {
 
     List<PlayerReview> findRecentReviewsForUser(
             Long reviewedUserId, PlayerReviewFilter filter, int limit, int offset);
+
+    PaginatedResult<PlayerReview> findReviewsForUser(
+            Long reviewedUserId, PlayerReviewFilter filter, int page, int pageSize);
 
     boolean canReview(Long reviewerUserId, Long reviewedUserId);
 }

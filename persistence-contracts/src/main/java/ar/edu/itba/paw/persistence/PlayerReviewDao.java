@@ -21,6 +21,8 @@ public interface PlayerReviewDao {
 
     PlayerReviewSummary getSummaryForUser(Long reviewedUserId);
 
+    int countReviewsForUser(Long reviewedUserId, PlayerReviewFilter filter);
+
     List<PlayerReview> findRecentReviewsForUser(
             Long reviewedUserId, PlayerReviewFilter filter, int limit, int offset);
 

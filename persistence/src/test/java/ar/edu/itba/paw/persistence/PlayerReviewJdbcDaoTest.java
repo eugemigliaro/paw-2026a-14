@@ -180,6 +180,37 @@ public class PlayerReviewJdbcDaoTest {
     }
 
     @Test
+    public void testCountReviewsForUserCountsActiveReviewsByFilter() {
+        joinMatch(10L, 1L, "joined");
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        joinMatch(10L, 4L, "joined");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
+        playerReviewDao.upsertReview(4L, 3L, PlayerReviewReaction.LIKE, "Reliable");
+
+        Assertions.assertEquals(
+                3, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BOTH));
+        Assertions.assertEquals(
+                2, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.POSITIVE));
+        Assertions.assertEquals(1, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BAD));
+    }
+
+    @Test
+    public void testCountReviewsForUserExcludesDeletedReviews() {
+        joinMatch(10L, 1L, "joined");
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
+        Assertions.assertTrue(playerReviewDao.softDeleteReview(2L, 3L));
+
+        Assertions.assertEquals(
+                1, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BOTH));
+        Assertions.assertEquals(0, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BAD));
+    }
+
+    @Test
     public void testFindRecentReviewsBothPreservesLimitAndOffset() {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");

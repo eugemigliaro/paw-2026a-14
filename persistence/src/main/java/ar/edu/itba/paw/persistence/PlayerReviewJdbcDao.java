@@ -137,6 +137,33 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
     }
 
     @Override
+    public int countReviewsForUser(final Long reviewedUserId, final PlayerReviewFilter filter) {
+        final StringBuilder sql =
+                new StringBuilder(
+                        "SELECT COUNT(id)"
+                                + " FROM player_reviews"
+                                + " WHERE reviewed_user_id = ? AND deleted_at IS NULL");
+
+        final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
+        final Optional<PlayerReviewReaction> reaction = safeFilter.getReaction();
+
+        if (reaction.isPresent()) {
+            sql.append(" AND reaction = ?");
+            final Integer count =
+                    jdbcTemplate.queryForObject(
+                            sql.toString(),
+                            Integer.class,
+                            reviewedUserId,
+                            reactionParameter(reaction.get()));
+            return count == null ? 0 : count;
+        }
+
+        final Integer count =
+                jdbcTemplate.queryForObject(sql.toString(), Integer.class, reviewedUserId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public List<PlayerReview> findRecentReviewsForUser(
             final Long reviewedUserId,
             final PlayerReviewFilter filter,
