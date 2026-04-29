@@ -151,10 +151,14 @@
 											<c:out value="${listControls.filterTitle}" />
 										</h2>
 									</div>
-									<c:url var="clearSearchHref" value="${pageContext.request.servletPath}">
+									<c:url var="clearSearchHref" value="/events">
 										<c:param name="q" value="${listControls.searchQuery}" />
 										<c:param name="sort" value="${selectedSort}" />
 										<c:param name="tz" value="${selectedTimezone}" />
+										<c:param name="startDate" value="${selectedStartDateValue}" />
+										<c:param name="endDate" value="${selectedEndDateValue}" />
+										<c:param name="minPrice" value="${selectedMinPriceValue}" />
+										<c:param name="maxPrice" value="${selectedMaxPriceValue}" />
 										<c:if test="${param.filter eq 'past'}">
 											<c:param name="filter" value="past" />
 										</c:if>

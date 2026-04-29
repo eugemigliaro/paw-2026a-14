@@ -536,10 +536,28 @@ public class MatchDashboardController {
         final List<Match> pendingMatches =
                 matchParticipationService.findPendingRequestMatches(userId).stream()
                         .filter(match -> belongsToContext(match, context, today, timezone))
+                        .filter(
+                                match ->
+                                        matchesFilters(
+                                                match,
+                                                sports,
+                                                statuses,
+                                                minPrice,
+                                                maxPrice,
+                                                searchQuery))
                         .toList();
         final List<Match> invitedMatches =
                 matchParticipationService.findInvitedMatches(userId).stream()
                         .filter(match -> belongsToContext(match, context, today, timezone))
+                        .filter(
+                                match ->
+                                        matchesFilters(
+                                                match,
+                                                sports,
+                                                statuses,
+                                                minPrice,
+                                                maxPrice,
+                                                searchQuery))
                         .toList();
 
         // Fetch joined and hosted matches with pagination
@@ -640,6 +658,74 @@ public class MatchDashboardController {
             return !matchDate.isAfter(today);
         }
         return !matchDate.isBefore(today);
+    }
+
+    private static boolean matchesFilters(
+            final Match match,
+            final String sports,
+            final String statuses,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final String searchQuery) {
+        // Filter by sport
+        if (sports != null && !sports.isBlank()) {
+            final List<String> sportList = normalizeCsvValues(List.of(sports));
+            if (!sportList.isEmpty() && !sportList.contains(match.getSport().getDbValue())) {
+                return false;
+            }
+        }
+
+        // Filter by status
+        if (statuses != null && !statuses.isBlank()) {
+            final List<String> statusList = normalizeCsvValues(List.of(statuses));
+            if (!statusList.isEmpty() && !statusList.contains(match.getStatus())) {
+                return false;
+            }
+        }
+
+        // Filter by price range
+        if (match.getPricePerPlayer() != null) {
+            if (minPrice != null && match.getPricePerPlayer().compareTo(minPrice) < 0) {
+                return false;
+            }
+            if (maxPrice != null && match.getPricePerPlayer().compareTo(maxPrice) > 0) {
+                return false;
+            }
+        }
+
+        // Filter by search query (title and host name)
+        if (searchQuery != null && !searchQuery.isBlank()) {
+            final String lowerQuery = searchQuery.trim().toLowerCase(Locale.ROOT);
+            final boolean titleMatches =
+                    match.getTitle().toLowerCase(Locale.ROOT).contains(lowerQuery);
+            if (!titleMatches) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static List<String> normalizeCsvValues(final List<String> rawValues) {
+        if (rawValues == null || rawValues.isEmpty()) {
+            return List.of();
+        }
+
+        final LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (final String rawValue : rawValues) {
+            if (rawValue == null || rawValue.isBlank()) {
+                continue;
+            }
+
+            for (final String part : rawValue.split(",")) {
+                if (part == null || part.isBlank()) {
+                    continue;
+                }
+                normalized.add(part.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+
+        return List.copyOf(normalized);
     }
 
     private EventCardViewModel toCard(
