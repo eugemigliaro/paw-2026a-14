@@ -1,7 +1,0 @@
-
-- ver lo del import thel arraylist en el jdbc y hacer un commit de cleaning unused code
-
-- decirle a mariu de un tag para paginacion y que sea reutilizable
-
-
-- usar mcp de playright para ver que onda con la app, que toquetee en todos lados
