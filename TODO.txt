@@ -1,5 +1,4 @@
 
-- Ver si sigue haciendo falta el service the findRecentReviewsForUser
 - ver lo del import thel arraylist en el jdbc y hacer un commit de cleaning unused code
 
 - decirle a mariu de un tag para paginacion y que sea reutilizable

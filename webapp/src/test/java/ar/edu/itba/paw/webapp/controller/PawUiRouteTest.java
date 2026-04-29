@@ -664,34 +664,23 @@ class PawUiRouteTest {
                     }
 
                     @Override
-                    public List<PlayerReview> findRecentReviewsForUser(
-                            final Long reviewedUserId,
-                            final PlayerReviewFilter filter,
-                            final int limit,
-                            final int offset) {
-                        if (reviewedUserId.equals(3L) && viewerReview != null) {
-                            if (filter != null
-                                    && filter.getReaction().isPresent()
-                                    && filter.getReaction().get() != viewerReview.getReaction()) {
-                                return List.of();
-                            }
-                            return List.of(viewerReview);
-                        }
-                        return List.of();
-                    }
-
-                    @Override
                     public PaginatedResult<PlayerReview> findReviewsForUser(
                             final Long reviewedUserId,
                             final PlayerReviewFilter filter,
                             final int page,
                             final int pageSize) {
-                        final List<PlayerReview> reviews =
-                                findRecentReviewsForUser(
-                                        reviewedUserId,
-                                        filter,
-                                        pageSize,
-                                        (Math.max(page, 1) - 1) * pageSize);
+                        final List<PlayerReview> reviews;
+                        if (reviewedUserId.equals(3L) && viewerReview != null) {
+                            if (filter != null
+                                    && filter.getReaction().isPresent()
+                                    && filter.getReaction().get() != viewerReview.getReaction()) {
+                                reviews = List.of();
+                            } else {
+                                reviews = List.of(viewerReview);
+                            }
+                        } else {
+                            reviews = List.of();
+                        }
                         final int totalCount =
                                 reviewedUserId.equals(3L)
                                                 && filter == PlayerReviewFilter.BOTH

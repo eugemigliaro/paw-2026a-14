@@ -55,19 +55,6 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
-    public List<PlayerReview> findRecentReviewsForUser(
-            final Long reviewedUserId,
-            final PlayerReviewFilter filter,
-            final int limit,
-            final int offset) {
-        final int safeLimit = limit <= 0 ? DEFAULT_RECENT_LIMIT : limit;
-        final int safeOffset = Math.max(offset, 0);
-        final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
-        return playerReviewDao.findRecentReviewsForUser(
-                reviewedUserId, safeFilter, safeLimit, safeOffset);
-    }
-
-    @Override
     public PaginatedResult<PlayerReview> findReviewsForUser(
             final Long reviewedUserId,
             final PlayerReviewFilter filter,
