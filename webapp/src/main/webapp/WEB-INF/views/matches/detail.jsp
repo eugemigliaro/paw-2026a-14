@@ -698,15 +698,24 @@
 									<c:forEach var="occurrence" items="${eventPage.occurrences}" varStatus="occurrenceStatus">
 										<li
 											class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}"
-											<c:if test="${recurrenceScheduleCollapsed and occurrenceStatus.index >= recurrencePreviewLimit}">
+											<c:if test="${recurrenceScheduleCollapsed and occurrenceStatus.index >= recurrencePreviewLimit and not occurrence.current}">
 												hidden="hidden"
 												data-recurrence-extra-date="true"
 											</c:if>>
 											<div class="recurrence-schedule__date">
-												<c:url var="occurrenceHref" value="${occurrence.href}" />
-												<a class="recurrence-schedule__link" href="${occurrenceHref}">
-													<c:out value="${occurrence.schedule}" />
-												</a>
+												<c:choose>
+													<c:when test="${not empty occurrence.href}">
+														<c:url var="occurrenceHref" value="${occurrence.href}" />
+														<a class="recurrence-schedule__link" href="${occurrenceHref}">
+															<c:out value="${occurrence.schedule}" />
+														</a>
+													</c:when>
+													<c:otherwise>
+														<span class="recurrence-schedule__text">
+															<c:out value="${occurrence.schedule}" />
+														</span>
+													</c:otherwise>
+												</c:choose>
 											</div>
 											<div class="recurrence-schedule__badges">
 												<c:if test="${not empty occurrence.statusLabel}">

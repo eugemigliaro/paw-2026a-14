@@ -277,7 +277,8 @@ public class EventController {
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject(
                 "eventPage",
-                buildRealEventPage(match, confirmedParticipants, seriesOccurrences, locale));
+                buildRealEventPage(
+                        match, confirmedParticipants, seriesOccurrences, currentUserId, locale));
 
         mav.addObject("reservationEnabled", canReserveMatch(match));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
@@ -349,6 +350,7 @@ public class EventController {
             final Match match,
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
+            final Long currentUserId,
             final Locale locale) {
         final Optional<User> host = userService.findById(match.getHostUserId());
         return new EventDetailPageViewModel(
@@ -372,7 +374,7 @@ public class EventController {
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
                 loadNearbyMatches(match.getId(), locale),
-                toOccurrenceViewModels(match, seriesOccurrences, locale));
+                toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale));
     }
 
     private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
@@ -468,7 +470,10 @@ public class EventController {
     }
 
     private List<EventOccurrenceViewModel> toOccurrenceViewModels(
-            final Match currentMatch, final List<Match> occurrences, final Locale locale) {
+            final Match currentMatch,
+            final List<Match> occurrences,
+            final Long currentUserId,
+            final Locale locale) {
         if (occurrences == null || occurrences.size() <= 1) {
             return List.of();
         }
@@ -477,8 +482,12 @@ public class EventController {
                 .map(
                         occurrence -> {
                             final EventDisplayState state = eventDisplayState(occurrence);
+                            final String href =
+                                    isMatchVisibleToUser(occurrence, currentUserId)
+                                            ? "/matches/" + occurrence.getId()
+                                            : null;
                             return new EventOccurrenceViewModel(
-                                    "/matches/" + occurrence.getId(),
+                                    href,
                                     scheduleFormatter(locale)
                                             .format(
                                                     occurrence

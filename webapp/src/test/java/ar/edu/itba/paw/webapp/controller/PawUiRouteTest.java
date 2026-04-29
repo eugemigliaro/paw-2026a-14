@@ -1215,14 +1215,40 @@ class PawUiRouteTest {
                                         Matchers.hasProperty(
                                                 "occurrences",
                                                 Matchers.hasItem(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("Cancelled"))))))
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("Cancelled")),
+                                                                Matchers.hasProperty(
+                                                                        "href",
+                                                                        Matchers.nullValue()))))))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(
                         model().attribute(
                                         "seriesReservationPath",
                                         "/matches/46/recurring-reservations"));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("Cancelled")),
+                                                                Matchers.hasProperty(
+                                                                        "href",
+                                                                        Matchers.is(
+                                                                                "/matches/50")))))));
     }
 
     @Test
