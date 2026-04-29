@@ -199,6 +199,37 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testCreateSeriesReservationsIfSpaceRejectsExistingActiveReservations() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 2, "open");
+        insertRecurringMatch(31L, 600L, 2, now.plusSeconds(172800), 2, "open");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (30, 2, 'joined', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (31, 2, 'checked_in', CURRENT_TIMESTAMP)");
+
+        final int insertedRows = matchParticipantDao.createSeriesReservationsIfSpace(600L, 2L, now);
+
+        Assertions.assertEquals(0, insertedRows);
+        final Integer participantRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND match_id IN (30, 31)",
+                        Integer.class);
+        final Integer activeRows =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE user_id = 2 AND status IN ('joined', 'checked_in')"
+                                + " AND match_id IN (30, 31)",
+                        Integer.class);
+        Assertions.assertEquals(2, participantRows);
+        Assertions.assertEquals(2, activeRows);
+    }
+
+    @Test
     public void testCreateReservationIfSpaceRestoresOccurrenceAfterSeriesCancellation() {
         final Instant startsAfter = Instant.now().minusSeconds(3600);
         insertRecurringSeries(600L, startsAfter.plusSeconds(86400));
