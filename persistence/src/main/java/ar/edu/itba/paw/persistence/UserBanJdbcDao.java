@@ -51,6 +51,14 @@ public class UserBanJdbcDao implements UserBanDao {
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
                         .withTableName("user_bans")
+                        .usingColumns(
+                                "user_id",
+                                "banned_by_user_id",
+                                "reason",
+                                "banned_until",
+                                "created_at",
+                                "updated_at",
+                                "appeal_count")
                         .usingGeneratedKeyColumns("id");
     }
 

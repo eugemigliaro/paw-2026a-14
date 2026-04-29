@@ -64,6 +64,17 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
                         .withTableName("moderation_reports")
+                        .usingColumns(
+                                "reporter_user_id",
+                                "target_type",
+                                "target_id",
+                                "target_key",
+                                "reason",
+                                "details",
+                                "status",
+                                "created_at",
+                                "updated_at",
+                                "appeal_count")
                         .usingGeneratedKeyColumns("id");
     }
 
@@ -78,12 +89,12 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
         final Instant now = Instant.now();
         final Map<String, Object> values = new HashMap<>();
         values.put("reporter_user_id", reporterUserId);
-        values.put("target_type", targetType.getDbValue());
+        values.put("target_type", new SqlParameterValue(Types.OTHER, targetType.getDbValue()));
         values.put("target_id", targetId);
         values.put("target_key", targetKey);
-        values.put("reason", reason.getDbValue());
+        values.put("reason", new SqlParameterValue(Types.OTHER, reason.getDbValue()));
         values.put("details", details);
-        values.put("status", ReportStatus.PENDING.getDbValue());
+        values.put("status", new SqlParameterValue(Types.OTHER, ReportStatus.PENDING.getDbValue()));
         values.put("created_at", Timestamp.from(now));
         values.put("updated_at", Timestamp.from(now));
         values.put("appeal_count", 0);
