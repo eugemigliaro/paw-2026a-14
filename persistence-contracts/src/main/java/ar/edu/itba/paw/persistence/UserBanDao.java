@@ -16,6 +16,8 @@ public interface UserBanDao {
 
     Optional<UserBan> findActiveBanForUser(Long userId, Instant now);
 
+    List<UserBan> findPendingAppeals();
+
     boolean appealBan(Long banId, String appealReason, Instant appealedAt);
 
     boolean resolveAppeal(

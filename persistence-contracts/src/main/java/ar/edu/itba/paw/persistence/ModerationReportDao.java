@@ -25,6 +25,8 @@ public interface ModerationReportDao {
 
     List<ModerationReport> findActiveReports();
 
+    Optional<ModerationReport> findLatestUserBanReportByTargetUserId(Long targetUserId);
+
     int countActiveReportsByReporter(Long reporterUserId);
 
     boolean markUnderReview(Long reportId, Long reviewedByUserId, Instant reviewedAt);

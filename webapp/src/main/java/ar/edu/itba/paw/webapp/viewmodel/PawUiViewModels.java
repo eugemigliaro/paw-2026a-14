@@ -806,6 +806,7 @@ public final class PawUiViewModels {
     }
 
     public static final class PlayerReviewViewModel {
+        private final Long reviewId;
         private final String reviewerUsername;
         private final String reviewerProfileHref;
         private final String reaction;
@@ -814,18 +815,24 @@ public final class PawUiViewModels {
         private final String updatedAtLabel;
 
         public PlayerReviewViewModel(
+                final Long reviewId,
                 final String reviewerUsername,
                 final String reviewerProfileHref,
                 final String reaction,
                 final String reactionLabel,
                 final String comment,
                 final String updatedAtLabel) {
+            this.reviewId = reviewId;
             this.reviewerUsername = reviewerUsername;
             this.reviewerProfileHref = reviewerProfileHref;
             this.reaction = reaction;
             this.reactionLabel = reactionLabel;
             this.comment = comment;
             this.updatedAtLabel = updatedAtLabel;
+        }
+
+        public Long getReviewId() {
+            return reviewId;
         }
 
         public String getReviewerUsername() {

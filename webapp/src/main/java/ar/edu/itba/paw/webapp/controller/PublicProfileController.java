@@ -3,7 +3,11 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.ReportReason;
+import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
@@ -36,14 +40,17 @@ public class PublicProfileController {
 
     private final UserService userService;
     private final PlayerReviewService playerReviewService;
+    private final ModerationService moderationService;
     private final MessageSource messageSource;
 
     public PublicProfileController(
             final UserService userService,
             final PlayerReviewService playerReviewService,
+            final ModerationService moderationService,
             final MessageSource messageSource) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
+        this.moderationService = moderationService;
         this.messageSource = messageSource;
     }
 
@@ -52,6 +59,7 @@ public class PublicProfileController {
             @PathVariable("username") final String username,
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
             final Locale locale) {
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final User user =
                 userService
                         .findByUsername(username)
@@ -64,8 +72,8 @@ public class PublicProfileController {
                         "page.title.publicProfile",
                         new Object[] {user.getUsername()},
                         "Match Point | " + user.getUsername(),
-                        locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
+                        resolvedLocale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, resolvedLocale));
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(
@@ -74,40 +82,69 @@ public class PublicProfileController {
                         user.getLastName(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, reviewForm, locale);
+        addReviewModel(mav, user, reviewForm, resolvedLocale);
         mav.addObject(
                 "profileEyebrow",
                 messageSource.getMessage(
-                        "profile.public.eyebrow", null, "Profile picture", locale));
+                        "profile.public.eyebrow", null, "Profile picture", resolvedLocale));
         mav.addObject(
                 "profileTitle",
-                messageSource.getMessage("profile.public.title", null, "Public profile", locale));
+                messageSource.getMessage(
+                        "profile.public.title", null, "Public profile", resolvedLocale));
         mav.addObject(
                 "profileDescription",
                 messageSource.getMessage(
                         "profile.public.description",
                         null,
                         "See this Match Point member's public identity and profile details.",
-                        locale));
+                        resolvedLocale));
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(
                         "profile.public.avatarAlt",
                         new Object[] {user.getUsername()},
                         user.getUsername() + " profile picture",
-                        locale));
+                        resolvedLocale));
         mav.addObject(
                 "profileUsernameLabel",
-                messageSource.getMessage("profile.public.username", null, "Username", locale));
+                messageSource.getMessage(
+                        "profile.public.username", null, "Username", resolvedLocale));
         mav.addObject(
                 "profileNameLabel",
-                messageSource.getMessage("profile.public.name", null, "First name", locale));
+                messageSource.getMessage(
+                        "profile.public.name", null, "First name", resolvedLocale));
         mav.addObject(
                 "profileLastNameLabel",
-                messageSource.getMessage("profile.public.lastName", null, "Last name", locale));
+                messageSource.getMessage(
+                        "profile.public.lastName", null, "Last name", resolvedLocale));
         mav.addObject(
                 "profilePhoneLabel",
-                messageSource.getMessage("profile.public.phone", null, "Phone", locale));
+                messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
+        final Long currentUserId =
+                CurrentAuthenticatedUser.get()
+                        .map(AuthenticatedUserPrincipal::getUserId)
+                        .orElse(null);
+        final boolean reportUserCanSubmit =
+                currentUserId != null && !currentUserId.equals(user.getId());
+        mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
+        mav.addObject("reportUserActionPath", "/reports/users/" + user.getUsername());
+        final Optional<UserBan> activeBan = moderationService.findActiveBan(user.getId());
+        mav.addObject("profileBanned", activeBan.isPresent());
+        mav.addObject(
+                "profileBannedLabel",
+                messageSource.getMessage(
+                        "profile.public.banned", null, "Temporarily banned", resolvedLocale));
+        activeBan.ifPresent(
+                ban -> {
+                    mav.addObject(
+                            "profileBannedUntil",
+                            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+                                    .withLocale(resolvedLocale)
+                                    .format(ban.getBannedUntil().atZone(ZoneId.systemDefault())));
+                    if (isAdminViewer()) {
+                        mav.addObject("profileBannedReason", ban.getReason());
+                    }
+                });
         CurrentAuthenticatedUser.get()
                 .filter(principal -> principal.getUserId().equals(user.getId()))
                 .ifPresent(
@@ -116,7 +153,10 @@ public class PublicProfileController {
                             mav.addObject(
                                     "profileEditLabel",
                                     messageSource.getMessage(
-                                            "profile.public.edit", null, "Edit profile", locale));
+                                            "profile.public.edit",
+                                            null,
+                                            "Edit profile",
+                                            resolvedLocale));
                         });
         return mav;
     }
@@ -153,6 +193,31 @@ public class PublicProfileController {
             return redirectToProfile(username, null, "deleted");
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
+        }
+    }
+
+    @PostMapping("/reports/users/{username}")
+    public ModelAndView reportUser(
+            @PathVariable("username") final String username,
+            @RequestParam("reason") final String reason,
+            @RequestParam(value = "details", required = false) final String details) {
+        final User reportedUser = findUserByUsernameOrThrow(username);
+        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final Optional<ReportReason> parsedReason = ReportReason.fromDbValue(reason);
+        if (parsedReason.isEmpty() || currentUser.getUserId().equals(reportedUser.getId())) {
+            return redirectToReportUser(username, "invalid_report", null);
+        }
+
+        try {
+            moderationService.reportContent(
+                    currentUser.getUserId(),
+                    ReportTargetType.USER,
+                    reportedUser.getId(),
+                    parsedReason.get(),
+                    details);
+            return redirectToReportUser(username, null, "user_sent");
+        } catch (final ar.edu.itba.paw.services.exceptions.ModerationException e) {
+            return redirectToReportUser(username, e.getCode(), null);
         }
     }
 
@@ -219,6 +284,7 @@ public class PublicProfileController {
                                                 "Unknown player",
                                                 locale)));
         return new PlayerReviewViewModel(
+                review.getId(),
                 reviewer.getUsername(),
                 reviewer.getUsername() == null ? null : "/users/" + reviewer.getUsername(),
                 review.getReaction().getDbValue(),
@@ -263,6 +329,13 @@ public class PublicProfileController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
+    private static boolean isAdminViewer() {
+        return CurrentAuthenticatedUser.get()
+                .map(AuthenticatedUserPrincipal::getRole)
+                .map(role -> role != null && role.isAdmin())
+                .orElse(false);
+    }
+
     private static ModelAndView redirectToProfile(
             final String username, final String errorCode, final String status) {
         final StringBuilder redirect = new StringBuilder("redirect:/users/").append(username);
@@ -272,6 +345,18 @@ public class PublicProfileController {
             redirect.append("?review=").append(status);
         }
         redirect.append("#reviews");
+        return new ModelAndView(redirect.toString());
+    }
+
+    private static ModelAndView redirectToReportUser(
+            final String username, final String errorCode, final String status) {
+        final StringBuilder redirect = new StringBuilder("redirect:/users/").append(username);
+        if (errorCode != null) {
+            redirect.append("?reportError=").append(errorCode);
+        } else if (status != null) {
+            redirect.append("?report=").append(status);
+        }
+        redirect.append("#profile");
         return new ModelAndView(redirect.toString());
     }
 }

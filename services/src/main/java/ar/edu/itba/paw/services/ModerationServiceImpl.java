@@ -27,6 +27,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
@@ -97,6 +99,11 @@ public class ModerationServiceImpl implements ModerationService {
     }
 
     @Override
+    public Optional<UserBan> findLatestBanForUser(final Long userId) {
+        return userBanDao.findLatestBanForUser(userId);
+    }
+
+    @Override
     @Transactional
     public UserBan appealBan(final Long banId, final Long userId, final String appealReason) {
         final UserBan ban =
@@ -161,7 +168,23 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     public List<ModerationReport> findActiveReports() {
-        return moderationReportDao.findActiveReports();
+        final List<ModerationReport> activeReports = moderationReportDao.findActiveReports();
+        final List<Long> existingIds =
+                activeReports.stream().map(ModerationReport::getId).collect(Collectors.toList());
+        final List<ModerationReport> reportsWithPendingBanAppeals =
+                userBanDao.findPendingAppeals().stream()
+                        .map(UserBan::getUserId)
+                        .distinct()
+                        .map(moderationReportDao::findLatestUserBanReportByTargetUserId)
+                        .flatMap(Optional::stream)
+                        .filter(report -> !existingIds.contains(report.getId()))
+                        .toList();
+        if (reportsWithPendingBanAppeals.isEmpty()) {
+            return activeReports;
+        }
+        return Stream.concat(activeReports.stream(), reportsWithPendingBanAppeals.stream())
+                .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
+                .toList();
     }
 
     @Override

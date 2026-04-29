@@ -110,13 +110,23 @@
 									<c:out value="${hostActionNotice}" />
 								</p>
 							</c:if>
-							<c:if test="${not empty reservationError}">
-								<p
-									class="booking-panel__notice booking-panel__notice--error"
-								>
-									<c:out value="${reservationError}" />
-								</p>
-							</c:if>
+								<c:if test="${not empty reservationError}">
+									<p
+										class="booking-panel__notice booking-panel__notice--error"
+									>
+										<c:out value="${reservationError}" />
+									</p>
+								</c:if>
+								<c:if test="${reportSent}">
+									<p class="booking-panel__notice booking-panel__notice--success">
+										<spring:message code="moderation.report.sent" />
+									</p>
+								</c:if>
+								<c:if test="${not empty reportError}">
+									<p class="booking-panel__notice booking-panel__notice--error">
+										<c:out value="${reportError}" />
+									</p>
+								</c:if>
 
 							<div class="booking-panel__availability">
 								<div>
@@ -134,68 +144,77 @@
 								/></span>
 							</div>
 
-							<c:if test="${hostCanManage}">
+							<c:if test="${not empty pageContext.request.userPrincipal}">
 								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
 								<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
 								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
 								<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
 								<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
+								<spring:message var="reportMenuLabel" code="moderation.report.match.menu" />
 								<ui:overflowMenu
 									ariaLabel="${hostManageMenuTriggerLabel}"
 									menuAriaLabel="${hostManageMenuLabel}"
 									className="booking-panel__overflow-menu">
-									<c:url var="hostEditHref" value="${hostEditPath}" />
-									<c:choose>
-										<c:when test="${hostCanEdit}">
-											<a class="overflow-menu__item" href="${hostEditHref}" role="menuitem">
-												<c:out value="${hostManageEditLabel}" />
-											</a>
-										</c:when>
-										<c:otherwise>
-											<span
-												class="overflow-menu__item overflow-menu__item--disabled"
-												role="menuitem"
-												aria-disabled="true">
-												<c:out value="${hostManageEditLabel}" />
-											</span>
-										</c:otherwise>
-									</c:choose>
-									<c:url var="hostCancelAction" value="${hostCancelPath}" />
-									<form
-										method="post"
-										action="${hostCancelAction}"
-										data-submit-guard="true"
-										data-submit-loading-label="${hostManageCancellingLabel}">
-										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<c:if test="${hostCanManage}">
+										<c:url var="hostEditHref" value="${hostEditPath}" />
 										<c:choose>
-											<c:when test="${hostCanCancel}">
-												<button
-													class="overflow-menu__item overflow-menu__item--danger"
-													type="submit"
-													role="menuitem">
-													<c:out value="${hostManageCancelLabel}" />
-												</button>
+											<c:when test="${hostCanEdit}">
+												<a class="overflow-menu__item" href="${hostEditHref}" role="menuitem">
+													<c:out value="${hostManageEditLabel}" />
+												</a>
 											</c:when>
 											<c:otherwise>
-												<button
-													class="overflow-menu__item overflow-menu__item--danger"
-													type="submit"
+												<span
+													class="overflow-menu__item overflow-menu__item--disabled"
 													role="menuitem"
-													disabled="disabled"
 													aria-disabled="true">
-													<c:out value="${hostManageCancelLabel}" />
-												</button>
+													<c:out value="${hostManageEditLabel}" />
+												</span>
 											</c:otherwise>
 										</c:choose>
-									</form>
+										<c:url var="hostCancelAction" value="${hostCancelPath}" />
+										<form
+											method="post"
+											action="${hostCancelAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${hostManageCancellingLabel}">
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<c:choose>
+												<c:when test="${hostCanCancel}">
+													<button
+														class="overflow-menu__item overflow-menu__item--danger"
+														type="submit"
+														role="menuitem">
+														<c:out value="${hostManageCancelLabel}" />
+													</button>
+												</c:when>
+												<c:otherwise>
+													<button
+														class="overflow-menu__item overflow-menu__item--danger"
+														type="submit"
+														role="menuitem"
+														disabled="disabled"
+														aria-disabled="true">
+														<c:out value="${hostManageCancelLabel}" />
+													</button>
+												</c:otherwise>
+											</c:choose>
+										</form>
+									</c:if>
+									<a class="overflow-menu__item" href="#moderation" role="menuitem">
+										<c:out value="${reportMenuLabel}" />
+									</a>
 								</ui:overflowMenu>
+							</c:if>
+
+							<c:if test="${hostCanManage}">
 								<div class="booking-panel__host-note">
 									<p class="detail-label"><spring:message code="host.manage.label" /></p>
 									<p><spring:message code="host.manage.detail" /></p>
 								</div>
 							</c:if>
 
-							<dl class="booking-panel__details">
+								<dl class="booking-panel__details">
 								<c:forEach
 									var="detail"
 									items="${eventPage.bookingDetails}"
@@ -209,7 +228,38 @@
 										</dd>
 									</div>
 								</c:forEach>
-							</dl>
+								</dl>
+
+								<c:if test="${not empty pageContext.request.userPrincipal}">
+									<c:url var="reportAction" value="${reportActionPath}" />
+									<form method="post" action="${reportAction}" class="stack" id="moderation">
+										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+										<label class="field" for="report-reason">
+											<span class="field__label"><spring:message code="moderation.report.reason" /></span>
+											<select
+												id="report-reason"
+												name="reason"
+												class="field__control field__control--select">
+												<option value="inappropriate_content"><spring:message code="moderation.reason.inappropriate_content" /></option>
+												<option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></option>
+												<option value="harassment"><spring:message code="moderation.reason.harassment" /></option>
+												<option value="cheating"><spring:message code="moderation.reason.cheating" /></option>
+												<option value="other"><spring:message code="moderation.reason.other" /></option>
+											</select>
+										</label>
+										<label class="field" for="report-details">
+											<span class="field__label"><spring:message code="moderation.report.details" /></span>
+											<textarea
+												id="report-details"
+												name="details"
+												rows="3"
+												maxlength="4000"
+												class="field__control"></textarea>
+										</label>
+										<spring:message var="reportEventLabel" code="moderation.report.match.submit" />
+										<ui:button label="${reportEventLabel}" type="submit" variant="secondary" fullWidth="${true}" />
+									</form>
+								</c:if>
 
 							<c:if test="${joinRequested}">
 								<p class="booking-panel__notice booking-panel__notice--success">

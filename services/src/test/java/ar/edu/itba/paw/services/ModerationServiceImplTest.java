@@ -241,6 +241,55 @@ public class ModerationServiceImplTest {
     }
 
     @Test
+    public void findActiveReportsIncludesReportsWithPendingBanAppeals() {
+        final ModerationReport resolvedBanReport =
+                new ModerationReport(
+                        91L,
+                        10L,
+                        ReportTargetType.USER,
+                        88L,
+                        "user:88",
+                        ReportReason.HARASSMENT,
+                        "details",
+                        ReportStatus.RESOLVED,
+                        ReportResolution.USER_BANNED,
+                        "reason",
+                        99L,
+                        FIXED_NOW,
+                        null,
+                        0,
+                        null,
+                        null,
+                        null,
+                        null,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW);
+        final UserBan appealedBan =
+                new UserBan(
+                        31L,
+                        88L,
+                        99L,
+                        "reason",
+                        FIXED_NOW.plusSeconds(86400),
+                        FIXED_NOW.minusSeconds(7200),
+                        "please review",
+                        1,
+                        FIXED_NOW.minusSeconds(1800),
+                        null,
+                        null,
+                        null);
+        Mockito.when(moderationReportDao.findActiveReports()).thenReturn(List.of());
+        Mockito.when(userBanDao.findPendingAppeals()).thenReturn(List.of(appealedBan));
+        Mockito.when(moderationReportDao.findLatestUserBanReportByTargetUserId(88L))
+                .thenReturn(Optional.of(resolvedBanReport));
+
+        final List<ModerationReport> reports = moderationService.findActiveReports();
+
+        Assertions.assertEquals(1, reports.size());
+        Assertions.assertEquals(91L, reports.get(0).getId());
+    }
+
+    @Test
     public void banUserCreatesBanAndSendsEmail() {
         final Instant bannedUntil = FIXED_NOW.plusSeconds(3600);
         final UserAccount account =

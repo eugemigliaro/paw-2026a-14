@@ -77,6 +77,8 @@ public class EventController {
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
             @RequestParam(value = "invite", required = false) final String inviteStatus,
             @RequestParam(value = "inviteError", required = false) final String inviteErrorCode,
+            @RequestParam(value = "report", required = false) final String reportStatus,
+            @RequestParam(value = "reportError", required = false) final String reportErrorCode,
             final Locale locale) {
         return showRealEventDetails(
                 parseEventIdOrThrowNotFound(eventId),
@@ -87,6 +89,8 @@ public class EventController {
                 joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
                 inviteStatus,
                 inviteErrorCode == null ? null : inviteErrorMessage(inviteErrorCode, locale),
+                reportStatus,
+                reportErrorCode,
                 locale);
     }
 
@@ -111,6 +115,8 @@ public class EventController {
                     null,
                     null,
                     null,
+                    null,
+                    null,
                     locale);
         }
     }
@@ -124,6 +130,8 @@ public class EventController {
             final String joinError,
             final String inviteStatus,
             final String inviteError,
+            final String reportStatus,
+            final String reportErrorCode,
             final Locale locale) {
         final Match match =
                 matchService
@@ -188,6 +196,13 @@ public class EventController {
         mav.addObject("declineInvitePath", "/matches/" + eventId + "/invites/decline");
         mav.addObject("inviteAccepted", "accepted".equalsIgnoreCase(inviteStatus));
         mav.addObject("inviteError", inviteError);
+        mav.addObject("reportActionPath", "/reports/matches/" + eventId);
+        mav.addObject("reportSent", "sent".equalsIgnoreCase(reportStatus));
+        mav.addObject(
+                "reportError",
+                reportErrorCode == null
+                        ? null
+                        : moderationReportErrorMessage(reportErrorCode, locale));
 
         mav.addObject("hostViewer", isHostViewer);
         mav.addObject("isPrivateEvent", isPrivateEvent);
@@ -534,6 +549,19 @@ public class EventController {
             return messageSource.getMessage("host.action.cancelled", null, locale);
         }
         return null;
+    }
+
+    private String moderationReportErrorMessage(final String code, final Locale locale) {
+        switch (code) {
+            case "duplicate_report":
+                return messageSource.getMessage("moderation.report.error.duplicate", null, locale);
+            case "report_limit":
+                return messageSource.getMessage("moderation.report.error.limit", null, locale);
+            case "invalid_report":
+                return messageSource.getMessage("moderation.report.error.invalid", null, locale);
+            default:
+                return messageSource.getMessage("moderation.report.error.generic", null, locale);
+        }
     }
 
     private boolean isHost(final Match match, final Long currentUserId) {

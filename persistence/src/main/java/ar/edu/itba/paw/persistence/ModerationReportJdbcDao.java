@@ -150,6 +150,24 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
     }
 
     @Override
+    public Optional<ModerationReport> findLatestUserBanReportByTargetUserId(
+            final Long targetUserId) {
+        return jdbcTemplate
+                .query(
+                        "SELECT * FROM moderation_reports"
+                                + " WHERE target_type = ? AND target_id = ?"
+                                + " AND resolution = ?"
+                                + " ORDER BY updated_at DESC, id DESC LIMIT 1",
+                        MODERATION_REPORT_ROW_MAPPER,
+                        new SqlParameterValue(Types.OTHER, ReportTargetType.USER.getDbValue()),
+                        targetUserId,
+                        new SqlParameterValue(
+                                Types.OTHER, ReportResolution.USER_BANNED.getDbValue()))
+                .stream()
+                .findFirst();
+    }
+
+    @Override
     public int countActiveReportsByReporter(final Long reporterUserId) {
         final Integer count =
                 jdbcTemplate.queryForObject(

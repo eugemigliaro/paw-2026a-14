@@ -18,6 +18,8 @@ public interface ModerationService {
 
     Optional<UserBan> findActiveBan(Long userId);
 
+    Optional<UserBan> findLatestBanForUser(Long userId);
+
     UserBan appealBan(Long banId, Long userId, String appealReason);
 
     UserBan resolveBanAppeal(Long banId, Long adminUserId, BanAppealDecision decision);

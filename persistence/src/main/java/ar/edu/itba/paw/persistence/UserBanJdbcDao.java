@@ -144,6 +144,17 @@ public class UserBanJdbcDao implements UserBanDao {
     }
 
     @Override
+    public List<UserBan> findPendingAppeals() {
+        return jdbcTemplate.query(
+                "SELECT id, user_id, banned_by_user_id, reason, banned_until, created_at,"
+                        + " appeal_reason, appeal_count, appealed_at, appeal_resolved_at,"
+                        + " appeal_resolved_by_user_id, appeal_decision"
+                        + " FROM user_bans WHERE appeal_count = 1 AND appeal_resolved_at IS NULL"
+                        + " ORDER BY appealed_at DESC, id DESC",
+                USER_BAN_ROW_MAPPER);
+    }
+
+    @Override
     public boolean appealBan(
             final Long banId, final String appealReason, final Instant appealedAt) {
         final int rows =
