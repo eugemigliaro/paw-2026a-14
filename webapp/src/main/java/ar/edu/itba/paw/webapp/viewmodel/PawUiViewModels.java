@@ -134,6 +134,7 @@ public final class PawUiViewModels {
     }
 
     public static final class MatchListControlsViewModel {
+        private final String cleanSearchAction;
         private final String searchAction;
         private final String searchLabel;
         private final String searchQuery;
@@ -145,6 +146,7 @@ public final class PawUiViewModels {
         private final List<FilterGroupViewModel> filterGroups;
 
         public MatchListControlsViewModel(
+                final String cleanSearchAction,
                 final String searchAction,
                 final String searchLabel,
                 final String searchQuery,
@@ -154,6 +156,7 @@ public final class PawUiViewModels {
                 final List<SelectOptionViewModel> sortOptions,
                 final String filterTitle,
                 final List<FilterGroupViewModel> filterGroups) {
+            this.cleanSearchAction = cleanSearchAction;
             this.searchAction = searchAction;
             this.searchLabel = searchLabel;
             this.searchQuery = searchQuery;
@@ -163,6 +166,10 @@ public final class PawUiViewModels {
             this.sortOptions = sortOptions;
             this.filterTitle = filterTitle;
             this.filterGroups = filterGroups;
+        }
+
+        public String getCleanSearchAction() {
+            return cleanSearchAction;
         }
 
         public String getSearchAction() {

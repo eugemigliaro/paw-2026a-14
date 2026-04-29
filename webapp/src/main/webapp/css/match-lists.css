@@ -9,7 +9,7 @@
 	align-items: start;
 	display: grid;
 	gap: 2rem;
-	grid-template-columns: 250px minmax(0, 1fr);
+	grid-template-columns: minmax(0, 1fr);
 }
 
 .matches-list-sidebar,
