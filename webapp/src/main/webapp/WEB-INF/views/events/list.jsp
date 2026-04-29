@@ -64,7 +64,7 @@
 				position: absolute;
 				top: 4px;
 				left: 4px;
-				width: 50%;
+				width: calc(50% - 4px);
 				height: calc(100% - 8px);
 				background: white;
 				border-radius: 999px;
@@ -83,14 +83,19 @@
 				background: transparent;
 				cursor: pointer;
 				padding: 8px 0;
-				font-weight: 400;
+				font-weight: 700;
 				border-radius: 999px;
 				font-size: 13px;
 				font-family: inherit;
+				color: var(--text-secondary);
 			}
 
 			.events-toggle-btn:hover {
-				color: #333;
+				color: var(--text-primary);
+			}
+
+			.events-toggle-btn.active {
+				color: var(--accent-strong);
 			}
 		</style>
 	</head>
@@ -153,9 +158,9 @@
 
 					<!-- Toggle -->
 					<div class="events-toggle-wrapper" id="eventsToggle">
-						<div class="events-toggle-slider" id="eventsSlider"></div>
-						<button class="events-toggle-btn" data-value="upcoming">Upcoming</button>
-						<button class="events-toggle-btn" data-value="past">Past</button>
+						<div class="events-toggle-slider ${param.filter eq 'past' ? 'right' : ''}" id="eventsSlider"></div>
+						<button class="events-toggle-btn ${empty param.filter or param.filter ne 'past' ? 'active' : ''}" data-value="upcoming"><spring:message code="filter.upcoming" text="Upcoming" /></button>
+						<button class="events-toggle-btn ${param.filter eq 'past' ? 'active' : ''}" data-value="past"><spring:message code="filter.past" text="Past" /></button>
 					</div>
 				</div>
 
@@ -423,6 +428,9 @@
 					eventsSlider.classList.remove("right");
 				}
 
+				eventsButtons.forEach(b => b.classList.remove("active"));
+				btn.classList.add("active");
+
 				// Navigate with new filter parameter
 				const value = btn.dataset.value;
 				const currentUrl = new URL(window.location);
@@ -435,12 +443,5 @@
 				window.location.href = currentUrl.toString();
 			});
 		});
-
-		// Set initial slider position based on current filter parameter
-		const urlParams = new URLSearchParams(window.location.search);
-		const currentFilter = urlParams.get("filter") || "upcoming";
-		if (currentFilter === "past") {
-			document.getElementById("eventsSlider").classList.add("right");
-		}
 	</script>
 </html>
