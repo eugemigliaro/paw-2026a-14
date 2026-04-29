@@ -69,7 +69,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         final int clampedPage = Math.min(safePage, totalPages);
         final int offset = (clampedPage - 1) * safePageSize;
         final List<PlayerReview> items =
-                playerReviewDao.findRecentReviewsForUser(
+                playerReviewDao.findReviewsForUser(
                         reviewedUserId, safeFilter, safePageSize, offset);
         return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
     }

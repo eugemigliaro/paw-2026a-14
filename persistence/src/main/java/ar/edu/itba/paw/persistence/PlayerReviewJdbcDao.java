@@ -164,7 +164,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
     }
 
     @Override
-    public List<PlayerReview> findRecentReviewsForUser(
+    public List<PlayerReview> findReviewsForUser(
             final Long reviewedUserId,
             final PlayerReviewFilter filter,
             final int limit,

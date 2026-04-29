@@ -154,7 +154,7 @@ public class PlayerReviewServiceImplTest {
         final PlayerReview review = review(2L, 4L, 3L, PlayerReviewReaction.LIKE, "Second", null);
         Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BOTH))
                 .thenReturn(21);
-        Mockito.when(playerReviewDao.findRecentReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 10))
+        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 10))
                 .thenReturn(List.of(review));
 
         final PaginatedResult<PlayerReview> result =
@@ -171,9 +171,7 @@ public class PlayerReviewServiceImplTest {
         final PlayerReview review = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great", null);
         Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.POSITIVE))
                 .thenReturn(1);
-        Mockito.when(
-                        playerReviewDao.findRecentReviewsForUser(
-                                3L, PlayerReviewFilter.POSITIVE, 10, 0))
+        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.POSITIVE, 10, 0))
                 .thenReturn(List.of(review));
 
         final PaginatedResult<PlayerReview> result =
@@ -189,7 +187,7 @@ public class PlayerReviewServiceImplTest {
         final PlayerReview review = review(3L, 5L, 3L, PlayerReviewReaction.DISLIKE, "Third", null);
         Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BAD))
                 .thenReturn(25);
-        Mockito.when(playerReviewDao.findRecentReviewsForUser(3L, PlayerReviewFilter.BAD, 10, 20))
+        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BAD, 10, 20))
                 .thenReturn(List.of(review));
 
         final PaginatedResult<PlayerReview> result =

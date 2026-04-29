@@ -23,7 +23,7 @@ public interface PlayerReviewDao {
 
     int countReviewsForUser(Long reviewedUserId, PlayerReviewFilter filter);
 
-    List<PlayerReview> findRecentReviewsForUser(
+    List<PlayerReview> findReviewsForUser(
             Long reviewedUserId, PlayerReviewFilter filter, int limit, int offset);
 
     boolean canReview(Long reviewerUserId, Long reviewedUserId);

@@ -132,7 +132,7 @@ public class PlayerReviewJdbcDaoTest {
     }
 
     @Test
-    public void testFindRecentReviewsReturnsNewestFirst() {
+    public void testFindReviewsReturnsNewestFirst() {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
@@ -140,7 +140,7 @@ public class PlayerReviewJdbcDaoTest {
         playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Second");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findRecentReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 0);
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 0);
 
         Assertions.assertEquals(2, reviews.size());
         Assertions.assertEquals("Second", reviews.get(0).getComment());
@@ -148,7 +148,7 @@ public class PlayerReviewJdbcDaoTest {
     }
 
     @Test
-    public void testFindRecentReviewsFiltersPositiveReviews() {
+    public void testFindReviewsFiltersPositiveReviews() {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
@@ -156,7 +156,7 @@ public class PlayerReviewJdbcDaoTest {
         playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findRecentReviewsForUser(3L, PlayerReviewFilter.POSITIVE, 10, 0);
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.POSITIVE, 10, 0);
 
         Assertions.assertEquals(1, reviews.size());
         Assertions.assertEquals(PlayerReviewReaction.LIKE, reviews.get(0).getReaction());
@@ -164,7 +164,7 @@ public class PlayerReviewJdbcDaoTest {
     }
 
     @Test
-    public void testFindRecentReviewsFiltersBadReviews() {
+    public void testFindReviewsFiltersBadReviews() {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
@@ -172,7 +172,7 @@ public class PlayerReviewJdbcDaoTest {
         playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findRecentReviewsForUser(3L, PlayerReviewFilter.BAD, 10, 0);
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BAD, 10, 0);
 
         Assertions.assertEquals(1, reviews.size());
         Assertions.assertEquals(PlayerReviewReaction.DISLIKE, reviews.get(0).getReaction());
@@ -211,7 +211,7 @@ public class PlayerReviewJdbcDaoTest {
     }
 
     @Test
-    public void testFindRecentReviewsBothPreservesLimitAndOffset() {
+    public void testFindReviewsBothPreservesLimitAndOffset() {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
@@ -221,7 +221,7 @@ public class PlayerReviewJdbcDaoTest {
         playerReviewDao.upsertReview(4L, 3L, PlayerReviewReaction.LIKE, "Third");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findRecentReviewsForUser(3L, PlayerReviewFilter.BOTH, 1, 1);
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 1, 1);
 
         Assertions.assertEquals(1, reviews.size());
         Assertions.assertEquals("Second", reviews.get(0).getComment());
