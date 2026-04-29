@@ -1093,6 +1093,238 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateSeriesFromOccurrenceUpdatesSelectedAndFutureOccurrences() {
+        // 1. Arrange
+        final Match pastOccurrence =
+                recurringMatch(
+                        45L,
+                        "Past Weekly Padel",
+                        FIXED_NOW.minusSeconds(604800),
+                        FIXED_NOW.minusSeconds(599400),
+                        "open",
+                        1);
+        final Match pivotOccurrence =
+                recurringMatch(
+                        46L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        "open",
+                        2);
+        final Match futureOccurrence =
+                recurringMatch(
+                        47L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(608400),
+                        FIXED_NOW.plusSeconds(612000),
+                        "open",
+                        3);
+        final Match cancelledOccurrence =
+                recurringMatch(
+                        48L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(1213200),
+                        FIXED_NOW.plusSeconds(1216800),
+                        "cancelled",
+                        4);
+        final Match updatedPivot =
+                recurringMatch(
+                        46L,
+                        "Updated Weekly Padel",
+                        FIXED_NOW.plusSeconds(5400),
+                        FIXED_NOW.plusSeconds(9000),
+                        "open",
+                        2);
+        final Match updatedFuture =
+                recurringMatch(
+                        47L,
+                        "Updated Weekly Padel",
+                        FIXED_NOW.plusSeconds(610200),
+                        FIXED_NOW.plusSeconds(613800),
+                        "open",
+                        3);
+        final UpdateMatchRequest request =
+                new UpdateMatchRequest(
+                        "Updated Address",
+                        "Updated Weekly Padel",
+                        "Updated Description",
+                        FIXED_NOW.plusSeconds(5400),
+                        FIXED_NOW.plusSeconds(9000),
+                        8,
+                        BigDecimal.ONE,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null);
+        Mockito.when(matchDao.findById(46L))
+                .thenReturn(Optional.of(pivotOccurrence))
+                .thenReturn(Optional.of(updatedPivot));
+        Mockito.when(matchDao.findById(47L)).thenReturn(Optional.of(updatedFuture));
+        Mockito.when(matchDao.findSeriesOccurrences(600L))
+                .thenReturn(
+                        List.of(
+                                pastOccurrence,
+                                pivotOccurrence,
+                                futureOccurrence,
+                                cancelledOccurrence));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(46L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(47L)).thenReturn(List.of());
+        Mockito.when(
+                        matchDao.updateMatch(
+                                46L,
+                                1L,
+                                "Updated Address",
+                                "Updated Weekly Padel",
+                                "Updated Description",
+                                FIXED_NOW.plusSeconds(5400),
+                                FIXED_NOW.plusSeconds(9000),
+                                8,
+                                BigDecimal.ONE,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null))
+                .thenReturn(true);
+        Mockito.when(
+                        matchDao.updateMatch(
+                                47L,
+                                1L,
+                                "Updated Address",
+                                "Updated Weekly Padel",
+                                "Updated Description",
+                                FIXED_NOW.plusSeconds(610200),
+                                FIXED_NOW.plusSeconds(613800),
+                                8,
+                                BigDecimal.ONE,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null))
+                .thenReturn(true);
+
+        // 2. Exercise
+        final List<Match> result = matchService.updateSeriesFromOccurrence(46L, 1L, request);
+
+        // 3. Assert
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertEquals(46L, result.get(0).getId());
+        Assertions.assertEquals(47L, result.get(1).getId());
+        Assertions.assertEquals("Updated Weekly Padel", result.get(0).getTitle());
+        Assertions.assertEquals(FIXED_NOW.plusSeconds(610200), result.get(1).getStartsAt());
+    }
+
+    @Test
+    public void testUpdateSeriesFromOccurrenceRejectsNonRecurringMatch() {
+        // 1. Arrange
+        final Match singleMatch = createTestMatch(46L, "Single Padel", "padel");
+        Mockito.when(matchDao.findById(46L)).thenReturn(Optional.of(singleMatch));
+
+        // 2. Exercise
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateSeriesFromOccurrence(
+                                        46L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Updated Address",
+                                                "Updated Match",
+                                                "Updated Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                8,
+                                                BigDecimal.ONE,
+                                                Sport.PADEL,
+                                                "public",
+                                                "direct",
+                                                "open",
+                                                null)));
+
+        // 3. Assert
+        Assertions.assertEquals(MatchUpdateFailureReason.NOT_RECURRING, exception.getReason());
+    }
+
+    @Test
+    public void testCancelSeriesFromOccurrenceCancelsSelectedAndFutureOccurrences() {
+        // 1. Arrange
+        final Match pastOccurrence =
+                recurringMatch(
+                        45L,
+                        "Past Weekly Padel",
+                        FIXED_NOW.minusSeconds(604800),
+                        FIXED_NOW.minusSeconds(599400),
+                        "open",
+                        1);
+        final Match pivotOccurrence =
+                recurringMatch(
+                        46L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        "open",
+                        2);
+        final Match futureOccurrence =
+                recurringMatch(
+                        47L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(608400),
+                        FIXED_NOW.plusSeconds(612000),
+                        "open",
+                        3);
+        final Match cancelledOccurrence =
+                recurringMatch(
+                        48L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(1213200),
+                        FIXED_NOW.plusSeconds(1216800),
+                        "cancelled",
+                        4);
+        final Match cancelledPivot =
+                recurringMatch(
+                        46L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        "cancelled",
+                        2);
+        final Match cancelledFuture =
+                recurringMatch(
+                        47L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(608400),
+                        FIXED_NOW.plusSeconds(612000),
+                        "cancelled",
+                        3);
+        Mockito.when(matchDao.findById(46L))
+                .thenReturn(Optional.of(pivotOccurrence))
+                .thenReturn(Optional.of(cancelledPivot));
+        Mockito.when(matchDao.findById(47L)).thenReturn(Optional.of(cancelledFuture));
+        Mockito.when(matchDao.findSeriesOccurrences(600L))
+                .thenReturn(
+                        List.of(
+                                pastOccurrence,
+                                pivotOccurrence,
+                                futureOccurrence,
+                                cancelledOccurrence));
+        Mockito.when(matchDao.cancelMatch(46L, 1L)).thenReturn(true);
+        Mockito.when(matchDao.cancelMatch(47L, 1L)).thenReturn(true);
+
+        // 2. Exercise
+        final List<Match> result = matchService.cancelSeriesFromOccurrence(46L, 1L);
+
+        // 3. Assert
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertEquals(46L, result.get(0).getId());
+        Assertions.assertEquals(47L, result.get(1).getId());
+        Assertions.assertEquals("cancelled", result.get(0).getStatus());
+        Assertions.assertEquals("cancelled", result.get(1).getStatus());
+    }
+
+    @Test
     public void testCancelMatchReturnsExistingMatchWhenAlreadyCancelled() {
         final Match existingMatch =
                 new Match(
@@ -1538,5 +1770,32 @@ public class MatchServiceImplTest {
                 "open",
                 0,
                 null);
+    }
+
+    private Match recurringMatch(
+            final Long id,
+            final String title,
+            final Instant startsAt,
+            final Instant endsAt,
+            final String status,
+            final Integer occurrenceIndex) {
+        return new Match(
+                id,
+                Sport.PADEL,
+                1L,
+                "Test Address",
+                title,
+                "Test Description",
+                startsAt,
+                endsAt,
+                10,
+                BigDecimal.ZERO,
+                "public",
+                "direct",
+                status,
+                0,
+                null,
+                600L,
+                occurrenceIndex);
     }
 }

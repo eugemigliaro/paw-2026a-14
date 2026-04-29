@@ -86,6 +86,10 @@ class PawUiRouteTest {
     private AtomicReference<Long> lastCancelledReservationUserId;
     private AtomicReference<Long> lastHostCancelledMatchId;
     private AtomicReference<Long> lastHostCancelledUserId;
+    private AtomicReference<Long> lastHostSeriesUpdatedMatchId;
+    private AtomicReference<Long> lastHostSeriesUpdatedUserId;
+    private AtomicReference<Long> lastHostSeriesCancelledMatchId;
+    private AtomicReference<Long> lastHostSeriesCancelledUserId;
     private AtomicReference<Long> lastCancelledSeriesMatchId;
     private AtomicReference<Long> lastCancelledSeriesUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
@@ -114,6 +118,10 @@ class PawUiRouteTest {
         lastCancelledReservationUserId = new AtomicReference<>();
         lastHostCancelledMatchId = new AtomicReference<>();
         lastHostCancelledUserId = new AtomicReference<>();
+        lastHostSeriesUpdatedMatchId = new AtomicReference<>();
+        lastHostSeriesUpdatedUserId = new AtomicReference<>();
+        lastHostSeriesCancelledMatchId = new AtomicReference<>();
+        lastHostSeriesCancelledUserId = new AtomicReference<>();
         lastCancelledSeriesMatchId = new AtomicReference<>();
         lastCancelledSeriesUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
@@ -433,6 +441,48 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public List<Match> updateSeriesFromOccurrence(
+                            final Long matchId,
+                            final Long actingUserId,
+                            final UpdateMatchRequest request) {
+                        if (matchId != 46L && matchId != 47L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.MATCH_NOT_FOUND, "Missing match");
+                        }
+                        if (actingUserId != 7L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.FORBIDDEN, "Forbidden");
+                        }
+                        if (request.getMaxPlayers() < 2) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                                    "Capacity too low");
+                        }
+                        lastHostSeriesUpdatedMatchId.set(matchId);
+                        lastHostSeriesUpdatedUserId.set(actingUserId);
+                        lastUpdateMatchRequest.set(request);
+                        return List.of(
+                                new Match(
+                                        matchId,
+                                        request.getSport(),
+                                        actingUserId,
+                                        request.getAddress(),
+                                        request.getTitle(),
+                                        request.getDescription(),
+                                        request.getStartsAt(),
+                                        request.getEndsAt(),
+                                        request.getMaxPlayers(),
+                                        request.getPricePerPlayer(),
+                                        request.getVisibility(),
+                                        request.getJoinPolicy(),
+                                        request.getStatus(),
+                                        0,
+                                        request.getBannerImageId(),
+                                        600L,
+                                        matchId == 46L ? 1 : 2));
+                    }
+
+                    @Override
                     public Match cancelMatch(final Long matchId, final Long actingUserId) {
                         if (matchId != 42L && matchId != 47L) {
                             throw new MatchCancellationException(
@@ -463,6 +513,41 @@ class PawUiRouteTest {
                                 null,
                                 matchId == 47L ? 600L : null,
                                 matchId == 47L ? 2 : null);
+                    }
+
+                    @Override
+                    public List<Match> cancelSeriesFromOccurrence(
+                            final Long matchId, final Long actingUserId) {
+                        if (matchId != 46L && matchId != 47L) {
+                            throw new MatchCancellationException(
+                                    MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                    "Missing match");
+                        }
+                        if (actingUserId != 7L) {
+                            throw new MatchCancellationException(
+                                    MatchCancellationFailureReason.FORBIDDEN, "Forbidden");
+                        }
+                        lastHostSeriesCancelledMatchId.set(matchId);
+                        lastHostSeriesCancelledUserId.set(actingUserId);
+                        return List.of(
+                                new Match(
+                                        matchId,
+                                        Sport.PADEL,
+                                        actingUserId,
+                                        "Downtown Club",
+                                        "Cancelled Series",
+                                        "Cancelled Description",
+                                        Instant.parse("2026-04-09T18:00:00Z"),
+                                        Instant.parse("2026-04-09T19:30:00Z"),
+                                        8,
+                                        BigDecimal.TEN,
+                                        "public",
+                                        "direct",
+                                        "cancelled",
+                                        1,
+                                        null,
+                                        600L,
+                                        matchId == 46L ? 1 : 2));
                     }
 
                     @Override
@@ -1148,6 +1233,11 @@ class PawUiRouteTest {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "reservationCancelPath", "/matches/46/reservations/cancel"))
                 .andExpect(model().attribute("seriesCancellationEnabled", true))
                 .andExpect(
                         model().attribute(
@@ -1179,6 +1269,21 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getRecurringMatchDetailsRouteForHostExposesSeriesManagementActions() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("hostCanEditSeries", true))
+                .andExpect(model().attribute("hostCanCancelSeries", true))
+                .andExpect(model().attribute("hostSeriesEditPath", "/host/matches/46/series/edit"))
+                .andExpect(
+                        model().attribute(
+                                        "hostSeriesCancelPath", "/host/matches/46/series/cancel"));
+    }
+
+    @Test
     void getRealMatchDetailsRouteForHostDisablesManagementOnCompletedEvent() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1199,6 +1304,18 @@ class PawUiRouteTest {
                         model().attribute(
                                         "hostActionNotice",
                                         "Tu evento fue actualizado correctamente."));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteWithSpanishSeriesHostActionLocalizesNotice() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/46").param("hostAction", "seriesUpdated").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "hostActionNotice",
+                                        "Las pr\u00f3ximas fechas recurrentes fueron actualizadas correctamente."));
     }
 
     @Test
@@ -1249,6 +1366,21 @@ class PawUiRouteTest {
 
         Assertions.assertEquals(42L, lastCancelledReservationMatchId.get());
         Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+    }
+
+    @Test
+    void postRecurringOccurrenceReservationCancelAsAuthenticatedUserCancelsOnlySelectedDate()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/46/reservations/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/46?reservation=cancelled"));
+
+        Assertions.assertEquals(46L, lastCancelledReservationMatchId.get());
+        Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+        Assertions.assertNull(lastCancelledSeriesMatchId.get());
+        Assertions.assertNull(lastCancelledSeriesUserId.get());
     }
 
     @Test
@@ -1730,6 +1862,31 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getHostSeriesEditRouteRendersPrefilledFormForHost() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/47/series/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attribute("isEditMode", true))
+                .andExpect(model().attribute("isSeriesEditMode", true))
+                .andExpect(model().attribute("formAction", "/host/matches/47/series/edit"))
+                .andExpect(model().attribute("formTitle", "Edit recurring dates"))
+                .andExpect(
+                        model().attribute(
+                                        "createEventForm",
+                                        Matchers.hasProperty(
+                                                "title", Matchers.is("Weekly Padel"))));
+    }
+
+    @Test
+    void getHostSeriesEditRouteForSingleEventReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/42/series/edit")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void postHostEditRedirectsToDetailOnSuccess() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1749,6 +1906,32 @@ class PawUiRouteTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+    }
+
+    @Test
+    void postHostSeriesEditRedirectsToDetailOnSuccess() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/47/series/edit")
+                                .param("title", "Updated Weekly Padel")
+                                .param("description", "Updated recurring game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/47?hostAction=seriesUpdated"));
+
+        Assertions.assertEquals(47L, lastHostSeriesUpdatedMatchId.get());
+        Assertions.assertEquals(7L, lastHostSeriesUpdatedUserId.get());
+        Assertions.assertEquals("Updated Weekly Padel", lastUpdateMatchRequest.get().getTitle());
     }
 
     @Test
@@ -1913,6 +2096,25 @@ class PawUiRouteTest {
                 .andExpect(redirectedUrl("/matches/47?hostAction=cancelled"));
         Assertions.assertEquals(47L, lastHostCancelledMatchId.get());
         Assertions.assertEquals(7L, lastHostCancelledUserId.get());
+    }
+
+    @Test
+    void postHostCancelRecurringSeriesRedirectsToSelectedOccurrence() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(post("/host/matches/47/series/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/47?hostAction=seriesCancelled"));
+
+        Assertions.assertEquals(47L, lastHostSeriesCancelledMatchId.get());
+        Assertions.assertEquals(7L, lastHostSeriesCancelledUserId.get());
+    }
+
+    @Test
+    void postHostCancelRecurringSeriesForSingleEventReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(post("/host/matches/42/series/cancel")).andExpect(status().isNotFound());
     }
 
     @Test

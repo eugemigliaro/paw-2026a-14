@@ -74,12 +74,23 @@ class ViewTemplateAssetsTest {
     @Test
     void matchDetailUsesOverflowMenuForHostActions() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
         assertTrue(detailView.contains("<ui:overflowMenu"));
         assertTrue(detailView.contains("host.manage.menu.trigger"));
         assertTrue(detailView.contains("overflow-menu__item--danger"));
+        assertTrue(detailView.contains("hostSeriesEditPath"));
+        assertTrue(detailView.contains("hostSeriesCancelPath"));
+        assertTrue(detailView.contains("host.manage.editSeries"));
+        assertTrue(detailView.contains("host.manage.cancelSeries"));
         assertFalse(detailView.contains("label=\"${hostManageEditLabel}\""));
         assertFalse(detailView.contains("label=\"${hostManageCancelLabel}\""));
+        assertEquals("Edit recurring dates", english.getProperty("host.manage.editSeries"));
+        assertEquals("Cancel recurring dates", english.getProperty("host.manage.cancelSeries"));
+        assertEquals("Editar fechas recurrentes", spanish.getProperty("host.manage.editSeries"));
+        assertEquals(
+                "Cancelar fechas recurrentes", spanish.getProperty("host.manage.cancelSeries"));
     }
 
     @Test
@@ -129,9 +140,20 @@ class ViewTemplateAssetsTest {
 
         assertTrue(detailView.contains("reservationCancelPath"));
         assertTrue(detailView.contains("event.booking.leave"));
+        assertTrue(detailView.contains("event.booking.leaveOccurrence"));
+        assertTrue(detailView.contains("event.booking.leavingOccurrence"));
         assertTrue(detailView.contains("event.booking.cancelled"));
+        assertTrue(detailView.contains("event.booking.occurrenceCancelled"));
         assertEquals("Leave event", english.getProperty("event.booking.leave"));
+        assertEquals("Leave this date", english.getProperty("event.booking.leaveOccurrence"));
+        assertEquals(
+                "You left this date. Your spot is available again.",
+                english.getProperty("event.booking.occurrenceCancelled"));
         assertEquals("Dejar evento", spanish.getProperty("event.booking.leave"));
+        assertEquals("Dejar esta fecha", spanish.getProperty("event.booking.leaveOccurrence"));
+        assertEquals(
+                "Dejaste esta fecha. Tu lugar vuelve a estar disponible.",
+                spanish.getProperty("event.booking.occurrenceCancelled"));
     }
 
     @Test

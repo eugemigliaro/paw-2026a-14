@@ -21,7 +21,12 @@ public interface MatchService {
 
     Match updateMatch(Long matchId, Long actingUserId, UpdateMatchRequest request);
 
+    List<Match> updateSeriesFromOccurrence(
+            Long matchId, Long actingUserId, UpdateMatchRequest request);
+
     Match cancelMatch(Long matchId, Long actingUserId);
+
+    List<Match> cancelSeriesFromOccurrence(Long matchId, Long actingUserId);
 
     PaginatedResult<Match> findHostedMatches(
             Long hostUserId,

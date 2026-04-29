@@ -331,8 +331,16 @@ public class EventController {
                 "hostCanManageParticipants", hostCanManage && canHostManageParticipants(match));
         mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
         mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
+        mav.addObject(
+                "hostCanEditSeries",
+                hostCanManage && match.isRecurringOccurrence() && canHostEdit(match));
+        mav.addObject(
+                "hostCanCancelSeries",
+                hostCanManage && match.isRecurringOccurrence() && canHostCancel(match));
         mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
+        mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
+        mav.addObject("hostSeriesCancelPath", "/host/matches/" + eventId + "/series/cancel");
         mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
         return mav;
     }
@@ -811,6 +819,12 @@ public class EventController {
         }
         if ("cancelled".equalsIgnoreCase(hostAction)) {
             return messageSource.getMessage("host.action.cancelled", null, locale);
+        }
+        if ("seriesUpdated".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.seriesUpdated", null, locale);
+        }
+        if ("seriesCancelled".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("host.action.seriesCancelled", null, locale);
         }
         return null;
     }

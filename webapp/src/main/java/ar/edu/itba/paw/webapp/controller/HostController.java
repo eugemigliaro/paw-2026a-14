@@ -257,6 +257,89 @@ public class HostController {
         return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=updated");
     }
 
+    @GetMapping("/host/matches/{matchId}/series/edit")
+    public ModelAndView showEditSeries(
+            @PathVariable("matchId") final String matchId, final Locale locale) {
+        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+        final Long actingUserId = requireAuthenticatedUserId();
+        final Match match =
+                findOwnedEditableRecurringMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        return hostFormView(toForm(match), null, locale, seriesEditFormConfig(match, locale));
+    }
+
+    @PostMapping("/host/matches/{matchId}/series/edit")
+    public ModelAndView updateSeries(
+            @PathVariable("matchId") final String matchId,
+            @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
+            final BindingResult bindingResult,
+            final Locale locale) {
+        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+        final Long actingUserId = requireAuthenticatedUserId();
+        final Match existingMatch =
+                findOwnedEditableRecurringMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        final HostFormConfig formConfig = seriesEditFormConfig(existingMatch, locale);
+        applyScheduleValidation(createEventForm, bindingResult, locale);
+        validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
+
+        if (bindingResult.hasErrors()) {
+            return hostFormView(createEventForm, null, locale, formConfig);
+        }
+
+        final Long bannerImageId;
+        try {
+            bannerImageId = storeBannerIfPresent(createEventForm, existingMatch.getBannerImageId());
+        } catch (final IllegalArgumentException exception) {
+            return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
+        } catch (final IOException exception) {
+            return hostFormView(
+                    createEventForm,
+                    messageSource.getMessage("host.imageError", null, locale),
+                    locale,
+                    formConfig);
+        }
+
+        final UpdateMatchRequest request =
+                toUpdateRequest(createEventForm, existingMatch.getStatus(), bannerImageId);
+
+        try {
+            matchService.updateSeriesFromOccurrence(parsedMatchId, actingUserId, request);
+        } catch (final MatchUpdateException exception) {
+            if (exception.getReason() == MatchUpdateFailureReason.MATCH_NOT_FOUND
+                    || exception.getReason() == MatchUpdateFailureReason.FORBIDDEN
+                    || exception.getReason() == MatchUpdateFailureReason.NOT_RECURRING) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED) {
+                bindingResult.rejectValue(
+                        "maxPlayers",
+                        "match.update.error.capacityBelowConfirmed",
+                        exception.getMessage());
+            } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
+                return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
+            } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
+                if (!isEndAfterStart(createEventForm)) {
+                    bindingResult.rejectValue(
+                            "endTime",
+                            "match.schedule.error.endBeforeStart",
+                            messageSource.getMessage(
+                                    "match.schedule.error.endBeforeStart", null, locale));
+                } else {
+                    bindingResult.rejectValue(
+                            "eventTime",
+                            "match.schedule.error.startsAtPast",
+                            messageSource.getMessage(
+                                    "match.schedule.error.startsAtPast", null, locale));
+                }
+            } else {
+                bindingResult.rejectValue(
+                        "eventTime", "match.schedule.error.startsAtPast", exception.getMessage());
+            }
+            return hostFormView(createEventForm, null, locale, formConfig);
+        }
+
+        return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=seriesUpdated");
+    }
+
     @PostMapping("/host/matches/{matchId}/cancel")
     public ModelAndView cancelEvent(@PathVariable("matchId") final String matchId) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
@@ -268,6 +351,20 @@ public class HostController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=cancelled");
+    }
+
+    @PostMapping("/host/matches/{matchId}/series/cancel")
+    public ModelAndView cancelSeries(@PathVariable("matchId") final String matchId) {
+        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+        final Long actingUserId = requireAuthenticatedUserId();
+        findOwnedEditableRecurringMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        try {
+            matchService.cancelSeriesFromOccurrence(parsedMatchId, actingUserId);
+        } catch (final MatchCancellationException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return new ModelAndView(
+                "redirect:/matches/" + parsedMatchId + "?hostAction=seriesCancelled");
     }
 
     private ModelAndView hostFormView(
@@ -290,6 +387,7 @@ public class HostController {
         mav.addObject("submitLoadingLabel", formConfig.submitLoadingLabel());
         mav.addObject("submitButtonId", formConfig.submitButtonId());
         mav.addObject("isEditMode", formConfig.editMode());
+        mav.addObject("isSeriesEditMode", formConfig.seriesEditMode());
         return mav;
     }
 
@@ -350,6 +448,7 @@ public class HostController {
                 messageSource.getMessage("host.form.submit", null, locale),
                 messageSource.getMessage("host.form.submitting", null, locale),
                 "publish-match-button",
+                false,
                 false);
     }
 
@@ -364,6 +463,22 @@ public class HostController {
                 messageSource.getMessage("host.edit.form.submit", null, locale),
                 messageSource.getMessage("host.edit.form.submitting", null, locale),
                 "update-match-button",
+                true,
+                false);
+    }
+
+    private HostFormConfig seriesEditFormConfig(final Match match, final Locale locale) {
+        return new HostFormConfig(
+                messageSource.getMessage(
+                        "page.title.hostEditMode", new Object[] {match.getTitle()}, locale),
+                messageSource.getMessage("host.seriesEdit.eyebrow", null, locale),
+                messageSource.getMessage("host.seriesEdit.title", null, locale),
+                messageSource.getMessage("host.seriesEdit.description", null, locale),
+                "/host/matches/" + match.getId() + "/series/edit",
+                messageSource.getMessage("host.seriesEdit.form.submit", null, locale),
+                messageSource.getMessage("host.seriesEdit.form.submitting", null, locale),
+                "update-series-button",
+                true,
                 true);
     }
 
@@ -389,6 +504,28 @@ public class HostController {
         return form;
     }
 
+    private UpdateMatchRequest toUpdateRequest(
+            final CreateEventForm form, final String status, final Long bannerImageId) {
+        final String resolvedVisibility = normalize(form.getVisibility());
+        final String resolvedJoinPolicy =
+                VISIBILITY_PRIVATE.equals(resolvedVisibility)
+                        ? JOIN_POLICY_INVITE_ONLY
+                        : normalize(form.getJoinPolicy());
+        return new UpdateMatchRequest(
+                form.getAddress(),
+                form.getTitle(),
+                form.getDescription(),
+                toInstant(form.getEventDate(), form.getEventTime(), form.getTz()),
+                toInstant(form.getEndDate(), form.getEndTime(), form.getTz()),
+                form.getMaxPlayers(),
+                form.getPricePerPlayer(),
+                Sport.fromDbValue(form.getSport()).orElse(Sport.PADEL),
+                resolvedVisibility,
+                resolvedJoinPolicy,
+                status,
+                bannerImageId);
+    }
+
     private Instant resolveEndsAt(final Match match) {
         if (match.getEndsAt() != null) {
             return match.getEndsAt();
@@ -412,6 +549,15 @@ public class HostController {
         final Match match = findOwnedMatchOrThrowNotFound(matchId, actingUserId);
         final EventStatus status = EventStatus.fromDbValue(match.getStatus()).orElse(null);
         if (status == EventStatus.COMPLETED || status == EventStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return match;
+    }
+
+    private Match findOwnedEditableRecurringMatchOrThrowNotFound(
+            final Long matchId, final Long actingUserId) {
+        final Match match = findOwnedEditableMatchOrThrowNotFound(matchId, actingUserId);
+        if (!match.isRecurringOccurrence()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return match;
@@ -529,5 +675,6 @@ public class HostController {
             String submitLabel,
             String submitLoadingLabel,
             String submitButtonId,
-            boolean editMode) {}
+            boolean editMode,
+            boolean seriesEditMode) {}
 }

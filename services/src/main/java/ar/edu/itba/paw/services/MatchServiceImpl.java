@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -208,6 +209,93 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    @Transactional
+    public List<Match> updateSeriesFromOccurrence(
+            final Long matchId, final Long actingUserId, final UpdateMatchRequest request) {
+        final Match pivot =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
+
+        validateSeriesUpdateAccess(pivot, actingUserId);
+        validateScheduleOrThrow(
+                request.getStartsAt(),
+                request.getEndsAt(),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.startsAtPast")),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.endBeforeStart")));
+
+        final List<Match> targets = editableFutureSeriesTargets(pivot);
+        if (targets.isEmpty()) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_EDITABLE,
+                    message("match.update.error.notEditable"));
+        }
+
+        for (final Match target : targets) {
+            final int confirmedParticipants =
+                    matchParticipantDao.findConfirmedParticipants(target.getId()).size();
+            if (request.getMaxPlayers() < confirmedParticipants) {
+                throw new MatchUpdateException(
+                        MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                        message("match.update.error.capacityBelowConfirmed"));
+            }
+        }
+
+        final Duration startOffset = Duration.between(pivot.getStartsAt(), request.getStartsAt());
+        final Duration requestedDuration =
+                request.getEndsAt() == null
+                        ? null
+                        : Duration.between(request.getStartsAt(), request.getEndsAt());
+        final List<Match> updatedMatches = new ArrayList<>();
+
+        for (final Match target : targets) {
+            final Instant targetStartsAt = target.getStartsAt().plus(startOffset);
+            final Instant targetEndsAt =
+                    requestedDuration == null ? null : targetStartsAt.plus(requestedDuration);
+            final boolean updated =
+                    matchDao.updateMatch(
+                            target.getId(),
+                            actingUserId,
+                            request.getAddress(),
+                            request.getTitle(),
+                            request.getDescription(),
+                            targetStartsAt,
+                            targetEndsAt,
+                            request.getMaxPlayers(),
+                            request.getPricePerPlayer(),
+                            request.getSport(),
+                            request.getVisibility(),
+                            request.getJoinPolicy(),
+                            target.getStatus(),
+                            request.getBannerImageId());
+            if (!updated) {
+                throw new MatchUpdateException(
+                        MatchUpdateFailureReason.FORBIDDEN,
+                        message("match.update.error.forbidden"));
+            }
+
+            final Match updatedMatch =
+                    matchDao.findById(target.getId())
+                            .orElseThrow(
+                                    () ->
+                                            new MatchUpdateException(
+                                                    MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                    message("match.update.error.notFound")));
+            updatedMatches.add(updatedMatch);
+            matchNotificationService.notifyMatchUpdated(updatedMatch);
+        }
+
+        return List.copyOf(updatedMatches);
+    }
+
+    @Override
     public Match cancelMatch(final Long matchId, final Long actingUserId) {
         final Match match =
                 matchDao.findById(matchId)
@@ -249,6 +337,103 @@ public class MatchServiceImpl implements MatchService {
                                                 message("match.cancel.error.notFound")));
         matchNotificationService.notifyMatchCancelled(cancelledMatch);
         return cancelledMatch;
+    }
+
+    @Override
+    @Transactional
+    public List<Match> cancelSeriesFromOccurrence(final Long matchId, final Long actingUserId) {
+        final Match pivot =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchCancellationException(
+                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                message("match.cancel.error.notFound")));
+
+        validateSeriesCancellationAccess(pivot, actingUserId);
+
+        final List<Match> targets = editableFutureSeriesTargets(pivot);
+        if (targets.isEmpty()) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        final List<Match> cancelledMatches = new ArrayList<>();
+        for (final Match target : targets) {
+            final boolean updated = matchDao.cancelMatch(target.getId(), actingUserId);
+            if (!updated) {
+                throw new MatchCancellationException(
+                        MatchCancellationFailureReason.FORBIDDEN,
+                        message("match.cancel.error.forbidden"));
+            }
+
+            final Match cancelledMatch =
+                    matchDao.findById(target.getId())
+                            .orElseThrow(
+                                    () ->
+                                            new MatchCancellationException(
+                                                    MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                    message("match.cancel.error.notFound")));
+            cancelledMatches.add(cancelledMatch);
+            matchNotificationService.notifyMatchCancelled(cancelledMatch);
+        }
+
+        return List.copyOf(cancelledMatches);
+    }
+
+    private void validateSeriesUpdateAccess(final Match pivot, final Long actingUserId) {
+        if (!pivot.getHostUserId().equals(actingUserId)) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+        }
+
+        if (!pivot.isRecurringOccurrence()) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_RECURRING,
+                    message("match.update.error.notRecurring"));
+        }
+
+        if (!isEditableMatch(pivot)) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_EDITABLE,
+                    message("match.update.error.notEditable"));
+        }
+    }
+
+    private void validateSeriesCancellationAccess(final Match pivot, final Long actingUserId) {
+        if (!pivot.getHostUserId().equals(actingUserId)) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        if (!pivot.isRecurringOccurrence()) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.NOT_RECURRING,
+                    message("match.cancel.error.notRecurring"));
+        }
+    }
+
+    private List<Match> editableFutureSeriesTargets(final Match pivot) {
+        if (!pivot.isRecurringOccurrence() || pivot.getSeriesOccurrenceIndex() == null) {
+            return List.of();
+        }
+
+        final int pivotIndex = pivot.getSeriesOccurrenceIndex();
+        final Instant now = Instant.now(clock);
+        return matchDao.findSeriesOccurrences(pivot.getSeriesId()).stream()
+                .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() != null)
+                .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() >= pivotIndex)
+                .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
+                .filter(MatchServiceImpl::isEditableMatch)
+                .toList();
+    }
+
+    private static boolean isEditableMatch(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
     }
 
     @Override

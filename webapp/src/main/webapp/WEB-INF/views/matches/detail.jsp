@@ -108,7 +108,14 @@
 								<p
 									class="booking-panel__notice booking-panel__notice--info"
 								>
-									<spring:message code="event.booking.cancelled" />
+									<c:choose>
+										<c:when test="${not empty eventPage.occurrences}">
+											<spring:message code="event.booking.occurrenceCancelled" />
+										</c:when>
+										<c:otherwise>
+											<spring:message code="event.booking.cancelled" />
+										</c:otherwise>
+									</c:choose>
 								</p>
 							</c:if>
 							<c:if test="${not empty hostActionNotice}">
@@ -151,7 +158,10 @@
 								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
 								<c:choose>
 									<c:when test="${not empty eventPage.occurrences}">
+										<spring:message var="hostManageEditLabel" code="host.manage.editOccurrence" />
+										<spring:message var="hostManageEditSeriesLabel" code="host.manage.editSeries" />
 										<spring:message var="hostManageCancelLabel" code="host.manage.cancelOccurrence" />
+										<spring:message var="hostManageCancelSeriesLabel" code="host.manage.cancelSeries" />
 										<spring:message var="hostManageDetailLabel" code="host.manage.detailOccurrence" />
 									</c:when>
 									<c:otherwise>
@@ -182,6 +192,24 @@
 											</span>
 										</c:otherwise>
 									</c:choose>
+									<c:if test="${not empty eventPage.occurrences}">
+										<c:url var="hostSeriesEditHref" value="${hostSeriesEditPath}" />
+										<c:choose>
+											<c:when test="${hostCanEditSeries}">
+												<a class="overflow-menu__item" href="${hostSeriesEditHref}" role="menuitem">
+													<c:out value="${hostManageEditSeriesLabel}" />
+												</a>
+											</c:when>
+											<c:otherwise>
+												<span
+													class="overflow-menu__item overflow-menu__item--disabled"
+													role="menuitem"
+													aria-disabled="true">
+													<c:out value="${hostManageEditSeriesLabel}" />
+												</span>
+											</c:otherwise>
+										</c:choose>
+									</c:if>
 									<c:url var="hostCancelAction" value="${hostCancelPath}" />
 									<form
 										method="post"
@@ -210,6 +238,36 @@
 											</c:otherwise>
 										</c:choose>
 									</form>
+									<c:if test="${not empty eventPage.occurrences}">
+										<c:url var="hostSeriesCancelAction" value="${hostSeriesCancelPath}" />
+										<form
+											method="post"
+											action="${hostSeriesCancelAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${hostManageCancellingLabel}">
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<c:choose>
+												<c:when test="${hostCanCancelSeries}">
+													<button
+														class="overflow-menu__item overflow-menu__item--danger"
+														type="submit"
+														role="menuitem">
+														<c:out value="${hostManageCancelSeriesLabel}" />
+													</button>
+												</c:when>
+												<c:otherwise>
+													<button
+														class="overflow-menu__item overflow-menu__item--danger"
+														type="submit"
+														role="menuitem"
+														disabled="disabled"
+														aria-disabled="true">
+														<c:out value="${hostManageCancelSeriesLabel}" />
+													</button>
+												</c:otherwise>
+											</c:choose>
+										</form>
+									</c:if>
 								</ui:overflowMenu>
 								<div class="booking-panel__host-note">
 									<p class="detail-label"><spring:message code="host.manage.label" /></p>
@@ -290,7 +348,16 @@
 										</p>
 										<c:if test="${reservationCancellationEnabled}">
 											<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
-											<spring:message var="leavingReservationLabel" code="event.booking.leaving" />
+											<c:choose>
+												<c:when test="${not empty eventPage.occurrences}">
+													<spring:message var="leavingReservationLabel" code="event.booking.leavingOccurrence" />
+													<spring:message var="leaveReservationLabel" code="event.booking.leaveOccurrence" />
+												</c:when>
+												<c:otherwise>
+													<spring:message var="leavingReservationLabel" code="event.booking.leaving" />
+													<spring:message var="leaveReservationLabel" code="event.booking.leave" />
+												</c:otherwise>
+											</c:choose>
 											<form
 												method="post"
 												action="${reservationCancelAction}"
@@ -299,7 +366,6 @@
 												class="booking-panel__request-form"
 											>
 												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-												<spring:message var="leaveReservationLabel" code="event.booking.leave" />
 												<ui:button label="${leaveReservationLabel}" type="submit" fullWidth="${true}" variant="danger" />
 											</form>
 										</c:if>
