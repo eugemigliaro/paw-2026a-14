@@ -157,6 +157,25 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void messageBundlesIncludeRecurringLifecycleMailCopy() throws IOException {
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertEquals(
+                "Recurring event updated",
+                english.getProperty("mail.matchLifecycle.recurringUpdated.eyebrow"));
+        assertEquals(
+                "Recurring event cancelled",
+                english.getProperty("mail.matchLifecycle.recurringCancelled.eyebrow"));
+        assertEquals(
+                "Evento recurrente actualizado",
+                spanish.getProperty("mail.matchLifecycle.recurringUpdated.eyebrow"));
+        assertEquals(
+                "Evento recurrente cancelado",
+                spanish.getProperty("mail.matchLifecycle.recurringCancelled.eyebrow"));
+    }
+
+    @Test
     void overflowMenuTagExists() {
         assertTrue(Files.exists(Path.of("src/main/webapp/WEB-INF/tags/overflowMenu.tag")));
     }

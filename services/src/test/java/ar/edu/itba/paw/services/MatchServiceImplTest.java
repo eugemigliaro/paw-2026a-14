@@ -1214,6 +1214,7 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(47L, result.get(1).getId());
         Assertions.assertEquals("Updated Weekly Padel", result.get(0).getTitle());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(610200), result.get(1).getStartsAt());
+        Mockito.verify(matchNotificationService).notifyRecurringMatchesUpdated(result);
     }
 
     @Test
@@ -1322,6 +1323,7 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(47L, result.get(1).getId());
         Assertions.assertEquals("cancelled", result.get(0).getStatus());
         Assertions.assertEquals("cancelled", result.get(1).getStatus());
+        Mockito.verify(matchNotificationService).notifyRecurringMatchesCancelled(result);
     }
 
     @Test

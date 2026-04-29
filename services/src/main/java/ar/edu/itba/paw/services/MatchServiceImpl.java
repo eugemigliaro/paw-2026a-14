@@ -289,9 +289,9 @@ public class MatchServiceImpl implements MatchService {
                                                     MatchUpdateFailureReason.MATCH_NOT_FOUND,
                                                     message("match.update.error.notFound")));
             updatedMatches.add(updatedMatch);
-            matchNotificationService.notifyMatchUpdated(updatedMatch);
         }
 
+        matchNotificationService.notifyRecurringMatchesUpdated(updatedMatches);
         return List.copyOf(updatedMatches);
     }
 
@@ -376,9 +376,9 @@ public class MatchServiceImpl implements MatchService {
                                                     MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                                     message("match.cancel.error.notFound")));
             cancelledMatches.add(cancelledMatch);
-            matchNotificationService.notifyMatchCancelled(cancelledMatch);
         }
 
+        matchNotificationService.notifyRecurringMatchesCancelled(cancelledMatches);
         return List.copyOf(cancelledMatches);
     }
 

@@ -37,7 +37,7 @@ public class ThymeleafMailTemplateRenderer {
     public MailContent renderMatchUpdatedNotification(
             final MatchLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
-        final Context context = buildMatchLifecycleContext(templateData, locale);
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
         context.setVariable("mailEyebrow", message("mail.matchLifecycle.updated.eyebrow", locale));
         context.setVariable(
                 "title",
@@ -59,7 +59,7 @@ public class ThymeleafMailTemplateRenderer {
     public MailContent renderMatchCancelledNotification(
             final MatchLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
-        final Context context = buildMatchLifecycleContext(templateData, locale);
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
         context.setVariable(
                 "mailEyebrow", message("mail.matchLifecycle.cancelled.eyebrow", locale));
         context.setVariable(
@@ -74,6 +74,64 @@ public class ThymeleafMailTemplateRenderer {
         return new MailContent(
                 message(
                         "mail.matchLifecycle.cancelled.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-cancelled", context),
+                textMailTemplateEngine.process("match-cancelled", context));
+    }
+
+    public MailContent renderRecurringMatchesUpdatedNotification(
+            final MatchLifecycleMailTemplateData templateData, final int occurrenceCount) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, occurrenceCount);
+        context.setVariable(
+                "mailEyebrow", message("mail.matchLifecycle.recurringUpdated.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.matchLifecycle.recurringUpdated.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary",
+                message(
+                        "mail.matchLifecycle.recurringUpdated.summary",
+                        new Object[] {occurrenceCount},
+                        locale));
+
+        return new MailContent(
+                message(
+                        "mail.matchLifecycle.recurringUpdated.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderRecurringMatchesCancelledNotification(
+            final MatchLifecycleMailTemplateData templateData, final int occurrenceCount) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, occurrenceCount);
+        context.setVariable(
+                "mailEyebrow", message("mail.matchLifecycle.recurringCancelled.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.matchLifecycle.recurringCancelled.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary",
+                message(
+                        "mail.matchLifecycle.recurringCancelled.summary",
+                        new Object[] {occurrenceCount},
+                        locale));
+        context.setVariable(
+                "notice", message("mail.matchLifecycle.recurringCancelled.notice", locale));
+
+        return new MailContent(
+                message(
+                        "mail.matchLifecycle.recurringCancelled.subject",
                         new Object[] {templateData.getMatchTitle()},
                         locale),
                 htmlMailTemplateEngine.process("match-cancelled", context),
@@ -117,19 +175,24 @@ public class ThymeleafMailTemplateRenderer {
     }
 
     private Context buildMatchLifecycleContext(
-            final MatchLifecycleMailTemplateData templateData, final Locale locale) {
+            final MatchLifecycleMailTemplateData templateData,
+            final Locale locale,
+            final Integer occurrenceCount) {
         final Context context = new Context(locale);
         context.setVariable("recipientEmail", templateData.getRecipientEmail());
         context.setVariable(
                 "requestedForLabel", message("mail.matchLifecycle.requestedFor", locale));
         context.setVariable("detailsLabel", message("mail.matchLifecycle.details", locale));
-        context.setVariable("details", buildMatchLifecycleDetails(templateData, locale));
+        context.setVariable(
+                "details", buildMatchLifecycleDetails(templateData, locale, occurrenceCount));
         context.setVariable("lang", locale.getLanguage());
         return context;
     }
 
     private List<VerificationPreviewDetail> buildMatchLifecycleDetails(
-            final MatchLifecycleMailTemplateData templateData, final Locale locale) {
+            final MatchLifecycleMailTemplateData templateData,
+            final Locale locale,
+            final Integer occurrenceCount) {
         final List<VerificationPreviewDetail> details = new ArrayList<>();
         details.add(
                 new VerificationPreviewDetail(
@@ -157,6 +220,15 @@ public class ThymeleafMailTemplateRenderer {
                 new VerificationPreviewDetail(
                         message("mail.matchLifecycle.field.status", locale),
                         templateData.getStatusLabel()));
+        if (occurrenceCount != null) {
+            details.add(
+                    new VerificationPreviewDetail(
+                            message("mail.matchLifecycle.field.affectedDates", locale),
+                            message(
+                                    "mail.matchLifecycle.affectedDates",
+                                    new Object[] {occurrenceCount},
+                                    locale)));
+        }
         return List.copyOf(details);
     }
 

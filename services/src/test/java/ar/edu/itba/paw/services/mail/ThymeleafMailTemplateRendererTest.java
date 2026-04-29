@@ -119,6 +119,58 @@ public class ThymeleafMailTemplateRendererTest {
         Assertions.assertEquals("Evento cancelado: Noche de Padel", content.getSubject());
     }
 
+    @Test
+    public void testRenderRecurringMatchesUpdatedNotificationSummarizesAffectedDates() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderRecurringMatchesUpdatedNotification(
+                        new MatchLifecycleMailTemplateData(
+                                "player@test.com",
+                                "Weekly Padel",
+                                "Downtown Club",
+                                Instant.parse("2026-04-06T18:00:00Z"),
+                                Instant.parse("2026-04-06T19:30:00Z"),
+                                "Padel",
+                                "Open",
+                                Locale.ENGLISH),
+                        3);
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Recurring event updated"));
+        Assertions.assertTrue(content.getTextBody().contains("Affected dates"));
+        Assertions.assertTrue(content.getTextBody().contains("3 recurring dates"));
+        Assertions.assertEquals("Recurring event updated: Weekly Padel", content.getSubject());
+    }
+
+    @Test
+    public void testRenderRecurringMatchesCancelledNotificationLocalizesNotice() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderRecurringMatchesCancelledNotification(
+                        new MatchLifecycleMailTemplateData(
+                                "jugadora@test.com",
+                                "Noche semanal de Padel",
+                                "Club Centro",
+                                Instant.parse("2026-04-06T18:00:00Z"),
+                                null,
+                                "Padel",
+                                "Cancelado",
+                                Locale.of("es")),
+                        2);
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Evento recurrente cancelado"));
+        Assertions.assertTrue(content.getTextBody().contains("Fechas afectadas"));
+        Assertions.assertTrue(content.getTextBody().contains("2 fechas recurrentes"));
+        Assertions.assertTrue(content.getHtmlBody().contains("Tus reservas ya no siguen activas"));
+        Assertions.assertEquals(
+                "Evento recurrente cancelado: Noche semanal de Padel", content.getSubject());
+    }
+
     private static TemplateEngine htmlTemplateEngine() {
         final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("mail/");
@@ -191,6 +243,14 @@ public class ThymeleafMailTemplateRendererTest {
         messageSource.addMessage("mail.matchLifecycle.field.status", Locale.ENGLISH, "Status");
         messageSource.addMessage("mail.matchLifecycle.field.status", Locale.of("es"), "Estado");
         messageSource.addMessage(
+                "mail.matchLifecycle.field.affectedDates", Locale.ENGLISH, "Affected dates");
+        messageSource.addMessage(
+                "mail.matchLifecycle.field.affectedDates", Locale.of("es"), "Fechas afectadas");
+        messageSource.addMessage(
+                "mail.matchLifecycle.affectedDates", Locale.ENGLISH, "{0} recurring dates");
+        messageSource.addMessage(
+                "mail.matchLifecycle.affectedDates", Locale.of("es"), "{0} fechas recurrentes");
+        messageSource.addMessage(
                 "mail.matchLifecycle.updated.eyebrow", Locale.ENGLISH, "Event updated");
         messageSource.addMessage(
                 "mail.matchLifecycle.updated.eyebrow", Locale.of("es"), "Evento actualizado");
@@ -238,6 +298,78 @@ public class ThymeleafMailTemplateRendererTest {
                 "mail.matchLifecycle.cancelled.notice",
                 Locale.of("es"),
                 "Tu reserva ya no sigue activa para este evento.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.eyebrow",
+                Locale.ENGLISH,
+                "Recurring event updated");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.eyebrow",
+                Locale.of("es"),
+                "Evento recurrente actualizado");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.subject",
+                Locale.ENGLISH,
+                "Recurring event updated: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.subject",
+                Locale.of("es"),
+                "Evento recurrente actualizado: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.title",
+                Locale.ENGLISH,
+                "Recurring dates for {0} were updated");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.title",
+                Locale.of("es"),
+                "Fechas recurrentes de {0} actualizadas");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.summary",
+                Locale.ENGLISH,
+                "The host updated {0} upcoming recurring dates you joined. Review the latest details below.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.summary",
+                Locale.of("es"),
+                "El organizador actualizo {0} proximas fechas recurrentes a las que te sumaste.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.eyebrow",
+                Locale.ENGLISH,
+                "Recurring event cancelled");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.eyebrow",
+                Locale.of("es"),
+                "Evento recurrente cancelado");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.subject",
+                Locale.ENGLISH,
+                "Recurring event cancelled: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.subject",
+                Locale.of("es"),
+                "Evento recurrente cancelado: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.title",
+                Locale.ENGLISH,
+                "Recurring dates for {0} were cancelled");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.title",
+                Locale.of("es"),
+                "Fechas recurrentes de {0} canceladas");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.summary",
+                Locale.ENGLISH,
+                "The host cancelled {0} upcoming recurring dates you joined.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.summary",
+                Locale.of("es"),
+                "El organizador cancelo {0} proximas fechas recurrentes a las que te habias sumado.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.notice",
+                Locale.ENGLISH,
+                "Your reservations are no longer active for these recurring dates.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.notice",
+                Locale.of("es"),
+                "Tus reservas ya no siguen activas para estas fechas recurrentes.");
         return messageSource;
     }
 }
