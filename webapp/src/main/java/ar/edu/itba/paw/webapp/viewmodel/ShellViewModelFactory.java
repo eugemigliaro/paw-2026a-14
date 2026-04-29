@@ -68,7 +68,9 @@ public final class ShellViewModelFactory {
                         : null,
                 isAuthenticated()
                         ? new NavItemViewModel(
-                                ms.getMessage("nav.hostAMatch", null, locale), null, false)
+                                ms.getMessage("nav.hostAMatch", null, locale),
+                                UrlUtils.withLang("/host/matches/new", locale),
+                                false)
                         : null,
                 navItems);
     }
@@ -109,7 +111,10 @@ public final class ShellViewModelFactory {
                         ms.getMessage("nav.switchToPlayer", null, locale),
                         UrlUtils.withLang("/", locale),
                         false),
-                new NavItemViewModel(ms.getMessage("nav.hostAMatch", null, locale), null, false),
+                new NavItemViewModel(
+                        ms.getMessage("nav.hostAMatch", null, locale),
+                        UrlUtils.withLang("/host/matches/new", locale),
+                        false),
                 navItems);
     }
 
