@@ -217,47 +217,43 @@
 										className="filter-rail__clear"/>
 								</div>
 								<c:forEach var="group" items="${listControls.filterGroups}">
-									<section class="filter-rail__group">
-										<div class="filter-rail__group-header">
-											<h2 class="filter-rail__title">
-												<c:out value="${group.title}" />
-											</h2>
-										</div>
-
-										<div class="filter-rail__options">
+									<div class="filter-dropdown" data-filter-name="${group.title}">
+										<button type="button" class="filter-dropdown__toggle">
+											<c:out value="${group.title}" />
+										</button>
+										<div class="filter-dropdown__panel">
 											<c:forEach var="option" items="${group.options}">
 												<c:url var="optionHref" value="${option.href}" />
-												<ui:chip
-													label="${option.label}"
-													href="${optionHref}"
-													active="${option.active}"
-													tone="default"
-													className="filter-rail__chip"/>
+												<a href="${optionHref}" class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
+													<c:out value="${option.label}" />
+												</a>
 											</c:forEach>
 										</div>
-									</section>
-								</c:forEach>
-								<section class="filter-rail__group">
-									<div class="filter-rail__group-header">
-										<h2 class="filter-rail__title"><spring:message code="filter.datePrice" /></h2>
 									</div>
-									<form method="get" action="${listControls.searchAction}" class="filter-rail__form">
-										<input type="hidden" name="q" value="<c:out value='${listControls.searchQuery}' />" />
-										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
-										<c:forEach var="selectedSport" items="${selectedSports}">
-											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
-										</c:forEach>
-										<c:forEach var="selectedStatus" items="${selectedStatuses}">
-											<input type="hidden" name="status" value="<c:out value='${selectedStatus}' />" />
-										</c:forEach>
-										<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
-											<input type="hidden" name="visibility" value="<c:out value='${selectedVisibilityItem}' />" />
-										</c:forEach>
-										<c:if test="${param.filter eq 'past'}">
-											<input type="hidden" name="filter" value="past" />
-										</c:if>
-										<div class="filter-rail__field-group">
+								</c:forEach>
+
+								<div class="filter-dropdown" data-filter-name="DatePrice">
+									<button type="button" class="filter-dropdown__toggle">
+										<spring:message code="filter.datePrice" />
+									</button>
+									<div class="filter-dropdown__panel">
+										<form method="get" action="${listControls.searchAction}" class="filter-dropdown__form">
+											<input type="hidden" name="q" value="<c:out value='${listControls.searchQuery}' />" />
+											<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
+											<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
+											<c:forEach var="selectedSport" items="${selectedSports}">
+												<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
+											</c:forEach>
+											<c:forEach var="selectedStatus" items="${selectedStatuses}">
+												<input type="hidden" name="status" value="<c:out value='${selectedStatus}' />" />
+											</c:forEach>
+											<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
+												<input type="hidden" name="visibility" value="<c:out value='${selectedVisibilityItem}' />" />
+											</c:forEach>
+											<c:if test="${param.filter eq 'past'}">
+												<input type="hidden" name="filter" value="past" />
+											</c:if>
+
 											<div class="field filter-rail__field">
 												<label class="field__label" for="list-start-date"><spring:message code="filter.date.from" /></label>
 												<input id="list-start-date" name="startDate" type="date" class="field__control" min="<c:out value='${selectedDateMinValue}' />" max="<c:out value='${selectedDateMaxValue}' />" value="<c:out value='${selectedStartDateValue}' />" />
@@ -266,8 +262,7 @@
 												<label class="field__label" for="list-end-date"><spring:message code="filter.date.to" /></label>
 												<input id="list-end-date" name="endDate" type="date" class="field__control" min="<c:out value='${selectedDateMinValue}' />" max="<c:out value='${selectedDateMaxValue}' />" value="<c:out value='${selectedEndDateValue}' />" />
 											</div>
-										</div>
-										<div class="filter-rail__field-group">
+
 											<div class="field filter-rail__field filter-rail__price-field">
 												<label class="field__label" for="list-min-price"><spring:message code="filter.price.from" /></label>
 												<div class="filter-rail__price-input-wrap">
@@ -282,12 +277,12 @@
 													<input id="list-max-price" name="maxPrice" type="number" min="0" step="0.01" inputmode="decimal" class="field__control filter-rail__price-input" value="<c:out value='${selectedMaxPriceValue}' />" placeholder="12" />
 												</div>
 											</div>
-											<p class="filter-rail__caption"><spring:message code="filter.price.perPlayer" /></p>
-										</div>
-										<spring:message var="applyPriceLabel" code="filter.price.apply" />
-										<ui:button label="${applyPriceLabel}" type="submit" fullWidth="${true}" className="filter-rail__submit" />
-									</form>
-								</section>
+
+											<spring:message var="applyPriceLabel" code="filter.price.apply" />
+											<ui:button label="${applyPriceLabel}" type="submit" fullWidth="${true}" />
+										</form>
+									</div>
+								</div>
 							</div>
 						</aside>
 

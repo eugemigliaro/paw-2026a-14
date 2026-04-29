@@ -632,3 +632,103 @@
 		padding: 0.48rem 0.75rem;
 	}
 }
+
+/* Filter Dropdown System */
+.filter-dropdown {
+	position: relative;
+	margin-bottom: 0.5rem;
+}
+
+.filter-dropdown__toggle {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.85rem 1.25rem;
+	background: white;
+	border: 1px solid rgba(19, 52, 48, 0.1);
+	border-radius: 14px;
+	color: var(--text-primary);
+	font-weight: 600;
+	font-size: 0.95rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.filter-dropdown__toggle:hover {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+}
+
+.filter-dropdown.is-open .filter-dropdown__toggle {
+	border-color: var(--accent);
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.filter-dropdown__toggle::after {
+	content: '▾';
+	font-size: 0.8rem;
+	transition: transform 0.2s ease;
+	color: var(--text-muted);
+}
+
+.filter-dropdown.is-open .filter-dropdown__toggle::after {
+	transform: rotate(180deg);
+}
+
+.filter-dropdown__panel {
+	display: none;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	background: white;
+	border: 1px solid var(--accent);
+	border-top: none;
+	border-bottom-left-radius: 14px;
+	border-bottom-right-radius: 14px;
+	box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+	padding: 0.5rem;
+	z-index: 100;
+}
+
+.filter-dropdown.is-open .filter-dropdown__panel {
+	display: block;
+}
+
+.filter-dropdown__item {
+	display: block;
+	padding: 0.6rem 0.85rem;
+	border-radius: 8px;
+	color: var(--text-secondary);
+	text-decoration: none;
+	font-size: 0.9rem;
+	transition: all 0.2s;
+}
+
+.filter-dropdown__item:hover {
+	background: var(--bg-muted);
+	color: var(--accent);
+}
+
+.filter-dropdown__item--active {
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-weight: 600;
+}
+
+.filter-dropdown__form {
+	padding: 0.75rem;
+}
+
+.filter-dropdown__form .filter-rail__field-group {
+	display: grid;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.filter-dropdown__form .ui-button {
+	margin-top: 0.5rem;
+}
