@@ -119,6 +119,30 @@ public class ThymeleafMailTemplateRendererTest {
         Assertions.assertEquals("Evento cancelado: Noche de Padel", content.getSubject());
     }
 
+    @Test
+    public void testRenderBanNotificationIncludesBanDetails() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderBanNotification(
+                        new BanMailTemplateData(
+                                "player@test.com",
+                                "player",
+                                Instant.parse("2026-04-20T12:00:00Z"),
+                                "Repeated abuse",
+                                "http://localhost:8080/login",
+                                Locale.ENGLISH));
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Moderation notice"));
+        Assertions.assertTrue(content.getHtmlBody().contains("Repeated abuse"));
+        Assertions.assertTrue(content.getHtmlBody().contains("http://localhost:8080/login"));
+        Assertions.assertTrue(content.getTextBody().contains("Banned until"));
+        Assertions.assertEquals(
+                "Your Match Point account has been temporarily banned", content.getSubject());
+    }
+
     private static TemplateEngine htmlTemplateEngine() {
         final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("mail/");
@@ -238,6 +262,40 @@ public class ThymeleafMailTemplateRendererTest {
                 "mail.matchLifecycle.cancelled.notice",
                 Locale.of("es"),
                 "Tu reserva ya no sigue activa para este evento.");
+        messageSource.addMessage(
+                "mail.moderation.ban.eyebrow", Locale.ENGLISH, "Moderation notice");
+        messageSource.addMessage(
+                "mail.moderation.ban.eyebrow", Locale.of("es"), "Aviso de moderacion");
+        messageSource.addMessage(
+                "mail.moderation.ban.subject",
+                Locale.ENGLISH,
+                "Your Match Point account has been temporarily banned");
+        messageSource.addMessage(
+                "mail.moderation.ban.subject",
+                Locale.of("es"),
+                "Tu cuenta de Match Point fue baneada temporalmente");
+        messageSource.addMessage(
+                "mail.moderation.ban.title", Locale.ENGLISH, "Your account is temporarily banned");
+        messageSource.addMessage(
+                "mail.moderation.ban.title",
+                Locale.of("es"),
+                "Tu cuenta esta baneada temporalmente");
+        messageSource.addMessage(
+                "mail.moderation.ban.summary",
+                Locale.ENGLISH,
+                "Review the details below and sign in to appeal if needed.");
+        messageSource.addMessage(
+                "mail.moderation.ban.summary",
+                Locale.of("es"),
+                "Revisa los detalles abajo e inicia sesion para apelar si hace falta.");
+        messageSource.addMessage("mail.moderation.ban.username", Locale.ENGLISH, "User");
+        messageSource.addMessage("mail.moderation.ban.username", Locale.of("es"), "Usuario");
+        messageSource.addMessage("mail.moderation.ban.until", Locale.ENGLISH, "Banned until");
+        messageSource.addMessage("mail.moderation.ban.until", Locale.of("es"), "Baneado hasta");
+        messageSource.addMessage("mail.moderation.ban.reason", Locale.ENGLISH, "Reason");
+        messageSource.addMessage("mail.moderation.ban.reason", Locale.of("es"), "Motivo");
+        messageSource.addMessage("mail.moderation.ban.login", Locale.ENGLISH, "Sign in");
+        messageSource.addMessage("mail.moderation.ban.login", Locale.of("es"), "Iniciar sesion");
         return messageSource;
     }
 }
