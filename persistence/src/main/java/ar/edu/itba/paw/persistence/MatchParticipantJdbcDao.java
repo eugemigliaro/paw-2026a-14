@@ -116,7 +116,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         "UPDATE match_participants"
                                 + " SET status = 'joined', joined_at = CURRENT_TIMESTAMP"
                                 + " WHERE user_id = ?"
-                                + " AND status = 'cancelled'"
+                                + " AND status NOT IN ('joined', 'checked_in')"
                                 + " AND match_id IN ("
                                 + " SELECT m.id"
                                 + " FROM matches m"
