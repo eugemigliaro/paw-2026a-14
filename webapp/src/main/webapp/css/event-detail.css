@@ -1,7 +1,14 @@
 .page-shell--detail {
-	display: grid;
+	display: flex;
+	flex-direction: column;
 	gap: 2rem;
 	padding-top: 1rem;
+}
+
+.detail-top {
+	align-items: stretch;
+	display: flex;
+	gap: 1.8rem;
 }
 
 .event-hero {
@@ -9,11 +16,21 @@
 	border-radius: 32px;
 	color: #f7fcfa;
 	display: grid;
+	flex: 1 1 0;
 	isolation: isolate;
-	min-height: clamp(28rem, 62vh, 36rem);
+	min-height: clamp(20rem, 42vh, 27rem);
 	overflow: hidden;
-	padding: 2rem 1.5rem 2rem;
+	padding: 1.6rem 1.35rem 1.6rem;
 	position: relative;
+}
+
+.detail-top__sidebar {
+	display: flex;
+	flex: 0 0 24rem;
+}
+
+.detail-top__sidebar .booking-panel {
+	width: 100%;
 }
 
 .event-hero__image {
@@ -186,7 +203,7 @@
 .event-hero__title {
 	color: #ffffff;
 	font-family: "Plus Jakarta Sans", sans-serif;
-	font-size: clamp(3rem, 5vw, 4.7rem);
+	font-size: clamp(2.6rem, 4.2vw, 4rem);
 	font-weight: 800;
 	letter-spacing: -0.075em;
 	line-height: 0.92;
@@ -233,10 +250,7 @@
 }
 
 .detail-layout {
-	align-items: start;
-	display: grid;
-	gap: 2rem;
-	grid-template-columns: minmax(0, 1.42fr) minmax(320px, 0.82fr);
+	display: block;
 }
 
 .detail-layout__main,
@@ -480,11 +494,40 @@
 	margin: 0;
 }
 
+.booking-panel__host-note {
+	display: grid;
+	gap: 0.28rem;
+	margin-right: 3.4rem;
+}
+
+.booking-panel__host-note .detail-label,
+.booking-panel__host-note p {
+	margin: 0;
+}
+
+.booking-panel__host-note p:last-child {
+	color: var(--text-secondary);
+	font-size: 0.96rem;
+	line-height: 1.5;
+}
+
 .booking-panel__detail-row {
 	align-items: baseline;
 	display: flex;
 	gap: 1rem;
 	justify-content: space-between;
+}
+
+.booking-panel__overflow-menu {
+	position: absolute;
+	right: 1.3rem;
+	top: 1.3rem;
+	z-index: 5;
+}
+
+.booking-panel__overflow-menu .overflow-menu__panel {
+	right: 0;
+	top: calc(100% + 0.35rem);
 }
 
 .booking-panel__detail-row dt,
@@ -581,12 +624,16 @@
 }
 
 @media (max-width: 1180px) {
-	.detail-layout {
-		grid-template-columns: 1fr;
+	.detail-top {
+		flex-direction: column;
 	}
 
 	.booking-panel {
 		position: static;
+	}
+
+	.detail-top__sidebar {
+		flex-basis: auto;
 	}
 }
 
@@ -609,6 +656,11 @@
 	.host-card__note {
 		max-width: none;
 		text-align: left;
+	}
+
+	.booking-panel__overflow-menu .overflow-menu__panel {
+		left: auto;
+		right: 0;
 	}
 }
 
@@ -634,6 +686,21 @@
 
 	.booking-panel {
 		padding: 1.15rem;
+	}
+
+	.booking-panel__overflow-menu {
+		right: 1.15rem;
+		top: 1.15rem;
+	}
+
+	.booking-panel__overflow-menu .overflow-menu__panel {
+		left: auto;
+		min-width: min(12rem, calc(100vw - 4rem));
+		right: 0;
+	}
+
+	.booking-panel__host-note {
+		margin-right: 3.1rem;
 	}
 }
 

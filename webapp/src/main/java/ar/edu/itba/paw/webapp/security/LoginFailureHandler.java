@@ -26,6 +26,10 @@ public class LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
             builder.queryParam("email", email);
         }
 
+        if (request.getParameter("continue") != null) {
+            builder.queryParam("continue", "");
+        }
+
         getRedirectStrategy()
                 .sendRedirect(request, response, builder.build().encode().toUriString());
     }

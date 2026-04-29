@@ -17,6 +17,7 @@ class ViewTemplateAssetsTest {
 
         assertTrue(head.contains("/js/timezone-field.js"));
         assertTrue(head.contains("/css/auth.css"));
+        assertTrue(head.contains("/js/overflow-menu.js"));
     }
 
     @Test
@@ -40,6 +41,30 @@ class ViewTemplateAssetsTest {
 
         assertTrue(Files.exists(scriptPath));
         assertTrue(Files.readString(scriptPath).contains("data-browser-timezone-field"));
+    }
+
+    @Test
+    void overflowMenuScriptExistsAndTargetsOverflowMenuHook() throws IOException {
+        final Path scriptPath = Path.of("src/main/webapp/js/overflow-menu.js");
+
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(Files.readString(scriptPath).contains("data-overflow-menu"));
+    }
+
+    @Test
+    void matchDetailUsesOverflowMenuForHostActions() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+
+        assertTrue(detailView.contains("<ui:overflowMenu"));
+        assertTrue(detailView.contains("host.manage.menu.trigger"));
+        assertTrue(detailView.contains("overflow-menu__item--danger"));
+        assertFalse(detailView.contains("label=\"${hostManageEditLabel}\""));
+        assertFalse(detailView.contains("label=\"${hostManageCancelLabel}\""));
+    }
+
+    @Test
+    void overflowMenuTagExists() {
+        assertTrue(Files.exists(Path.of("src/main/webapp/WEB-INF/tags/overflowMenu.tag")));
     }
 
     @Test

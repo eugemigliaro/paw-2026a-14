@@ -227,3 +227,15 @@ The following technologies are still future concerns and should be kept in mind,
 - Jersey / JAX-RS
 
 Code written for the current product phase should not make those future additions harder, but it also should not partially implement them ahead of time.
+
+## 12. Logging Rules
+
+Logging standards for this repository are defined in `./docs/logging.md`.
+
+When changing or adding behavior in `webapp`, `services`, or `persistence`:
+
+- follow `SLF4J + Logback` conventions from `docs/logging.md`
+- avoid overlogging and redundant logs across layers
+- never log sensitive information (passwords, tokens, raw secrets, session identifiers, full personal data)
+- prefer stable identifiers and business outcomes (`matchId`, `userId`, status transitions)
+- keep test logging console-based via `logback-test.xml`

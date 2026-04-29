@@ -49,7 +49,16 @@
 						<spring:message var="loginSubmitLabel" code="auth.login.submit" />
 						<c:url var="forgotPasswordHref" value="/forgot-password" />
 						<c:url var="registerHref" value="/register" />
-						<c:url var="loginAction" value="/login" />
+						<c:choose>
+							<c:when test="${loginContinue}">
+								<c:url var="loginAction" value="/login">
+									<c:param name="continue" value="" />
+								</c:url>
+							</c:when>
+							<c:otherwise>
+								<c:url var="loginAction" value="/login" />
+							</c:otherwise>
+						</c:choose>
 						<form method="post" action="${loginAction}" class="auth-form" novalidate="novalidate">
 							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 							<ui:textInput
