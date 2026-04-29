@@ -49,6 +49,7 @@ public class MatchJdbcDao implements MatchDao {
 
     private static final String BASE_FROM =
             " FROM matches m"
+                    + " JOIN users hu ON hu.id = m.host_user_id"
                     + " LEFT JOIN match_participants mp"
                     + " ON mp.match_id = m.id"
                     + " AND mp.status IN ('joined', 'checked_in', 'invited') ";
@@ -418,7 +419,7 @@ public class MatchJdbcDao implements MatchDao {
                 " INNER JOIN match_participants me"
                         + " ON me.match_id = m.id"
                         + " AND me.user_id = ?"
-                        + " AND me.status IN ('joined', 'checked_in')");
+                        + " AND me.status IN ('joined', 'checked_in', 'pending_approval', 'invited')");
         params.add(userId);
         sql.append(" WHERE 1=1");
         appendFilters(
@@ -468,7 +469,7 @@ public class MatchJdbcDao implements MatchDao {
                 " INNER JOIN match_participants me"
                         + " ON me.match_id = m.id"
                         + " AND me.user_id = ?"
-                        + " AND me.status IN ('joined', 'checked_in')");
+                        + " AND me.status IN ('joined', 'checked_in', 'pending_approval', 'invited')");
         params.add(userId);
         sql.append(" WHERE 1=1");
         appendFilters(
@@ -525,8 +526,14 @@ public class MatchJdbcDao implements MatchDao {
             return;
         }
 
-        sql.append(" AND (LOWER(m.title) LIKE ? OR LOWER(COALESCE(m.description, '')) LIKE ?)");
+        sql.append(
+                " AND (LOWER(m.title) LIKE ? OR LOWER(COALESCE(m.description, '')) LIKE ? OR LOWER(COALESCE(hu.name, '')) LIKE ? OR LOWER(COALESCE(hu.last_name, '')) LIKE ? OR LOWER(COALESCE(hu.username, '')) LIKE ? OR LOWER(COALESCE(hu.name, '') || ' ' || COALESCE(hu.last_name, '')) LIKE ? OR LOWER(COALESCE(hu.last_name, '') || ' ' || COALESCE(hu.name, '')) LIKE ?)");
         final String queryPattern = "%" + query.trim().toLowerCase() + "%";
+        params.add(queryPattern);
+        params.add(queryPattern);
+        params.add(queryPattern);
+        params.add(queryPattern);
+        params.add(queryPattern);
         params.add(queryPattern);
         params.add(queryPattern);
     }

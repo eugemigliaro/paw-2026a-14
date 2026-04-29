@@ -188,7 +188,7 @@
 								</ui:button>
 							</div>
 						</form:form>
-						
+
 						<c:forEach var="group" items="${listControls.filterGroups}">
 							<div class="filter-dropdown" data-filter-name="${group.title}">
 								<button type="button" class="filter-dropdown__toggle">

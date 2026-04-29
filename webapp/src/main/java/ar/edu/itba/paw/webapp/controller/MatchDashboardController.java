@@ -925,16 +925,7 @@ public class MatchDashboardController {
 
         return new MatchListControlsViewModel(
                 buildSearchAction(
-                        path,
-                        locale,
-                        sort,
-                        null,
-                        null,
-                        null,
-                        null,
-                        timezone,
-                        List.of(),
-                        List.of(),
+                        path, locale, sort, null, null, null, null, timezone, List.of(), List.of(),
                         List.of()),
                 buildSearchAction(
                         path,
@@ -1477,14 +1468,18 @@ public class MatchDashboardController {
         final LocalDate today = LocalDate.now(zoneId);
 
         if (context == DateRangeContext.UPCOMING) {
-            if (startDate != null && startDate.isBefore(today)) {
+            if (startDate == null) {
+                startDate = today;
+            } else if (startDate.isBefore(today)) {
                 startDate = today;
             }
             if (endDate != null && endDate.isBefore(today)) {
                 endDate = today;
             }
         } else if (context == DateRangeContext.PAST) {
-            if (endDate != null && endDate.isAfter(today)) {
+            if (endDate == null) {
+                endDate = today;
+            } else if (endDate.isAfter(today)) {
                 endDate = today;
             }
             if (startDate != null && startDate.isAfter(today)) {
