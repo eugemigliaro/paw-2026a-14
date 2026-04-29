@@ -34,6 +34,14 @@
     </c:if>
 
     <div class="site-header__actions">
+      <c:if test="${not empty shell.hostMatchNav}">
+        <a
+          class="site-header__nav-link site-header__host-match-nav"
+          href="#"
+          aria-label="${shell.hostMatchNav.label}">
+          <c:out value="${shell.hostMatchNav.label}" />
+        </a>
+      </c:if>
       <c:choose>
         <c:when test="${pageContext.request.userPrincipal ne null}">
           <spring:message var="accountLabel" code="nav.account" text="Account" />
