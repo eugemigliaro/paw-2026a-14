@@ -49,7 +49,7 @@ Create `config/local.properties` from `config/local.example.properties`, then in
 multi-module snapshots and run the webapp:
 
 ```sh
-mvn install -DskipTests
+mvn clean install
 cd webapp
 mvn jetty:run
 ```
