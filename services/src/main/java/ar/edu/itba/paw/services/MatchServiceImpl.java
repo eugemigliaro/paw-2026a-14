@@ -352,7 +352,7 @@ public class MatchServiceImpl implements MatchService {
 
         validateSeriesCancellationAccess(pivot, actingUserId);
 
-        final List<Match> targets = editableFutureSeriesTargets(pivot);
+        final List<Match> targets = cancellableFutureSeriesTargets(pivot);
         if (targets.isEmpty()) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
@@ -425,6 +425,18 @@ public class MatchServiceImpl implements MatchService {
         return matchDao.findSeriesOccurrences(pivot.getSeriesId()).stream()
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() != null)
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() >= pivotIndex)
+                .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
+                .filter(MatchServiceImpl::isEditableMatch)
+                .toList();
+    }
+
+    private List<Match> cancellableFutureSeriesTargets(final Match pivot) {
+        if (!pivot.isRecurringOccurrence()) {
+            return List.of();
+        }
+
+        final Instant now = Instant.now(clock);
+        return matchDao.findSeriesOccurrences(pivot.getSeriesId()).stream()
                 .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
                 .filter(MatchServiceImpl::isEditableMatch)
                 .toList();

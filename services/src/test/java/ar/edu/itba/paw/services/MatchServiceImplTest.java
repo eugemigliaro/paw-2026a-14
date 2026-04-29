@@ -1327,6 +1327,103 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testCancelSeriesFromLaterOccurrenceCancelsEarlierFutureOccurrence() {
+        // 1. Arrange
+        final Match pastOccurrence =
+                recurringMatch(
+                        44L,
+                        "Past Weekly Padel",
+                        FIXED_NOW.minusSeconds(604800),
+                        FIXED_NOW.minusSeconds(599400),
+                        "open",
+                        1);
+        final Match earlierFutureOccurrence =
+                recurringMatch(
+                        45L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        "open",
+                        2);
+        final Match pivotOccurrence =
+                recurringMatch(
+                        46L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(608400),
+                        FIXED_NOW.plusSeconds(612000),
+                        "open",
+                        3);
+        final Match laterFutureOccurrence =
+                recurringMatch(
+                        47L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(1213200),
+                        FIXED_NOW.plusSeconds(1216800),
+                        "open",
+                        4);
+        final Match cancelledOccurrence =
+                recurringMatch(
+                        48L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(1818000),
+                        FIXED_NOW.plusSeconds(1821600),
+                        "cancelled",
+                        5);
+        final Match cancelledEarlierFuture =
+                recurringMatch(
+                        45L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        "cancelled",
+                        2);
+        final Match cancelledPivot =
+                recurringMatch(
+                        46L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(608400),
+                        FIXED_NOW.plusSeconds(612000),
+                        "cancelled",
+                        3);
+        final Match cancelledLaterFuture =
+                recurringMatch(
+                        47L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(1213200),
+                        FIXED_NOW.plusSeconds(1216800),
+                        "cancelled",
+                        4);
+        Mockito.when(matchDao.findById(46L))
+                .thenReturn(Optional.of(pivotOccurrence))
+                .thenReturn(Optional.of(cancelledPivot));
+        Mockito.when(matchDao.findById(45L)).thenReturn(Optional.of(cancelledEarlierFuture));
+        Mockito.when(matchDao.findById(47L)).thenReturn(Optional.of(cancelledLaterFuture));
+        Mockito.when(matchDao.findSeriesOccurrences(600L))
+                .thenReturn(
+                        List.of(
+                                pastOccurrence,
+                                earlierFutureOccurrence,
+                                pivotOccurrence,
+                                laterFutureOccurrence,
+                                cancelledOccurrence));
+        Mockito.when(matchDao.cancelMatch(45L, 1L)).thenReturn(true);
+        Mockito.when(matchDao.cancelMatch(46L, 1L)).thenReturn(true);
+        Mockito.when(matchDao.cancelMatch(47L, 1L)).thenReturn(true);
+
+        // 2. Exercise
+        final List<Match> result = matchService.cancelSeriesFromOccurrence(46L, 1L);
+
+        // 3. Assert
+        Assertions.assertEquals(3, result.size());
+        Assertions.assertEquals(45L, result.get(0).getId());
+        Assertions.assertEquals(46L, result.get(1).getId());
+        Assertions.assertEquals(47L, result.get(2).getId());
+        Assertions.assertEquals("cancelled", result.get(0).getStatus());
+        Assertions.assertEquals("cancelled", result.get(1).getStatus());
+        Assertions.assertEquals("cancelled", result.get(2).getStatus());
+    }
+
+    @Test
     public void testCancelMatchReturnsExistingMatchWhenAlreadyCancelled() {
         final Match existingMatch =
                 new Match(
