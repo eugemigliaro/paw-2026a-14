@@ -32,7 +32,7 @@ class ViewTemplateAssetsTest {
     void feedTimezoneInputsUseBrowserTimezoneFieldHook() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
 
-        assertEquals(3, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
+        assertEquals(4, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
     }
 
     @Test

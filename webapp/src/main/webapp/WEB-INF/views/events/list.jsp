@@ -232,9 +232,9 @@
 									</div>
 								</c:forEach>
 
-								<div class="filter-dropdown" data-filter-name="DatePrice">
+								<div class="filter-dropdown" data-filter-name="Date">
 									<button type="button" class="filter-dropdown__toggle">
-										<spring:message code="filter.datePrice" />
+										<spring:message code="filter.date" />
 									</button>
 									<div class="filter-dropdown__panel">
 										<form method="get" action="${listControls.searchAction}" class="filter-dropdown__form">
@@ -250,6 +250,8 @@
 											<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
 												<input type="hidden" name="visibility" value="<c:out value='${selectedVisibilityItem}' />" />
 											</c:forEach>
+											<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
+											<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 											<c:if test="${param.filter eq 'past'}">
 												<input type="hidden" name="filter" value="past" />
 											</c:if>
@@ -262,6 +264,36 @@
 												<label class="field__label" for="list-end-date"><spring:message code="filter.date.to" /></label>
 												<input id="list-end-date" name="endDate" type="date" class="field__control" min="<c:out value='${selectedDateMinValue}' />" max="<c:out value='${selectedDateMaxValue}' />" value="<c:out value='${selectedEndDateValue}' />" />
 											</div>
+
+											<spring:message var="applyDateLabel" code="filter.date.apply" text="Apply" />
+											<ui:button label="${applyDateLabel}" type="submit" fullWidth="${true}" />
+										</form>
+									</div>
+								</div>
+
+								<div class="filter-dropdown" data-filter-name="Price">
+									<button type="button" class="filter-dropdown__toggle">
+										<spring:message code="filter.price" />
+									</button>
+									<div class="filter-dropdown__panel">
+										<form method="get" action="${listControls.searchAction}" class="filter-dropdown__form">
+											<input type="hidden" name="q" value="<c:out value='${listControls.searchQuery}' />" />
+											<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
+											<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
+											<c:forEach var="selectedSport" items="${selectedSports}">
+												<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
+											</c:forEach>
+											<c:forEach var="selectedStatus" items="${selectedStatuses}">
+												<input type="hidden" name="status" value="<c:out value='${selectedStatus}' />" />
+											</c:forEach>
+											<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
+												<input type="hidden" name="visibility" value="<c:out value='${selectedVisibilityItem}' />" />
+											</c:forEach>
+											<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
+											<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
+											<c:if test="${param.filter eq 'past'}">
+												<input type="hidden" name="filter" value="past" />
+											</c:if>
 
 											<div class="field filter-rail__field filter-rail__price-field">
 												<label class="field__label" for="list-min-price"><spring:message code="filter.price.from" /></label>

@@ -53,9 +53,9 @@
 							</div>
 						</c:forEach>
 
-						<div class="filter-dropdown" data-filter-name="DatePrice">
+						<div class="filter-dropdown" data-filter-name="Date">
 							<button type="button" class="filter-dropdown__toggle">
-								<spring:message code="filter.datePrice" />
+								<spring:message code="filter.date" />
 							</button>
 							<div class="filter-dropdown__panel">
 								<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate">
@@ -65,6 +65,8 @@
 									</c:forEach>
 									<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 									<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
+									<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
+									<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 
 									<div class="field filter-rail__field">
 										<label class="field__label" for="start-date"><spring:message code="filter.date.from" /></label>
@@ -74,6 +76,27 @@
 										<label class="field__label" for="end-date"><spring:message code="filter.date.to" /></label>
 										<input id="end-date" name="endDate" type="date" class="field__control" min="<c:out value='${selectedDateMinValue}' />" value="<c:out value='${selectedEndDateValue}' />" />
 									</div>
+
+									<spring:message var="applyDateLabel" code="filter.date.apply" text="Apply" />
+									<ui:button label="${applyDateLabel}" type="submit" fullWidth="${true}" />
+								</form>
+							</div>
+						</div>
+
+						<div class="filter-dropdown" data-filter-name="Price">
+							<button type="button" class="filter-dropdown__toggle">
+								<spring:message code="filter.price" />
+							</button>
+							<div class="filter-dropdown__panel">
+								<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate">
+									<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
+									<c:forEach var="selectedSport" items="${selectedSports}">
+										<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
+									</c:forEach>
+									<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
+									<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
+									<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
+									<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 
 									<div class="field filter-rail__field filter-rail__price-field">
 										<label class="field__label" for="min-price"><spring:message code="filter.price.from" /></label>
