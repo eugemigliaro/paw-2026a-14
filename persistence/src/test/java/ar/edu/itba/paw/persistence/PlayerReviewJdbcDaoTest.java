@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.PlayerReviewSummary;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -112,6 +113,47 @@ public class PlayerReviewJdbcDaoTest {
 
         Assertions.assertEquals(0L, summary.getReviewCount());
         Assertions.assertEquals(0L, summary.getLikeCount());
+    }
+
+    @Test
+    public void testSoftDeleteReviewWithAdminDetails() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        final PlayerReview initial =
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
+
+        final boolean deleted =
+                playerReviewDao.softDeleteReview(
+                        2L, 3L, ar.edu.itba.paw.models.ReviewDeleteReason.SPAM, 4L);
+
+        Assertions.assertTrue(deleted);
+        final Optional<PlayerReview> found =
+                playerReviewDao.findByIdIncludingDeleted(initial.getId());
+        Assertions.assertTrue(found.isPresent());
+        Assertions.assertTrue(found.get().isDeleted());
+        Assertions.assertEquals(4L, found.get().getDeletedByUserId());
+        Assertions.assertEquals(
+                ar.edu.itba.paw.models.ReviewDeleteReason.SPAM, found.get().getDeleteReason());
+    }
+
+    @Test
+    public void testRestoreReview() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
+        playerReviewDao.softDeleteReview(
+                2L, 3L, ar.edu.itba.paw.models.ReviewDeleteReason.SPAM, 4L);
+
+        final boolean restored = playerReviewDao.restoreReview(2L, 3L);
+        Assertions.assertTrue(restored);
+
+        final Optional<PlayerReview> found = playerReviewDao.findByPair(2L, 3L);
+        Assertions.assertTrue(found.isPresent());
+        Assertions.assertFalse(found.get().isDeleted());
+        Assertions.assertNull(found.get().getDeletedByUserId());
+        Assertions.assertNull(found.get().getDeleteReason());
+        Assertions.assertNull(found.get().getDeletedAt());
     }
 
     @Test

@@ -45,7 +45,8 @@ public class MatchJdbcDao implements MatchDao {
                     + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
                     + " m.visibility, m.join_policy, "
                     + DERIVED_STATUS_SQL
-                    + " AS status, m.banner_image_id, COUNT(mp.id) AS joined_players";
+                    + " AS status, m.banner_image_id, m.deleted, m.deleted_at,"
+                    + " m.deleted_by_user_id, m.delete_reason, COUNT(mp.id) AS joined_players";
 
     private static final String BASE_FROM =
             " FROM matches m"
@@ -79,7 +80,13 @@ public class MatchJdbcDao implements MatchDao {
                         rs.getInt("joined_players"),
                         rs.getObject("banner_image_id") == null
                                 ? null
-                                : rs.getLong("banner_image_id"));
+                                : rs.getLong("banner_image_id"),
+                        rs.getBoolean("deleted"),
+                        toInstant(rs.getTimestamp("deleted_at")),
+                        rs.getObject("deleted_by_user_id") == null
+                                ? null
+                                : rs.getLong("deleted_by_user_id"),
+                        rs.getString("delete_reason"));
             };
 
     private final JdbcTemplate jdbcTemplate;
@@ -123,6 +130,7 @@ public class MatchJdbcDao implements MatchDao {
         values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy));
         values.put("status", new SqlParameterValue(Types.OTHER, status));
         values.put("banner_image_id", bannerImageId);
+        values.put("deleted", Boolean.FALSE);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
         values.put("updated_at", new Timestamp(System.currentTimeMillis()));
 
@@ -200,6 +208,23 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
+    public boolean softDeleteMatch(
+            final Long matchId, final Long deletedByUserId, final String deleteReason) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', deleted = TRUE,"
+                                + " deleted_at = CURRENT_TIMESTAMP, deleted_by_user_id = ?,"
+                                + " delete_reason = ?, updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ?",
+                        deletedByUserId,
+                        deleteReason,
+                        matchId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
     public Optional<Match> findById(final Long matchId) {
         final String sql =
                 MATCH_SELECT_WITH_JOINED_PLAYERS + BASE_FROM + " WHERE m.id = ? GROUP BY m.id";
@@ -255,6 +280,7 @@ public class MatchJdbcDao implements MatchDao {
                 List.of(EventVisibility.PUBLIC),
                 List.of(EventStatus.OPEN),
                 Boolean.TRUE);
+        sql.append(" AND m.deleted = FALSE");
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
         appendSort(sql, sort);
@@ -296,6 +322,7 @@ public class MatchJdbcDao implements MatchDao {
                 List.of(EventVisibility.PUBLIC),
                 List.of(EventStatus.OPEN),
                 Boolean.TRUE);
+        sql.append(" AND m.deleted = FALSE");
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
         sql.append(") filtered_matches");
@@ -726,6 +753,10 @@ public class MatchJdbcDao implements MatchDao {
 
         final ZonedDateTime start = now.minusDays(7);
         return new TimeRange(start.toInstant(), now.toInstant());
+    }
+
+    private static Instant toInstant(final Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
     }
 
     private record TimeRange(Instant start, Instant end) {}

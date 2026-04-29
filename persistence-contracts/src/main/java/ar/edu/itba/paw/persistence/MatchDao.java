@@ -77,6 +77,8 @@ public interface MatchDao {
 
     boolean cancelMatch(Long matchId, Long hostUserId);
 
+    boolean softDeleteMatch(Long matchId, Long deletedByUserId, String deleteReason);
+
     Optional<Match> findById(Long matchId);
 
     Optional<Match> findPublicMatchById(Long matchId);
