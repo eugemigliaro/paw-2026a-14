@@ -221,10 +221,6 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         requireHost(match, hostUserId);
 
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
-            throw new MatchParticipationException("closed", "The event is not open.");
-        }
-
         if (match.isRecurringOccurrence()
                 && matchParticipantDao.isSeriesJoinRequest(matchId, targetUserId)) {
             final int approvedRows =
@@ -235,6 +231,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                         "full", "The event is full; cannot approve more participants.");
             }
             return;
+        }
+
+        if (!"open".equalsIgnoreCase(match.getStatus())) {
+            throw new MatchParticipationException("closed", "The event is not open.");
         }
 
         if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
@@ -414,14 +414,6 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             return;
         }
 
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
-            throw new MatchParticipationException("closed", "The event is not open.");
-        }
-
-        if (!match.getStartsAt().isAfter(now)) {
-            throw new MatchParticipationException("started", "The event has already started.");
-        }
-
         if (!matchParticipantDao.hasInvitation(matchId, userId)) {
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
@@ -436,6 +428,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                         "no_invitation", "No pending invitation found for this series.");
             }
             return;
+        }
+
+        if (!"open".equalsIgnoreCase(match.getStatus())) {
+            throw new MatchParticipationException("closed", "The event is not open.");
+        }
+
+        if (!match.getStartsAt().isAfter(now)) {
+            throw new MatchParticipationException("started", "The event has already started.");
         }
 
         if (!matchParticipantDao.acceptInvite(matchId, userId)) {

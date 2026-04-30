@@ -401,6 +401,29 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
+    public void testApproveSeriesJoinRequestUsesFutureSeriesWhenAnchorIsClosed() {
+        // Arrange
+        final Match staleOccurrence =
+                createRecurringMatch(
+                        10L,
+                        "public",
+                        "approval_required",
+                        "cancelled",
+                        FIXED_NOW.minusSeconds(60),
+                        4,
+                        0,
+                        100L,
+                        1);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(staleOccurrence));
+        Mockito.when(matchParticipantDao.isSeriesJoinRequest(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.approveSeriesJoinRequest(100L, 20L, FIXED_NOW))
+                .thenReturn(1);
+
+        // Exercise and Assert
+        Assertions.assertDoesNotThrow(() -> matchParticipationService.approveRequest(10L, 1L, 20L));
+    }
+
+    @Test
     public void testInviteUserToSeriesInvitesEligibleDatesOnlyAndSendsOneMail() {
         // Arrange
         final Match selectedOccurrence =
@@ -594,6 +617,38 @@ public class MatchParticipationServiceImplTest {
 
         // Assert
         Assertions.assertEquals(2, acceptedRows.get());
+    }
+
+    @Test
+    public void testAcceptSeriesInviteUsesFutureSeriesWhenAnchorIsClosed() {
+        // Arrange
+        final Match staleOccurrence =
+                createRecurringMatch(
+                        10L,
+                        "private",
+                        "invite_only",
+                        "cancelled",
+                        FIXED_NOW.minusSeconds(60),
+                        4,
+                        0,
+                        100L,
+                        1);
+        final AtomicInteger acceptedRows = new AtomicInteger();
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(staleOccurrence));
+        Mockito.when(matchParticipantDao.hasInvitation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.isSeriesInvitation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, 20L, FIXED_NOW))
+                .thenAnswer(
+                        invocation -> {
+                            acceptedRows.set(1);
+                            return 1;
+                        });
+
+        // Exercise
+        matchParticipationService.acceptInvite(10L, 20L);
+
+        // Assert
+        Assertions.assertEquals(1, acceptedRows.get());
     }
 
     @Test

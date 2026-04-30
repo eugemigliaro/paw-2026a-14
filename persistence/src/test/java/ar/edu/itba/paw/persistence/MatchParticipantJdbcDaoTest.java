@@ -473,9 +473,14 @@ public class MatchParticipantJdbcDaoTest {
     public void testApproveSeriesJoinRequestExpandsOnePendingRequestToFutureOccurrences() {
         final Instant now = Instant.now();
         insertRecurringSeries(601L, now.plusSeconds(86400));
+        insertRecurringMatch(39L, 601L, 0, now.minusSeconds(86400), 2, "open", "approval_required");
         insertRecurringMatch(40L, 601L, 1, now.plusSeconds(86400), 2, "open", "approval_required");
         insertRecurringMatch(41L, 601L, 2, now.plusSeconds(172800), 2, "open", "approval_required");
         insertRecurringMatch(42L, 601L, 3, now.plusSeconds(259200), 1, "open", "approval_required");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (39, 2, 'pending_approval', CURRENT_TIMESTAMP, TRUE)");
         jdbcTemplate.update(
                 "INSERT INTO match_participants"
                         + " (match_id, user_id, status, joined_at, series_request)"
@@ -508,6 +513,33 @@ public class MatchParticipantJdbcDaoTest {
         Assertions.assertEquals(2, joinedRows);
         Assertions.assertEquals(0, pendingRows);
         Assertions.assertEquals(0, skippedRows);
+    }
+
+    @Test
+    public void testHasPendingSeriesRequestIgnoresStaleAnchors() {
+        final Instant now = Instant.now();
+        insertRecurringSeries(602L, now.plusSeconds(86400));
+        insertRecurringMatch(43L, 602L, 1, now.minusSeconds(86400), 4, "open", "approval_required");
+        insertRecurringMatch(
+                44L, 602L, 2, now.plusSeconds(86400), 4, "cancelled", "approval_required");
+        insertRecurringMatch(45L, 602L, 3, now.plusSeconds(172800), 4, "open", "approval_required");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (43, 2, 'pending_approval', CURRENT_TIMESTAMP, TRUE)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (44, 2, 'pending_approval', CURRENT_TIMESTAMP, TRUE)");
+
+        Assertions.assertFalse(matchParticipantDao.hasPendingSeriesRequest(602L, 2L));
+
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (45, 2, 'pending_approval', CURRENT_TIMESTAMP, TRUE)");
+
+        Assertions.assertTrue(matchParticipantDao.hasPendingSeriesRequest(602L, 2L));
     }
 
     @Test
@@ -627,7 +659,7 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
-    public void testFindInvitedMatchIdsCollapsesSeriesInvitationRows() {
+    public void testFindInvitedMatchIdsCollapsesSeriesInvitationsAndKeepsSingleInvites() {
         final Instant now = Instant.now();
         insertRecurringSeries(700L, now.plusSeconds(86400));
         insertRecurringMatch(70L, 700L, 1, now.plusSeconds(86400), 4, "open", "invite_only");
@@ -648,11 +680,36 @@ public class MatchParticipantJdbcDaoTest {
 
         final List<Long> invitedMatchIds = matchParticipantDao.findInvitedMatchIds(2L);
 
-        Assertions.assertEquals(List.of(70L), invitedMatchIds);
+        Assertions.assertEquals(List.of(70L, 72L), invitedMatchIds);
     }
 
     @Test
-    public void testIsSeriesInvitationDetectsMultiplePendingInvitesInSameSeries() {
+    public void testFindInvitedMatchIdsUsesNextFutureSeriesInvitationAnchor() {
+        final Instant now = Instant.now();
+        insertRecurringSeries(701L, now.plusSeconds(86400));
+        insertRecurringMatch(73L, 701L, 1, now.minusSeconds(86400), 4, "open", "invite_only");
+        insertRecurringMatch(74L, 701L, 2, now.plusSeconds(86400), 4, "open", "invite_only");
+        insertRecurringMatch(75L, 701L, 3, now.plusSeconds(172800), 4, "open", "invite_only");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (73, 2, 'invited', TIMESTAMP '2026-04-06 10:00:00', TRUE)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (74, 2, 'invited', TIMESTAMP '2026-04-06 10:00:00', TRUE)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (75, 2, 'invited', TIMESTAMP '2026-04-06 11:00:00', TRUE)");
+
+        final List<Long> invitedMatchIds = matchParticipantDao.findInvitedMatchIds(2L);
+
+        Assertions.assertEquals(List.of(74L), invitedMatchIds);
+    }
+
+    @Test
+    public void testIsSeriesInvitationUsesSeriesRequestFlag() {
         final Instant now = Instant.now();
         insertRecurringSeries(700L, now.plusSeconds(86400));
         insertRecurringMatch(70L, 700L, 1, now.plusSeconds(86400), 4, "open", "invite_only");
@@ -669,12 +726,19 @@ public class MatchParticipantJdbcDaoTest {
                         + " (match_id, user_id, status, joined_at, series_request)"
                         + " VALUES (71, 2, 'invited', CURRENT_TIMESTAMP, FALSE)");
 
+        Assertions.assertFalse(matchParticipantDao.isSeriesInvitation(70L, 2L));
+        Assertions.assertFalse(matchParticipantDao.isSeriesInvitation(71L, 2L));
+
+        jdbcTemplate.update(
+                "UPDATE match_participants SET series_request = TRUE"
+                        + " WHERE match_id = 70 AND user_id = 2");
+
         Assertions.assertTrue(matchParticipantDao.isSeriesInvitation(70L, 2L));
-        Assertions.assertTrue(matchParticipantDao.isSeriesInvitation(71L, 2L));
+        Assertions.assertFalse(matchParticipantDao.isSeriesInvitation(71L, 2L));
     }
 
     @Test
-    public void testAcceptSeriesInviteJoinsAllPendingSeriesInvitationRows() {
+    public void testAcceptSeriesInviteJoinsOnlySeriesInvitationRows() {
         final Instant now = Instant.now();
         insertRecurringSeries(700L, now.plusSeconds(86400));
         insertRecurringMatch(70L, 700L, 1, now.plusSeconds(86400), 4, "open", "invite_only");
@@ -696,15 +760,39 @@ public class MatchParticipantJdbcDaoTest {
         final int acceptedRows =
                 matchParticipantDao.acceptSeriesInvite(700L, 2L, now.minusSeconds(60));
 
-        Assertions.assertEquals(3, acceptedRows);
+        Assertions.assertEquals(2, acceptedRows);
         Assertions.assertEquals("joined", participantStatus(70L, 2L));
         Assertions.assertEquals("joined", participantStatus(71L, 2L));
-        Assertions.assertEquals("joined", participantStatus(72L, 2L));
+        Assertions.assertEquals("invited", participantStatus(72L, 2L));
         Assertions.assertFalse(matchParticipantDao.isSeriesInvitation(70L, 2L));
     }
 
     @Test
-    public void testDeclineSeriesInviteDeclinesAllPendingSeriesInvitationRows() {
+    public void testAcceptSeriesInviteClearsStaleInvitationAnchor() {
+        final Instant now = Instant.now();
+        insertRecurringSeries(702L, now.plusSeconds(86400));
+        insertRecurringMatch(76L, 702L, 1, now.minusSeconds(86400), 4, "open", "invite_only");
+        insertRecurringMatch(77L, 702L, 2, now.plusSeconds(86400), 4, "open", "invite_only");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (76, 2, 'invited', CURRENT_TIMESTAMP, TRUE)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants"
+                        + " (match_id, user_id, status, joined_at, series_request)"
+                        + " VALUES (77, 2, 'invited', CURRENT_TIMESTAMP, TRUE)");
+
+        final int acceptedRows =
+                matchParticipantDao.acceptSeriesInvite(702L, 2L, now.minusSeconds(60));
+
+        Assertions.assertEquals(1, acceptedRows);
+        Assertions.assertEquals("declined_invite", participantStatus(76L, 2L));
+        Assertions.assertEquals("joined", participantStatus(77L, 2L));
+        Assertions.assertFalse(matchParticipantDao.isSeriesInvitation(76L, 2L));
+    }
+
+    @Test
+    public void testDeclineSeriesInviteDeclinesOnlySeriesInvitationRows() {
         final Instant now = Instant.now();
         insertRecurringSeries(700L, now.plusSeconds(86400));
         insertRecurringMatch(70L, 700L, 1, now.plusSeconds(86400), 4, "open", "invite_only");
@@ -725,10 +813,10 @@ public class MatchParticipantJdbcDaoTest {
 
         final int declinedRows = matchParticipantDao.declineSeriesInvite(700L, 2L);
 
-        Assertions.assertEquals(3, declinedRows);
+        Assertions.assertEquals(2, declinedRows);
         Assertions.assertEquals("declined_invite", participantStatus(70L, 2L));
         Assertions.assertEquals("declined_invite", participantStatus(71L, 2L));
-        Assertions.assertEquals("declined_invite", participantStatus(72L, 2L));
+        Assertions.assertEquals("invited", participantStatus(72L, 2L));
         Assertions.assertFalse(matchParticipantDao.isSeriesInvitation(70L, 2L));
     }
 

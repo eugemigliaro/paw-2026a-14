@@ -527,11 +527,9 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                             + " AND match_id IN ("
                             + " SELECT id FROM matches"
                             + " WHERE series_id = ?"
-                            + " AND starts_at > ?"
                             + ")",
                     userId,
-                    seriesId,
-                    startsAfterTimestamp);
+                    seriesId);
         }
         return approvedRows;
     }
@@ -560,7 +558,11 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + " WHERE m.series_id = ?"
                                 + " AND mp.user_id = ?"
                                 + " AND mp.status = 'pending_approval'"
-                                + " AND mp.series_request = TRUE",
+                                + " AND mp.series_request = TRUE"
+                                + " AND m.visibility = 'public'"
+                                + " AND m.join_policy = 'approval_required'"
+                                + " AND m.status = 'open'"
+                                + " AND m.starts_at > CURRENT_TIMESTAMP",
                         Integer.class,
                         seriesId,
                         userId);
@@ -679,18 +681,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + " AND mp.user_id = ?"
                                 + " AND mp.status = 'invited'"
                                 + " AND m.series_id IS NOT NULL"
-                                + " AND ("
-                                + " mp.series_request = TRUE"
-                                + " OR EXISTS ("
-                                + " SELECT 1"
-                                + " FROM match_participants other_mp"
-                                + " JOIN matches other_m ON other_m.id = other_mp.match_id"
-                                + " WHERE other_mp.user_id = mp.user_id"
-                                + " AND other_mp.status = 'invited'"
-                                + " AND other_m.series_id = m.series_id"
-                                + " AND other_mp.match_id <> mp.match_id"
-                                + " )"
-                                + " )",
+                                + " AND mp.series_request = TRUE",
                         Integer.class,
                         matchId,
                         userId);
@@ -712,20 +703,37 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     @Override
     public int acceptSeriesInvite(
             final Long seriesId, final Long userId, final Instant startsAfter) {
-        return jdbcTemplate.update(
-                "UPDATE match_participants"
-                        + " SET status = 'joined', series_request = FALSE"
-                        + " WHERE user_id = ?"
-                        + " AND status = 'invited'"
-                        + " AND match_id IN ("
-                        + " SELECT id FROM matches"
-                        + " WHERE series_id = ?"
-                        + " AND status = 'open'"
-                        + " AND starts_at > ?"
-                        + ")",
-                userId,
-                seriesId,
-                Timestamp.from(startsAfter));
+        final int acceptedRows =
+                jdbcTemplate.update(
+                        "UPDATE match_participants"
+                                + " SET status = 'joined', series_request = FALSE"
+                                + " WHERE user_id = ?"
+                                + " AND status = 'invited'"
+                                + " AND series_request = TRUE"
+                                + " AND match_id IN ("
+                                + " SELECT id FROM matches"
+                                + " WHERE series_id = ?"
+                                + " AND status = 'open'"
+                                + " AND starts_at > ?"
+                                + ")",
+                        userId,
+                        seriesId,
+                        Timestamp.from(startsAfter));
+        if (acceptedRows > 0) {
+            jdbcTemplate.update(
+                    "UPDATE match_participants"
+                            + " SET status = 'declined_invite', series_request = FALSE"
+                            + " WHERE user_id = ?"
+                            + " AND status = 'invited'"
+                            + " AND series_request = TRUE"
+                            + " AND match_id IN ("
+                            + " SELECT id FROM matches"
+                            + " WHERE series_id = ?"
+                            + ")",
+                    userId,
+                    seriesId);
+        }
+        return acceptedRows;
     }
 
     @Override
@@ -748,6 +756,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         + " SET status = 'declined_invite', series_request = FALSE"
                         + " WHERE user_id = ?"
                         + " AND status = 'invited'"
+                        + " AND series_request = TRUE"
                         + " AND match_id IN ("
                         + " SELECT id FROM matches"
                         + " WHERE series_id = ?"
@@ -802,6 +811,17 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         + " WHERE mp.user_id = ?"
                         + " AND mp.status = 'invited'"
                         + " AND m.series_id IS NOT NULL"
+                        + " AND mp.series_request = FALSE"
+                        + " UNION ALL"
+                        + " SELECT mp.match_id, mp.joined_at, m.starts_at"
+                        + " FROM match_participants mp"
+                        + " JOIN matches m ON m.id = mp.match_id"
+                        + " WHERE mp.user_id = ?"
+                        + " AND mp.status = 'invited'"
+                        + " AND m.series_id IS NOT NULL"
+                        + " AND mp.series_request = TRUE"
+                        + " AND m.status = 'open'"
+                        + " AND m.starts_at > CURRENT_TIMESTAMP"
                         + " AND NOT EXISTS ("
                         + " SELECT 1"
                         + " FROM match_participants earlier"
@@ -810,12 +830,15 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         + " AND earlier.status = 'invited'"
                         + " AND earlier.series_request = TRUE"
                         + " AND em.series_id = m.series_id"
+                        + " AND em.status = 'open'"
+                        + " AND em.starts_at > CURRENT_TIMESTAMP"
                         + " AND (em.starts_at < m.starts_at"
                         + " OR (em.starts_at = m.starts_at AND em.id < m.id))"
                         + " )"
                         + " ) invited_matches"
                         + " ORDER BY joined_at ASC, starts_at ASC, match_id ASC",
                 Long.class,
+                userId,
                 userId,
                 userId);
     }
