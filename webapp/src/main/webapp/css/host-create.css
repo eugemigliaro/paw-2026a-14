@@ -11,7 +11,11 @@
 .create-form {
 	display: grid;
 	gap: 1.5rem;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	padding-inline: 1.5rem;
 }
+
+
 
 .form-card,
 .upload-card {
@@ -30,7 +34,7 @@
 }
 
 .form-card__grid--three {
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .field--hidden {
@@ -114,6 +118,7 @@
 }
 
 .create-layout__actions {
+	grid-column: 1 / -1;
 	background: linear-gradient(
 		180deg,
 		rgba(12, 111, 100, 0.06) 0%,
