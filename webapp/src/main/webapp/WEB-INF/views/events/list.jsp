@@ -33,6 +33,7 @@
 												<h1 class="page-heading__title events-header-title">
 													<c:out value="${listTitle}" />
 												</h1>
+
 											</div>
 
 											<div class="events-right-section">
@@ -104,8 +105,6 @@
 
 										<div class="events-filters-section">
 
-
-
 											<c:if test="${not empty listControls}">
 												<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
 
@@ -114,6 +113,16 @@
 															<button type="button" class="filter-dropdown__toggle">
 																<span class="filter-dropdown__icon">
 																	<c:choose>
+																		<c:when
+																			test="${fn:contains(fn:toLowerCase(group.title), 'category') || fn:contains(fn:toLowerCase(group.title), 'categoría')}">
+																			<svg viewBox="0 0 24 24" fill="none"
+																				stroke="currentColor" stroke-width="2"
+																				stroke-linecap="round"
+																				stroke-linejoin="round">
+																				<path d="M19 21l-7-7-7 7" />
+																				<polyline points="7 14 12 8 17 14" />
+																			</svg>
+																		</c:when>
 																		<c:when
 																			test="${fn:contains(fn:toLowerCase(group.title), 'sport') || fn:contains(fn:toLowerCase(group.title), 'deporte')}">
 																			<svg viewBox="0 0 24 24" fill="none"
@@ -368,6 +377,8 @@
 												</section>
 
 										</div>
+
+										<!-- Matches -->
 
 										<section class="matches-list-layout">
 											<section class="matches-list-content">

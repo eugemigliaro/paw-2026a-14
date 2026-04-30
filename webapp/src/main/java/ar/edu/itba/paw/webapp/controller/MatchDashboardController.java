@@ -126,6 +126,7 @@ public class MatchDashboardController {
                 selectedStatuses,
                 selectedSports,
                 selectedVisibility,
+                List.of(),
                 result,
                 messageSource.getMessage("host.dashboard.title", null, locale),
                 messageSource.getMessage("host.dashboard.description", null, locale),
@@ -193,6 +194,7 @@ public class MatchDashboardController {
                 selectedStatuses,
                 selectedSports,
                 selectedVisibility,
+                List.of(),
                 result,
                 messageSource.getMessage("host.finished.title", null, locale),
                 messageSource.getMessage("host.finished.description", null, locale),
@@ -255,6 +257,7 @@ public class MatchDashboardController {
                 selectedTimezone,
                 selectedStatuses,
                 selectedSports,
+                List.of(),
                 List.of(),
                 result,
                 messageSource.getMessage("player.past.title", null, locale),
@@ -319,6 +322,7 @@ public class MatchDashboardController {
                 selectedStatuses,
                 selectedSports,
                 List.of(),
+                List.of(),
                 result,
                 messageSource.getMessage("player.upcoming.title", null, locale),
                 messageSource.getMessage("player.upcoming.description", null, locale),
@@ -338,6 +342,7 @@ public class MatchDashboardController {
             @RequestParam(value = "tz", required = false) final String timezone,
             @RequestParam(value = "sport", required = false) final List<String> sports,
             @RequestParam(value = "status", required = false) final List<String> statuses,
+            @RequestParam(value = "category", required = false) final List<String> categories,
             @RequestParam(value = "filter", defaultValue = "upcoming") final String filter,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
@@ -345,6 +350,9 @@ public class MatchDashboardController {
         final List<String> selectedSports = normalizeSports(sports);
         final List<String> selectedStatuses =
                 normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
+        final List<String> selectedCategories =
+                normalizeValues(
+                        categories, List.of(), List.of("joined", "invited", "pending", "hosted"));
         final String selectedSort = normalizeSort(sort);
         final String searchQuery = normalizeQuery(query);
         final String selectedTimezone = normalizeTimezone(timezone);
@@ -362,6 +370,7 @@ public class MatchDashboardController {
                         encodeCsv(selectedSports),
                         encodeCsv(selectedStatuses),
                         selectedDateRange.startDate(),
+                        encodeCsv(selectedCategories),
                         selectedDateRange.endDate(),
                         minPrice,
                         maxPrice,
@@ -385,6 +394,7 @@ public class MatchDashboardController {
                 selectedStatuses,
                 selectedSports,
                 List.of(),
+                selectedCategories,
                 result,
                 messageSource.getMessage("events.title", null, locale),
                 messageSource.getMessage("events.description", null, locale),
@@ -407,6 +417,7 @@ public class MatchDashboardController {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
+            final List<String> selectedCategories,
             final PaginatedResult<Match> result,
             final String title,
             final String description,
@@ -429,6 +440,7 @@ public class MatchDashboardController {
         mav.addObject("selectedSports", selectedSports);
         mav.addObject("selectedStatuses", selectedStatuses);
         mav.addObject("selectedVisibility", selectedVisibility);
+        mav.addObject("selectedCategories", selectedCategories);
         mav.addObject("selectedTimezone", timezone);
         mav.addObject("selectedMinPriceValue", formatNullablePriceValue(minPrice));
         mav.addObject("selectedMaxPriceValue", formatNullablePriceValue(maxPrice));
@@ -447,7 +459,8 @@ public class MatchDashboardController {
                         timezone,
                         selectedStatuses,
                         selectedSports,
-                        selectedVisibility));
+                        selectedVisibility,
+                        selectedCategories));
         mav.addObject(
                 "events",
                 result.getItems().stream()
@@ -468,6 +481,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
+                        selectedCategories,
                         result));
         mav.addObject(
                 "previousPageHref",
@@ -485,6 +499,7 @@ public class MatchDashboardController {
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
+                                selectedCategories,
                                 result.getPage() - 1)
                         : null);
         mav.addObject(
@@ -503,6 +518,7 @@ public class MatchDashboardController {
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
+                                selectedCategories,
                                 result.getPage() + 1)
                         : null);
         return mav;
@@ -521,6 +537,7 @@ public class MatchDashboardController {
             final String sports,
             final String statuses,
             final String startDate,
+            final String categories,
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
@@ -530,35 +547,45 @@ public class MatchDashboardController {
             final int pageSize) {
         final Boolean isUpcoming = context == DateRangeContext.UPCOMING;
         final LocalDate today = LocalDate.now(ZoneId.of(timezone));
+        final List<String> categoryList =
+                normalizeCsvValues(categories == null ? List.of() : List.of(categories));
+        final boolean allowJoined = categoryList.isEmpty() || categoryList.contains("joined");
+        final boolean allowInvited = categoryList.isEmpty() || categoryList.contains("invited");
+        final boolean allowPending = categoryList.isEmpty() || categoryList.contains("pending");
+        final boolean allowHosted = categoryList.isEmpty() || categoryList.contains("hosted");
 
         // Fetch pending and invited matches (small, non-paginated lists).
         // Pending matches are split by date so stale pending requests show in past.
         final List<Match> pendingMatches =
-                matchParticipationService.findPendingRequestMatches(userId).stream()
-                        .filter(match -> belongsToContext(match, context, today, timezone))
-                        .filter(
-                                match ->
-                                        matchesFilters(
-                                                match,
-                                                sports,
-                                                statuses,
-                                                minPrice,
-                                                maxPrice,
-                                                searchQuery))
-                        .toList();
+                !allowPending
+                        ? List.of()
+                        : matchParticipationService.findPendingRequestMatches(userId).stream()
+                                .filter(match -> belongsToContext(match, context, today, timezone))
+                                .filter(
+                                        match ->
+                                                matchesFilters(
+                                                        match,
+                                                        sports,
+                                                        statuses,
+                                                        minPrice,
+                                                        maxPrice,
+                                                        searchQuery))
+                                .toList();
         final List<Match> invitedMatches =
-                matchParticipationService.findInvitedMatches(userId).stream()
-                        .filter(match -> belongsToContext(match, context, today, timezone))
-                        .filter(
-                                match ->
-                                        matchesFilters(
-                                                match,
-                                                sports,
-                                                statuses,
-                                                minPrice,
-                                                maxPrice,
-                                                searchQuery))
-                        .toList();
+                !allowInvited
+                        ? List.of()
+                        : matchParticipationService.findInvitedMatches(userId).stream()
+                                .filter(match -> belongsToContext(match, context, today, timezone))
+                                .filter(
+                                        match ->
+                                                matchesFilters(
+                                                        match,
+                                                        sports,
+                                                        statuses,
+                                                        minPrice,
+                                                        maxPrice,
+                                                        searchQuery))
+                                .toList();
 
         // Fetch joined and hosted matches with pagination
         // We fetch with a larger page size to ensure we get reasonable results even
@@ -566,38 +593,42 @@ public class MatchDashboardController {
         final int fetchPageSize =
                 pageSize * 3; // Fetch 3x the page size to have more data to work with
         final PaginatedResult<Match> joinedMatches =
-                matchService.findJoinedMatches(
-                        userId,
-                        isUpcoming,
-                        searchQuery,
-                        sports,
-                        null,
-                        statuses,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        sort,
-                        timezone,
-                        requestedPage,
-                        fetchPageSize);
+                !allowJoined
+                        ? new PaginatedResult<>(List.of(), 0, requestedPage, fetchPageSize)
+                        : matchService.findJoinedMatches(
+                                userId,
+                                isUpcoming,
+                                searchQuery,
+                                sports,
+                                null,
+                                statuses,
+                                startDate,
+                                endDate,
+                                minPrice,
+                                maxPrice,
+                                sort,
+                                timezone,
+                                requestedPage,
+                                fetchPageSize);
 
         final PaginatedResult<Match> hostedMatches =
-                matchService.findHostedMatches(
-                        userId,
-                        isUpcoming,
-                        searchQuery,
-                        sports,
-                        null,
-                        statuses,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        sort,
-                        timezone,
-                        requestedPage,
-                        fetchPageSize);
+                !allowHosted
+                        ? new PaginatedResult<>(List.of(), 0, requestedPage, fetchPageSize)
+                        : matchService.findHostedMatches(
+                                userId,
+                                isUpcoming,
+                                searchQuery,
+                                sports,
+                                null,
+                                statuses,
+                                startDate,
+                                endDate,
+                                minPrice,
+                                maxPrice,
+                                sort,
+                                timezone,
+                                requestedPage,
+                                fetchPageSize);
 
         // Combine all results and deduplicate by match ID
         final LinkedHashSet<Long> seenIds = new LinkedHashSet<>();
@@ -799,7 +830,8 @@ public class MatchDashboardController {
             final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
-            final List<String> selectedVisibility) {
+            final List<String> selectedVisibility,
+            final List<String> selectedCategories) {
         final boolean hostView = path.startsWith("/host/");
 
         final List<FilterGroupViewModel> filterGroups = new ArrayList<>();
@@ -818,7 +850,28 @@ public class MatchDashboardController {
                                 timezone,
                                 selectedStatuses,
                                 selectedSports,
-                                selectedVisibility)));
+                                selectedVisibility,
+                                selectedCategories)));
+
+        if ("/events".equals(path)) {
+            filterGroups.add(
+                    new FilterGroupViewModel(
+                            messageSource.getMessage("filter.category", null, locale),
+                            buildCategoryFilterOptions(
+                                    path,
+                                    locale,
+                                    searchQuery,
+                                    sort,
+                                    selectedStartDate,
+                                    selectedEndDate,
+                                    minPrice,
+                                    maxPrice,
+                                    timezone,
+                                    selectedStatuses,
+                                    selectedSports,
+                                    selectedVisibility,
+                                    selectedCategories)));
+        }
 
         if (hostView) {
             filterGroups.add(
@@ -837,6 +890,7 @@ public class MatchDashboardController {
                                     selectedStatuses,
                                     selectedSports,
                                     selectedVisibility,
+                                    selectedCategories,
                                     path.endsWith("/finished")
                                             ? HOST_FINISHED_STATUS_OPTIONS
                                             : HOST_ALL_STATUS_OPTIONS)));
@@ -855,7 +909,8 @@ public class MatchDashboardController {
                                     timezone,
                                     selectedStatuses,
                                     selectedSports,
-                                    selectedVisibility)));
+                                    selectedVisibility,
+                                    selectedCategories)));
         } else {
             filterGroups.add(
                     new FilterGroupViewModel(
@@ -873,6 +928,7 @@ public class MatchDashboardController {
                                     selectedStatuses,
                                     selectedSports,
                                     selectedVisibility,
+                                    selectedCategories,
                                     PLAYER_STATUS_OPTIONS)));
         }
         final List<SelectOptionViewModel> sortOptions =
@@ -889,6 +945,7 @@ public class MatchDashboardController {
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
+                                selectedCategories,
                                 "soonest",
                                 sort,
                                 messageSource.getMessage("feed.sort.soonest", null, locale)),
@@ -904,6 +961,7 @@ public class MatchDashboardController {
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
+                                selectedCategories,
                                 "price",
                                 sort,
                                 messageSource.getMessage("feed.sort.price", null, locale)),
@@ -919,6 +977,7 @@ public class MatchDashboardController {
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
+                                selectedCategories,
                                 "spots",
                                 sort,
                                 messageSource.getMessage("feed.sort.spots", null, locale)));
@@ -926,7 +985,7 @@ public class MatchDashboardController {
         return new MatchListControlsViewModel(
                 buildSearchAction(
                         path, locale, sort, null, null, null, null, timezone, List.of(), List.of(),
-                        List.of()),
+                        List.of(), List.of()),
                 buildSearchAction(
                         path,
                         locale,
@@ -938,7 +997,8 @@ public class MatchDashboardController {
                         timezone,
                         selectedStatuses,
                         selectedSports,
-                        selectedVisibility),
+                        selectedVisibility,
+                        selectedCategories),
                 messageSource.getMessage("feed.aria.search", null, locale),
                 searchQuery,
                 messageSource.getMessage("feed.search.placeholder", null, locale),
@@ -962,6 +1022,7 @@ public class MatchDashboardController {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
+            final List<String> selectedCategories,
             final PaginatedResult<Match> result) {
         if (result.getTotalPages() <= 1) {
             return List.of();
@@ -986,6 +1047,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
+                        selectedCategories,
                         1,
                         result.getPage()));
 
@@ -1008,6 +1070,7 @@ public class MatchDashboardController {
                             selectedStatuses,
                             selectedSports,
                             selectedVisibility,
+                            selectedCategories,
                             page,
                             result.getPage()));
         }
@@ -1030,6 +1093,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
+                        selectedCategories,
                         result.getTotalPages(),
                         result.getPage()));
 
@@ -1049,6 +1113,7 @@ public class MatchDashboardController {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
+            final List<String> selectedCategories,
             final int page,
             final int currentPage) {
         return new PaginationItemViewModel(
@@ -1066,6 +1131,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
+                        selectedCategories,
                         page),
                 page == currentPage,
                 false);
@@ -1084,6 +1150,7 @@ public class MatchDashboardController {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
+            final List<String> selectedCategories,
             final int page) {
         final UriComponentsBuilder builder =
                 UriComponentsBuilder.fromPath(path).queryParam("page", page);
@@ -1122,6 +1189,7 @@ public class MatchDashboardController {
         final String encodedStatuses = encodeCsv(selectedStatuses);
         final String encodedSports = encodeCsv(selectedSports);
         final String encodedVisibility = encodeCsv(selectedVisibility);
+        final String encodedCategories = encodeCsv(selectedCategories);
 
         if (encodedStatuses != null) {
             builder.queryParam("status", encodedStatuses);
@@ -1131,6 +1199,9 @@ public class MatchDashboardController {
         }
         if (encodedVisibility != null) {
             builder.queryParam("visibility", encodedVisibility);
+        }
+        if (encodedCategories != null) {
+            builder.queryParam("category", encodedCategories);
         }
 
         return builder.build().encode().toUriString();
@@ -1147,7 +1218,8 @@ public class MatchDashboardController {
             final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
-            final List<String> selectedVisibility) {
+            final List<String> selectedVisibility,
+            final List<String> selectedCategories) {
         return buildPageUrl(
                 path,
                 locale,
@@ -1161,6 +1233,7 @@ public class MatchDashboardController {
                 selectedStatuses,
                 selectedSports,
                 selectedVisibility,
+                selectedCategories,
                 1);
     }
 
@@ -1176,6 +1249,7 @@ public class MatchDashboardController {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
+            final List<String> selectedCategories,
             final String value,
             final String currentSort,
             final String label) {
@@ -1194,6 +1268,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
+                        selectedCategories,
                         1),
                 value.equalsIgnoreCase(currentSort));
     }
@@ -1211,6 +1286,7 @@ public class MatchDashboardController {
             final List<String> statuses,
             final List<String> sports,
             final List<String> visibility,
+            final List<String> categories,
             final boolean active,
             final String label) {
         return new FilterOptionViewModel(
@@ -1228,6 +1304,7 @@ public class MatchDashboardController {
                         statuses,
                         sports,
                         visibility,
+                        categories,
                         1),
                 null,
                 active);
@@ -1245,7 +1322,8 @@ public class MatchDashboardController {
             final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
-            final List<String> selectedVisibility) {
+            final List<String> selectedVisibility,
+            final List<String> selectedCategories) {
         return List.of(
                 filterOption(
                         path,
@@ -1260,6 +1338,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         List.of(),
                         selectedVisibility,
+                        selectedCategories,
                         selectedSports.isEmpty(),
                         messageSource.getMessage("filter.anySport", null, locale)),
                 filterOption(
@@ -1275,6 +1354,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         toggleValue(selectedSports, "football"),
                         selectedVisibility,
+                        selectedCategories,
                         selectedSports.contains("football"),
                         messageSource.getMessage("sport.football", null, locale)),
                 filterOption(
@@ -1290,6 +1370,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         toggleValue(selectedSports, "tennis"),
                         selectedVisibility,
+                        selectedCategories,
                         selectedSports.contains("tennis"),
                         messageSource.getMessage("sport.tennis", null, locale)),
                 filterOption(
@@ -1305,6 +1386,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         toggleValue(selectedSports, "basketball"),
                         selectedVisibility,
+                        selectedCategories,
                         selectedSports.contains("basketball"),
                         messageSource.getMessage("sport.basketball", null, locale)),
                 filterOption(
@@ -1320,6 +1402,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         toggleValue(selectedSports, "padel"),
                         selectedVisibility,
+                        selectedCategories,
                         selectedSports.contains("padel"),
                         messageSource.getMessage("sport.padel", null, locale)));
     }
@@ -1337,6 +1420,7 @@ public class MatchDashboardController {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
+            final List<String> selectedCategories,
             final List<String> allowedStatuses) {
         final List<FilterOptionViewModel> options = new ArrayList<>();
         options.add(
@@ -1353,6 +1437,7 @@ public class MatchDashboardController {
                         List.of(),
                         selectedSports,
                         selectedVisibility,
+                        selectedCategories,
                         selectedStatuses.isEmpty(),
                         messageSource.getMessage("filter.anyStatus", null, locale)));
 
@@ -1371,6 +1456,7 @@ public class MatchDashboardController {
                             toggleValue(selectedStatuses, status),
                             selectedSports,
                             selectedVisibility,
+                            selectedCategories,
                             selectedStatuses.contains(status),
                             messageSource.getMessage("match.status." + status, null, locale)));
         }
@@ -1390,7 +1476,8 @@ public class MatchDashboardController {
             final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
-            final List<String> selectedVisibility) {
+            final List<String> selectedVisibility,
+            final List<String> selectedCategories) {
         return List.of(
                 filterOption(
                         path,
@@ -1405,6 +1492,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         List.of(),
+                        selectedCategories,
                         selectedVisibility.isEmpty(),
                         messageSource.getMessage("filter.anyVisibility", null, locale)),
                 filterOption(
@@ -1420,6 +1508,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         toggleValue(selectedVisibility, "public"),
+                        selectedCategories,
                         selectedVisibility.contains("public"),
                         messageSource.getMessage("visibility.public", null, locale)),
                 filterOption(
@@ -1435,6 +1524,7 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         toggleValue(selectedVisibility, "private"),
+                        selectedCategories,
                         selectedVisibility.contains("private"),
                         messageSource.getMessage("visibility.private", null, locale)),
                 filterOption(
@@ -1450,8 +1540,106 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         toggleValue(selectedVisibility, "invite_only"),
+                        selectedCategories,
                         selectedVisibility.contains("invite_only"),
                         messageSource.getMessage("visibility.inviteOnly", null, locale)));
+    }
+
+    private List<FilterOptionViewModel> buildCategoryFilterOptions(
+            final String path,
+            final Locale locale,
+            final String searchQuery,
+            final String sort,
+            final String startDate,
+            final String endDate,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final String timezone,
+            final List<String> selectedStatuses,
+            final List<String> selectedSports,
+            final List<String> selectedVisibility,
+            final List<String> selectedCategories) {
+        return List.of(
+                filterOption(
+                        path,
+                        locale,
+                        searchQuery,
+                        sort,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        timezone,
+                        selectedStatuses,
+                        selectedSports,
+                        selectedVisibility,
+                        List.of(),
+                        selectedCategories.isEmpty(),
+                        messageSource.getMessage("filter.anyCategory", null, locale)),
+                filterOption(
+                        path,
+                        locale,
+                        searchQuery,
+                        sort,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        timezone,
+                        selectedStatuses,
+                        selectedSports,
+                        selectedVisibility,
+                        toggleValue(selectedCategories, "joined"),
+                        selectedCategories.contains("joined"),
+                        messageSource.getMessage("category.joined", null, locale)),
+                filterOption(
+                        path,
+                        locale,
+                        searchQuery,
+                        sort,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        timezone,
+                        selectedStatuses,
+                        selectedSports,
+                        selectedVisibility,
+                        toggleValue(selectedCategories, "invited"),
+                        selectedCategories.contains("invited"),
+                        messageSource.getMessage("category.invited", null, locale)),
+                filterOption(
+                        path,
+                        locale,
+                        searchQuery,
+                        sort,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        timezone,
+                        selectedStatuses,
+                        selectedSports,
+                        selectedVisibility,
+                        toggleValue(selectedCategories, "pending"),
+                        selectedCategories.contains("pending"),
+                        messageSource.getMessage("category.pending", null, locale)),
+                filterOption(
+                        path,
+                        locale,
+                        searchQuery,
+                        sort,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        timezone,
+                        selectedStatuses,
+                        selectedSports,
+                        selectedVisibility,
+                        toggleValue(selectedCategories, "hosted"),
+                        selectedCategories.contains("hosted"),
+                        messageSource.getMessage("category.hosted", null, locale)));
     }
 
     private static String normalizeQuery(final String query) {
