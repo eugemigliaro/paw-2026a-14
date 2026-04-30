@@ -23,6 +23,9 @@
 
 				<section class="feed-main">
 					<section class="feed-hero-stage">
+						<div class="hero-and-search">
+
+
 						<section class="hero-panel">
 							<c:if test="${not empty feedPage.eyebrow}">
 								<p class="eyebrow"><c:out value="${feedPage.eyebrow}" /></p>
@@ -64,10 +67,8 @@
 								<form:errors path="q" cssClass="search-panel__error" element="p" />
 							</form:form>
 						</section>
-
+					</div>
 						<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
-							<h2 class="filter-rail__main-title"><spring:message code="filter.title" /></h2>
-
 							<c:forEach var="group" items="${feedPage.filterGroups}">
 								<div class="filter-dropdown" data-filter-name="${group.title}">
 									<button type="button" class="filter-dropdown__toggle">
@@ -192,38 +193,36 @@
 								variant="primary"
 								size="sm"
 								className="filter-rail__clear" />
-						</div>
-					</section>
 
-						<form method="get" action="${feedFormAction}" class="sort-panel" aria-label="${sortAriaLabel}">
-							<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
-							<c:forEach var="selectedSport" items="${selectedSports}">
-								<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
-							</c:forEach>
-							<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
-							<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
-							<input
-								type="hidden"
-								name="tz"
-								value="<c:out value='${selectedTimezone}' />"
-								data-browser-timezone-field="true" />
-							<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
-							<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
-							<input type="hidden" name="page" value="1" />
-							<label class="field sort-panel__field" for="sort-select">
-								<span class="field__label"><spring:message code="feed.sortBy" /></span>
-								<select
-									id="sort-select"
-									name="sort"
-									class="field__control field__control--select sort-panel__select"
-									onchange="this.form.submit()">
-									<option value="soonest" ${selectedSort == 'soonest' ? 'selected="selected"' : ''}><spring:message code="feed.sort.soonest" /></option>
-									<option value="price" ${selectedSort == 'price' ? 'selected="selected"' : ''}><spring:message code="feed.sort.price" /></option>
-									<option value="spots" ${selectedSort == 'spots' ? 'selected="selected"' : ''}><spring:message code="feed.sort.spots" /></option>
-								</select>
-							</label>
-						</form>
-					</section>
+							<form method="get" action="${feedFormAction}" class="sort-panel" aria-label="${sortAriaLabel}">
+								<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
+								<c:forEach var="selectedSport" items="${selectedSports}">
+									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
+								</c:forEach>
+								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
+								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
+								<input
+									type="hidden"
+									name="tz"
+									value="<c:out value='${selectedTimezone}' />"
+									data-browser-timezone-field="true" />
+								<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
+								<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
+								<input type="hidden" name="page" value="1" />
+								<label class="field sort-panel__field" for="sort-select">
+									<span class="field__label"><spring:message code="feed.sortBy" /></span>
+									<select
+										id="sort-select"
+										name="sort"
+										class="field__control field__control--select sort-panel__select"
+										onchange="this.form.submit()">
+										<option value="soonest" ${selectedSort == 'soonest' ? 'selected="selected"' : ''}><spring:message code="feed.sort.soonest" /></option>
+										<option value="price" ${selectedSort == 'price' ? 'selected="selected"' : ''}><spring:message code="feed.sort.price" /></option>
+										<option value="spots" ${selectedSort == 'spots' ? 'selected="selected"' : ''}><spring:message code="feed.sort.spots" /></option>
+									</select>
+								</label>
+							</form>
+						</div>
 
 					<section>
 						<div class="section-head section-head--feed-list">

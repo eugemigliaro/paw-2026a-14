@@ -23,6 +23,7 @@
 									<spring:message var="filtersAriaLabel" code="feed.aria.filters" />
 									<spring:message var="searchAriaLabel" code="feed.aria.search" />
 									<spring:message var="sortAriaLabel" code="feed.aria.sort" />
+									<spring:message var="searchPlaceholder" code="events.search.placeholder" />
 
 									<main class="page-shell page-shell--matches-list">
 
@@ -72,7 +73,7 @@
 													</c:if>
 													<div class="filters-bar__search-row">
 														<form:input path="q" cssClass="filters-bar__search-input"
-															placeholder="${listControls.searchPlaceholder}" />
+															placeholder="${searchPlaceholder}" />
 														<ui:button type="submit" variant="primary"
 															className="filters-bar__search-submit">
 															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"

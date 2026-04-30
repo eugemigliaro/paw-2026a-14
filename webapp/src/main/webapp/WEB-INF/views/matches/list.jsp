@@ -88,6 +88,8 @@
 					</section>
 				</section>
 
+				<div class="events-filters-section">
+
 				<c:if test="${not empty listControls}">
 					<section class="matches-list-layout">
 						<aside class="matches-list-sidebar" aria-label="${filtersAriaLabel}">
@@ -182,7 +184,7 @@
 								</section>
 							</div>
 						</aside>
-
+					</div>
 						<section class="matches-list-content">
 							<c:choose>
 								<c:when test="${empty events}">
