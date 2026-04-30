@@ -90,6 +90,10 @@ public final class ShellViewModelFactory {
                                     UrlUtils.withLang("/host/matches", locale),
                                     "/host/matches".equals(activePath)),
                             new NavItemViewModel(
+                                    ms.getMessage("nav.host.joinRequests", null, locale),
+                                    UrlUtils.withLang("/host/requests", locale),
+                                    "/host/requests".equals(activePath)),
+                            new NavItemViewModel(
                                     ms.getMessage("nav.host.finishedEvents", null, locale),
                                     UrlUtils.withLang("/host/matches/finished", locale),
                                     "/host/matches/finished".equals(activePath)));

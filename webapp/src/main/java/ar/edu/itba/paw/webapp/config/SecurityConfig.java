@@ -60,7 +60,28 @@ public class SecurityConfig {
                                                         "/matches/*/reservations",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
+                                                        "/matches/*/reservations/cancel",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/recurring-reservations",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/series-reservations",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/recurring-reservations/cancel",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/series-reservations/cancel",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
                                                         "/matches/*/join-requests",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/recurring-join-requests",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/series-join-requests",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
                                                         "/matches/*/join-requests/cancel",

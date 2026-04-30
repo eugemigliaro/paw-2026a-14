@@ -469,6 +469,47 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class EventOccurrenceViewModel {
+        private final String href;
+        private final String schedule;
+        private final String statusLabel;
+        private final String statusTone;
+        private final boolean current;
+
+        public EventOccurrenceViewModel(
+                final String href,
+                final String schedule,
+                final String statusLabel,
+                final String statusTone,
+                final boolean current) {
+            this.href = href;
+            this.schedule = schedule;
+            this.statusLabel = statusLabel;
+            this.statusTone = statusTone;
+            this.current = current;
+        }
+
+        public String getHref() {
+            return href;
+        }
+
+        public String getSchedule() {
+            return schedule;
+        }
+
+        public String getStatusLabel() {
+            return statusLabel;
+        }
+
+        public String getStatusTone() {
+            return statusTone;
+        }
+
+        public boolean isCurrent() {
+            return current;
+        }
+    }
+
     public static final class ParticipantViewModel {
         private final String username;
         private final String avatarLabel;
@@ -533,16 +574,33 @@ public final class PawUiViewModels {
         private final String avatarLabel;
         private final String approveUrl;
         private final String rejectUrl;
+        private final String matchTitle;
+        private final String matchHref;
+        private final boolean seriesRequest;
 
         public PendingRequestViewModel(
                 final String username,
                 final String avatarLabel,
                 final String approveUrl,
                 final String rejectUrl) {
+            this(username, avatarLabel, approveUrl, rejectUrl, null, null, false);
+        }
+
+        public PendingRequestViewModel(
+                final String username,
+                final String avatarLabel,
+                final String approveUrl,
+                final String rejectUrl,
+                final String matchTitle,
+                final String matchHref,
+                final boolean seriesRequest) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.approveUrl = approveUrl;
             this.rejectUrl = rejectUrl;
+            this.matchTitle = matchTitle;
+            this.matchHref = matchHref;
+            this.seriesRequest = seriesRequest;
         }
 
         public String getUsername() {
@@ -559,6 +617,18 @@ public final class PawUiViewModels {
 
         public String getRejectUrl() {
             return rejectUrl;
+        }
+
+        public String getMatchTitle() {
+            return matchTitle;
+        }
+
+        public String getMatchHref() {
+            return matchHref;
+        }
+
+        public boolean isSeriesRequest() {
+            return seriesRequest;
         }
     }
 
@@ -602,12 +672,22 @@ public final class PawUiViewModels {
         private final EventCardViewModel card;
         private final String acceptUrl;
         private final String declineUrl;
+        private final boolean seriesInvite;
 
         public InvitedMatchViewModel(
                 final EventCardViewModel card, final String acceptUrl, final String declineUrl) {
+            this(card, acceptUrl, declineUrl, false);
+        }
+
+        public InvitedMatchViewModel(
+                final EventCardViewModel card,
+                final String acceptUrl,
+                final String declineUrl,
+                final boolean seriesInvite) {
             this.card = card;
             this.acceptUrl = acceptUrl;
             this.declineUrl = declineUrl;
+            this.seriesInvite = seriesInvite;
         }
 
         public EventCardViewModel getCard() {
@@ -620,6 +700,10 @@ public final class PawUiViewModels {
 
         public String getDeclineUrl() {
             return declineUrl;
+        }
+
+        public boolean isSeriesInvite() {
+            return seriesInvite;
         }
     }
 
@@ -639,6 +723,7 @@ public final class PawUiViewModels {
         private final String availabilityLabel;
         private final String ctaLabel;
         private final List<EventCardViewModel> nearbyEvents;
+        private final List<EventOccurrenceViewModel> occurrences;
 
         public EventDetailPageViewModel(
                 final EventCardViewModel event,
@@ -655,7 +740,8 @@ public final class PawUiViewModels {
                 final List<BookingDetailViewModel> bookingDetails,
                 final String availabilityLabel,
                 final String ctaLabel,
-                final List<EventCardViewModel> nearbyEvents) {
+                final List<EventCardViewModel> nearbyEvents,
+                final List<EventOccurrenceViewModel> occurrences) {
             this.event = event;
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
@@ -671,6 +757,7 @@ public final class PawUiViewModels {
             this.availabilityLabel = availabilityLabel;
             this.ctaLabel = ctaLabel;
             this.nearbyEvents = nearbyEvents;
+            this.occurrences = occurrences;
         }
 
         public EventCardViewModel getEvent() {
@@ -731,6 +818,10 @@ public final class PawUiViewModels {
 
         public List<EventCardViewModel> getNearbyEvents() {
             return nearbyEvents;
+        }
+
+        public List<EventOccurrenceViewModel> getOccurrences() {
+            return occurrences;
         }
     }
 

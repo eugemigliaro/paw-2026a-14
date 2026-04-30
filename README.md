@@ -45,14 +45,19 @@ This repository uses **SLF4J + Logback** for application logging.
 
 ### Run locally
 
-Create `config/local.properties` from `config/local.example.properties`, then run:
+Create `config/local.properties` from `config/local.example.properties`, then install the current
+multi-module snapshots and run the webapp:
 
 ```sh
+mvn clean install
 cd webapp
 mvn jetty:run
 ```
 
 `mvn jetty:run` uses the default `local` Maven profile, so no extra `source` or environment export is needed.
+Run `mvn install -DskipTests` again after changing classes in `models`, `service-contracts`,
+`persistence-contracts`, `persistence`, or `services`; otherwise Jetty may load stale
+`1.0-SNAPSHOT` jars from the local Maven repository.
 
 ### Build For Pampero
 

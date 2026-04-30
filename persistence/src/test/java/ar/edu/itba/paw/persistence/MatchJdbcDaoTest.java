@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.test.annotation.Rollback;
@@ -78,6 +79,98 @@ public class MatchJdbcDaoTest {
                         20);
         Assertions.assertEquals(1, found.size());
         Assertions.assertEquals(Sport.TENNIS, found.get(0).getSport());
+    }
+
+    @Test
+    public void testCreateRecurringMatchPersistsSeriesOccurrences() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        hostUserId,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+        final Match first =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Stadium A",
+                        "Weekly Tennis",
+                        "Open match",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        1);
+        final Match second =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Stadium A",
+                        "Weekly Tennis",
+                        "Open match",
+                        startsAt.plusWeeks(1).toInstant(),
+                        endsAt.plusWeeks(1).toInstant(),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        2);
+
+        final List<Match> occurrences = matchDao.findSeriesOccurrences(seriesId);
+
+        Assertions.assertEquals(2, occurrences.size());
+        Assertions.assertEquals(first.getId(), occurrences.get(0).getId());
+        Assertions.assertEquals(second.getId(), occurrences.get(1).getId());
+        Assertions.assertEquals(seriesId, occurrences.get(0).getSeriesId());
+        Assertions.assertEquals(1, occurrences.get(0).getSeriesOccurrenceIndex());
+    }
+
+    @Test
+    public void testCreateRecurringMatchRejectsIncompleteSeriesIdentity() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        hostUserId,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+
+        Assertions.assertThrows(
+                DataIntegrityViolationException.class,
+                () ->
+                        matchDao.createMatch(
+                                hostUserId,
+                                "Stadium A",
+                                "Incomplete Weekly Tennis",
+                                "Open match",
+                                startsAt.toInstant(),
+                                endsAt.toInstant(),
+                                4,
+                                BigDecimal.ZERO,
+                                Sport.TENNIS,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                seriesId,
+                                null));
     }
 
     @Test
@@ -450,7 +543,8 @@ public class MatchJdbcDaoTest {
                         10,
                         new BigDecimal("15"),
                         Sport.TENNIS,
-                        "public",
+                        "private",
+                        "invite_only",
                         "open",
                         null);
 
@@ -461,6 +555,8 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Updated Title", found.getTitle());
         Assertions.assertEquals("Updated Description", found.getDescription());
         Assertions.assertEquals(Sport.TENNIS, found.getSport());
+        Assertions.assertEquals("private", found.getVisibility());
+        Assertions.assertEquals("invite_only", found.getJoinPolicy());
         Assertions.assertEquals(10, found.getMaxPlayers());
         Assertions.assertEquals(new BigDecimal("15.00"), found.getPricePerPlayer());
     }
@@ -534,6 +630,67 @@ public class MatchJdbcDaoTest {
 
         Assertions.assertTrue(cancelled);
         Assertions.assertEquals("cancelled", found.getStatus());
+    }
+
+    @Test
+    public void testCancelMatchCancelsOnlySelectedRecurringOccurrence() {
+        // Arrange
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        hostUserId,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+        final Match firstOccurrence =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Weekly Padel",
+                        "First occurrence",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        1);
+        final Match secondOccurrence =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Weekly Padel",
+                        "Second occurrence",
+                        startsAt.plusWeeks(1).toInstant(),
+                        endsAt.plusWeeks(1).toInstant(),
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        seriesId,
+                        2);
+
+        // Exercise
+        final boolean cancelled = matchDao.cancelMatch(secondOccurrence.getId(), hostUserId);
+
+        // Assert
+        final List<Match> occurrences = matchDao.findSeriesOccurrences(seriesId);
+        Assertions.assertTrue(cancelled);
+        Assertions.assertEquals(firstOccurrence.getId(), occurrences.get(0).getId());
+        Assertions.assertEquals("open", occurrences.get(0).getStatus());
+        Assertions.assertEquals(secondOccurrence.getId(), occurrences.get(1).getId());
+        Assertions.assertEquals("cancelled", occurrences.get(1).getStatus());
     }
 
     @Test
