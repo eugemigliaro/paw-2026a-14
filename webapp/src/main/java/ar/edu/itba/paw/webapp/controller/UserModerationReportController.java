@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.ReportStatus;
+import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
@@ -11,8 +12,13 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -38,10 +44,19 @@ public class UserModerationReportController {
     }
 
     @GetMapping
-    public ModelAndView showMyReports(final Locale locale) {
+    public ModelAndView showMyReports(
+            @RequestParam(value = "type", required = false) final List<String> typeFilters,
+            @RequestParam(value = "status", required = false) final List<String> statusFilters,
+            final Locale locale) {
         final long userId = currentUserId();
+        final List<ReportTargetType> selectedTypes =
+                parseEnumFilters(typeFilters, ReportTargetType::fromDbValue);
+        final List<ReportStatus> selectedStatuses =
+                parseEnumFilters(statusFilters, ReportStatus::fromDbValue);
         final List<UserReportViewModel> reports =
-                moderationService.findReportsByReporter(userId).stream()
+                moderationService
+                        .findReportsByReporter(userId, selectedTypes, selectedStatuses)
+                        .stream()
                         .map(report -> toViewModel(report, locale))
                         .toList();
 
@@ -60,6 +75,11 @@ public class UserModerationReportController {
                 messageSource.getMessage(
                         "reports.mine.count", new Object[] {reports.size()}, locale));
         mav.addObject("reports", reports);
+        mav.addObject(
+                "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
+        mav.addObject(
+                "selectedStatuses",
+                selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
         return mav;
     }
 
@@ -117,7 +137,7 @@ public class UserModerationReportController {
         return new UserReportViewModel(
                 report.getId(),
                 report.getTargetType() == null ? "" : report.getTargetType().getDbValue(),
-                report.getTargetKey(),
+                moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()),
                 report.getReason() == null ? "" : report.getReason().getDbValue(),
                 report.getStatus() == null ? "" : report.getStatus().getDbValue(),
                 report.getResolution() == null ? "" : report.getResolution().getDbValue(),
@@ -142,6 +162,20 @@ public class UserModerationReportController {
                         .withLocale(locale)
                         .withZone(ZoneId.systemDefault())
                         .format(instant);
+    }
+
+    private static <T> List<T> parseEnumFilters(
+            final List<String> rawValues, final Function<String, Optional<T>> parser) {
+        if (rawValues == null || rawValues.isEmpty()) {
+            return List.of();
+        }
+        final Set<T> parsed =
+                rawValues.stream()
+                        .filter(value -> value != null && !value.isBlank())
+                        .map(parser)
+                        .flatMap(Optional::stream)
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+        return List.copyOf(parsed);
     }
 
     public static final class UserReportViewModel {

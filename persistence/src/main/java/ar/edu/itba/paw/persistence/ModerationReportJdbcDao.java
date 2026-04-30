@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -133,10 +134,24 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
 
     @Override
     public List<ModerationReport> findReportsByReporter(final Long reporterUserId) {
-        return jdbcTemplate.query(
-                "SELECT * FROM moderation_reports WHERE reporter_user_id = ? ORDER BY created_at DESC, id DESC",
-                MODERATION_REPORT_ROW_MAPPER,
-                reporterUserId);
+        return findReportsByReporter(reporterUserId, List.of(), List.of());
+    }
+
+    @Override
+    public List<ModerationReport> findReportsByReporter(
+            final Long reporterUserId,
+            final List<ReportTargetType> targetTypes,
+            final List<ReportStatus> statuses) {
+        final StringBuilder sql =
+                new StringBuilder("SELECT * FROM moderation_reports WHERE reporter_user_id = ?");
+        final List<Object> args = new LinkedList<>();
+        args.add(reporterUserId);
+
+        appendEnumFilter(sql, args, "target_type", targetTypes);
+        appendEnumFilter(sql, args, "status", statuses);
+
+        sql.append(" ORDER BY created_at DESC, id DESC");
+        return jdbcTemplate.query(sql.toString(), MODERATION_REPORT_ROW_MAPPER, args.toArray());
     }
 
     @Override
@@ -265,6 +280,30 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
 
     private static String selectByIdSql() {
         return "SELECT * FROM moderation_reports WHERE id = ?";
+    }
+
+    private static <T> void appendEnumFilter(
+            final StringBuilder sql,
+            final List<Object> args,
+            final String column,
+            final List<T> values) {
+        if (values == null || values.isEmpty()) {
+            return;
+        }
+
+        sql.append(" AND ").append(column).append(" IN (");
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                sql.append(',');
+            }
+            sql.append('?');
+            if (values.get(i) instanceof ReportTargetType targetType) {
+                args.add(new SqlParameterValue(Types.OTHER, targetType.getDbValue()));
+            } else if (values.get(i) instanceof ReportStatus status) {
+                args.add(new SqlParameterValue(Types.OTHER, status.getDbValue()));
+            }
+        }
+        sql.append(')');
     }
 
     private static Instant toInstant(final Timestamp timestamp) {

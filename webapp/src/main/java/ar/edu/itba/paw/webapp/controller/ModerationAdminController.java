@@ -229,7 +229,7 @@ public class ModerationAdminController {
                 report.getId(),
                 report.getReporterUserId(),
                 report.getTargetType() == null ? "" : report.getTargetType().getDbValue(),
-                report.getTargetKey(),
+                moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()),
                 report.getReason() == null ? "" : report.getReason().getDbValue(),
                 report.getStatus() == null ? "" : report.getStatus().getDbValue(),
                 report.getDetails(),

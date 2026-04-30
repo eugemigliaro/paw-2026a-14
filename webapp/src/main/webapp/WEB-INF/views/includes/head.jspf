@@ -28,6 +28,7 @@
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
 <c:url var="overflowMenuHref" value="/js/overflow-menu.js" />
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
+<c:url var="reportFiltersHref" value="/js/report-filters.js" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
 <link rel="stylesheet" href="${cssComponentsHref}" />
 <link rel="stylesheet" href="${cssBaseHref}" />
@@ -49,3 +50,4 @@
 <script defer src="${hostJoinPolicyGuardHref}"></script>
 <script defer src="${overflowMenuHref}"></script>
 <script defer src="${reportDropdownsHref}"></script>
+<script defer src="${reportFiltersHref}"></script>

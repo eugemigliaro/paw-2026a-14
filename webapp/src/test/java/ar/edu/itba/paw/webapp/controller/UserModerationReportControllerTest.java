@@ -61,10 +61,28 @@ class UserModerationReportControllerTest {
     @Test
     void getMyReportsRendersList() throws Exception {
         authenticateUser(7L);
-        Mockito.when(moderationService.findReportsByReporter(7L))
+        Mockito.when(moderationService.findReportsByReporter(7L, List.of(), List.of()))
                 .thenReturn(List.of(sampleReport()));
 
         mockMvc.perform(get("/reports/mine"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("reports/mine/list"));
+    }
+
+    @Test
+    void getMyReportsAppliesBackendFilters() throws Exception {
+        authenticateUser(7L);
+        Mockito.when(
+                        moderationService.findReportsByReporter(
+                                7L,
+                                List.of(ReportTargetType.MATCH, ReportTargetType.REVIEW),
+                                List.of(ReportStatus.PENDING, ReportStatus.RESOLVED)))
+                .thenReturn(List.of(sampleReport()));
+
+        mockMvc.perform(
+                        get("/reports/mine")
+                                .param("type", "match", "review")
+                                .param("status", "pending", "resolved"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reports/mine/list"));
     }

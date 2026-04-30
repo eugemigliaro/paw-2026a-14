@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
 import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.ReviewDeleteReason;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.persistence.MatchDao;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -54,6 +56,7 @@ public class ModerationServiceImpl implements ModerationService {
     private final MailProperties mailProperties;
     private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MatchService matchService;
+    private final MessageSource messageSource;
     private final Clock clock;
 
     @Autowired
@@ -68,6 +71,7 @@ public class ModerationServiceImpl implements ModerationService {
             final MailProperties mailProperties,
             final ThymeleafMailTemplateRenderer templateRenderer,
             final MatchService matchService,
+            final MessageSource messageSource,
             final Clock clock) {
         this.userBanDao = userBanDao;
         this.moderationReportDao = moderationReportDao;
@@ -79,6 +83,7 @@ public class ModerationServiceImpl implements ModerationService {
         this.mailProperties = mailProperties;
         this.templateRenderer = templateRenderer;
         this.matchService = matchService;
+        this.messageSource = messageSource;
         this.clock = clock;
     }
 
@@ -153,12 +158,13 @@ public class ModerationServiceImpl implements ModerationService {
             throw new ModerationException("report_limit", "Report limit reached.");
         }
 
-        final String targetKey = reportKey(targetType, targetId);
+        final String targetKey = resolveTargetName(targetType, targetId);
         final boolean duplicateReport =
                 moderationReportDao.findReportsByReporter(reporterUserId).stream()
                         .anyMatch(
                                 report ->
-                                        report.getTargetKey().equals(targetKey)
+                                        report.getTargetType() == targetType
+                                                && report.getTargetId().equals(targetId)
                                                 && isActiveReport(report.getStatus()));
         if (duplicateReport) {
             throw new ModerationException("duplicate_report", "Report already exists.");
@@ -206,10 +212,18 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     public List<ModerationReport> findReportsByReporter(final Long reporterUserId) {
+        return findReportsByReporter(reporterUserId, List.of(), List.of());
+    }
+
+    @Override
+    public List<ModerationReport> findReportsByReporter(
+            final Long reporterUserId,
+            final List<ReportTargetType> targetTypes,
+            final List<ReportStatus> statuses) {
         if (reporterUserId == null) {
             throw new ModerationException("invalid_report", "Reporter user is required.");
         }
-        return moderationReportDao.findReportsByReporter(reporterUserId);
+        return moderationReportDao.findReportsByReporter(reporterUserId, targetTypes, statuses);
     }
 
     @Override
@@ -273,13 +287,16 @@ public class ModerationServiceImpl implements ModerationService {
         if (report.getTargetType() != ReportTargetType.USER) {
             throw new ModerationException("invalid_report", "Report target is not a user.");
         }
+
+        final Locale locale = currentLocale();
         final int safeBanDays =
                 banDurationDays <= 0 ? DEFAULT_BAN_DURATION_DAYS : Math.min(banDurationDays, 365);
         final Instant bannedUntil = Instant.now(clock).plusSeconds(safeBanDays * 24L * 3600L);
         final String normalizedBanReason = normalizeText(banReason, 2000);
         final String effectiveReason =
                 normalizedBanReason == null
-                        ? "Report #" + reportId + " moderation action"
+                        ? messageSource.getMessage(
+                                "moderation.action.defaultReason", new Object[] {reportId}, locale)
                         : normalizedBanReason;
         banUser(report.getTargetId(), adminUserId, bannedUntil, effectiveReason);
         if (!moderationReportDao.resolveReport(
@@ -459,8 +476,52 @@ public class ModerationServiceImpl implements ModerationService {
                 || status == ReportStatus.APPEALED;
     }
 
-    private static String reportKey(final ReportTargetType targetType, final Long targetId) {
-        return targetType.getDbValue() + ":" + targetId;
+    @Override
+    public String resolveTargetName(final ReportTargetType targetType, final Long targetId) {
+        final Locale locale = currentLocale();
+        final String name =
+                switch (targetType) {
+                    case USER ->
+                            userDao.findById(targetId)
+                                    .map(User::getUsername)
+                                    .orElseGet(
+                                            () ->
+                                                    messageSource.getMessage(
+                                                            "moderation.target.user.fallback",
+                                                            new Object[] {targetId},
+                                                            locale));
+                    case MATCH ->
+                            matchDao.findById(targetId)
+                                    .map(Match::getTitle)
+                                    .orElseGet(
+                                            () ->
+                                                    messageSource.getMessage(
+                                                            "moderation.target.match.fallback",
+                                                            new Object[] {targetId},
+                                                            locale));
+                    case REVIEW ->
+                            playerReviewDao
+                                    .findByIdIncludingDeleted(targetId)
+                                    .flatMap(review -> userDao.findById(review.getReviewerUserId()))
+                                    .map(User::getUsername)
+                                    .map(
+                                            username ->
+                                                    messageSource.getMessage(
+                                                            "moderation.target.review.label",
+                                                            new Object[] {username},
+                                                            locale))
+                                    .orElseGet(
+                                            () ->
+                                                    messageSource.getMessage(
+                                                            "moderation.target.review.fallback",
+                                                            new Object[] {targetId},
+                                                            locale));
+                };
+
+        if (name.length() <= 64) {
+            return name;
+        }
+        return name.substring(0, 61) + "...";
     }
 
     private static String normalizeText(final String value, final int maxLength) {
@@ -505,7 +566,10 @@ public class ModerationServiceImpl implements ModerationService {
                     Instant.now(clock).plusSeconds(DEFAULT_BAN_DURATION_DAYS * 24L * 3600L);
             final String reason =
                     resolutionDetails == null
-                            ? "Report #" + report.getId() + " moderation action"
+                            ? messageSource.getMessage(
+                                    "moderation.action.defaultReason",
+                                    new Object[] {report.getId()},
+                                    currentLocale())
                             : resolutionDetails;
             banUser(report.getTargetId(), adminUserId, bannedUntil, reason);
         }

@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,6 +35,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.StaticMessageSource;
 
 @ExtendWith(MockitoExtension.class)
 public class ModerationServiceImplTest {
@@ -67,7 +70,18 @@ public class ModerationServiceImplTest {
                         mailProperties,
                         templateRenderer,
                         matchService,
+                        messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+    }
+
+    private static MessageSource messageSource() {
+        final StaticMessageSource messageSource = new StaticMessageSource();
+        messageSource.addMessage("ban.period.unknown", Locale.getDefault(), "Unknown");
+        messageSource.addMessage("ban.period.7d", Locale.getDefault(), "7 days");
+        messageSource.addMessage("ban.period.14d", Locale.getDefault(), "14 days");
+        messageSource.addMessage("ban.period.30d", Locale.getDefault(), "30 days");
+        messageSource.addMessage("ban.period.permanent", Locale.getDefault(), "Permanent");
+        return messageSource;
     }
 
     @Test
@@ -233,7 +247,8 @@ public class ModerationServiceImplTest {
     @Test
     public void findReportsByReporterReturnsReportsFromDao() {
         final List<ModerationReport> expectedReports = List.of(sampleUserReport());
-        Mockito.when(moderationReportDao.findReportsByReporter(50L)).thenReturn(expectedReports);
+        Mockito.when(moderationReportDao.findReportsByReporter(50L, List.of(), List.of()))
+                .thenReturn(expectedReports);
 
         final List<ModerationReport> reports = moderationService.findReportsByReporter(50L);
 

@@ -35,6 +35,9 @@ public interface ModerationService {
 
     List<ModerationReport> findReportsByReporter(Long reporterUserId);
 
+    List<ModerationReport> findReportsByReporter(
+            Long reporterUserId, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
+
     Optional<ModerationReport> findReportById(Long reportId);
 
     ModerationReport markReportUnderReview(Long reportId, Long adminUserId);
@@ -67,4 +70,6 @@ public interface ModerationService {
     boolean restoreReview(Long reviewerUserId, Long reviewedUserId);
 
     boolean softDeleteMatch(Long matchId, Long deletedByUserId, String deleteReason);
+
+    String resolveTargetName(ReportTargetType targetType, Long targetId);
 }
