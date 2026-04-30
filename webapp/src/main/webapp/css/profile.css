@@ -328,3 +328,25 @@
 		flex: 1 1 100%;
 	}
 }
+
+
+.account-profile-media__image {
+	max-width: 90px;
+}
+
+.account-summary__name-row {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.account-profile-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.5rem;
+}
+
+.account-profile-header .account-profile-media {
+	flex-shrink: 0;
+}

@@ -295,6 +295,11 @@
 	cursor: default;
 }
 
+.account-readonly-control--muted {
+	background: #f3f4f6;
+	color: var(--text-secondary);
+}
+
 .account-locked-field {
 	position: relative;
 }
