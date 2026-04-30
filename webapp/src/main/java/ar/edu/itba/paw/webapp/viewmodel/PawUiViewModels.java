@@ -295,6 +295,8 @@ public final class PawUiViewModels {
         private final String title;
         private final String venue;
         private final String schedule;
+        private final String dateLabel;
+        private final String timeLabel;
         private final String priceLabel;
         private final String badge;
         private final String level;
@@ -308,6 +310,8 @@ public final class PawUiViewModels {
                 final String title,
                 final String venue,
                 final String schedule,
+                final String dateLabel,
+                final String timeLabel,
                 final String priceLabel,
                 final String badge,
                 final String level,
@@ -319,11 +323,41 @@ public final class PawUiViewModels {
             this.title = title;
             this.venue = venue;
             this.schedule = schedule;
+            this.dateLabel = dateLabel;
+            this.timeLabel = timeLabel;
             this.priceLabel = priceLabel;
             this.badge = badge;
             this.level = level;
             this.mediaClass = mediaClass;
             this.bannerImageUrl = bannerImageUrl;
+        }
+
+        public EventCardViewModel(
+                final String id,
+                final String href,
+                final String sport,
+                final String title,
+                final String venue,
+                final String schedule,
+                final String priceLabel,
+                final String badge,
+                final String level,
+                final String mediaClass,
+                final String bannerImageUrl) {
+            this(
+                    id,
+                    href,
+                    sport,
+                    title,
+                    venue,
+                    schedule,
+                    null,
+                    null,
+                    priceLabel,
+                    badge,
+                    level,
+                    mediaClass,
+                    bannerImageUrl);
         }
 
         public String getId() {
@@ -348,6 +382,14 @@ public final class PawUiViewModels {
 
         public String getSchedule() {
             return schedule;
+        }
+
+        public String getDateLabel() {
+            return dateLabel;
+        }
+
+        public String getTimeLabel() {
+            return timeLabel;
         }
 
         public String getPriceLabel() {

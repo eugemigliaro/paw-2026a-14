@@ -20,6 +20,7 @@ import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
@@ -255,8 +256,14 @@ public class FeedController {
 
     private EventCardViewModel toCard(final Match match, final ZoneId zoneId, final Locale locale) {
         final Locale resolvedLocale = resolvedLocale(locale);
-        final String schedule =
-                scheduleFormatter(resolvedLocale).format(match.getStartsAt().atZone(zoneId));
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
+        final String schedule = scheduleFormatter(resolvedLocale).format(startsAt);
+        final String dateLabel =
+                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale).format(startsAt);
+        final String timeLabel =
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt);
         final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
 
         return new EventCardViewModel(
@@ -266,6 +273,8 @@ public class FeedController {
                 match.getTitle(),
                 match.getAddress(),
                 schedule,
+                dateLabel,
+                timeLabel,
                 priceLabel,
                 messageSource.getMessage(
                         "event.spotsLeft", new Object[] {match.getAvailableSpots()}, locale),

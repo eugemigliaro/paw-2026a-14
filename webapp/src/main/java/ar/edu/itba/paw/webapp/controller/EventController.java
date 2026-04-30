@@ -24,6 +24,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
@@ -322,14 +323,18 @@ public class EventController {
     }
 
     private EventCardViewModel toCard(final Match match, final Locale locale) {
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(ZoneId.systemDefault());
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
                 "/matches/" + match.getId(),
                 toSportLabel(match.getSport(), locale),
                 match.getTitle(),
                 match.getAddress(),
-                scheduleFormatter(locale)
-                        .format(match.getStartsAt().atZone(ZoneId.systemDefault())),
+                scheduleFormatter(locale).format(startsAt),
+                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale(locale)).format(startsAt),
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale(locale))
+                        .format(startsAt),
                 toPriceLabel(match.getPricePerPlayer(), locale),
                 buildAvailabilityLabel(match, locale),
                 null,

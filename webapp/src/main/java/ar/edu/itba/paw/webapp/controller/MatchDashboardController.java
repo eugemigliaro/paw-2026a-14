@@ -23,6 +23,7 @@ import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
@@ -765,10 +766,17 @@ public class MatchDashboardController {
             final Locale locale,
             final boolean hostDashboardView) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
         final String schedule =
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
                         .withLocale(resolvedLocale)
-                        .format(match.getStartsAt().atZone(zoneId));
+                        .format(startsAt);
+        final String dateLabel =
+                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale).format(startsAt);
+        final String timeLabel =
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt);
 
         final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
         final String badge =
@@ -788,6 +796,8 @@ public class MatchDashboardController {
                 match.getTitle(),
                 match.getAddress(),
                 schedule,
+                dateLabel,
+                timeLabel,
                 priceLabel,
                 badge,
                 null,

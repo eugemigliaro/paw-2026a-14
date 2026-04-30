@@ -153,6 +153,27 @@
 	font-size: 0.82rem;
 }
 
+.event-card__meta-item {
+	align-items: center;
+	display: inline-flex;
+	gap: 0.4rem;
+}
+
+.event-card__meta-icon {
+	align-items: center;
+	color: var(--text-muted);
+	display: inline-flex;
+	flex-shrink: 0;
+	height: 0.95rem;
+	justify-content: center;
+	width: 0.95rem;
+}
+
+.event-card__meta-icon svg {
+	height: 100%;
+	width: 100%;
+}
+
 .event-card__footer {
 	align-items: center;
 	display: flex;
