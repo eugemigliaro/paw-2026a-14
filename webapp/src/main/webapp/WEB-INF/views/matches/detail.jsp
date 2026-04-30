@@ -117,16 +117,6 @@
 										<c:out value="${reservationError}" />
 									</p>
 								</c:if>
-								<c:if test="${reportSent}">
-									<p class="booking-panel__notice booking-panel__notice--success">
-										<spring:message code="moderation.report.sent" />
-									</p>
-								</c:if>
-								<c:if test="${not empty reportError}">
-									<p class="booking-panel__notice booking-panel__notice--error">
-										<c:out value="${reportError}" />
-									</p>
-								</c:if>
 
 							<div class="booking-panel__availability">
 								<div>
@@ -201,7 +191,8 @@
 											</c:choose>
 										</form>
 									</c:if>
-									<a class="overflow-menu__item" href="#moderation" role="menuitem">
+									<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+									<a class="overflow-menu__item" href="${reportMatchHref}" role="menuitem">
 										<c:out value="${reportMenuLabel}" />
 									</a>
 								</ui:overflowMenu>
@@ -230,36 +221,7 @@
 								</c:forEach>
 								</dl>
 
-								<c:if test="${not empty pageContext.request.userPrincipal}">
-									<c:url var="reportAction" value="${reportActionPath}" />
-									<form method="post" action="${reportAction}" class="stack" id="moderation">
-										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<label class="field" for="report-reason">
-											<span class="field__label"><spring:message code="moderation.report.reason" /></span>
-											<select
-												id="report-reason"
-												name="reason"
-												class="field__control field__control--select">
-												<option value="inappropriate_content"><spring:message code="moderation.reason.inappropriate_content" /></option>
-												<option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></option>
-												<option value="harassment"><spring:message code="moderation.reason.harassment" /></option>
-												<option value="cheating"><spring:message code="moderation.reason.cheating" /></option>
-												<option value="other"><spring:message code="moderation.reason.other" /></option>
-											</select>
-										</label>
-										<label class="field" for="report-details">
-											<span class="field__label"><spring:message code="moderation.report.details" /></span>
-											<textarea
-												id="report-details"
-												name="details"
-												rows="3"
-												maxlength="4000"
-												class="field__control"></textarea>
-										</label>
-										<spring:message var="reportEventLabel" code="moderation.report.match.submit" />
-										<ui:button label="${reportEventLabel}" type="submit" variant="secondary" fullWidth="${true}" />
-									</form>
-								</c:if>
+
 
 							<c:if test="${joinRequested}">
 								<p class="booking-panel__notice booking-panel__notice--success">

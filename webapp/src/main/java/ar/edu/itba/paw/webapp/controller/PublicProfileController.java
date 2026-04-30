@@ -3,8 +3,6 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
@@ -127,7 +125,6 @@ public class PublicProfileController {
         final boolean reportUserCanSubmit =
                 currentUserId != null && !currentUserId.equals(user.getId());
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
-        mav.addObject("reportUserActionPath", "/reports/users/" + user.getUsername());
         final Optional<UserBan> activeBan = moderationService.findActiveBan(user.getId());
         mav.addObject("profileBanned", activeBan.isPresent());
         mav.addObject(
@@ -193,31 +190,6 @@ public class PublicProfileController {
             return redirectToProfile(username, null, "deleted");
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
-        }
-    }
-
-    @PostMapping("/reports/users/{username}")
-    public ModelAndView reportUser(
-            @PathVariable("username") final String username,
-            @RequestParam("reason") final String reason,
-            @RequestParam(value = "details", required = false) final String details) {
-        final User reportedUser = findUserByUsernameOrThrow(username);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
-        final Optional<ReportReason> parsedReason = ReportReason.fromDbValue(reason);
-        if (parsedReason.isEmpty() || currentUser.getUserId().equals(reportedUser.getId())) {
-            return redirectToReportUser(username, "invalid_report", null);
-        }
-
-        try {
-            moderationService.reportContent(
-                    currentUser.getUserId(),
-                    ReportTargetType.USER,
-                    reportedUser.getId(),
-                    parsedReason.get(),
-                    details);
-            return redirectToReportUser(username, null, "user_sent");
-        } catch (final ar.edu.itba.paw.services.exceptions.ModerationException e) {
-            return redirectToReportUser(username, e.getCode(), null);
         }
     }
 
@@ -345,18 +317,6 @@ public class PublicProfileController {
             redirect.append("?review=").append(status);
         }
         redirect.append("#reviews");
-        return new ModelAndView(redirect.toString());
-    }
-
-    private static ModelAndView redirectToReportUser(
-            final String username, final String errorCode, final String status) {
-        final StringBuilder redirect = new StringBuilder("redirect:/users/").append(username);
-        if (errorCode != null) {
-            redirect.append("?reportError=").append(errorCode);
-        } else if (status != null) {
-            redirect.append("?report=").append(status);
-        }
-        redirect.append("#profile");
         return new ModelAndView(redirect.toString());
     }
 }

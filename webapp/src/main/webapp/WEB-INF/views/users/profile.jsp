@@ -104,64 +104,14 @@
 							<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
 						</div>
 					</c:if>
-					<c:if test="${param.report eq 'user_sent'}">
-						<div class="notice notice--success">
-							<spring:message code="moderation.report.sent" />
-						</div>
-					</c:if>
-					<c:if test="${not empty param.reportError}">
-						<div class="notice notice--error">
-							<c:choose>
-								<c:when test="${param.reportError eq 'duplicate_report'}">
-									<spring:message code="moderation.report.error.duplicate" />
-								</c:when>
-								<c:when test="${param.reportError eq 'report_limit'}">
-									<spring:message code="moderation.report.error.limit" />
-								</c:when>
-								<c:when test="${param.reportError eq 'invalid_report'}">
-									<spring:message code="moderation.report.error.invalid" />
-								</c:when>
-								<c:otherwise>
-									<spring:message code="moderation.report.error.generic" />
-								</c:otherwise>
-							</c:choose>
-						</div>
-					</c:if>
 					<c:if test="${reportUserCanSubmit}">
-						<section class="public-profile-report-form-panel" aria-labelledby="report-user-form-title">
-							<h3 id="report-user-form-title" class="public-profile-review-form-panel__title">
-								<spring:message code="moderation.report.user.title" />
-							</h3>
-							<c:url var="reportUserAction" value="${reportUserActionPath}" />
-							<form method="post" action="${reportUserAction}" class="public-profile-review-form">
-								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-								<label class="field" for="report-user-reason">
-									<span class="field__label"><spring:message code="moderation.report.reason" /></span>
-									<select
-										id="report-user-reason"
-										name="reason"
-										class="field__control field__control--select">
-										<option value="inappropriate_content"><spring:message code="moderation.reason.inappropriate_content" /></option>
-										<option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></option>
-										<option value="harassment"><spring:message code="moderation.reason.harassment" /></option>
-										<option value="cheating"><spring:message code="moderation.reason.cheating" /></option>
-										<option value="other"><spring:message code="moderation.reason.other" /></option>
-									</select>
-								</label>
-								<label class="field" for="report-user-details">
-									<span class="field__label"><spring:message code="moderation.report.details" /></span>
-									<textarea
-										id="report-user-details"
-										name="details"
-										rows="4"
-										maxlength="4000"
-										class="field__control"></textarea>
-								</label>
-								<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
-								<ui:button label="${reportUserLabel}" type="submit" variant="secondary" />
-							</form>
-						</section>
+						<div class="public-profile-actions">
+							<c:url var="reportUserHref" value="/reports/users/${profilePage.username}" />
+							<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
+							<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="secondary" />
+						</div>
 					</c:if>
+
 				</section>
 
 				<section id="reviews" class="panel public-profile-panel public-profile-reviews">
@@ -208,24 +158,7 @@
 								<spring:message code="moderation.report.sent" />
 							</div>
 						</c:if>
-						<c:if test="${not empty param.reportError}">
-							<div class="notice notice--error">
-								<c:choose>
-									<c:when test="${param.reportError eq 'duplicate_report'}">
-										<spring:message code="moderation.report.error.duplicate" />
-									</c:when>
-									<c:when test="${param.reportError eq 'report_limit'}">
-										<spring:message code="moderation.report.error.limit" />
-									</c:when>
-									<c:when test="${param.reportError eq 'invalid_report'}">
-										<spring:message code="moderation.report.error.invalid" />
-									</c:when>
-									<c:otherwise>
-										<spring:message code="moderation.report.error.generic" />
-									</c:otherwise>
-								</c:choose>
-							</div>
-						</c:if>
+
 
 					<spring:message var="reviewSummaryAria" code="profile.reviews.summaryAria" />
 					<c:if test="${reviewCanSubmit}">
@@ -459,34 +392,9 @@
 												<p class="public-profile-review-list__comment"><c:out value="${review.comment}" /></p>
 											</c:if>
 											<c:if test="${not empty pageContext.request.userPrincipal}">
-												<c:url var="reportReviewAction" value="/reports/reviews/${review.reviewId}" />
-												<form method="post" action="${reportReviewAction}" class="stack">
-													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-													<input type="hidden" name="username" value="${profilePage.username}" />
-													<label class="field" for="report-reason-${review.reviewId}">
-														<span class="field__label"><spring:message code="moderation.report.reason" /></span>
-														<select
-															id="report-reason-${review.reviewId}"
-															name="reason"
-															class="field__control field__control--select">
-															<option value="inappropriate_content"><spring:message code="moderation.reason.inappropriate_content" /></option>
-															<option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></option>
-															<option value="harassment"><spring:message code="moderation.reason.harassment" /></option>
-															<option value="other"><spring:message code="moderation.reason.other" /></option>
-														</select>
-													</label>
-													<label class="field" for="report-details-${review.reviewId}">
-														<span class="field__label"><spring:message code="moderation.report.details" /></span>
-														<textarea
-															id="report-details-${review.reviewId}"
-															name="details"
-															rows="2"
-															maxlength="4000"
-															class="field__control"></textarea>
-													</label>
-													<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
-													<ui:button label="${reportReviewLabel}" type="submit" variant="secondary" />
-												</form>
+												<c:url var="reportReviewHref" value="/reports/reviews/${review.reviewId}" />
+												<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
+												<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="secondary" />
 											</c:if>
 										</li>
 									</c:forEach>

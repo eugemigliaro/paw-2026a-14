@@ -88,20 +88,6 @@ class PublicProfileControllerTest {
                 .andExpect(redirectedUrl("/users/target?review=deleted#reviews"));
     }
 
-    @Test
-    void postUserReportRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
-        final User user = new User(42L, "target@test.com", "target", "Target", "User", null, null);
-        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
-
-        mockMvc.perform(
-                        post("/reports/users/target")
-                                .param("reason", "harassment")
-                                .param("details", "Repeated insults"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/target?report=user_sent#profile"));
-    }
-
     private static void authenticateUser(final Long userId) {
         SecurityContextHolder.getContext()
                 .setAuthentication(

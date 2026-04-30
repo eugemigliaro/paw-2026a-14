@@ -612,6 +612,11 @@ class PawUiRouteTest {
                                     null);
 
                     @Override
+                    public Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
                     public PlayerReview submitReview(
                             final Long reviewerUserId,
                             final Long reviewedUserId,

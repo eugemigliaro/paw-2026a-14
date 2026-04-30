@@ -859,4 +859,166 @@ public final class PawUiViewModels {
             return updatedAtLabel;
         }
     }
+
+    public static final class ReportPageViewModel {
+        private final String targetTypeCode;
+        private final ReportUserViewModel user;
+        private final ReportReviewViewModel review;
+        private final ReportMatchViewModel match;
+
+        public ReportPageViewModel(
+                final String targetTypeCode,
+                final ReportUserViewModel user,
+                final ReportReviewViewModel review,
+                final ReportMatchViewModel match) {
+            this.targetTypeCode = targetTypeCode;
+            this.user = user;
+            this.review = review;
+            this.match = match;
+        }
+
+        public String getTargetTypeCode() {
+            return targetTypeCode;
+        }
+
+        public ReportUserViewModel getUser() {
+            return user;
+        }
+
+        public ReportReviewViewModel getReview() {
+            return review;
+        }
+
+        public ReportMatchViewModel getMatch() {
+            return match;
+        }
+    }
+
+    public static final class ReportUserViewModel {
+        private final String username;
+        private final String profileImageUrl;
+        private final String profileImageAlt;
+
+        public ReportUserViewModel(
+                final String username, final String profileImageUrl, final String profileImageAlt) {
+            this.username = username;
+            this.profileImageUrl = profileImageUrl;
+            this.profileImageAlt = profileImageAlt;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
+        }
+
+        public String getProfileImageAlt() {
+            return profileImageAlt;
+        }
+    }
+
+    public static final class ReportReviewViewModel {
+        private final String authorUsername;
+        private final String authorProfileHref;
+        private final String reviewedUsername;
+        private final String reviewedProfileHref;
+        private final String content;
+        private final String dateLabel;
+
+        public ReportReviewViewModel(
+                final String authorUsername,
+                final String authorProfileHref,
+                final String reviewedUsername,
+                final String reviewedProfileHref,
+                final String content,
+                final String dateLabel) {
+            this.authorUsername = authorUsername;
+            this.authorProfileHref = authorProfileHref;
+            this.reviewedUsername = reviewedUsername;
+            this.reviewedProfileHref = reviewedProfileHref;
+            this.content = content;
+            this.dateLabel = dateLabel;
+        }
+
+        public String getAuthorUsername() {
+            return authorUsername;
+        }
+
+        public String getAuthorProfileHref() {
+            return authorProfileHref;
+        }
+
+        public String getReviewedUsername() {
+            return reviewedUsername;
+        }
+
+        public String getReviewedProfileHref() {
+            return reviewedProfileHref;
+        }
+
+        public String getContent() {
+            return content;
+        }
+
+        public String getDateLabel() {
+            return dateLabel;
+        }
+    }
+
+    public static final class ReportMatchViewModel {
+        private final String title;
+        private final String description;
+        private final String hostUsername;
+        private final String hostProfileHref;
+        private final String dateLabel;
+        private final String address;
+        private final String priceLabel;
+
+        public ReportMatchViewModel(
+                final String title,
+                final String description,
+                final String hostUsername,
+                final String hostProfileHref,
+                final String dateLabel,
+                final String address,
+                final String priceLabel) {
+            this.title = title;
+            this.description = description;
+            this.hostUsername = hostUsername;
+            this.hostProfileHref = hostProfileHref;
+            this.dateLabel = dateLabel;
+            this.address = address;
+            this.priceLabel = priceLabel;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public String getHostUsername() {
+            return hostUsername;
+        }
+
+        public String getHostProfileHref() {
+            return hostProfileHref;
+        }
+
+        public String getDateLabel() {
+            return dateLabel;
+        }
+
+        public String getAddress() {
+            return address;
+        }
+
+        public String getPriceLabel() {
+            return priceLabel;
+        }
+    }
 }
