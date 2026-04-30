@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -94,7 +95,7 @@ class ModerationReportControllerTest {
     }
 
     @Test
-    void postReviewReportRedirectsWithErrorCode() throws Exception {
+    void postReviewReportRendersWithErrorCode() throws Exception {
         authenticateUser(9L);
         final PlayerReview review =
                 new PlayerReview(
@@ -109,8 +110,13 @@ class ModerationReportControllerTest {
                         null,
                         null,
                         null);
+        final User author = new User(7L, "author@test.com", "author", "Author", "User", null, null);
+        final User reviewedUser =
+                new User(42L, "reviewed@test.com", "reviewed", "Reviewed", "User", null, null);
         Mockito.when(playerReviewService.findReviewByIdIncludingDeleted(12L))
                 .thenReturn(Optional.of(review));
+        Mockito.when(userService.findById(7L)).thenReturn(Optional.of(author));
+        Mockito.when(userService.findById(42L)).thenReturn(Optional.of(reviewedUser));
         Mockito.when(
                         moderationService.reportContent(
                                 Mockito.eq(9L),
@@ -121,8 +127,13 @@ class ModerationReportControllerTest {
                 .thenThrow(new ModerationException("duplicate_report", "Duplicate report"));
 
         mockMvc.perform(post("/reports/reviews/12").param("reason", "inappropriate_content"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/reports/reviews/12?reportError=duplicate_report"));
+                .andExpect(status().isOk())
+                .andExpect(view().name("reports/create"))
+                .andExpect(
+                        model().attributeHasFieldErrorCode(
+                                        "reportForm",
+                                        "reason",
+                                        "moderation.report.error.duplicate"));
     }
 
     @Test
