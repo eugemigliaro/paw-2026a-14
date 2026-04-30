@@ -392,9 +392,11 @@
 												<p class="public-profile-review-list__comment"><c:out value="${review.comment}" /></p>
 											</c:if>
 											<c:if test="${not empty pageContext.request.userPrincipal}">
-												<c:url var="reportReviewHref" value="/reports/reviews/${review.reviewId}" />
-												<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
-												<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="danger" />
+												<div class="public-profile-actions">
+													<c:url var="reportReviewHref" value="/reports/reviews/${review.reviewId}" />
+													<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
+													<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="danger" />
+												</div>
 											</c:if>
 										</li>
 									</c:forEach>
