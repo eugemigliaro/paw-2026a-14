@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -166,8 +167,8 @@
 
 					<dl class="stack">
 						<c:url var="reportAction" value="${reportActionPath}" />
-						<form method="post" action="${reportAction}">
-							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+						<form:form modelAttribute="reportForm" action="${reportAction}">
+							<form:errors path="" cssClass="notice notice--error" element="div" />
 							<div class="report-section-field">
 								<label for="report-reason" class="detail-label"><spring:message code="moderation.report.reason" /></label>
 								<div class="report-dropdown" id="reason-dropdown">
@@ -191,29 +192,31 @@
 											<spring:message code="moderation.reason.other" />
 										</button>
 									</div>
-									<select id="report-reason" name="reason" style="display: none;">
-										<option value="inappropriate_content" selected><spring:message code="moderation.reason.inappropriate_content" /></option>
-										<option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></option>
-										<option value="harassment"><spring:message code="moderation.reason.harassment" /></option>
-										<option value="cheating"><spring:message code="moderation.reason.cheating" /></option>
-										<option value="other"><spring:message code="moderation.reason.other" /></option>
-									</select>
+									<form:select id="report-reason" path="reason" cssStyle="display: none;">
+										<form:option value="inappropriate_content"><spring:message code="moderation.reason.inappropriate_content" /></form:option>
+										<form:option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></form:option>
+										<form:option value="harassment"><spring:message code="moderation.reason.harassment" /></form:option>
+										<form:option value="cheating"><spring:message code="moderation.reason.cheating" /></form:option>
+										<form:option value="other"><spring:message code="moderation.reason.other" /></form:option>
+									</form:select>
 								</div>
+								<form:errors path="reason" cssClass="notice notice--error" element="span" />
 							</div>
 							<div class="report-section-field">
 								<label for="report-details" class="detail-label"><spring:message code="moderation.report.details" /></label>
-								<textarea
+								<form:textarea
 									id="report-details"
-									name="details"
+									path="details"
 									rows="4"
 									maxlength="4000"
-									class="field__control"></textarea>
+									cssClass="field__control" />
+								<form:errors path="details" cssClass="notice notice--error" element="span" />
 							</div>
 							<spring:message var="submitReportLabel" code="moderation.report.submit" />
 							<div class="report-section-actions">
 								<ui:button label="${submitReportLabel}" type="submit" />
 							</div>
-						</form>
+						</form:form>
 					</dl>
 				</ui:card>
 			</main>

@@ -12,6 +12,7 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ReportMatchViewModel;
@@ -25,11 +26,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
-import java.util.Optional;
+import java.util.function.Supplier;
+import javax.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -63,6 +67,7 @@ public class ModerationReportController {
             @PathVariable("username") final String username,
             @RequestParam(value = "report", required = false) final String reportStatus,
             @RequestParam(value = "reportError", required = false) final String reportErrorCode,
+            @ModelAttribute("reportForm") final ReportForm form,
             final Locale locale) {
         requireAuthenticatedUser();
         final User reportedUser = findUserByUsernameOrThrow(username);
@@ -98,6 +103,7 @@ public class ModerationReportController {
             @PathVariable("reviewId") final Long reviewId,
             @RequestParam(value = "report", required = false) final String reportStatus,
             @RequestParam(value = "reportError", required = false) final String reportErrorCode,
+            @ModelAttribute("reportForm") final ReportForm form,
             final Locale locale) {
         requireAuthenticatedUser();
         final PlayerReview review = findReviewByIdOrThrow(reviewId);
@@ -146,6 +152,7 @@ public class ModerationReportController {
             @PathVariable("matchId") final Long matchId,
             @RequestParam(value = "report", required = false) final String reportStatus,
             @RequestParam(value = "reportError", required = false) final String reportErrorCode,
+            @ModelAttribute("reportForm") final ReportForm form,
             final Locale locale) {
         requireAuthenticatedUser();
         final Match match = findMatchByIdOrThrow(matchId);
@@ -180,13 +187,14 @@ public class ModerationReportController {
     @PostMapping("/reports/users/{username}")
     public ModelAndView reportUser(
             @PathVariable("username") final String username,
-            @RequestParam("reason") final String reason,
-            @RequestParam(value = "details", required = false) final String details) {
+            @Valid @ModelAttribute("reportForm") final ReportForm form,
+            final BindingResult errors,
+            final Locale locale) {
         final User reportedUser = findUserByUsernameOrThrow(username);
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
-        final Optional<ReportReason> parsedReason = ReportReason.fromDbValue(reason);
-        if (parsedReason.isEmpty() || currentUser.getUserId().equals(reportedUser.getId())) {
-            return redirectToReportUser(username, "invalid_report", null);
+
+        if (errors.hasErrors()) {
+            return showUserReportPage(username, null, null, form, locale);
         }
 
         try {
@@ -194,24 +202,29 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.USER,
                     reportedUser.getId(),
-                    parsedReason.get(),
-                    details);
+                    ReportReason.fromDbValue(form.getReason()).get(),
+                    form.getDetails());
             return redirectToReportUser(username, null, "sent");
         } catch (final ModerationException exception) {
-            return redirectToReportUser(username, exception.getCode(), null);
+            return handleModerationException(
+                    exception,
+                    errors,
+                    () -> showUserReportPage(username, null, null, form, locale),
+                    () -> redirectToReportUser(username, exception.getCode(), null));
         }
     }
 
     @PostMapping("/reports/reviews/{reviewId}")
     public ModelAndView reportReview(
             @PathVariable("reviewId") final Long reviewId,
-            @RequestParam("reason") final String reason,
-            @RequestParam(value = "details", required = false) final String details) {
+            @Valid @ModelAttribute("reportForm") final ReportForm form,
+            final BindingResult errors,
+            final Locale locale) {
         final PlayerReview review = findReviewByIdOrThrow(reviewId);
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
-        final Optional<ReportReason> parsedReason = ReportReason.fromDbValue(reason);
-        if (parsedReason.isEmpty()) {
-            return redirectToReportReview(review.getId(), "invalid_report", null);
+
+        if (errors.hasErrors()) {
+            return showReviewReportPage(reviewId, null, null, form, locale);
         }
 
         try {
@@ -219,32 +232,45 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.REVIEW,
                     review.getId(),
-                    parsedReason.get(),
-                    details);
+                    ReportReason.fromDbValue(form.getReason()).get(),
+                    form.getDetails());
             return redirectToReportReview(review.getId(), null, "sent");
         } catch (final ModerationException exception) {
-            return redirectToReportReview(review.getId(), exception.getCode(), null);
+            return handleModerationException(
+                    exception,
+                    errors,
+                    () -> showReviewReportPage(reviewId, null, null, form, locale),
+                    () -> redirectToReportReview(review.getId(), exception.getCode(), null));
         }
     }
 
     @PostMapping("/reports/matches/{matchId}")
     public ModelAndView reportMatch(
             @PathVariable("matchId") final Long matchId,
-            @RequestParam("reason") final String reason,
-            @RequestParam(value = "details", required = false) final String details) {
+            @Valid @ModelAttribute("reportForm") final ReportForm form,
+            final BindingResult errors,
+            final Locale locale) {
         final Match match = findMatchByIdOrThrow(matchId);
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
-        final ReportReason parsedReason = parseReason(reason);
+
+        if (errors.hasErrors()) {
+            return showMatchReportPage(matchId, null, null, form, locale);
+        }
+
         try {
             moderationService.reportContent(
                     currentUser.getUserId(),
                     ReportTargetType.MATCH,
                     match.getId(),
-                    parsedReason,
-                    details);
+                    ReportReason.fromDbValue(form.getReason()).get(),
+                    form.getDetails());
             return redirectToReportMatch(match.getId(), null, "sent");
         } catch (final ModerationException exception) {
-            return redirectToReportMatch(match.getId(), exception.getCode(), null);
+            return handleModerationException(
+                    exception,
+                    errors,
+                    () -> showMatchReportPage(matchId, null, null, form, locale),
+                    () -> redirectToReportMatch(match.getId(), exception.getCode(), null));
         }
     }
 
@@ -307,11 +333,6 @@ public class ModerationReportController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
-    private static ReportReason parseReason(final String reason) {
-        return ReportReason.fromDbValue(reason)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
-    }
-
     private static AuthenticatedUserPrincipal requireAuthenticatedUser() {
         return CurrentAuthenticatedUser.get()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
@@ -351,6 +372,37 @@ public class ModerationReportController {
             redirect.append("?report=").append(status);
         }
         return new ModelAndView(redirect.toString());
+    }
+
+    private ModelAndView handleModerationException(
+            final ModerationException exception,
+            final BindingResult errors,
+            final Supplier<ModelAndView> errorViewSupplier,
+            final Supplier<ModelAndView> redirectSupplier) {
+        final String code = exception.getCode();
+        switch (code) {
+            case "duplicate_report":
+                errors.rejectValue("reason", "moderation.report.error.duplicate");
+                return errorViewSupplier.get();
+            case "report_limit":
+                errors.reject("moderation.report.error.limit");
+                return errorViewSupplier.get();
+            case "invalid_report":
+                errors.reject("moderation.report.error.invalid");
+                return errorViewSupplier.get();
+            case "self_report":
+                errors.reject("moderation.report.error.self");
+                return errorViewSupplier.get();
+            case "report_failed":
+            case "report_error":
+                errors.reject("moderation.report.error.generic");
+                return errorViewSupplier.get();
+            case "value_too_long":
+                errors.rejectValue("details", "Size.reportForm.details");
+                return errorViewSupplier.get();
+            default:
+                return redirectSupplier.get();
+        }
     }
 
     private String moderationReportErrorMessage(final String code, final Locale locale) {

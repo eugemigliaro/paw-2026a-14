@@ -31,6 +31,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -141,6 +144,10 @@ public class ModerationServiceImpl implements ModerationService {
             final String details) {
         validateReportRequest(reporterUserId, targetType, targetId, reason);
 
+        if (ReportTargetType.USER.equals(targetType) && targetId.equals(reporterUserId)) {
+            throw new ModerationException("self_report", "Cannot report yourself.");
+        }
+
         if (moderationReportDao.countActiveReportsByReporter(reporterUserId)
                 >= MAX_ACTIVE_REPORTS) {
             throw new ModerationException("report_limit", "Report limit reached.");
@@ -157,13 +164,23 @@ public class ModerationServiceImpl implements ModerationService {
             throw new ModerationException("duplicate_report", "Report already exists.");
         }
 
-        return moderationReportDao.createReport(
-                reporterUserId,
-                targetType,
-                targetId,
-                targetKey,
-                reason,
-                normalizeText(details, 4000));
+        try {
+            return moderationReportDao.createReport(
+                    reporterUserId,
+                    targetType,
+                    targetId,
+                    targetKey,
+                    reason,
+                    normalizeText(details, 4000));
+        } catch (DuplicateKeyException e) {
+            throw new ModerationException("duplicate_report", "Report already exists.");
+        } catch (DataIntegrityViolationException e) {
+            throw new ModerationException("invalid_report", "Invalid report data.");
+        } catch (DataAccessException e) {
+            throw new ModerationException("report_failed", "Failed to create report.");
+        } catch (Exception e) {
+            throw new ModerationException("report_error", "An unexpected error occurred.");
+        }
     }
 
     @Override
