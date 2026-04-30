@@ -7,6 +7,7 @@ import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,17 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     @Override
     public boolean hasActiveReservation(final Long matchId, final Long userId) {
         return matchParticipantDao.hasActiveReservation(matchId, userId);
+    }
+
+    @Override
+    public Set<Long> findActiveFutureReservationMatchIdsForSeries(
+            final Long seriesId, final Long userId) {
+        if (seriesId == null || userId == null) {
+            return Set.of();
+        }
+        return Set.copyOf(
+                matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                        seriesId, userId, Instant.now(clock)));
     }
 
     @Override

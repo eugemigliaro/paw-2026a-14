@@ -54,6 +54,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -711,6 +712,17 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public Set<Long> findActiveFutureReservationMatchIdsForSeries(
+                            final Long seriesId, final Long userId) {
+                        if (Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
+                                && userId == 9L
+                                && seriesId == 600L) {
+                            return Set.of(46L, 47L);
+                        }
+                        return Set.of();
+                    }
+
+                    @Override
                     public void reserveSpot(final Long matchId, final Long userId) {
                         final MatchReservationException failure = reservationFailure.get();
                         if (failure != null) {
@@ -1331,9 +1343,13 @@ class PawUiRouteTest {
                                         Matchers.hasProperty(
                                                 "occurrences",
                                                 Matchers.hasItem(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("Cancelled"))))))
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("Cancelled")),
+                                                                Matchers.hasProperty(
+                                                                        "href",
+                                                                        Matchers.nullValue()))))))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(
                         model().attribute(
@@ -1372,6 +1388,28 @@ class PawUiRouteTest {
                 .andExpect(model().attribute("joinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestPending", true));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("Cancelled")),
+                                                                Matchers.hasProperty(
+                                                                        "href",
+                                                                        Matchers.is(
+                                                                                "/matches/50")))))));
     }
 
     @Test

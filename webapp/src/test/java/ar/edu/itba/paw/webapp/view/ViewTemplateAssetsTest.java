@@ -154,10 +154,14 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("var=\"recurrencePreviewLimit\" value=\"3\""));
         assertTrue(detailView.contains("data-recurrence-extra-date=\"true\""));
         assertTrue(detailView.contains("hidden=\"hidden\""));
+        assertTrue(detailView.contains("and not occurrence.current"));
+        assertTrue(detailView.contains("<c:when test=\"${not empty occurrence.href}\">"));
+        assertTrue(detailView.contains("recurrence-schedule__text"));
         assertTrue(detailView.contains("data-recurrence-toggle=\"true\""));
         assertTrue(detailView.contains("event.recurrence.showMore"));
         assertTrue(detailView.contains("event.recurrence.showLess"));
         assertTrue(eventDetailCss.contains(".recurrence-schedule__item[hidden]"));
+        assertTrue(eventDetailCss.contains(".recurrence-schedule__text"));
         assertTrue(recurrenceScript.contains("data-recurrence-toggle"));
         assertTrue(recurrenceScript.contains("aria-expanded"));
         assertEquals("Show more", english.getProperty("event.recurrence.showMore"));

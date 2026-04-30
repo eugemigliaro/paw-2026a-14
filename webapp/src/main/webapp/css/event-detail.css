@@ -380,7 +380,8 @@
 	border-color: rgba(0, 100, 90, 0.22);
 }
 
-.recurrence-schedule__link {
+.recurrence-schedule__link,
+.recurrence-schedule__text {
 	color: var(--text-primary);
 	font-weight: 700;
 	text-decoration: none;

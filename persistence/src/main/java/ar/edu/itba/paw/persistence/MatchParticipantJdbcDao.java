@@ -5,7 +5,9 @@ import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -22,10 +24,22 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MatchParticipantJdbcDao.class);
     private final JdbcTemplate jdbcTemplate;
+    private final boolean supportsOnConflictDoNothing;
 
     @Autowired
     public MatchParticipantJdbcDao(final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.supportsOnConflictDoNothing = supportsOnConflictDoNothing(dataSource);
+    }
+
+    private static boolean supportsOnConflictDoNothing(final DataSource dataSource) {
+        try (final Connection connection = dataSource.getConnection()) {
+            return "PostgreSQL".equalsIgnoreCase(connection.getMetaData().getDatabaseProductName());
+        } catch (final SQLException e) {
+            LOGGER.debug(
+                    "Could not determine database product for participant conflict handling", e);
+            return false;
+        }
     }
 
     @Override
@@ -39,6 +53,24 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         matchId,
                         userId);
         return count != null && count > 0;
+    }
+
+    @Override
+    public List<Long> findActiveFutureReservationMatchIdsForSeries(
+            final Long seriesId, final Long userId, final Instant startsAfter) {
+        return jdbcTemplate.queryForList(
+                "SELECT mp.match_id"
+                        + " FROM match_participants mp"
+                        + " JOIN matches m ON m.id = mp.match_id"
+                        + " WHERE m.series_id = ?"
+                        + " AND m.starts_at > ?"
+                        + " AND mp.user_id = ?"
+                        + " AND mp.status IN ('joined', 'checked_in')"
+                        + " ORDER BY m.starts_at ASC, m.id ASC",
+                Long.class,
+                seriesId,
+                Timestamp.from(startsAfter),
+                userId);
     }
 
     @Override
@@ -140,28 +172,36 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         seriesId,
                         startsAfterTimestamp);
 
-        final int insertedRows =
-                jdbcTemplate.update(
-                        "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
-                                + " SELECT m.id, ?, 'joined', CURRENT_TIMESTAMP"
-                                + " FROM matches m"
-                                + " LEFT JOIN match_participants mp"
-                                + " ON mp.match_id = m.id"
-                                + " AND mp.status IN ('joined', 'checked_in')"
-                                + " WHERE m.series_id = ?"
-                                + " AND m.visibility = 'public'"
-                                + " AND m.join_policy = 'direct'"
-                                + " AND m.status = 'open'"
-                                + " AND m.starts_at > ?"
-                                + " AND NOT EXISTS ("
-                                + " SELECT 1 FROM match_participants existing"
-                                + " WHERE existing.match_id = m.id AND existing.user_id = ?)"
-                                + " GROUP BY m.id, m.max_players"
-                                + " HAVING COUNT(mp.id) < MAX(m.max_players)",
-                        userId,
-                        seriesId,
-                        startsAfterTimestamp,
-                        userId);
+        final String insertSql =
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " SELECT m.id, ?, 'joined', CURRENT_TIMESTAMP"
+                        + " FROM matches m"
+                        + " LEFT JOIN match_participants mp"
+                        + " ON mp.match_id = m.id"
+                        + " AND mp.status IN ('joined', 'checked_in')"
+                        + " WHERE m.series_id = ?"
+                        + " AND m.visibility = 'public'"
+                        + " AND m.join_policy = 'direct'"
+                        + " AND m.status = 'open'"
+                        + " AND m.starts_at > ?"
+                        + " AND NOT EXISTS ("
+                        + " SELECT 1 FROM match_participants existing"
+                        + " WHERE existing.match_id = m.id AND existing.user_id = ?)"
+                        + " GROUP BY m.id, m.max_players"
+                        + " HAVING COUNT(mp.id) < MAX(m.max_players)"
+                        + (supportsOnConflictDoNothing
+                                ? " ON CONFLICT (match_id, user_id) DO NOTHING"
+                                : "");
+        int insertedRows = 0;
+        try {
+            insertedRows =
+                    jdbcTemplate.update(insertSql, userId, seriesId, startsAfterTimestamp, userId);
+        } catch (final DuplicateKeyException e) {
+            LOGGER.debug(
+                    "Series reservation insert hit duplicate participant row seriesId={} userId={}",
+                    seriesId,
+                    userId);
+        }
         final int reservedRows = restoredRows + insertedRows;
         if (reservedRows == 0) {
             LOGGER.debug(
