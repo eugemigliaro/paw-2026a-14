@@ -192,7 +192,7 @@
 										</form>
 									</c:if>
 									<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
-									<a class="overflow-menu__item" href="${reportMatchHref}" role="menuitem">
+									<a class="overflow-menu__item overflow-menu__item--danger" href="${reportMatchHref}" role="menuitem">
 										<c:out value="${reportMenuLabel}" />
 									</a>
 								</ui:overflowMenu>

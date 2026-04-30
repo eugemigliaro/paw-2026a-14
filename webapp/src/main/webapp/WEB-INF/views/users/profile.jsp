@@ -108,7 +108,7 @@
 						<div class="public-profile-actions">
 							<c:url var="reportUserHref" value="/reports/users/${profilePage.username}" />
 							<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
-							<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="secondary" />
+							<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
 						</div>
 					</c:if>
 
@@ -394,7 +394,7 @@
 											<c:if test="${not empty pageContext.request.userPrincipal}">
 												<c:url var="reportReviewHref" value="/reports/reviews/${review.reviewId}" />
 												<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
-												<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="secondary" />
+												<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="danger" />
 											</c:if>
 										</li>
 									</c:forEach>
