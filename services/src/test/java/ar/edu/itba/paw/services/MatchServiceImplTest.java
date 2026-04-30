@@ -1218,6 +1218,56 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateSeriesFromOccurrenceRejectsComputedTargetStartInPast() {
+        // 1. Arrange
+        final Match pivotOccurrence =
+                recurringMatch(
+                        46L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        "open",
+                        2);
+        final Match inconsistentFutureOccurrence =
+                recurringMatch(
+                        47L,
+                        "Weekly Padel",
+                        FIXED_NOW.plusSeconds(60),
+                        FIXED_NOW.plusSeconds(3660),
+                        "open",
+                        3);
+        final UpdateMatchRequest request =
+                new UpdateMatchRequest(
+                        "Updated Address",
+                        "Updated Weekly Padel",
+                        "Updated Description",
+                        FIXED_NOW.plusSeconds(30),
+                        FIXED_NOW.plusSeconds(3630),
+                        8,
+                        BigDecimal.ONE,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null);
+        Mockito.when(matchDao.findById(46L)).thenReturn(Optional.of(pivotOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(600L))
+                .thenReturn(List.of(inconsistentFutureOccurrence, pivotOccurrence));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(47L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(46L)).thenReturn(List.of());
+
+        // 2. Exercise
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () -> matchService.updateSeriesFromOccurrence(46L, 1L, request));
+
+        // 3. Assert
+        Assertions.assertEquals(MatchUpdateFailureReason.INVALID_SCHEDULE, exception.getReason());
+        Assertions.assertEquals("match.schedule.error.startsAtPast", exception.getMessage());
+    }
+
+    @Test
     public void testUpdateSeriesFromOccurrenceRejectsNonRecurringMatch() {
         // 1. Arrange
         final Match singleMatch = createTestMatch(46L, "Single Padel", "padel");

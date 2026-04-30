@@ -74,6 +74,24 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     }
 
     @Override
+    public List<Long> findPendingFutureRequestMatchIdsForSeries(
+            final Long seriesId, final Long userId, final Instant startsAfter) {
+        return jdbcTemplate.queryForList(
+                "SELECT mp.match_id"
+                        + " FROM match_participants mp"
+                        + " JOIN matches m ON m.id = mp.match_id"
+                        + " WHERE m.series_id = ?"
+                        + " AND m.starts_at > ?"
+                        + " AND mp.user_id = ?"
+                        + " AND mp.status = 'pending_approval'"
+                        + " ORDER BY m.starts_at ASC, m.id ASC",
+                Long.class,
+                seriesId,
+                Timestamp.from(startsAfter),
+                userId);
+    }
+
+    @Override
     public boolean createReservationIfSpace(final Long matchId, final Long userId) {
         LOGGER.debug("Attempting reservation insert matchId={} userId={}", matchId, userId);
         final int restoredRows =

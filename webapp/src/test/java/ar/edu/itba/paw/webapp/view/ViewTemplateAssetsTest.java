@@ -87,10 +87,13 @@ class ViewTemplateAssetsTest {
         assertFalse(detailView.contains("label=\"${hostManageEditLabel}\""));
         assertFalse(detailView.contains("label=\"${hostManageCancelLabel}\""));
         assertEquals("Edit recurring dates", english.getProperty("host.manage.editSeries"));
-        assertEquals("Cancel recurring dates", english.getProperty("host.manage.cancelSeries"));
+        assertEquals(
+                "Cancel all upcoming recurring dates",
+                english.getProperty("host.manage.cancelSeries"));
         assertEquals("Editar fechas recurrentes", spanish.getProperty("host.manage.editSeries"));
         assertEquals(
-                "Cancelar fechas recurrentes", spanish.getProperty("host.manage.cancelSeries"));
+                "Cancelar todas las fechas recurrentes pr\u00f3ximas",
+                spanish.getProperty("host.manage.cancelSeries"));
     }
 
     @Test

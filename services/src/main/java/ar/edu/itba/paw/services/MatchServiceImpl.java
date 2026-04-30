@@ -259,6 +259,15 @@ public class MatchServiceImpl implements MatchService {
             final Instant targetStartsAt = target.getStartsAt().plus(startOffset);
             final Instant targetEndsAt =
                     requestedDuration == null ? null : targetStartsAt.plus(requestedDuration);
+            validateScheduleOrThrow(
+                    targetStartsAt,
+                    targetEndsAt,
+                    new MatchUpdateException(
+                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                            message("match.schedule.error.startsAtPast")),
+                    new MatchUpdateException(
+                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                            message("match.schedule.error.endBeforeStart")));
             final boolean updated =
                     matchDao.updateMatch(
                             target.getId(),

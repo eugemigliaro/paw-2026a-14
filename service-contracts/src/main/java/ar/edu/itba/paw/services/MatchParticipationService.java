@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.util.List;
+import java.util.Set;
 
 public interface MatchParticipationService {
 
@@ -18,6 +19,8 @@ public interface MatchParticipationService {
     boolean hasPendingRequest(Long matchId, Long userId);
 
     boolean hasPendingSeriesRequest(Long matchId, Long userId);
+
+    Set<Long> findPendingFutureRequestMatchIdsForSeries(Long seriesId, Long userId);
 
     // Host actions (public approval-required events)
 

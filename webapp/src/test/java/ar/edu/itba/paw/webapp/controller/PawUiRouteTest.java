@@ -794,6 +794,17 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public Set<Long> findPendingFutureRequestMatchIdsForSeries(
+                            final Long seriesId, final Long userId) {
+                        if (Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
+                                && userId == 9L
+                                && seriesId == 700L) {
+                            return Set.of(52L, 53L);
+                        }
+                        return Set.of();
+                    }
+
+                    @Override
                     public void approveRequest(
                             final Long matchId, final Long hostUserId, final Long targetUserId) {
                         // No-op for route rendering tests.

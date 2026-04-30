@@ -602,14 +602,31 @@ public class EventController {
             return new SeriesJoinRequestUiState(false, true);
         }
 
+        final Set<Long> activeFutureReservationMatchIds =
+                currentUserId == null || match.getSeriesId() == null
+                        ? Set.of()
+                        : matchReservationService.findActiveFutureReservationMatchIdsForSeries(
+                                match.getSeriesId(), currentUserId);
+        final Set<Long> pendingFutureRequestMatchIds =
+                currentUserId == null || match.getSeriesId() == null
+                        ? Set.of()
+                        : matchParticipationService.findPendingFutureRequestMatchIdsForSeries(
+                                match.getSeriesId(), currentUserId);
         final SeriesJoinRequestEvaluation evaluation =
-                evaluateSeriesJoinRequestTargets(occurrences, currentUserId);
+                evaluateSeriesJoinRequestTargets(
+                        occurrences,
+                        currentUserId,
+                        activeFutureReservationMatchIds,
+                        pendingFutureRequestMatchIds);
         return new SeriesJoinRequestUiState(
                 !evaluation.targetMatchIds().isEmpty(), evaluation.pending());
     }
 
     private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
-            final List<Match> occurrences, final Long userId) {
+            final List<Match> occurrences,
+            final Long userId,
+            final Set<Long> activeFutureReservationMatchIds,
+            final Set<Long> pendingFutureRequestMatchIds) {
         final List<Long> targetMatchIds = new ArrayList<>();
         int futureOpenApprovalOccurrenceCount = 0;
         int pendingFutureOpenApprovalOccurrenceCount = 0;
@@ -623,17 +640,13 @@ public class EventController {
 
             futureOpenApprovalOccurrenceCount++;
             final boolean alreadyJoined =
-                    userId != null
-                            && matchReservationService.hasActiveReservation(
-                                    occurrence.getId(), userId);
+                    activeFutureReservationMatchIds.contains(occurrence.getId());
             if (alreadyJoined) {
                 continue;
             }
 
             final boolean alreadyPending =
-                    userId != null
-                            && matchParticipationService.hasPendingRequest(
-                                    occurrence.getId(), userId);
+                    pendingFutureRequestMatchIds.contains(occurrence.getId());
             if (alreadyPending) {
                 pendingFutureOpenApprovalOccurrenceCount++;
                 continue;

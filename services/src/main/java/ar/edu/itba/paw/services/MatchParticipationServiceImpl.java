@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -130,8 +131,21 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         }
 
         final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeriesId());
+        final Instant now = Instant.now(clock);
+        final Set<Long> activeFutureReservationMatchIds =
+                Set.copyOf(
+                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                match.getSeriesId(), userId, now));
+        final Set<Long> pendingFutureRequestMatchIds =
+                Set.copyOf(
+                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                                match.getSeriesId(), userId, now));
         final SeriesJoinRequestEvaluation evaluation =
-                evaluateSeriesJoinRequestTargets(occurrences, userId);
+                evaluateSeriesJoinRequestTargets(
+                        occurrences,
+                        activeFutureReservationMatchIds,
+                        pendingFutureRequestMatchIds,
+                        now);
         if (matchParticipantDao.hasPendingSeriesRequest(match.getSeriesId(), userId)) {
             throw buildSeriesJoinRequestFailure(evaluation.asPending());
         }
@@ -140,13 +154,22 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         }
 
         final Long requestMatchId =
-                matchParticipantDao.hasPendingRequest(matchId, userId)
+                pendingFutureRequestMatchIds.contains(matchId)
                         ? matchId
                         : evaluation.targetMatchIds().get(0);
         if (!matchParticipantDao.createSeriesJoinRequestIfSpace(requestMatchId, userId)) {
+            final Instant currentNow = Instant.now(clock);
             final SeriesJoinRequestEvaluation currentEvaluation =
                     evaluateSeriesJoinRequestTargets(
-                            matchDao.findSeriesOccurrences(match.getSeriesId()), userId);
+                            matchDao.findSeriesOccurrences(match.getSeriesId()),
+                            Set.copyOf(
+                                    matchParticipantDao
+                                            .findActiveFutureReservationMatchIdsForSeries(
+                                                    match.getSeriesId(), userId, currentNow)),
+                            Set.copyOf(
+                                    matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                                            match.getSeriesId(), userId, currentNow)),
+                            currentNow);
             throw buildSeriesJoinRequestFailure(currentEvaluation);
         }
     }
@@ -175,6 +198,17 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         return match.isRecurringOccurrence()
                 && matchParticipantDao.hasPendingSeriesRequest(match.getSeriesId(), userId);
+    }
+
+    @Override
+    public Set<Long> findPendingFutureRequestMatchIdsForSeries(
+            final Long seriesId, final Long userId) {
+        if (seriesId == null || userId == null) {
+            return Set.of();
+        }
+        return Set.copyOf(
+                matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                        seriesId, userId, Instant.now(clock)));
     }
 
     // -------------------------------------------------------------------------
@@ -576,14 +610,16 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
-            final List<Match> occurrences, final Long userId) {
+            final List<Match> occurrences,
+            final Set<Long> activeFutureReservationMatchIds,
+            final Set<Long> pendingFutureRequestMatchIds,
+            final Instant now) {
         int futureOccurrenceCount = 0;
         int futureOpenApprovalOccurrenceCount = 0;
         int joinedFutureOpenApprovalOccurrenceCount = 0;
         int pendingFutureOpenApprovalOccurrenceCount = 0;
         final java.util.ArrayList<Long> targetMatchIds = new java.util.ArrayList<>();
         int fullOccurrenceCount = 0;
-        final Instant now = Instant.now(clock);
 
         for (final Match occurrence : occurrences) {
             if (!occurrence.getStartsAt().isAfter(now)) {
@@ -596,12 +632,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             }
 
             futureOpenApprovalOccurrenceCount++;
-            if (matchParticipantDao.hasActiveReservation(occurrence.getId(), userId)) {
+            if (activeFutureReservationMatchIds.contains(occurrence.getId())) {
                 joinedFutureOpenApprovalOccurrenceCount++;
                 continue;
             }
 
-            if (matchParticipantDao.hasPendingRequest(occurrence.getId(), userId)) {
+            if (pendingFutureRequestMatchIds.contains(occurrence.getId())) {
                 pendingFutureOpenApprovalOccurrenceCount++;
                 continue;
             }

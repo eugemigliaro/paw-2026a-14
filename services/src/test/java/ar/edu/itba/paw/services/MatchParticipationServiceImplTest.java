@@ -16,6 +16,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,22 @@ public class MatchParticipationServiceImplTest {
                         mailDispatchService,
                         templateRenderer,
                         new StaticMessageSource());
+    }
+
+    @Test
+    public void testFindPendingFutureRequestMatchIdsForSeriesUsesCurrentTime() {
+        // Arrange
+        Mockito.when(
+                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                                100L, 20L, FIXED_NOW))
+                .thenReturn(List.of(10L, 11L));
+
+        // Exercise
+        final Set<Long> matchIds =
+                matchParticipationService.findPendingFutureRequestMatchIdsForSeries(100L, 20L);
+
+        // Assert
+        Assertions.assertEquals(Set.of(10L, 11L), matchIds);
     }
 
     @Test
@@ -345,6 +362,14 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
         Mockito.when(matchDao.findSeriesOccurrences(100L))
                 .thenReturn(List.of(pastOccurrence, selectedOccurrence, secondOccurrence));
+        Mockito.when(
+                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                100L, 20L, FIXED_NOW))
+                .thenReturn(List.of());
+        Mockito.when(
+                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                                100L, 20L, FIXED_NOW))
+                .thenReturn(List.of());
         Mockito.when(matchParticipantDao.createSeriesJoinRequestIfSpace(10L, 20L)).thenReturn(true);
 
         // Exercise and Assert
@@ -631,8 +656,14 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
         Mockito.when(matchDao.findSeriesOccurrences(100L))
                 .thenReturn(List.of(selectedOccurrence, secondOccurrence));
-        Mockito.when(matchParticipantDao.hasPendingRequest(10L, 20L)).thenReturn(true);
-        Mockito.when(matchParticipantDao.hasPendingRequest(11L, 20L)).thenReturn(true);
+        Mockito.when(
+                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                100L, 20L, FIXED_NOW))
+                .thenReturn(List.of());
+        Mockito.when(
+                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                                100L, 20L, FIXED_NOW))
+                .thenReturn(List.of(10L, 11L));
 
         // Exercise
         final MatchParticipationException exception =
