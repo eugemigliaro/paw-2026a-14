@@ -98,6 +98,7 @@ public class WebConfig implements WebMvcConfigurer {
                 new ReloadableResourceBundleMessageSource();
         ms.setBasename("classpath:i18n/messages");
         ms.setDefaultEncoding("UTF-8");
+        ms.setFallbackToSystemLocale(false);
         return ms;
     }
 

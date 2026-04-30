@@ -483,6 +483,12 @@
 														><c:out
 															value="${participant.username}"
 													/></a>
+													<c:if test="${not empty participant.reviewHref}">
+														<c:url var="participantReviewHref" value="${participant.reviewHref}" />
+														<a class="participant-list__review-link" href="${participantReviewHref}">
+															<spring:message code="event.participants.review" />
+														</a>
+													</c:if>
 												</div>
 											</li>
 										</c:forEach>

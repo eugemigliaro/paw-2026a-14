@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
@@ -45,6 +46,7 @@ public class EventController {
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
     private final MatchParticipationService matchParticipationService;
+    private final PlayerReviewService playerReviewService;
     private final UserService userService;
     private final MessageSource messageSource;
 
@@ -53,11 +55,13 @@ public class EventController {
             final MatchService matchService,
             final MatchReservationService matchReservationService,
             final MatchParticipationService matchParticipationService,
+            final PlayerReviewService playerReviewService,
             final UserService userService,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
+        this.playerReviewService = playerReviewService;
         this.userService = userService;
         this.messageSource = messageSource;
     }
@@ -162,7 +166,9 @@ public class EventController {
         mav.addObject("isInviteOnly", isInviteOnly);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
-        mav.addObject("eventPage", buildRealEventPage(match, confirmedParticipants, locale));
+        mav.addObject(
+                "eventPage",
+                buildRealEventPage(match, confirmedParticipants, currentUserId, locale));
 
         mav.addObject("reservationEnabled", canReserveMatch(match));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
@@ -200,7 +206,10 @@ public class EventController {
     }
 
     private EventDetailPageViewModel buildRealEventPage(
-            final Match match, final List<User> confirmedParticipants, final Locale locale) {
+            final Match match,
+            final List<User> confirmedParticipants,
+            final Long currentUserId,
+            final Locale locale) {
         final Optional<User> host = userService.findById(match.getHostUserId());
         return new EventDetailPageViewModel(
                 toCard(match, locale),
@@ -214,7 +223,7 @@ public class EventController {
                                         locale)),
                 host.map(this::profileHrefFor).orElse(null),
                 host.map(user -> profileUrlFor(user)).orElse(DEFAULT_PROFILE_IMAGE_URL),
-                toParticipantViewModels(confirmedParticipants),
+                toParticipantViewModels(confirmedParticipants, currentUserId),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
                 buildAboutParagraphs(match, locale),
@@ -269,7 +278,7 @@ public class EventController {
     }
 
     private List<ParticipantViewModel> toParticipantViewModels(
-            final List<User> confirmedParticipants) {
+            final List<User> confirmedParticipants, final Long currentUserId) {
         return confirmedParticipants.stream()
                 .map(
                         participant ->
@@ -277,8 +286,19 @@ public class EventController {
                                         participant.getUsername(),
                                         avatarLabelForUsername(participant.getUsername()),
                                         profileHrefFor(participant),
-                                        profileImageUrlForParticipant(participant)))
+                                        profileImageUrlForParticipant(participant),
+                                        reviewHrefForParticipant(participant, currentUserId)))
                 .toList();
+    }
+
+    private String reviewHrefForParticipant(final User participant, final Long currentUserId) {
+        if (currentUserId == null
+                || participant.getId() == null
+                || currentUserId.equals(participant.getId())
+                || !playerReviewService.canReview(currentUserId, participant.getId())) {
+            return null;
+        }
+        return profileHrefFor(participant) + "?reviewForm=open#reviews";
     }
 
     private String profileImageUrlForParticipant(final User participant) {

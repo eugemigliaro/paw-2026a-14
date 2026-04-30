@@ -272,7 +272,8 @@ public class HostParticipationController {
                                                 + matchId
                                                 + "/participants/"
                                                 + u.getId()
-                                                + "/remove"))
+                                                + "/remove",
+                                        profileHrefFor(u)))
                 .toList();
     }
 
@@ -281,7 +282,9 @@ public class HostParticipationController {
                 .map(
                         u ->
                                 new InviteParticipantViewModel(
-                                        u.getUsername(), avatarLabel(u.getUsername())))
+                                        u.getUsername(),
+                                        avatarLabel(u.getUsername()),
+                                        profileHrefFor(u)))
                 .toList();
     }
 
@@ -302,8 +305,13 @@ public class HostParticipationController {
                                                 + matchId
                                                 + "/requests/"
                                                 + u.getId()
-                                                + "/reject"))
+                                                + "/reject",
+                                        profileHrefFor(u)))
                 .toList();
+    }
+
+    private static String profileHrefFor(final User user) {
+        return user.getUsername() == null ? null : "/users/" + user.getUsername();
     }
 
     private Match requireHostMatch(final long matchId, final long hostUserId) {

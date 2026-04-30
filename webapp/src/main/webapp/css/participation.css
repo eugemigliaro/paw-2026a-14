@@ -74,11 +74,17 @@ player pending join requests
 }
 
 .participant-manage-list__name {
+	color: var(--text-primary);
 	font-size: 0.95rem;
 	font-weight: 700;
 	overflow: hidden;
+	text-decoration: none;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+a.participant-manage-list__name:hover {
+	text-decoration: underline;
 }
 
 .participant-manage-list__actions {
