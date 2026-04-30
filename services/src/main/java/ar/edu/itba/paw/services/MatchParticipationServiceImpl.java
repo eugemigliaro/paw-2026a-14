@@ -78,7 +78,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
 
         if (isHost(match, userId)) {
-            return;
+            throw new MatchParticipationException(
+                    "is_host", "Hosts cannot request to join their own event.");
         }
 
         if (!"open".equalsIgnoreCase(match.getStatus())) {
@@ -122,7 +123,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
 
         if (isHost(match, userId)) {
-            return;
+            throw new MatchParticipationException(
+                    "is_host", "Hosts cannot request to join their own recurring event series.");
         }
 
         if (!match.isRecurringOccurrence()) {
@@ -343,7 +345,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                                                 "No user found with that email address."));
 
         if (isHost(match, target.getId())) {
-            return;
+            throw new MatchParticipationException(
+                    "is_host", "The host user cannot be invited to their own match.");
         }
 
         requireInvitableMatch(match);
@@ -411,7 +414,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Instant now = Instant.now(clock);
 
         if (isHost(match, userId)) {
-            return;
+            throw new MatchParticipationException(
+                    "is_host", "The host cannot accept an invitation to their own event.");
         }
 
         if (!matchParticipantDao.hasInvitation(matchId, userId)) {

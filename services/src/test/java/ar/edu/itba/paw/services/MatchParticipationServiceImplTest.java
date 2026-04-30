@@ -71,7 +71,7 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
-    public void testRequestToJoinNoOpsForHostSelfRequest() {
+    public void testRequestToJoinRejectsHostSelfRequest() {
         // Arrange
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
@@ -83,12 +83,18 @@ public class MatchParticipationServiceImplTest {
                                         "open",
                                         FIXED_NOW.plusSeconds(3600))));
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchParticipationService.requestToJoin(10L, 1L));
+        // Exercise
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () -> matchParticipationService.requestToJoin(10L, 1L));
+
+        // Assert
+        Assertions.assertEquals("is_host", exception.getCode());
     }
 
     @Test
-    public void testRequestToJoinSeriesNoOpsForHostSelfRequest() {
+    public void testRequestToJoinSeriesRejectsHostSelfRequest() {
         // Arrange
         final Match selectedOccurrence =
                 createRecurringMatch(
@@ -103,12 +109,18 @@ public class MatchParticipationServiceImplTest {
                         1);
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchParticipationService.requestToJoinSeries(10L, 1L));
+        // Exercise
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () -> matchParticipationService.requestToJoinSeries(10L, 1L));
+
+        // Assert
+        Assertions.assertEquals("is_host", exception.getCode());
     }
 
     @Test
-    public void testInviteUserNoOpsForHostSelfInvite() {
+    public void testInviteUserRejectsHostSelfInvite() {
         // Arrange
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
@@ -122,13 +134,19 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(userService.findByEmail("host@test.com"))
                 .thenReturn(Optional.of(new User(1L, "host@test.com", "host-player")));
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(
-                () -> matchParticipationService.inviteUser(10L, 1L, "host@test.com"));
+        // Exercise
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () -> matchParticipationService.inviteUser(10L, 1L, "host@test.com"));
+
+        // Assert
+        Assertions.assertEquals("is_host", exception.getCode());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
-    public void testAcceptInviteNoOpsForHostWithoutInvitation() {
+    public void testAcceptInviteRejectsHostWithoutInvitation() {
         // Arrange
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
@@ -140,8 +158,14 @@ public class MatchParticipationServiceImplTest {
                                         "closed",
                                         FIXED_NOW.plusSeconds(3600))));
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchParticipationService.acceptInvite(10L, 1L));
+        // Exercise
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () -> matchParticipationService.acceptInvite(10L, 1L));
+
+        // Assert
+        Assertions.assertEquals("is_host", exception.getCode());
     }
 
     @Test
