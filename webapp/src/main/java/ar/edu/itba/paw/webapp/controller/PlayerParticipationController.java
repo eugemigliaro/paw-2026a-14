@@ -123,7 +123,8 @@ public class PlayerParticipationController {
                 "shell",
                 ShellViewModelFactory.playerShell(
                         messageSource, resolvedLocale, "/player/matches/invites"));
-        mav.addObject("invitedMatches", toInvitedMatchViewModels(invitedMatches, resolvedLocale));
+        mav.addObject(
+                "invitedMatches", toInvitedMatchViewModels(invitedMatches, userId, resolvedLocale));
         mav.addObject(
                 "emptyMessage",
                 messageSource.getMessage("player.invites.empty", null, resolvedLocale));
@@ -161,14 +162,18 @@ public class PlayerParticipationController {
     }
 
     private java.util.List<InvitedMatchViewModel> toInvitedMatchViewModels(
-            final java.util.List<Match> matches, final Locale locale) {
+            final java.util.List<Match> matches, final long userId, final Locale locale) {
         return matches.stream()
                 .map(
-                        m ->
-                                new InvitedMatchViewModel(
-                                        toCard(m, locale),
-                                        "/matches/" + m.getId() + "/invites/accept",
-                                        "/matches/" + m.getId() + "/invites/decline"))
+                        m -> {
+                            final boolean seriesInvite =
+                                    matchParticipationService.isSeriesInvitation(m.getId(), userId);
+                            return new InvitedMatchViewModel(
+                                    toCard(m, locale),
+                                    "/matches/" + m.getId() + "/invites/accept",
+                                    "/matches/" + m.getId() + "/invites/decline",
+                                    seriesInvite);
+                        })
                 .toList();
     }
 

@@ -672,12 +672,22 @@ public final class PawUiViewModels {
         private final EventCardViewModel card;
         private final String acceptUrl;
         private final String declineUrl;
+        private final boolean seriesInvite;
 
         public InvitedMatchViewModel(
                 final EventCardViewModel card, final String acceptUrl, final String declineUrl) {
+            this(card, acceptUrl, declineUrl, false);
+        }
+
+        public InvitedMatchViewModel(
+                final EventCardViewModel card,
+                final String acceptUrl,
+                final String declineUrl,
+                final boolean seriesInvite) {
             this.card = card;
             this.acceptUrl = acceptUrl;
             this.declineUrl = declineUrl;
+            this.seriesInvite = seriesInvite;
         }
 
         public EventCardViewModel getCard() {
@@ -690,6 +700,10 @@ public final class PawUiViewModels {
 
         public String getDeclineUrl() {
             return declineUrl;
+        }
+
+        public boolean isSeriesInvite() {
+            return seriesInvite;
         }
     }
 

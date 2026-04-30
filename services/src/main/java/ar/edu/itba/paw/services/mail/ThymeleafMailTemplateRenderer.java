@@ -138,6 +138,55 @@ public class ThymeleafMailTemplateRenderer {
                 textMailTemplateEngine.process("match-cancelled", context));
     }
 
+    public MailContent renderMatchInvitationNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchInvitationContext(templateData, locale, null);
+        context.setVariable("mailEyebrow", message("mail.matchInvitation.single.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.matchInvitation.single.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable("summary", message("mail.matchInvitation.single.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.matchInvitation.single.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderSeriesInvitationNotification(
+            final MatchLifecycleMailTemplateData templateData, final int occurrenceCount) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchInvitationContext(templateData, locale, occurrenceCount);
+        context.setVariable("mailEyebrow", message("mail.matchInvitation.series.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.matchInvitation.series.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary",
+                message(
+                        "mail.matchInvitation.series.summary",
+                        new Object[] {occurrenceCount},
+                        locale));
+
+        return new MailContent(
+                message(
+                        "mail.matchInvitation.series.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
     public MailContent renderActionMail(final VerificationMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
         final Context context = new Context(locale);
@@ -189,6 +238,21 @@ public class ThymeleafMailTemplateRenderer {
         return context;
     }
 
+    private Context buildMatchInvitationContext(
+            final MatchLifecycleMailTemplateData templateData,
+            final Locale locale,
+            final Integer occurrenceCount) {
+        final Context context = new Context(locale);
+        context.setVariable("recipientEmail", templateData.getRecipientEmail());
+        context.setVariable(
+                "requestedForLabel", message("mail.matchInvitation.requestedFor", locale));
+        context.setVariable("detailsLabel", message("mail.matchInvitation.details", locale));
+        context.setVariable(
+                "details", buildMatchInvitationDetails(templateData, locale, occurrenceCount));
+        context.setVariable("lang", locale.getLanguage());
+        return context;
+    }
+
     private List<VerificationPreviewDetail> buildMatchLifecycleDetails(
             final MatchLifecycleMailTemplateData templateData,
             final Locale locale,
@@ -226,6 +290,49 @@ public class ThymeleafMailTemplateRenderer {
                             message("mail.matchLifecycle.field.affectedDates", locale),
                             message(
                                     "mail.matchLifecycle.affectedDates",
+                                    new Object[] {occurrenceCount},
+                                    locale)));
+        }
+        return List.copyOf(details);
+    }
+
+    private List<VerificationPreviewDetail> buildMatchInvitationDetails(
+            final MatchLifecycleMailTemplateData templateData,
+            final Locale locale,
+            final Integer occurrenceCount) {
+        final List<VerificationPreviewDetail> details = new ArrayList<>();
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.matchInvitation.field.matchTitle", locale),
+                        templateData.getMatchTitle()));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.matchInvitation.field.sport", locale),
+                        templateData.getSportLabel()));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.matchInvitation.field.address", locale),
+                        templateData.getAddress()));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.matchInvitation.field.startsAt", locale),
+                        formatDateTime(templateData.getStartsAt(), locale)));
+        if (templateData.getEndsAt() != null) {
+            details.add(
+                    new VerificationPreviewDetail(
+                            message("mail.matchInvitation.field.endsAt", locale),
+                            formatDateTime(templateData.getEndsAt(), locale)));
+        }
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.matchInvitation.field.status", locale),
+                        templateData.getStatusLabel()));
+        if (occurrenceCount != null) {
+            details.add(
+                    new VerificationPreviewDetail(
+                            message("mail.matchInvitation.field.seriesDates", locale),
+                            message(
+                                    "mail.matchInvitation.seriesDates",
                                     new Object[] {occurrenceCount},
                                     locale)));
         }

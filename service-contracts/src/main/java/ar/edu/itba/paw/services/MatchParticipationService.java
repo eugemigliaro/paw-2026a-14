@@ -41,11 +41,23 @@ public interface MatchParticipationService {
 
     void inviteUser(Long matchId, Long hostUserId, String email);
 
+    default void inviteUser(
+            final Long matchId,
+            final Long hostUserId,
+            final String email,
+            final boolean includeSeries) {
+        inviteUser(matchId, hostUserId, email);
+    }
+
     void acceptInvite(Long matchId, Long userId);
 
     void declineInvite(Long matchId, Long userId);
 
     boolean hasInvitation(Long matchId, Long userId);
+
+    default boolean isSeriesInvitation(final Long matchId, final Long userId) {
+        return false;
+    }
 
     List<User> findInvitedUsers(Long matchId, Long hostUserId);
 

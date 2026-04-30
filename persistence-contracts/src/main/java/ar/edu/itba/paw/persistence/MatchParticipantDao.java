@@ -50,11 +50,19 @@ public interface MatchParticipantDao {
 
     boolean inviteUser(Long matchId, Long userId);
 
+    boolean inviteUser(Long matchId, Long userId, boolean seriesInvitation);
+
     boolean hasInvitation(Long matchId, Long userId);
+
+    boolean isSeriesInvitation(Long matchId, Long userId);
 
     boolean acceptInvite(Long matchId, Long userId);
 
+    int acceptSeriesInvite(Long seriesId, Long userId, Instant startsAfter);
+
     boolean declineInvite(Long matchId, Long userId);
+
+    int declineSeriesInvite(Long seriesId, Long userId);
 
     List<User> findInvitedUsers(Long matchId);
 

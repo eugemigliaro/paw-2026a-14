@@ -171,6 +171,32 @@ public class ThymeleafMailTemplateRendererTest {
                 "Evento recurrente cancelado: Noche semanal de Padel", content.getSubject());
     }
 
+    @Test
+    public void testRenderSeriesInvitationNotificationUsesSeriesCopy() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderSeriesInvitationNotification(
+                        new MatchLifecycleMailTemplateData(
+                                "player@test.com",
+                                "Weekly Padel",
+                                "Downtown Club",
+                                Instant.parse("2026-04-06T18:00:00Z"),
+                                Instant.parse("2026-04-06T19:30:00Z"),
+                                "Padel",
+                                "Open",
+                                Locale.ENGLISH),
+                        3);
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Series invitation"));
+        Assertions.assertTrue(content.getHtmlBody().contains("all available dates in this series"));
+        Assertions.assertTrue(content.getTextBody().contains("Series dates"));
+        Assertions.assertTrue(content.getTextBody().contains("3 dates in this series"));
+        Assertions.assertEquals("You are invited to a series: Weekly Padel", content.getSubject());
+    }
+
     private static TemplateEngine htmlTemplateEngine() {
         final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("mail/");
@@ -370,6 +396,84 @@ public class ThymeleafMailTemplateRendererTest {
                 "mail.matchLifecycle.recurringCancelled.notice",
                 Locale.of("es"),
                 "Tus reservas ya no siguen activas para estas fechas recurrentes.");
+        messageSource.addMessage(
+                "mail.matchInvitation.requestedFor", Locale.ENGLISH, "Invitation for");
+        messageSource.addMessage(
+                "mail.matchInvitation.requestedFor", Locale.of("es"), "Invitacion para");
+        messageSource.addMessage(
+                "mail.matchInvitation.details", Locale.ENGLISH, "Invitation details");
+        messageSource.addMessage(
+                "mail.matchInvitation.details", Locale.of("es"), "Detalles de la invitacion");
+        messageSource.addMessage("mail.matchInvitation.field.matchTitle", Locale.ENGLISH, "Event");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.matchTitle", Locale.of("es"), "Evento");
+        messageSource.addMessage("mail.matchInvitation.field.sport", Locale.ENGLISH, "Sport");
+        messageSource.addMessage("mail.matchInvitation.field.sport", Locale.of("es"), "Deporte");
+        messageSource.addMessage("mail.matchInvitation.field.address", Locale.ENGLISH, "Venue");
+        messageSource.addMessage("mail.matchInvitation.field.address", Locale.of("es"), "Lugar");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.startsAt", Locale.ENGLISH, "Starts at");
+        messageSource.addMessage("mail.matchInvitation.field.startsAt", Locale.of("es"), "Empieza");
+        messageSource.addMessage("mail.matchInvitation.field.endsAt", Locale.ENGLISH, "Ends at");
+        messageSource.addMessage("mail.matchInvitation.field.endsAt", Locale.of("es"), "Termina");
+        messageSource.addMessage("mail.matchInvitation.field.status", Locale.ENGLISH, "Status");
+        messageSource.addMessage("mail.matchInvitation.field.status", Locale.of("es"), "Estado");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.seriesDates", Locale.ENGLISH, "Series dates");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.seriesDates", Locale.of("es"), "Fechas de la serie");
+        messageSource.addMessage(
+                "mail.matchInvitation.seriesDates", Locale.ENGLISH, "{0} dates in this series");
+        messageSource.addMessage(
+                "mail.matchInvitation.seriesDates", Locale.of("es"), "{0} fechas de esta serie");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.eyebrow", Locale.ENGLISH, "Event invitation");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.eyebrow", Locale.of("es"), "Invitacion a evento");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.subject", Locale.ENGLISH, "You are invited: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.subject", Locale.of("es"), "Estas invitado: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.title", Locale.ENGLISH, "You are invited to {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.title", Locale.of("es"), "Estas invitado a {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.summary",
+                Locale.ENGLISH,
+                "The host invited you to this private event. Review the details before responding.");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.summary",
+                Locale.of("es"),
+                "El organizador te invito a este evento privado.");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.eyebrow", Locale.ENGLISH, "Series invitation");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.eyebrow", Locale.of("es"), "Invitacion a serie");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.subject",
+                Locale.ENGLISH,
+                "You are invited to a series: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.subject",
+                Locale.of("es"),
+                "Estas invitado a una serie: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.title",
+                Locale.ENGLISH,
+                "You are invited to all dates in {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.title",
+                Locale.of("es"),
+                "Estas invitado a todas las fechas de {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.summary",
+                Locale.ENGLISH,
+                "The host invited you to all available dates in this series. This invitation covers {0} dates where you were not already invited or participating.");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.summary",
+                Locale.of("es"),
+                "El organizador te invito a todas las fechas disponibles de esta serie.");
         return messageSource;
     }
 }

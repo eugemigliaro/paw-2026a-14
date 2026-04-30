@@ -6,12 +6,20 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.services.mail.MailContent;
+import ar.edu.itba.paw.services.mail.MailDispatchService;
+import ar.edu.itba.paw.services.mail.MatchLifecycleMailTemplateData;
+import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.StaticMessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +30,41 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private final MatchParticipantDao matchParticipantDao;
     private final UserService userService;
     private final Clock clock;
+    private final MailDispatchService mailDispatchService;
+    private final ThymeleafMailTemplateRenderer templateRenderer;
+    private final MessageSource messageSource;
+
+    public MatchParticipationServiceImpl(
+            final MatchDao matchDao,
+            final MatchParticipantDao matchParticipantDao,
+            final UserService userService,
+            final Clock clock) {
+        this(
+                matchDao,
+                matchParticipantDao,
+                userService,
+                clock,
+                (recipientEmail, content) -> {},
+                null,
+                new StaticMessageSource());
+    }
 
     @Autowired
     public MatchParticipationServiceImpl(
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
             final UserService userService,
-            final Clock clock) {
+            final Clock clock,
+            final MailDispatchService mailDispatchService,
+            final ThymeleafMailTemplateRenderer templateRenderer,
+            final MessageSource messageSource) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.userService = userService;
         this.clock = clock;
+        this.mailDispatchService = mailDispatchService;
+        this.templateRenderer = templateRenderer;
+        this.messageSource = messageSource;
     }
 
     // -------------------------------------------------------------------------
@@ -245,19 +277,20 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     @Transactional
     public void inviteUser(final Long matchId, final Long hostUserId, final String email) {
+        inviteUser(matchId, hostUserId, email, false);
+    }
+
+    @Override
+    @Transactional
+    public void inviteUser(
+            final Long matchId,
+            final Long hostUserId,
+            final String email,
+            final boolean includeSeries) {
         final Match match = requireMatch(matchId);
         requireHost(match, hostUserId);
 
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
-            throw new MatchParticipationException("closed", "The event is not open.");
-        }
-
-        if (!"private".equalsIgnoreCase(match.getVisibility())
-                || !"invite_only".equalsIgnoreCase(match.getJoinPolicy())) {
-            throw new MatchParticipationException(
-                    "not_invite_only",
-                    "Invitations are only supported for private invite-only events.");
-        }
+        requireInvitableMatch(match);
 
         final User target =
                 userService
@@ -268,6 +301,16 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                                                 "user_not_found",
                                                 "No user found with that email address."));
 
+        if (includeSeries && match.getSeriesId() != null) {
+            inviteUserToSeries(match, target);
+            return;
+        }
+
+        inviteUserToMatch(match, target);
+    }
+
+    private void inviteUserToMatch(final Match match, final User target) {
+        final Long matchId = match.getId();
         if (matchParticipantDao.hasActiveReservation(matchId, target.getId())) {
             throw new MatchParticipationException(
                     "already_joined", "That user is already a confirmed participant.");
@@ -286,24 +329,62 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "already_invited", "Could not send the invitation.");
         }
+
+        dispatchMatchInvitation(target, match);
+    }
+
+    private void inviteUserToSeries(final Match match, final User target) {
+        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeriesId());
+        final SeriesInvitationEvaluation evaluation =
+                evaluateSeriesInvitationTargets(occurrences, target.getId());
+        if (evaluation.invitableOccurrenceCount() == 0) {
+            throw buildSeriesInvitationFailure(evaluation);
+        }
+
+        int invitedCount = 0;
+        for (final Long targetMatchId : evaluation.targetMatchIds()) {
+            if (matchParticipantDao.inviteUser(targetMatchId, target.getId(), true)) {
+                invitedCount++;
+            }
+        }
+
+        if (invitedCount == 0) {
+            throw new MatchParticipationException(
+                    "series_already_covered",
+                    "That user is already invited or participating in this series.");
+        }
+
+        dispatchSeriesInvitation(target, match, invitedCount);
     }
 
     @Override
     @Transactional
     public void acceptInvite(final Long matchId, final Long userId) {
         final Match match = requireMatch(matchId);
+        final Instant now = Instant.now(clock);
 
         if (!"open".equalsIgnoreCase(match.getStatus())) {
             throw new MatchParticipationException("closed", "The event is not open.");
         }
 
-        if (!match.getStartsAt().isAfter(Instant.now(clock))) {
+        if (!match.getStartsAt().isAfter(now)) {
             throw new MatchParticipationException("started", "The event has already started.");
         }
 
         if (!matchParticipantDao.hasInvitation(matchId, userId)) {
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
+        }
+
+        if (match.getSeriesId() != null
+                && matchParticipantDao.isSeriesInvitation(matchId, userId)) {
+            final int acceptedRows =
+                    matchParticipantDao.acceptSeriesInvite(match.getSeriesId(), userId, now);
+            if (acceptedRows <= 0) {
+                throw new MatchParticipationException(
+                        "no_invitation", "No pending invitation found for this series.");
+            }
+            return;
         }
 
         if (!matchParticipantDao.acceptInvite(matchId, userId)) {
@@ -315,9 +396,22 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     @Transactional
     public void declineInvite(final Long matchId, final Long userId) {
+        final Match match = requireMatch(matchId);
+
         if (!matchParticipantDao.hasInvitation(matchId, userId)) {
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
+        }
+
+        if (match.getSeriesId() != null
+                && matchParticipantDao.isSeriesInvitation(matchId, userId)) {
+            final int declinedRows =
+                    matchParticipantDao.declineSeriesInvite(match.getSeriesId(), userId);
+            if (declinedRows <= 0) {
+                throw new MatchParticipationException(
+                        "no_invitation", "No pending invitation found for this series.");
+            }
+            return;
         }
 
         if (!matchParticipantDao.declineInvite(matchId, userId)) {
@@ -329,6 +423,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     public boolean hasInvitation(final Long matchId, final Long userId) {
         return matchParticipantDao.hasInvitation(matchId, userId);
+    }
+
+    @Override
+    public boolean isSeriesInvitation(final Long matchId, final Long userId) {
+        return matchParticipantDao.isSeriesInvitation(matchId, userId);
     }
 
     @Override
@@ -371,6 +470,66 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "forbidden", "Only the host can perform this action.");
         }
+    }
+
+    private static void requireInvitableMatch(final Match match) {
+        if (!"open".equalsIgnoreCase(match.getStatus())) {
+            throw new MatchParticipationException("closed", "The event is not open.");
+        }
+
+        if (!"private".equalsIgnoreCase(match.getVisibility())
+                || !"invite_only".equalsIgnoreCase(match.getJoinPolicy())) {
+            throw new MatchParticipationException(
+                    "not_invite_only",
+                    "Invitations are only supported for private invite-only events.");
+        }
+    }
+
+    private void dispatchMatchInvitation(final User target, final Match match) {
+        if (templateRenderer == null) {
+            return;
+        }
+        final MatchLifecycleMailTemplateData templateData =
+                buildInvitationTemplateData(target, match);
+        final MailContent content =
+                templateRenderer.renderMatchInvitationNotification(templateData);
+        mailDispatchService.dispatch(target.getEmail(), content);
+    }
+
+    private void dispatchSeriesInvitation(
+            final User target, final Match match, final int occurrenceCount) {
+        if (templateRenderer == null) {
+            return;
+        }
+        final MatchLifecycleMailTemplateData templateData =
+                buildInvitationTemplateData(target, match);
+        final MailContent content =
+                templateRenderer.renderSeriesInvitationNotification(templateData, occurrenceCount);
+        mailDispatchService.dispatch(target.getEmail(), content);
+    }
+
+    private MatchLifecycleMailTemplateData buildInvitationTemplateData(
+            final User recipient, final Match match) {
+        final Locale locale = LocaleContextHolder.getLocale();
+        final String sportLabel =
+                messageSource.getMessage(
+                        "sport." + match.getSport().getDbValue(),
+                        null,
+                        match.getSport().getDisplayName(),
+                        locale);
+        final String statusLabel =
+                messageSource.getMessage(
+                        "match.status." + match.getStatus(), null, match.getStatus(), locale);
+
+        return new MatchLifecycleMailTemplateData(
+                recipient.getEmail(),
+                match.getTitle(),
+                match.getAddress(),
+                match.getStartsAt(),
+                match.getEndsAt(),
+                sportLabel,
+                statusLabel,
+                locale);
     }
 
     private void leaveMatch(final Match match, final Long userId) {
@@ -461,6 +620,60 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 && "approval_required".equalsIgnoreCase(occurrence.getJoinPolicy());
     }
 
+    private SeriesInvitationEvaluation evaluateSeriesInvitationTargets(
+            final List<Match> occurrences, final Long userId) {
+        int futureOccurrenceCount = 0;
+        int futureOpenInviteOnlyOccurrenceCount = 0;
+        int joinedFutureOpenInviteOnlyOccurrenceCount = 0;
+        int invitedFutureOpenInviteOnlyOccurrenceCount = 0;
+        int fullOccurrenceCount = 0;
+        final java.util.ArrayList<Long> targetMatchIds = new java.util.ArrayList<>();
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)) {
+                continue;
+            }
+
+            futureOccurrenceCount++;
+            if (!isSeriesInvitableOccurrence(occurrence)) {
+                continue;
+            }
+
+            futureOpenInviteOnlyOccurrenceCount++;
+            if (matchParticipantDao.hasActiveReservation(occurrence.getId(), userId)) {
+                joinedFutureOpenInviteOnlyOccurrenceCount++;
+                continue;
+            }
+
+            if (matchParticipantDao.hasInvitation(occurrence.getId(), userId)) {
+                invitedFutureOpenInviteOnlyOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getJoinedPlayers() >= occurrence.getMaxPlayers()) {
+                fullOccurrenceCount++;
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        return new SeriesInvitationEvaluation(
+                futureOccurrenceCount,
+                futureOpenInviteOnlyOccurrenceCount,
+                joinedFutureOpenInviteOnlyOccurrenceCount,
+                invitedFutureOpenInviteOnlyOccurrenceCount,
+                List.copyOf(targetMatchIds),
+                fullOccurrenceCount);
+    }
+
+    private static boolean isSeriesInvitableOccurrence(final Match occurrence) {
+        return "open".equalsIgnoreCase(occurrence.getStatus())
+                && "private".equalsIgnoreCase(occurrence.getVisibility())
+                && "invite_only".equalsIgnoreCase(occurrence.getJoinPolicy());
+    }
+
     private static MatchParticipationException buildSeriesJoinRequestFailure(
             final SeriesJoinRequestEvaluation evaluation) {
         if (evaluation.futureOccurrenceCount() == 0) {
@@ -494,6 +707,45 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 "series_closed", "The upcoming recurring dates are not open.");
     }
 
+    private static MatchParticipationException buildSeriesInvitationFailure(
+            final SeriesInvitationEvaluation evaluation) {
+        if (evaluation.futureOccurrenceCount() == 0) {
+            return new MatchParticipationException(
+                    "series_started", "There are no upcoming dates left in this series.");
+        }
+
+        if (evaluation.futureOpenInviteOnlyOccurrenceCount() == 0) {
+            return new MatchParticipationException(
+                    "series_closed", "The upcoming dates in this series are not open.");
+        }
+
+        if (evaluation.joined()) {
+            return new MatchParticipationException(
+                    "series_already_joined",
+                    "That user is already participating in every available date in this series.");
+        }
+
+        if (evaluation.invited()) {
+            return new MatchParticipationException(
+                    "series_already_invited",
+                    "That user is already invited to every available date in this series.");
+        }
+
+        if (evaluation.covered()) {
+            return new MatchParticipationException(
+                    "series_already_covered",
+                    "That user is already invited or participating in this series.");
+        }
+
+        if (evaluation.fullOccurrenceCount() > 0) {
+            return new MatchParticipationException(
+                    "series_full", "The available dates in this series are full.");
+        }
+
+        return new MatchParticipationException(
+                "series_closed", "The upcoming dates in this series are not open.");
+    }
+
     private record SeriesJoinRequestEvaluation(
             int futureOccurrenceCount,
             int futureOpenApprovalOccurrenceCount,
@@ -514,6 +766,38 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     true,
                     targetMatchIds,
                     fullOccurrenceCount);
+        }
+    }
+
+    private record SeriesInvitationEvaluation(
+            int futureOccurrenceCount,
+            int futureOpenInviteOnlyOccurrenceCount,
+            int joinedFutureOpenInviteOnlyOccurrenceCount,
+            int invitedFutureOpenInviteOnlyOccurrenceCount,
+            List<Long> targetMatchIds,
+            int fullOccurrenceCount) {
+
+        private int invitableOccurrenceCount() {
+            return targetMatchIds.size();
+        }
+
+        private boolean joined() {
+            return futureOpenInviteOnlyOccurrenceCount > 0
+                    && joinedFutureOpenInviteOnlyOccurrenceCount
+                            == futureOpenInviteOnlyOccurrenceCount;
+        }
+
+        private boolean invited() {
+            return futureOpenInviteOnlyOccurrenceCount > 0
+                    && invitedFutureOpenInviteOnlyOccurrenceCount
+                            == futureOpenInviteOnlyOccurrenceCount;
+        }
+
+        private boolean covered() {
+            return futureOpenInviteOnlyOccurrenceCount > 0
+                    && joinedFutureOpenInviteOnlyOccurrenceCount
+                                    + invitedFutureOpenInviteOnlyOccurrenceCount
+                            == futureOpenInviteOnlyOccurrenceCount;
         }
     }
 }

@@ -11,11 +11,21 @@ public class InviteForm {
     @Size(max = 255)
     private String email;
 
+    private boolean inviteSeries;
+
     public String getEmail() {
         return email;
     }
 
     public void setEmail(final String email) {
         this.email = email;
+    }
+
+    public boolean isInviteSeries() {
+        return inviteSeries;
+    }
+
+    public void setInviteSeries(final boolean inviteSeries) {
+        this.inviteSeries = inviteSeries;
     }
 }

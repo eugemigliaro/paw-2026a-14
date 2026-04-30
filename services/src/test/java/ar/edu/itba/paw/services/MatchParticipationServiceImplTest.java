@@ -2,15 +2,21 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.services.mail.MailContent;
+import ar.edu.itba.paw.services.mail.MailDispatchService;
+import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.support.StaticMessageSource;
 
 @ExtendWith(MockitoExtension.class)
 public class MatchParticipationServiceImplTest {
@@ -27,17 +34,23 @@ public class MatchParticipationServiceImplTest {
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
+    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
 
+    private RecordingMailDispatchService mailDispatchService;
     private MatchParticipationServiceImpl matchParticipationService;
 
     @BeforeEach
     public void setUp() {
+        mailDispatchService = new RecordingMailDispatchService();
         matchParticipationService =
                 new MatchParticipationServiceImpl(
                         matchDao,
                         matchParticipantDao,
                         userService,
-                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
+                        mailDispatchService,
+                        templateRenderer,
+                        new StaticMessageSource());
     }
 
     @Test
@@ -239,6 +252,234 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
+    public void testInviteUserToSeriesInvitesEligibleDatesOnlyAndSendsOneMail() {
+        // Arrange
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1);
+        final Match secondOccurrence =
+                createRecurringMatch(
+                        11L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(7200),
+                        4,
+                        0,
+                        100L,
+                        2);
+        final Match alreadyInvitedOccurrence =
+                createRecurringMatch(
+                        12L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(10800),
+                        4,
+                        1,
+                        100L,
+                        3);
+        final Match alreadyJoinedOccurrence =
+                createRecurringMatch(
+                        13L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(14400),
+                        4,
+                        1,
+                        100L,
+                        4);
+        final Match fullOccurrence =
+                createRecurringMatch(
+                        14L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(18000),
+                        4,
+                        4,
+                        100L,
+                        5);
+        final Match publicOccurrence =
+                createRecurringMatch(
+                        15L,
+                        "public",
+                        "direct",
+                        "open",
+                        FIXED_NOW.plusSeconds(21600),
+                        4,
+                        0,
+                        100L,
+                        6);
+        final List<Long> invitedMatchIds = new ArrayList<>();
+        final AtomicInteger mailOccurrenceCount = new AtomicInteger();
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(
+                        List.of(
+                                selectedOccurrence,
+                                secondOccurrence,
+                                alreadyInvitedOccurrence,
+                                alreadyJoinedOccurrence,
+                                fullOccurrence,
+                                publicOccurrence));
+        Mockito.when(userService.findByEmail("player@test.com"))
+                .thenReturn(Optional.of(new User(20L, "player@test.com", "player")));
+        Mockito.when(matchParticipantDao.hasInvitation(Mockito.anyLong(), Mockito.eq(20L)))
+                .thenAnswer(invocation -> Long.valueOf(12L).equals(invocation.getArgument(0)));
+        Mockito.when(matchParticipantDao.hasActiveReservation(Mockito.anyLong(), Mockito.eq(20L)))
+                .thenAnswer(invocation -> Long.valueOf(13L).equals(invocation.getArgument(0)));
+        Mockito.when(
+                        matchParticipantDao.inviteUser(
+                                Mockito.anyLong(), Mockito.eq(20L), Mockito.eq(true)))
+                .thenAnswer(
+                        invocation -> {
+                            invitedMatchIds.add(invocation.getArgument(0));
+                            return true;
+                        });
+        Mockito.when(
+                        templateRenderer.renderSeriesInvitationNotification(
+                                Mockito.any(), Mockito.anyInt()))
+                .thenAnswer(
+                        invocation -> {
+                            mailOccurrenceCount.set(invocation.getArgument(1, Integer.class));
+                            return new MailContent("Series invitation", "<p>series</p>", "series");
+                        });
+
+        // Exercise
+        matchParticipationService.inviteUser(10L, 1L, "player@test.com", true);
+
+        // Assert
+        Assertions.assertEquals(List.of(10L, 11L), invitedMatchIds);
+        Assertions.assertEquals(1, mailDispatchService.contents.size());
+        Assertions.assertEquals("player@test.com", mailDispatchService.recipients.get(0));
+        Assertions.assertEquals(
+                "Series invitation", mailDispatchService.contents.get(0).getSubject());
+        Assertions.assertEquals(2, mailOccurrenceCount.get());
+    }
+
+    @Test
+    public void testInviteUserToSeriesRejectsWhenAllDatesAlreadyCovered() {
+        // Arrange
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1);
+        final Match alreadyJoinedOccurrence =
+                createRecurringMatch(
+                        11L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(7200),
+                        4,
+                        1,
+                        100L,
+                        2);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(List.of(selectedOccurrence, alreadyJoinedOccurrence));
+        Mockito.when(userService.findByEmail("player@test.com"))
+                .thenReturn(Optional.of(new User(20L, "player@test.com", "player")));
+        Mockito.when(matchParticipantDao.hasInvitation(Mockito.anyLong(), Mockito.eq(20L)))
+                .thenAnswer(invocation -> Long.valueOf(10L).equals(invocation.getArgument(0)));
+        Mockito.when(matchParticipantDao.hasActiveReservation(Mockito.anyLong(), Mockito.eq(20L)))
+                .thenAnswer(invocation -> Long.valueOf(11L).equals(invocation.getArgument(0)));
+
+        // Exercise
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () ->
+                                matchParticipationService.inviteUser(
+                                        10L, 1L, "player@test.com", true));
+
+        // Assert
+        Assertions.assertEquals("series_already_covered", exception.getCode());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+    }
+
+    @Test
+    public void testAcceptInviteExpandsSeriesInvitation() {
+        // Arrange
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1);
+        final AtomicInteger acceptedRows = new AtomicInteger();
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchParticipantDao.hasInvitation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.isSeriesInvitation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, 20L, FIXED_NOW))
+                .thenAnswer(
+                        invocation -> {
+                            acceptedRows.set(2);
+                            return 2;
+                        });
+
+        // Exercise
+        matchParticipationService.acceptInvite(10L, 20L);
+
+        // Assert
+        Assertions.assertEquals(2, acceptedRows.get());
+    }
+
+    @Test
+    public void testDeclineInviteExpandsSeriesInvitation() {
+        // Arrange
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L,
+                        "private",
+                        "invite_only",
+                        "open",
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1);
+        final AtomicInteger declinedRows = new AtomicInteger();
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchParticipantDao.hasInvitation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.isSeriesInvitation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.declineSeriesInvite(100L, 20L))
+                .thenAnswer(
+                        invocation -> {
+                            declinedRows.set(2);
+                            return 2;
+                        });
+
+        // Exercise
+        matchParticipationService.declineInvite(10L, 20L);
+
+        // Assert
+        Assertions.assertEquals(2, declinedRows.get());
+    }
+
+    @Test
     public void testRequestToJoinSeriesRejectsAlreadyPendingFutureSeries() {
         // Arrange
         final Match selectedOccurrence =
@@ -300,6 +541,18 @@ public class MatchParticipationServiceImplTest {
 
         // Assert
         Assertions.assertEquals("not_recurring", exception.getCode());
+    }
+
+    private static class RecordingMailDispatchService implements MailDispatchService {
+
+        private final List<String> recipients = new ArrayList<>();
+        private final List<MailContent> contents = new ArrayList<>();
+
+        @Override
+        public void dispatch(final String recipientEmail, final MailContent content) {
+            recipients.add(recipientEmail);
+            contents.add(content);
+        }
     }
 
     private static Match createMatch(

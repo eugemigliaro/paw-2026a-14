@@ -585,12 +585,20 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
 
     @Override
     public boolean inviteUser(final Long matchId, final Long userId) {
+        return inviteUser(matchId, userId, false);
+    }
+
+    @Override
+    public boolean inviteUser(
+            final Long matchId, final Long userId, final boolean seriesInvitation) {
         final int restoredRows =
                 jdbcTemplate.update(
                         "UPDATE match_participants"
-                                + " SET status = 'invited', joined_at = CURRENT_TIMESTAMP"
+                                + " SET status = 'invited', series_request = ?,"
+                                + " joined_at = CURRENT_TIMESTAMP"
                                 + " WHERE match_id = ? AND user_id = ?"
                                 + " AND status IN ('cancelled', 'declined_invite')",
+                        seriesInvitation,
                         matchId,
                         userId);
 
@@ -600,8 +608,9 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
 
         final int insertedRows =
                 jdbcTemplate.update(
-                        "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
-                                + " SELECT ?, ?, 'invited', CURRENT_TIMESTAMP"
+                        "INSERT INTO match_participants"
+                                + " (match_id, user_id, status, joined_at, series_request)"
+                                + " SELECT ?, ?, 'invited', CURRENT_TIMESTAMP, ?"
                                 + " FROM users u"
                                 + " WHERE u.id = ?"
                                 + " AND NOT EXISTS ("
@@ -609,6 +618,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + "   WHERE match_id = ? AND user_id = ?)",
                         matchId,
                         userId,
+                        seriesInvitation,
                         userId,
                         matchId,
                         userId);
@@ -629,10 +639,39 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     }
 
     @Override
+    public boolean isSeriesInvitation(final Long matchId, final Long userId) {
+        final Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*)"
+                                + " FROM match_participants mp"
+                                + " JOIN matches m ON m.id = mp.match_id"
+                                + " WHERE mp.match_id = ?"
+                                + " AND mp.user_id = ?"
+                                + " AND mp.status = 'invited'"
+                                + " AND m.series_id IS NOT NULL"
+                                + " AND ("
+                                + " mp.series_request = TRUE"
+                                + " OR EXISTS ("
+                                + " SELECT 1"
+                                + " FROM match_participants other_mp"
+                                + " JOIN matches other_m ON other_m.id = other_mp.match_id"
+                                + " WHERE other_mp.user_id = mp.user_id"
+                                + " AND other_mp.status = 'invited'"
+                                + " AND other_m.series_id = m.series_id"
+                                + " AND other_mp.match_id <> mp.match_id"
+                                + " )"
+                                + " )",
+                        Integer.class,
+                        matchId,
+                        userId);
+        return count != null && count > 0;
+    }
+
+    @Override
     public boolean acceptInvite(final Long matchId, final Long userId) {
         final int rows =
                 jdbcTemplate.update(
-                        "UPDATE match_participants SET status = 'joined'"
+                        "UPDATE match_participants SET status = 'joined', series_request = FALSE"
                                 + " WHERE match_id = ? AND user_id = ?"
                                 + " AND status = 'invited'",
                         matchId,
@@ -641,15 +680,50 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     }
 
     @Override
+    public int acceptSeriesInvite(
+            final Long seriesId, final Long userId, final Instant startsAfter) {
+        return jdbcTemplate.update(
+                "UPDATE match_participants"
+                        + " SET status = 'joined', series_request = FALSE"
+                        + " WHERE user_id = ?"
+                        + " AND status = 'invited'"
+                        + " AND match_id IN ("
+                        + " SELECT id FROM matches"
+                        + " WHERE series_id = ?"
+                        + " AND status = 'open'"
+                        + " AND starts_at > ?"
+                        + ")",
+                userId,
+                seriesId,
+                Timestamp.from(startsAfter));
+    }
+
+    @Override
     public boolean declineInvite(final Long matchId, final Long userId) {
         final int rows =
                 jdbcTemplate.update(
-                        "UPDATE match_participants SET status = 'declined_invite'"
+                        "UPDATE match_participants"
+                                + " SET status = 'declined_invite', series_request = FALSE"
                                 + " WHERE match_id = ? AND user_id = ?"
                                 + " AND status = 'invited'",
                         matchId,
                         userId);
         return rows == 1;
+    }
+
+    @Override
+    public int declineSeriesInvite(final Long seriesId, final Long userId) {
+        return jdbcTemplate.update(
+                "UPDATE match_participants"
+                        + " SET status = 'declined_invite', series_request = FALSE"
+                        + " WHERE user_id = ?"
+                        + " AND status = 'invited'"
+                        + " AND match_id IN ("
+                        + " SELECT id FROM matches"
+                        + " WHERE series_id = ?"
+                        + ")",
+                userId,
+                seriesId);
     }
 
     @Override
@@ -683,10 +757,36 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     @Override
     public List<Long> findInvitedMatchIds(final Long userId) {
         return jdbcTemplate.queryForList(
-                "SELECT match_id FROM match_participants"
-                        + " WHERE user_id = ? AND status = 'invited'"
-                        + " ORDER BY joined_at ASC",
+                "SELECT match_id"
+                        + " FROM ("
+                        + " SELECT mp.match_id, mp.joined_at, m.starts_at"
+                        + " FROM match_participants mp"
+                        + " JOIN matches m ON m.id = mp.match_id"
+                        + " WHERE mp.user_id = ?"
+                        + " AND mp.status = 'invited'"
+                        + " AND m.series_id IS NULL"
+                        + " UNION ALL"
+                        + " SELECT mp.match_id, mp.joined_at, m.starts_at"
+                        + " FROM match_participants mp"
+                        + " JOIN matches m ON m.id = mp.match_id"
+                        + " WHERE mp.user_id = ?"
+                        + " AND mp.status = 'invited'"
+                        + " AND m.series_id IS NOT NULL"
+                        + " AND NOT EXISTS ("
+                        + " SELECT 1"
+                        + " FROM match_participants earlier"
+                        + " JOIN matches em ON em.id = earlier.match_id"
+                        + " WHERE earlier.user_id = mp.user_id"
+                        + " AND earlier.status = 'invited'"
+                        + " AND earlier.series_request = TRUE"
+                        + " AND em.series_id = m.series_id"
+                        + " AND (em.starts_at < m.starts_at"
+                        + " OR (em.starts_at = m.starts_at AND em.id < m.id))"
+                        + " )"
+                        + " ) invited_matches"
+                        + " ORDER BY joined_at ASC, starts_at ASC, match_id ASC",
                 Long.class,
+                userId,
                 userId);
     }
 

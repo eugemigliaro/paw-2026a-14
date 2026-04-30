@@ -200,10 +200,15 @@ public class HostParticipationController {
         }
 
         try {
+            final boolean includeSeries =
+                    inviteForm.isInviteSeries() && match.getSeriesId() != null;
             matchParticipationService.inviteUser(
-                    resolvedMatchId, hostUserId, inviteForm.getEmail());
+                    resolvedMatchId, hostUserId, inviteForm.getEmail(), includeSeries);
             return new ModelAndView(
-                    "redirect:/host/matches/" + resolvedMatchId + "/invites?action=invited");
+                    "redirect:/host/matches/"
+                            + resolvedMatchId
+                            + "/invites?action="
+                            + (includeSeries ? "seriesInvited" : "invited"));
         } catch (final MatchParticipationException e) {
             final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
             return buildInviteView(
@@ -230,6 +235,7 @@ public class HostParticipationController {
         mav.addObject("matchId", matchId);
         mav.addObject("inviteForm", form);
         mav.addObject("inviteError", inviteError);
+        mav.addObject("seriesInviteAvailable", match.getSeriesId() != null);
         mav.addObject("pendingInvites", toInviteParticipantViewModels(pending));
         mav.addObject("acceptedParticipants", toRosterViewModels(accepted, matchId));
         mav.addObject("declinedInvites", toInviteParticipantViewModels(declined));
@@ -252,6 +258,21 @@ public class HostParticipationController {
                 return messageSource.getMessage("host.invites.error.isHost", null, locale);
             case "closed":
                 return messageSource.getMessage("host.invites.error.closed", null, locale);
+            case "series_started":
+                return messageSource.getMessage("host.invites.error.seriesStarted", null, locale);
+            case "series_closed":
+                return messageSource.getMessage("host.invites.error.seriesClosed", null, locale);
+            case "series_already_joined":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyJoined", null, locale);
+            case "series_already_invited":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyInvited", null, locale);
+            case "series_already_covered":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyCovered", null, locale);
+            case "series_full":
+                return messageSource.getMessage("host.invites.error.seriesFull", null, locale);
             default:
                 return messageSource.getMessage("host.invites.error.generic", null, locale);
         }

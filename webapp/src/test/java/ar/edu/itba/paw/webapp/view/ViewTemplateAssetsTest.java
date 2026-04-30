@@ -144,6 +144,41 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void hostInvitesIncludesLocalizedSeriesInviteOption() throws IOException {
+        final String inviteView =
+                read("src/main/webapp/WEB-INF/views/host/participation/invites.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(inviteView.contains("seriesInviteAvailable"));
+        assertTrue(inviteView.contains("path=\"inviteSeries\""));
+        assertTrue(inviteView.contains("host.invites.inviteSeries"));
+        assertEquals(
+                "Invite to all dates in this series",
+                english.getProperty("host.invites.inviteSeries"));
+        assertEquals(
+                "Invitar a todas las fechas de esta serie",
+                spanish.getProperty("host.invites.inviteSeries"));
+    }
+
+    @Test
+    void playerInvitesIncludesLocalizedSeriesInviteActions() throws IOException {
+        final String inviteView =
+                read("src/main/webapp/WEB-INF/views/player/participation/invites.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(inviteView.contains("item.seriesInvite"));
+        assertTrue(inviteView.contains("player.invites.seriesStatusLabel"));
+        assertTrue(inviteView.contains("player.invites.acceptSeries"));
+        assertEquals("Series invitation", english.getProperty("player.invites.seriesStatusLabel"));
+        assertEquals("Accept series", english.getProperty("player.invites.acceptSeries"));
+        assertEquals(
+                "Invitaci\u00f3n a serie", spanish.getProperty("player.invites.seriesStatusLabel"));
+        assertEquals("Aceptar serie", spanish.getProperty("player.invites.acceptSeries"));
+    }
+
+    @Test
     void matchDetailCollapsesLongRecurringSchedule() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final String eventDetailCss = read("src/main/webapp/css/event-detail.css");
