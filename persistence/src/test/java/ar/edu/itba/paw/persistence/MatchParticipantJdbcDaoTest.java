@@ -69,6 +69,30 @@ public class MatchParticipantJdbcDaoTest {
     }
 
     @Test
+    public void testCreateReservationIfSpaceAllowsHostForInviteOnlyMatch() {
+        jdbcTemplate.update(
+                "UPDATE matches SET visibility = 'private', join_policy = 'invite_only'"
+                        + " WHERE id = 10");
+
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(10L, 1L);
+
+        Assertions.assertTrue(inserted);
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(10L, 1L));
+    }
+
+    @Test
+    public void testCreateReservationIfSpaceRejectsNonHostForInviteOnlyMatch() {
+        jdbcTemplate.update(
+                "UPDATE matches SET visibility = 'private', join_policy = 'invite_only'"
+                        + " WHERE id = 10");
+
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(10L, 2L);
+
+        Assertions.assertFalse(inserted);
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(10L, 2L));
+    }
+
+    @Test
     public void testCreateReservationIfSpaceRestoresInactiveParticipantRow() {
         jdbcTemplate.update(
                 "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
@@ -142,6 +166,34 @@ public class MatchParticipantJdbcDaoTest {
                                 + " WHERE user_id = 2 AND match_id IN (32, 33)",
                         Integer.class);
         Assertions.assertEquals(0, skippedRows);
+    }
+
+    @Test
+    public void testCreateSeriesReservationsIfSpaceAllowsHostForApprovalRequiredOccurrences() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 2, "open", "approval_required");
+        insertRecurringMatch(31L, 600L, 2, now.plusSeconds(172800), 2, "open", "approval_required");
+
+        final int insertedRows = matchParticipantDao.createSeriesReservationsIfSpace(600L, 1L, now);
+
+        Assertions.assertEquals(2, insertedRows);
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(30L, 1L));
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(31L, 1L));
+    }
+
+    @Test
+    public void testCreateSeriesReservationsIfSpaceRejectsNonHostForApprovalRequiredOccurrences() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        insertRecurringSeries(600L, now.plusSeconds(86400));
+        insertRecurringMatch(30L, 600L, 1, now.plusSeconds(86400), 2, "open", "approval_required");
+        insertRecurringMatch(31L, 600L, 2, now.plusSeconds(172800), 2, "open", "approval_required");
+
+        final int insertedRows = matchParticipantDao.createSeriesReservationsIfSpace(600L, 2L, now);
+
+        Assertions.assertEquals(0, insertedRows);
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(30L, 2L));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(31L, 2L));
     }
 
     @Test

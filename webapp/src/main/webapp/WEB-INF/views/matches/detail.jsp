@@ -340,7 +340,7 @@
 							</c:if>
 
 							<spring:message var="joiningLabel" code="event.booking.joining" />
-							<c:if test="${not (hostViewer and isPrivateEvent) or isConfirmedParticipant or isInvitedPlayer}">
+							<c:if test="${not hostViewer or isConfirmedParticipant or reservationEnabled or seriesReservationEnabled or seriesCancellationEnabled}">
 								<c:choose>
 									<c:when test="${isConfirmedParticipant}">
 										<p class="booking-panel__notice booking-panel__notice--success">

@@ -76,6 +76,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void requestToJoin(final Long matchId, final Long userId) {
         final Match match = requireMatch(matchId);
 
+        if (isHost(match, userId)) {
+            return;
+        }
+
         if (!"open".equalsIgnoreCase(match.getStatus())) {
             throw new MatchParticipationException(
                     "closed", "The event is not open for join requests.");
@@ -115,6 +119,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Transactional
     public void requestToJoinSeries(final Long matchId, final Long userId) {
         final Match match = requireMatch(matchId);
+
+        if (isHost(match, userId)) {
+            return;
+        }
 
         if (!match.isRecurringOccurrence()) {
             throw new MatchParticipationException(
@@ -267,6 +275,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 .map(matchDao::findMatchById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
+                .filter(match -> !isHost(match, userId))
                 .collect(Collectors.toList());
     }
 
@@ -290,8 +299,6 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         requireHost(match, hostUserId);
 
-        requireInvitableMatch(match);
-
         final User target =
                 userService
                         .findByEmail(email)
@@ -300,6 +307,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                                         new MatchParticipationException(
                                                 "user_not_found",
                                                 "No user found with that email address."));
+
+        if (isHost(match, target.getId())) {
+            return;
+        }
+
+        requireInvitableMatch(match);
 
         if (includeSeries && match.getSeriesId() != null) {
             inviteUserToSeries(match, target);
@@ -362,6 +375,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void acceptInvite(final Long matchId, final Long userId) {
         final Match match = requireMatch(matchId);
         final Instant now = Instant.now(clock);
+
+        if (isHost(match, userId)) {
+            return;
+        }
 
         if (!"open".equalsIgnoreCase(match.getStatus())) {
             throw new MatchParticipationException("closed", "The event is not open.");
@@ -450,6 +467,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 .map(matchDao::findMatchById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
+                .filter(match -> !isHost(match, userId))
                 .collect(Collectors.toList());
     }
 
@@ -466,10 +484,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     private void requireHost(final Match match, final Long userId) {
-        if (!match.getHostUserId().equals(userId)) {
+        if (!isHost(match, userId)) {
             throw new MatchParticipationException(
                     "forbidden", "Only the host can perform this action.");
         }
+    }
+
+    private static boolean isHost(final Match match, final Long userId) {
+        return userId != null && userId.equals(match.getHostUserId());
     }
 
     private static void requireInvitableMatch(final Match match) {

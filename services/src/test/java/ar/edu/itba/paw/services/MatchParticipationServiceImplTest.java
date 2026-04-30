@@ -54,6 +54,80 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
+    public void testRequestToJoinNoOpsForHostSelfRequest() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        "public",
+                                        "approval_required",
+                                        "open",
+                                        FIXED_NOW.plusSeconds(3600))));
+
+        // Exercise and Assert
+        Assertions.assertDoesNotThrow(() -> matchParticipationService.requestToJoin(10L, 1L));
+    }
+
+    @Test
+    public void testRequestToJoinSeriesNoOpsForHostSelfRequest() {
+        // Arrange
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L,
+                        "public",
+                        "approval_required",
+                        "open",
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+
+        // Exercise and Assert
+        Assertions.assertDoesNotThrow(() -> matchParticipationService.requestToJoinSeries(10L, 1L));
+    }
+
+    @Test
+    public void testInviteUserNoOpsForHostSelfInvite() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        "private",
+                                        "invite_only",
+                                        "open",
+                                        FIXED_NOW.plusSeconds(3600))));
+        Mockito.when(userService.findByEmail("host@test.com"))
+                .thenReturn(Optional.of(new User(1L, "host@test.com", "host-player")));
+
+        // Exercise and Assert
+        Assertions.assertDoesNotThrow(
+                () -> matchParticipationService.inviteUser(10L, 1L, "host@test.com"));
+    }
+
+    @Test
+    public void testAcceptInviteNoOpsForHostWithoutInvitation() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        "private",
+                                        "invite_only",
+                                        "closed",
+                                        FIXED_NOW.plusSeconds(3600))));
+
+        // Exercise and Assert
+        Assertions.assertDoesNotThrow(() -> matchParticipationService.acceptInvite(10L, 1L));
+    }
+
+    @Test
     public void testRemoveParticipantAllowsSelfLeaveForUpcomingPublicMatch() {
         // Arrange
         Mockito.when(matchDao.findMatchById(10L))
@@ -180,6 +254,56 @@ public class MatchParticipationServiceImplTest {
         // Exercise and Assert
         Assertions.assertDoesNotThrow(
                 () -> matchParticipationService.removeParticipant(10L, 1L, 30L));
+    }
+
+    @Test
+    public void testFindPendingRequestMatchesSkipsHostedMatches() {
+        // Arrange
+        final Match hostedMatch =
+                createMatchWithHost(
+                        10L,
+                        20L,
+                        "public",
+                        "approval_required",
+                        "open",
+                        FIXED_NOW.plusSeconds(3600));
+        final Match otherMatch =
+                createMatchWithHost(
+                        11L,
+                        1L,
+                        "public",
+                        "approval_required",
+                        "open",
+                        FIXED_NOW.plusSeconds(7200));
+        Mockito.when(matchParticipantDao.findPendingMatchIds(20L)).thenReturn(List.of(10L, 11L));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(hostedMatch));
+        Mockito.when(matchDao.findMatchById(11L)).thenReturn(Optional.of(otherMatch));
+
+        // Exercise
+        final List<Match> matches = matchParticipationService.findPendingRequestMatches(20L);
+
+        // Assert
+        Assertions.assertEquals(List.of(otherMatch), matches);
+    }
+
+    @Test
+    public void testFindInvitedMatchesSkipsHostedMatches() {
+        // Arrange
+        final Match hostedMatch =
+                createMatchWithHost(
+                        10L, 20L, "private", "invite_only", "open", FIXED_NOW.plusSeconds(3600));
+        final Match otherMatch =
+                createMatchWithHost(
+                        11L, 1L, "private", "invite_only", "open", FIXED_NOW.plusSeconds(7200));
+        Mockito.when(matchParticipantDao.findInvitedMatchIds(20L)).thenReturn(List.of(10L, 11L));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(hostedMatch));
+        Mockito.when(matchDao.findMatchById(11L)).thenReturn(Optional.of(otherMatch));
+
+        // Exercise
+        final List<Match> matches = matchParticipationService.findInvitedMatches(20L);
+
+        // Assert
+        Assertions.assertEquals(List.of(otherMatch), matches);
     }
 
     @Test
@@ -561,10 +685,20 @@ public class MatchParticipationServiceImplTest {
             final String joinPolicy,
             final String status,
             final Instant startsAt) {
+        return createMatchWithHost(id, 1L, visibility, joinPolicy, status, startsAt);
+    }
+
+    private static Match createMatchWithHost(
+            final Long id,
+            final Long hostUserId,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final Instant startsAt) {
         return new Match(
                 id,
                 Sport.FOOTBALL,
-                1L,
+                hostUserId,
                 "Test Address",
                 "Test Match",
                 "Test Description",

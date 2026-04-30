@@ -89,8 +89,10 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + " ON active.match_id = m.id"
                                 + " AND active.status IN ('joined', 'checked_in')"
                                 + " WHERE m.id = ?"
-                                + " AND m.visibility = 'public'"
-                                + " AND m.join_policy = 'direct'"
+                                + " AND ("
+                                + " (m.visibility = 'public' AND m.join_policy = 'direct')"
+                                + " OR m.host_user_id = ?"
+                                + " )"
                                 + " AND m.status = 'open'"
                                 + " AND m.starts_at > CURRENT_TIMESTAMP"
                                 + " GROUP BY m.id, m.max_players"
@@ -98,7 +100,8 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + ")",
                         matchId,
                         userId,
-                        matchId);
+                        matchId,
+                        userId);
         if (restoredRows == 1) {
             return true;
         }
@@ -114,8 +117,10 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                     + " ON mp.match_id = m.id"
                                     + " AND mp.status IN ('joined', 'checked_in')"
                                     + " WHERE m.id = ?"
-                                    + " AND m.visibility = 'public'"
-                                    + " AND m.join_policy = 'direct'"
+                                    + " AND ("
+                                    + " (m.visibility = 'public' AND m.join_policy = 'direct')"
+                                    + " OR m.host_user_id = ?"
+                                    + " )"
                                     + " AND m.status = 'open'"
                                     + " AND m.starts_at > CURRENT_TIMESTAMP"
                                     + " AND NOT EXISTS ("
@@ -125,6 +130,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                     + " HAVING COUNT(mp.id) < MAX(m.max_players)",
                             userId,
                             matchId,
+                            userId,
                             userId);
         } catch (final DuplicateKeyException e) {
             LOGGER.debug(
@@ -161,8 +167,10 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + " ON active.match_id = m.id"
                                 + " AND active.status IN ('joined', 'checked_in')"
                                 + " WHERE m.series_id = ?"
-                                + " AND m.visibility = 'public'"
-                                + " AND m.join_policy = 'direct'"
+                                + " AND ("
+                                + " (m.visibility = 'public' AND m.join_policy = 'direct')"
+                                + " OR m.host_user_id = ?"
+                                + " )"
                                 + " AND m.status = 'open'"
                                 + " AND m.starts_at > ?"
                                 + " GROUP BY m.id, m.max_players"
@@ -170,6 +178,7 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                                 + ")",
                         userId,
                         seriesId,
+                        userId,
                         startsAfterTimestamp);
 
         final String insertSql =
@@ -180,8 +189,10 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         + " ON mp.match_id = m.id"
                         + " AND mp.status IN ('joined', 'checked_in')"
                         + " WHERE m.series_id = ?"
-                        + " AND m.visibility = 'public'"
-                        + " AND m.join_policy = 'direct'"
+                        + " AND ("
+                        + " (m.visibility = 'public' AND m.join_policy = 'direct')"
+                        + " OR m.host_user_id = ?"
+                        + " )"
                         + " AND m.status = 'open'"
                         + " AND m.starts_at > ?"
                         + " AND NOT EXISTS ("
@@ -195,7 +206,8 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
         int insertedRows = 0;
         try {
             insertedRows =
-                    jdbcTemplate.update(insertSql, userId, seriesId, startsAfterTimestamp, userId);
+                    jdbcTemplate.update(
+                            insertSql, userId, seriesId, userId, startsAfterTimestamp, userId);
         } catch (final DuplicateKeyException e) {
             LOGGER.debug(
                     "Series reservation insert hit duplicate participant row seriesId={} userId={}",

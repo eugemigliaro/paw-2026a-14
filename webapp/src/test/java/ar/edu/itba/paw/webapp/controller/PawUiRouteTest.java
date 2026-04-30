@@ -1311,6 +1311,18 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getPrivateInviteOnlyMatchDetailsForHostExposesDirectReservation() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/51"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("isInvitedPlayer", false));
+    }
+
+    @Test
     void getRecurringMatchDetailsRouteExposesRecurringOccurrenceStates() throws Exception {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
@@ -1451,6 +1463,10 @@ class PawUiRouteTest {
                 .andExpect(model().attribute("hostCanManage", true))
                 .andExpect(model().attribute("hostCanEdit", true))
                 .andExpect(model().attribute("hostCanCancel", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("seriesReservationEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
                 .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"));
     }
@@ -1464,10 +1480,26 @@ class PawUiRouteTest {
                 .andExpect(model().attribute("hostCanManage", true))
                 .andExpect(model().attribute("hostCanEditSeries", true))
                 .andExpect(model().attribute("hostCanCancelSeries", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(model().attribute("hostSeriesEditPath", "/host/matches/46/series/edit"))
                 .andExpect(
                         model().attribute(
                                         "hostSeriesCancelPath", "/host/matches/46/series/cancel"));
+    }
+
+    @Test
+    void getApprovalRequiredMatchDetailsRouteForHostHidesJoinRequestActions() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/52"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", false))
+                .andExpect(model().attribute("hasPendingJoinRequest", false));
     }
 
     @Test

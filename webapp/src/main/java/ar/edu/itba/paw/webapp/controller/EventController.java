@@ -243,12 +243,16 @@ public class EventController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
+        final boolean isHostViewer =
+                currentUserId != null && currentUserId.equals(match.getHostUserId());
         final boolean hasPendingRequest =
-                currentUserId != null
+                !isHostViewer
+                        && currentUserId != null
                         && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
                         && matchParticipationService.hasPendingRequest(eventId, currentUserId);
         final boolean isInvitedPlayer =
-                currentUserId != null
+                !isHostViewer
+                        && currentUserId != null
                         && "invite_only".equalsIgnoreCase(match.getJoinPolicy())
                         && matchParticipationService.hasInvitation(eventId, currentUserId);
         final boolean isConfirmedParticipant =
@@ -258,8 +262,6 @@ public class EventController {
         final boolean isApprovalRequired =
                 "approval_required".equalsIgnoreCase(match.getJoinPolicy());
         final boolean isInviteOnly = "invite_only".equalsIgnoreCase(match.getJoinPolicy());
-        final boolean isHostViewer =
-                currentUserId != null && currentUserId.equals(match.getHostUserId());
         final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
@@ -269,9 +271,11 @@ public class EventController {
                         : List.of();
         final SeriesReservationUiState seriesReservationState =
                 buildSeriesReservationUiState(
-                        match.getSeriesId(), seriesOccurrences, currentUserId);
+                        match.getSeriesId(), seriesOccurrences, currentUserId, isHostViewer);
         final SeriesJoinRequestUiState seriesJoinRequestState =
-                buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUserId);
+                isHostViewer
+                        ? new SeriesJoinRequestUiState(false, false)
+                        : buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUserId);
         final ModelAndView mav = new ModelAndView("matches/detail");
         final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
@@ -284,7 +288,7 @@ public class EventController {
                 buildRealEventPage(
                         match, confirmedParticipants, seriesOccurrences, currentUserId, locale));
 
-        mav.addObject("reservationEnabled", canReserveMatch(match));
+        mav.addObject("reservationEnabled", canReserveMatch(match, isHostViewer));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationCancelPath", "/matches/" + eventId + "/reservations/cancel");
         mav.addObject(
@@ -313,7 +317,8 @@ public class EventController {
         mav.addObject("eventStateNotice", eventStateNotice(match, locale));
 
         mav.addObject(
-                "joinRequestEnabled", canRequestToJoin(match) && !seriesJoinRequestState.pending());
+                "joinRequestEnabled",
+                !isHostViewer && canRequestToJoin(match) && !seriesJoinRequestState.pending());
         mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
         mav.addObject("seriesJoinRequestPath", "/matches/" + eventId + "/recurring-join-requests");
         mav.addObject("seriesJoinRequestEnabled", seriesJoinRequestState.available());
@@ -512,7 +517,10 @@ public class EventController {
     }
 
     private SeriesReservationUiState buildSeriesReservationUiState(
-            final Long seriesId, final List<Match> occurrences, final Long currentUserId) {
+            final Long seriesId,
+            final List<Match> occurrences,
+            final Long currentUserId,
+            final boolean isHostViewer) {
         if (occurrences == null || occurrences.isEmpty()) {
             return new SeriesReservationUiState(false, false, false);
         }
@@ -523,7 +531,7 @@ public class EventController {
                                 seriesId, currentUserId);
         final SeriesReservationEvaluation evaluation =
                 evaluateSeriesReservationTargets(
-                        occurrences, currentUserId, activeFutureReservationMatchIds);
+                        occurrences, currentUserId, activeFutureReservationMatchIds, isHostViewer);
         return new SeriesReservationUiState(
                 !evaluation.targetMatchIds().isEmpty(),
                 evaluation.joined(),
@@ -533,7 +541,8 @@ public class EventController {
     private SeriesReservationEvaluation evaluateSeriesReservationTargets(
             final List<Match> occurrences,
             final Long userId,
-            final Set<Long> activeFutureReservationMatchIds) {
+            final Set<Long> activeFutureReservationMatchIds,
+            final boolean isHostViewer) {
         final List<Long> targetMatchIds = new ArrayList<>();
         int futureOpenOccurrenceCount = 0;
         int joinedFutureOpenOccurrenceCount = 0;
@@ -551,7 +560,7 @@ public class EventController {
                 activeFutureReservationCount++;
             }
 
-            if (!isSeriesReservationOpenOccurrence(occurrence)) {
+            if (!isSeriesReservationOpenOccurrence(occurrence, isHostViewer)) {
                 continue;
             }
 
@@ -576,10 +585,12 @@ public class EventController {
                 List.copyOf(targetMatchIds), joined, activeFutureReservationCount);
     }
 
-    private static boolean isSeriesReservationOpenOccurrence(final Match occurrence) {
-        return "public".equalsIgnoreCase(occurrence.getVisibility())
-                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())
-                && "open".equalsIgnoreCase(occurrence.getStatus());
+    private static boolean isSeriesReservationOpenOccurrence(
+            final Match occurrence, final boolean isHostViewer) {
+        return "open".equalsIgnoreCase(occurrence.getStatus())
+                && (isHostViewer
+                        || ("public".equalsIgnoreCase(occurrence.getVisibility())
+                                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())));
     }
 
     private SeriesJoinRequestUiState buildSeriesJoinRequestUiState(
@@ -734,6 +745,8 @@ public class EventController {
                 return messageSource.getMessage("reservation.error.started", null, locale);
             case "already_joined":
                 return messageSource.getMessage("reservation.error.alreadyJoined", null, locale);
+            case "is_host":
+                return messageSource.getMessage("reservation.error.isHost", null, locale);
             case "not_joined":
                 return messageSource.getMessage("reservation.error.notJoined", null, locale);
             case "not_cancellable":
@@ -841,10 +854,11 @@ public class EventController {
         return "public".equalsIgnoreCase(match.getVisibility());
     }
 
-    private boolean canReserveMatch(final Match match) {
-        return "public".equalsIgnoreCase(match.getVisibility())
-                && "direct".equalsIgnoreCase(match.getJoinPolicy())
-                && "open".equalsIgnoreCase(match.getStatus())
+    private boolean canReserveMatch(final Match match, final boolean isHostViewer) {
+        return "open".equalsIgnoreCase(match.getStatus())
+                && (isHostViewer
+                        || ("public".equalsIgnoreCase(match.getVisibility())
+                                && "direct".equalsIgnoreCase(match.getJoinPolicy())))
                 && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
     }
@@ -915,6 +929,8 @@ public class EventController {
                 return messageSource.getMessage("invite.error.started", null, locale);
             case "no_invitation":
                 return messageSource.getMessage("invite.error.noInvitation", null, locale);
+            case "is_host":
+                return messageSource.getMessage("invite.error.isHost", null, locale);
             case "not_found":
             default:
                 return messageSource.getMessage("invite.error.notFound", null, locale);

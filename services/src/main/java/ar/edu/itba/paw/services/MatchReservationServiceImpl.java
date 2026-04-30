@@ -223,7 +223,9 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "closed", "The event is not open for reservations.");
         }
 
-        if (!"public".equalsIgnoreCase(match.getVisibility())) {
+        final boolean hostReservation = isHost(match, userId);
+
+        if (!hostReservation && !"public".equalsIgnoreCase(match.getVisibility())) {
             LOGGER.warn(
                     "Reservation rejected code=closed matchId={} userId={} visibility={}",
                     match.getId(),
@@ -233,7 +235,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "closed", "The event is not open for reservations.");
         }
 
-        if (!"direct".equalsIgnoreCase(match.getJoinPolicy())) {
+        if (!hostReservation && !"direct".equalsIgnoreCase(match.getJoinPolicy())) {
             LOGGER.warn(
                     "Reservation rejected code=closed matchId={} userId={} joinPolicy={}",
                     match.getId(),
@@ -281,9 +283,12 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             return new MatchReservationException("not_found", "The event does not exist.");
         }
 
+        final boolean hostReservation = isHost(currentMatch, userId);
+
         if (!"open".equalsIgnoreCase(currentMatch.getStatus())
-                || !"public".equalsIgnoreCase(currentMatch.getVisibility())
-                || !"direct".equalsIgnoreCase(currentMatch.getJoinPolicy())) {
+                || (!hostReservation
+                        && (!"public".equalsIgnoreCase(currentMatch.getVisibility())
+                                || !"direct".equalsIgnoreCase(currentMatch.getJoinPolicy())))) {
             return new MatchReservationException(
                     "closed", "The event is not open for reservations.");
         }
@@ -317,7 +322,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             }
 
             futureOccurrenceCount++;
-            if (!isSeriesReservableOccurrence(occurrence)) {
+            if (!isSeriesReservableOccurrence(occurrence, userId)) {
                 continue;
             }
 
@@ -350,10 +355,15 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 fullOccurrenceCount);
     }
 
-    private static boolean isSeriesReservableOccurrence(final Match occurrence) {
+    private static boolean isSeriesReservableOccurrence(final Match occurrence, final Long userId) {
         return "open".equalsIgnoreCase(occurrence.getStatus())
-                && "public".equalsIgnoreCase(occurrence.getVisibility())
-                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy());
+                && (isHost(occurrence, userId)
+                        || ("public".equalsIgnoreCase(occurrence.getVisibility())
+                                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())));
+    }
+
+    private static boolean isHost(final Match match, final Long userId) {
+        return userId != null && userId.equals(match.getHostUserId());
     }
 
     private MatchReservationException buildSeriesReservationFailure(

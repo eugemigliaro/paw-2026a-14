@@ -50,6 +50,38 @@ public class MatchReservationServiceImplTest {
     }
 
     @Test
+    public void testReserveSpotSucceedsForHostSelfReservation() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch("private", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 1L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.createReservationIfSpace(10L, 1L)).thenReturn(true);
+
+        // Exercise and Assert
+        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSpot(10L, 1L));
+    }
+
+    @Test
+    public void testReserveSpotRejectsPrivateInviteOnlyForNonHost() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch("private", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
+
+        // Exercise
+        final MatchReservationException exception =
+                Assertions.assertThrows(
+                        MatchReservationException.class,
+                        () -> matchReservationService.reserveSpot(10L, 20L));
+
+        // Assert
+        Assertions.assertEquals("closed", exception.getCode());
+    }
+
+    @Test
     public void testFindActiveFutureReservationMatchIdsForSeriesUsesCurrentClock() {
         // Arrange
         Mockito.when(
@@ -181,6 +213,27 @@ public class MatchReservationServiceImplTest {
                 .thenReturn(2);
 
         Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSeries(10L, 20L));
+    }
+
+    @Test
+    public void testReserveSeriesSucceedsForHostSelfReservation() {
+        // Arrange
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L, FIXED_NOW.plusSeconds(3600), 4, 1, 100L, 1, "approval_required");
+        final Match secondOccurrence =
+                createRecurringMatch(
+                        11L, FIXED_NOW.plusSeconds(7200), 4, 0, 100L, 2, "approval_required");
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(List.of(selectedOccurrence, secondOccurrence));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 1L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.hasActiveReservation(11L, 1L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.createSeriesReservationsIfSpace(100L, 1L, FIXED_NOW))
+                .thenReturn(2);
+
+        // Exercise and Assert
+        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSeries(10L, 1L));
     }
 
     @Test
@@ -344,6 +397,18 @@ public class MatchReservationServiceImplTest {
             final int joinedPlayers,
             final Long seriesId,
             final int occurrenceIndex) {
+        return createRecurringMatch(
+                id, startsAt, maxPlayers, joinedPlayers, seriesId, occurrenceIndex, "direct");
+    }
+
+    private static Match createRecurringMatch(
+            final Long id,
+            final Instant startsAt,
+            final int maxPlayers,
+            final int joinedPlayers,
+            final Long seriesId,
+            final int occurrenceIndex,
+            final String joinPolicy) {
         return new Match(
                 id,
                 Sport.FOOTBALL,
@@ -356,7 +421,7 @@ public class MatchReservationServiceImplTest {
                 maxPlayers,
                 BigDecimal.ZERO,
                 "public",
-                "direct",
+                joinPolicy,
                 "open",
                 joinedPlayers,
                 null,
