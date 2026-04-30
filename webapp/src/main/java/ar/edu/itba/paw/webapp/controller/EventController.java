@@ -684,6 +684,9 @@ public class EventController {
         if (status.filter(EventStatus.DRAFT::equals).isPresent()) {
             return new EventDisplayState("draft", "draft");
         }
+        if (isEventInProgress(match)) {
+            return new EventDisplayState("inProgress", "in-progress");
+        }
         if (match.getAvailableSpots() <= 0) {
             return new EventDisplayState("full", "full");
         }
@@ -712,6 +715,13 @@ public class EventController {
 
     private boolean hasEventStarted(final Match match) {
         return !match.getStartsAt().isAfter(Instant.now(clock));
+    }
+
+    private boolean isEventInProgress(final Match match) {
+        final Instant now = Instant.now(clock);
+        return match.getEndsAt() != null
+                && !match.getStartsAt().isAfter(now)
+                && match.getEndsAt().isAfter(now);
     }
 
     private String buildAvailabilityLabel(final Match match, final Locale locale) {

@@ -281,6 +281,25 @@ class PawUiRouteTest {
                         null,
                         600L,
                         0);
+        final Match recurringInProgressOccurrence =
+                new Match(
+                        55L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-04T23:00:00Z"),
+                        Instant.parse("2026-04-05T01:00:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        4,
+                        null,
+                        600L,
+                        1);
         final Match recurringFullOccurrence =
                 new Match(
                         49L,
@@ -428,6 +447,9 @@ class PawUiRouteTest {
                         if (matchId == 48L) {
                             return Optional.of(recurringPastOccurrence);
                         }
+                        if (matchId == 55L) {
+                            return Optional.of(recurringInProgressOccurrence);
+                        }
                         if (matchId == 49L) {
                             return Optional.of(recurringFullOccurrence);
                         }
@@ -456,6 +478,7 @@ class PawUiRouteTest {
                         if (Long.valueOf(600L).equals(seriesId)) {
                             return List.of(
                                     recurringPastOccurrence,
+                                    recurringInProgressOccurrence,
                                     recurringMatch,
                                     recurringSecondOccurrence,
                                     recurringFullOccurrence,
@@ -1341,7 +1364,7 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(5))))
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(6))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1351,6 +1374,20 @@ class PawUiRouteTest {
                                                         Matchers.hasProperty(
                                                                 "statusLabel",
                                                                 Matchers.is("Completed"))))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("In progress")),
+                                                                Matchers.hasProperty(
+                                                                        "statusTone",
+                                                                        Matchers.is(
+                                                                                "in-progress")))))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1378,6 +1415,21 @@ class PawUiRouteTest {
                         model().attribute(
                                         "seriesReservationPath",
                                         "/matches/46/recurring-reservations"));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteLocalizesInProgressOccurrenceState() throws Exception {
+        mockMvc.perform(get("/matches/46").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("En curso"))))));
     }
 
     @Test

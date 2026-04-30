@@ -415,6 +415,11 @@
 	color: var(--color-primary);
 }
 
+.recurrence-schedule__status--in-progress {
+	background: rgba(20, 126, 148, 0.13);
+	color: #126b7f;
+}
+
 .recurrence-schedule__status--full {
 	background: rgba(120, 82, 28, 0.13);
 	color: #8a5a13;
