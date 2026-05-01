@@ -30,6 +30,11 @@
 						<spring:message code="host.invites.sent" />
 					</div>
 				</c:if>
+				<c:if test="${param.action eq 'seriesInvited'}">
+					<div class="notice notice--success">
+						<spring:message code="host.invites.seriesSent" />
+					</div>
+				</c:if>
 
 				<div class="participation-layout">
 					<div class="participation-nav">
@@ -84,6 +89,23 @@
 									<ui:button label="${inviteLabel}" type="submit" />
 								</div>
 							</div>
+							<c:if test="${seriesInviteAvailable}">
+								<label class="series-invite-option" for="invite-series">
+									<form:checkbox
+										path="inviteSeries"
+										id="invite-series"
+										cssClass="series-invite-option__input"
+									/>
+									<span class="series-invite-option__copy">
+										<span class="series-invite-option__title">
+											<spring:message code="host.invites.inviteSeries" />
+										</span>
+										<span class="series-invite-option__hint">
+											<spring:message code="host.invites.inviteSeries.hint" />
+										</span>
+									</span>
+								</label>
+							</c:if>
 						</form:form>
 					</section>
 

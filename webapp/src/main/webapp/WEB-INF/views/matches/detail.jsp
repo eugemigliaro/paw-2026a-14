@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="pageTitle" code="page.title.eventDetail" arguments="${eventPage.event.title}" />
@@ -103,6 +104,20 @@
 									<spring:message code="event.booking.confirmed" />
 								</p>
 							</c:if>
+							<c:if test="${reservationCancelled}">
+								<p
+									class="booking-panel__notice booking-panel__notice--info"
+								>
+									<c:choose>
+										<c:when test="${not empty eventPage.occurrences}">
+											<spring:message code="event.booking.occurrenceCancelled" />
+										</c:when>
+										<c:otherwise>
+											<spring:message code="event.booking.cancelled" />
+										</c:otherwise>
+									</c:choose>
+								</p>
+							</c:if>
 							<c:if test="${not empty hostActionNotice}">
 								<p
 									class="booking-panel__notice booking-panel__notice--success"
@@ -115,6 +130,11 @@
 									class="booking-panel__notice booking-panel__notice--error"
 								>
 									<c:out value="${reservationError}" />
+								</p>
+							</c:if>
+							<c:if test="${not empty eventStateNotice}">
+								<p class="booking-panel__notice booking-panel__notice--info">
+									<c:out value="${eventStateNotice}" />
 								</p>
 							</c:if>
 
@@ -136,7 +156,19 @@
 
 							<c:if test="${hostCanManage}">
 								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
-								<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
+								<c:choose>
+									<c:when test="${not empty eventPage.occurrences}">
+										<spring:message var="hostManageEditLabel" code="host.manage.editOccurrence" />
+										<spring:message var="hostManageEditSeriesLabel" code="host.manage.editSeries" />
+										<spring:message var="hostManageCancelLabel" code="host.manage.cancelOccurrence" />
+										<spring:message var="hostManageCancelSeriesLabel" code="host.manage.cancelSeries" />
+										<spring:message var="hostManageDetailLabel" code="host.manage.detailOccurrence" />
+									</c:when>
+									<c:otherwise>
+										<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
+										<spring:message var="hostManageDetailLabel" code="host.manage.detail" />
+									</c:otherwise>
+								</c:choose>
 								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
 								<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
 								<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
@@ -160,6 +192,24 @@
 											</span>
 										</c:otherwise>
 									</c:choose>
+									<c:if test="${not empty eventPage.occurrences}">
+										<c:url var="hostSeriesEditHref" value="${hostSeriesEditPath}" />
+										<c:choose>
+											<c:when test="${hostCanEditSeries}">
+												<a class="overflow-menu__item" href="${hostSeriesEditHref}" role="menuitem">
+													<c:out value="${hostManageEditSeriesLabel}" />
+												</a>
+											</c:when>
+											<c:otherwise>
+												<span
+													class="overflow-menu__item overflow-menu__item--disabled"
+													role="menuitem"
+													aria-disabled="true">
+													<c:out value="${hostManageEditSeriesLabel}" />
+												</span>
+											</c:otherwise>
+										</c:choose>
+									</c:if>
 									<c:url var="hostCancelAction" value="${hostCancelPath}" />
 									<form
 										method="post"
@@ -188,10 +238,40 @@
 											</c:otherwise>
 										</c:choose>
 									</form>
+									<c:if test="${not empty eventPage.occurrences}">
+										<c:url var="hostSeriesCancelAction" value="${hostSeriesCancelPath}" />
+										<form
+											method="post"
+											action="${hostSeriesCancelAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${hostManageCancellingLabel}">
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<c:choose>
+												<c:when test="${hostCanCancelSeries}">
+													<button
+														class="overflow-menu__item overflow-menu__item--danger"
+														type="submit"
+														role="menuitem">
+														<c:out value="${hostManageCancelSeriesLabel}" />
+													</button>
+												</c:when>
+												<c:otherwise>
+													<button
+														class="overflow-menu__item overflow-menu__item--danger"
+														type="submit"
+														role="menuitem"
+														disabled="disabled"
+														aria-disabled="true">
+														<c:out value="${hostManageCancelSeriesLabel}" />
+													</button>
+												</c:otherwise>
+											</c:choose>
+										</form>
+									</c:if>
 								</ui:overflowMenu>
 								<div class="booking-panel__host-note">
 									<p class="detail-label"><spring:message code="host.manage.label" /></p>
-									<p><spring:message code="host.manage.detail" /></p>
+									<p><c:out value="${hostManageDetailLabel}" /></p>
 								</div>
 							</c:if>
 
@@ -260,12 +340,35 @@
 							</c:if>
 
 							<spring:message var="joiningLabel" code="event.booking.joining" />
-							<c:if test="${not (hostViewer and isPrivateEvent) or isConfirmedParticipant or isInvitedPlayer}">
+							<c:if test="${not hostViewer or isConfirmedParticipant or reservationEnabled or seriesReservationEnabled or seriesCancellationEnabled}">
 								<c:choose>
 									<c:when test="${isConfirmedParticipant}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
 										</p>
+										<c:if test="${reservationCancellationEnabled}">
+											<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
+											<c:choose>
+												<c:when test="${not empty eventPage.occurrences}">
+													<spring:message var="leavingReservationLabel" code="event.booking.leavingOccurrence" />
+													<spring:message var="leaveReservationLabel" code="event.booking.leaveOccurrence" />
+												</c:when>
+												<c:otherwise>
+													<spring:message var="leavingReservationLabel" code="event.booking.leaving" />
+													<spring:message var="leaveReservationLabel" code="event.booking.leave" />
+												</c:otherwise>
+											</c:choose>
+											<form
+												method="post"
+												action="${reservationCancelAction}"
+												data-submit-guard="true"
+												data-submit-loading-label="${leavingReservationLabel}"
+												class="booking-panel__request-form"
+											>
+												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+												<ui:button label="${leaveReservationLabel}" type="submit" fullWidth="${true}" variant="danger" />
+											</form>
+										</c:if>
 									</c:when>
 									<c:when test="${reservationRequiresLogin}">
 										<c:choose>
@@ -317,7 +420,14 @@
 											class="booking-panel__request-form"
 										>
 											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-											<spring:message var="requestToJoinLabel" code="event.joinRequest.requestToJoin" />
+											<c:choose>
+												<c:when test="${not empty eventPage.occurrences}">
+													<spring:message var="requestToJoinLabel" code="event.joinRequest.requestThisOccurrence" />
+												</c:when>
+												<c:otherwise>
+													<spring:message var="requestToJoinLabel" code="event.joinRequest.requestToJoin" />
+												</c:otherwise>
+											</c:choose>
 											<ui:button label="${requestToJoinLabel}" type="submit" fullWidth="${true}" />
 										</form>
 										<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
@@ -384,6 +494,103 @@
 									</c:otherwise>
 								</c:choose>
 							</c:if>
+
+							<c:if test="${seriesJoinRequested}">
+								<p class="booking-panel__notice booking-panel__notice--success">
+									<spring:message code="event.recurringJoinRequest.requested" />
+								</p>
+							</c:if>
+							<c:if test="${seriesJoinRequestPending and not seriesJoinRequested}">
+								<p class="booking-panel__notice booking-panel__notice--info">
+									<spring:message code="event.recurringJoinRequest.pending" />
+								</p>
+							</c:if>
+							<c:if test="${seriesJoinRequestEnabled and not seriesJoinRequestPending}">
+								<c:choose>
+									<c:when test="${seriesJoinRequestRequiresLogin}">
+										<spring:message var="signInToRequestRecurringLabel" code="event.recurringJoinRequest.signIn" />
+										<c:url var="recurringJoinRequestLoginHref" value="/login" />
+										<ui:button label="${signInToRequestRecurringLabel}" href="${recurringJoinRequestLoginHref}" fullWidth="${true}" variant="secondary" />
+									</c:when>
+									<c:otherwise>
+										<c:url var="recurringJoinRequestAction" value="${seriesJoinRequestPath}" />
+										<spring:message var="requestingRecurringJoinLabel" code="event.recurringJoinRequest.requesting" />
+										<form
+											method="post"
+											action="${recurringJoinRequestAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${requestingRecurringJoinLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="requestRecurringJoinLabel" code="event.recurringJoinRequest.cta" />
+											<ui:button label="${requestRecurringJoinLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+										</form>
+									</c:otherwise>
+								</c:choose>
+								<p class="booking-panel__note"><spring:message code="event.recurringJoinRequest.note" /></p>
+							</c:if>
+
+							<c:if test="${seriesReservationConfirmed}">
+								<p class="booking-panel__notice booking-panel__notice--success">
+									<spring:message code="event.recurringReservation.confirmed" />
+								</p>
+							</c:if>
+							<c:if test="${seriesReservationCancelled}">
+								<p class="booking-panel__notice booking-panel__notice--info">
+									<spring:message code="event.recurringReservation.cancelled" />
+								</p>
+							</c:if>
+							<c:if test="${seriesReservationJoined and not seriesReservationConfirmed}">
+								<p class="booking-panel__notice booking-panel__notice--success">
+									<spring:message code="event.recurringReservation.joined" />
+								</p>
+							</c:if>
+							<c:if test="${not empty seriesReservationError}">
+								<p class="booking-panel__notice booking-panel__notice--error">
+									<c:out value="${seriesReservationError}" />
+								</p>
+							</c:if>
+							<c:if test="${seriesReservationEnabled and not seriesReservationJoined}">
+								<c:choose>
+									<c:when test="${seriesReservationRequiresLogin}">
+										<spring:message var="signInToJoinRecurringLabel" code="event.recurringReservation.signIn" />
+										<c:url var="recurringLoginHref" value="/login" />
+										<ui:button label="${signInToJoinRecurringLabel}" href="${recurringLoginHref}" fullWidth="${true}" variant="secondary" />
+									</c:when>
+									<c:otherwise>
+										<c:url var="recurringReservationAction" value="${seriesReservationPath}" />
+										<spring:message var="joiningRecurringLabel" code="event.recurringReservation.joining" />
+										<form
+											method="post"
+											action="${recurringReservationAction}"
+											data-submit-guard="true"
+											data-submit-loading-label="${joiningRecurringLabel}"
+											class="booking-panel__request-form"
+										>
+											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<spring:message var="joinRecurringLabel" code="event.recurringReservation.cta" />
+											<ui:button label="${joinRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+										</form>
+									</c:otherwise>
+								</c:choose>
+								<p class="booking-panel__note"><spring:message code="event.recurringReservation.note" /></p>
+							</c:if>
+							<c:if test="${seriesCancellationEnabled}">
+								<c:url var="recurringReservationCancelAction" value="${seriesReservationCancelPath}" />
+								<spring:message var="leavingRecurringLabel" code="event.recurringReservation.leaving" />
+								<form
+									method="post"
+									action="${recurringReservationCancelAction}"
+									data-submit-guard="true"
+									data-submit-loading-label="${leavingRecurringLabel}"
+									class="booking-panel__request-form"
+								>
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<spring:message var="leaveRecurringLabel" code="event.recurringReservation.leave" />
+									<ui:button label="${leaveRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+								</form>
+							</c:if>
 						</article>
 					</aside>
 				</section>
@@ -416,6 +623,33 @@
 								</div>
 							</div>
 						</article>
+
+						<section
+							class="detail-section detail-section--about"
+							aria-labelledby="about-event-title"
+						>
+							<div
+								class="section-head section-head--detail-compact"
+							>
+								<div>
+									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
+									<h2
+										id="about-event-title"
+										class="detail-section__title"
+									>
+										<spring:message code="event.detail.aboutEvent" />
+									</h2>
+								</div>
+							</div>
+							<div class="detail-stack">
+								<c:forEach
+									var="paragraph"
+									items="${eventPage.aboutParagraphs}"
+								>
+									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
+								</c:forEach>
+							</div>
+						</section>
 
 						<section
 							class="detail-section detail-section--participants"
@@ -497,32 +731,68 @@
 							</c:choose>
 						</section>
 
-						<section
-							class="detail-section detail-section--about"
-							aria-labelledby="about-event-title"
-						>
-							<div
-								class="section-head section-head--detail-compact"
-							>
-								<div>
-									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
-									<h2
-										id="about-event-title"
-										class="detail-section__title"
-									>
-										<spring:message code="event.detail.aboutEvent" />
-									</h2>
+						<c:if test="${not empty eventPage.occurrences}">
+							<c:set var="recurrencePreviewLimit" value="3" />
+							<c:set var="recurrenceScheduleCollapsed" value="${fn:length(eventPage.occurrences) > recurrencePreviewLimit}" />
+							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
+								<div class="section-head section-head--detail-compact">
+									<div>
+										<span class="detail-label"><spring:message code="event.recurrence.label" /></span>
+										<h2 id="recurrence-schedule-title" class="detail-section__title">
+											<spring:message code="event.recurrence.title" />
+										</h2>
+									</div>
 								</div>
-							</div>
-							<div class="detail-stack">
-								<c:forEach
-									var="paragraph"
-									items="${eventPage.aboutParagraphs}"
-								>
-									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
-								</c:forEach>
-							</div>
-						</section>
+								<ul id="recurrence-schedule-list" class="recurrence-schedule__list">
+									<c:forEach var="occurrence" items="${eventPage.occurrences}" varStatus="occurrenceStatus">
+										<li
+											class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}"
+											<c:if test="${recurrenceScheduleCollapsed and occurrenceStatus.index >= recurrencePreviewLimit and not occurrence.current}">
+												hidden="hidden"
+												data-recurrence-extra-date="true"
+											</c:if>>
+											<div class="recurrence-schedule__date">
+												<c:choose>
+													<c:when test="${not empty occurrence.href}">
+														<c:url var="occurrenceHref" value="${occurrence.href}" />
+														<a class="recurrence-schedule__link" href="${occurrenceHref}">
+															<c:out value="${occurrence.schedule}" />
+														</a>
+													</c:when>
+													<c:otherwise>
+														<span class="recurrence-schedule__text">
+															<c:out value="${occurrence.schedule}" />
+														</span>
+													</c:otherwise>
+												</c:choose>
+											</div>
+											<div class="recurrence-schedule__badges">
+												<c:if test="${not empty occurrence.statusLabel}">
+													<span class="recurrence-schedule__status recurrence-schedule__status--${occurrence.statusTone}">
+														<c:out value="${occurrence.statusLabel}" />
+													</span>
+												</c:if>
+											</div>
+										</li>
+									</c:forEach>
+								</ul>
+								<c:if test="${recurrenceScheduleCollapsed}">
+									<spring:message var="showMoreRecurringDatesLabel" code="event.recurrence.showMore" />
+									<spring:message var="showLessRecurringDatesLabel" code="event.recurrence.showLess" />
+									<button
+										type="button"
+										class="btn btn--secondary btn--sm recurrence-schedule__toggle"
+										data-recurrence-toggle="true"
+										data-show-more-label="${showMoreRecurringDatesLabel}"
+										data-show-less-label="${showLessRecurringDatesLabel}"
+										aria-controls="recurrence-schedule-list"
+										aria-expanded="false">
+										<c:out value="${showMoreRecurringDatesLabel}" />
+									</button>
+								</c:if>
+							</section>
+						</c:if>
+
 					</div>
 
 				</section>

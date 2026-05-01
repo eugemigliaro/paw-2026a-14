@@ -7,8 +7,10 @@ import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MatchLifecycleMailTemplateData;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -57,6 +59,84 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             final MailContent content =
                     templateRenderer.renderMatchCancelledNotification(templateData);
             mailDispatchService.dispatch(participant.getEmail(), content);
+        }
+    }
+
+    @Override
+    public void notifyRecurringMatchesUpdated(final List<Match> matches) {
+        final List<Match> safeMatches = safeMatches(matches);
+        if (safeMatches.isEmpty()) {
+            return;
+        }
+
+        for (final AffectedRecurringParticipant participant :
+                affectedParticipants(safeMatches).values()) {
+            final MatchLifecycleMailTemplateData templateData =
+                    buildTemplateData(participant.user(), participant.firstAffectedMatch());
+            final MailContent content =
+                    templateRenderer.renderRecurringMatchesUpdatedNotification(
+                            templateData, participant.affectedOccurrenceCount());
+            mailDispatchService.dispatch(participant.user().getEmail(), content);
+        }
+    }
+
+    @Override
+    public void notifyRecurringMatchesCancelled(final List<Match> matches) {
+        final List<Match> safeMatches = safeMatches(matches);
+        if (safeMatches.isEmpty()) {
+            return;
+        }
+
+        for (final AffectedRecurringParticipant participant :
+                affectedParticipants(safeMatches).values()) {
+            final MatchLifecycleMailTemplateData templateData =
+                    buildTemplateData(participant.user(), participant.firstAffectedMatch());
+            final MailContent content =
+                    templateRenderer.renderRecurringMatchesCancelledNotification(
+                            templateData, participant.affectedOccurrenceCount());
+            mailDispatchService.dispatch(participant.user().getEmail(), content);
+        }
+    }
+
+    private Map<String, AffectedRecurringParticipant> affectedParticipants(
+            final List<Match> matches) {
+        final Map<String, AffectedRecurringParticipant> participantsByIdentity =
+                new LinkedHashMap<>();
+        for (final Match match : matches) {
+            for (final User participant :
+                    matchParticipantDao.findConfirmedParticipants(match.getId())) {
+                final String identity = participantIdentity(participant);
+                participantsByIdentity.compute(
+                        identity,
+                        (ignored, existing) ->
+                                existing == null
+                                        ? new AffectedRecurringParticipant(participant, match, 1)
+                                        : existing.incremented());
+            }
+        }
+        return participantsByIdentity;
+    }
+
+    private static String participantIdentity(final User participant) {
+        if (participant.getId() != null) {
+            return "id:" + participant.getId();
+        }
+        return "email:" + participant.getEmail().trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static List<Match> safeMatches(final List<Match> matches) {
+        if (matches == null || matches.isEmpty()) {
+            return List.of();
+        }
+        return matches.stream().filter(match -> match != null).toList();
+    }
+
+    private record AffectedRecurringParticipant(
+            User user, Match firstAffectedMatch, int affectedOccurrenceCount) {
+
+        private AffectedRecurringParticipant incremented() {
+            return new AffectedRecurringParticipant(
+                    user, firstAffectedMatch, affectedOccurrenceCount + 1);
         }
     }
 

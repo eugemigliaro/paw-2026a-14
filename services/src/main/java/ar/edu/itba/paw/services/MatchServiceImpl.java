@@ -6,6 +6,8 @@ import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.RecurrenceEndMode;
+import ar.edu.itba.paw.models.RecurrenceFrequency;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
@@ -14,9 +16,12 @@ import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -26,11 +31,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MatchServiceImpl implements MatchService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MIN_RECURRING_OCCURRENCES = 2;
+    private static final int MAX_RECURRING_OCCURRENCES = 52;
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
@@ -53,12 +61,17 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    @Transactional
     public Match createMatch(final CreateMatchRequest request) {
         validateScheduleOrThrow(
                 request.getStartsAt(),
                 request.getEndsAt(),
                 new IllegalArgumentException(message("match.schedule.error.startsAtPast")),
                 new IllegalArgumentException(message("match.schedule.error.endBeforeStart")));
+
+        if (request.isRecurring()) {
+            return createRecurringMatch(request);
+        }
 
         return matchDao.createMatch(
                 request.getHostUserId(),
@@ -74,6 +87,51 @@ public class MatchServiceImpl implements MatchService {
                 request.getJoinPolicy(),
                 request.getStatus(),
                 request.getBannerImageId());
+    }
+
+    private Match createRecurringMatch(final CreateMatchRequest request) {
+        final CreateRecurrenceRequest recurrence = request.getRecurrence();
+        final List<OccurrenceWindow> occurrences = buildOccurrenceWindows(request, recurrence);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        request.getHostUserId(),
+                        recurrence.getFrequency().getValue(),
+                        request.getStartsAt(),
+                        request.getEndsAt(),
+                        resolveZone(recurrence.getZoneId()).getId(),
+                        recurrence.getEndMode() == RecurrenceEndMode.UNTIL_DATE
+                                ? recurrence.getUntilDate()
+                                : null,
+                        recurrence.getEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
+                                ? recurrence.getOccurrenceCount()
+                                : null);
+
+        Match firstOccurrence = null;
+        for (int i = 0; i < occurrences.size(); i++) {
+            final OccurrenceWindow occurrence = occurrences.get(i);
+            final Match created =
+                    matchDao.createMatch(
+                            request.getHostUserId(),
+                            request.getAddress(),
+                            request.getTitle(),
+                            request.getDescription(),
+                            occurrence.startsAt(),
+                            occurrence.endsAt(),
+                            request.getMaxPlayers(),
+                            request.getPricePerPlayer(),
+                            request.getSport(),
+                            request.getVisibility(),
+                            request.getJoinPolicy(),
+                            request.getStatus(),
+                            request.getBannerImageId(),
+                            seriesId,
+                            i + 1);
+            if (firstOccurrence == null) {
+                firstOccurrence = created;
+            }
+        }
+
+        return firstOccurrence;
     }
 
     @Override
@@ -130,6 +188,7 @@ public class MatchServiceImpl implements MatchService {
                         request.getPricePerPlayer(),
                         request.getSport(),
                         request.getVisibility(),
+                        request.getJoinPolicy(),
                         request.getStatus(),
                         request.getBannerImageId());
 
@@ -147,6 +206,102 @@ public class MatchServiceImpl implements MatchService {
                                                 message("match.update.error.notFound")));
         matchNotificationService.notifyMatchUpdated(updatedMatch);
         return updatedMatch;
+    }
+
+    @Override
+    @Transactional
+    public List<Match> updateSeriesFromOccurrence(
+            final Long matchId, final Long actingUserId, final UpdateMatchRequest request) {
+        final Match pivot =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
+
+        validateSeriesUpdateAccess(pivot, actingUserId);
+        validateScheduleOrThrow(
+                request.getStartsAt(),
+                request.getEndsAt(),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.startsAtPast")),
+                new MatchUpdateException(
+                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                        message("match.schedule.error.endBeforeStart")));
+
+        final List<Match> targets = editableFutureSeriesTargets(pivot);
+        if (targets.isEmpty()) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_EDITABLE,
+                    message("match.update.error.notEditable"));
+        }
+
+        for (final Match target : targets) {
+            final int confirmedParticipants =
+                    matchParticipantDao.findConfirmedParticipants(target.getId()).size();
+            if (request.getMaxPlayers() < confirmedParticipants) {
+                throw new MatchUpdateException(
+                        MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                        message("match.update.error.capacityBelowConfirmed"));
+            }
+        }
+
+        final Duration startOffset = Duration.between(pivot.getStartsAt(), request.getStartsAt());
+        final Duration requestedDuration =
+                request.getEndsAt() == null
+                        ? null
+                        : Duration.between(request.getStartsAt(), request.getEndsAt());
+        final List<Match> updatedMatches = new ArrayList<>();
+
+        for (final Match target : targets) {
+            final Instant targetStartsAt = target.getStartsAt().plus(startOffset);
+            final Instant targetEndsAt =
+                    requestedDuration == null ? null : targetStartsAt.plus(requestedDuration);
+            validateScheduleOrThrow(
+                    targetStartsAt,
+                    targetEndsAt,
+                    new MatchUpdateException(
+                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                            message("match.schedule.error.startsAtPast")),
+                    new MatchUpdateException(
+                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                            message("match.schedule.error.endBeforeStart")));
+            final boolean updated =
+                    matchDao.updateMatch(
+                            target.getId(),
+                            actingUserId,
+                            request.getAddress(),
+                            request.getTitle(),
+                            request.getDescription(),
+                            targetStartsAt,
+                            targetEndsAt,
+                            request.getMaxPlayers(),
+                            request.getPricePerPlayer(),
+                            request.getSport(),
+                            request.getVisibility(),
+                            request.getJoinPolicy(),
+                            target.getStatus(),
+                            request.getBannerImageId());
+            if (!updated) {
+                throw new MatchUpdateException(
+                        MatchUpdateFailureReason.FORBIDDEN,
+                        message("match.update.error.forbidden"));
+            }
+
+            final Match updatedMatch =
+                    matchDao.findById(target.getId())
+                            .orElseThrow(
+                                    () ->
+                                            new MatchUpdateException(
+                                                    MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                    message("match.update.error.notFound")));
+            updatedMatches.add(updatedMatch);
+        }
+
+        matchNotificationService.notifyRecurringMatchesUpdated(updatedMatches);
+        return List.copyOf(updatedMatches);
     }
 
     @Override
@@ -194,6 +349,115 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    @Transactional
+    public List<Match> cancelSeriesFromOccurrence(final Long matchId, final Long actingUserId) {
+        final Match pivot =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchCancellationException(
+                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                message("match.cancel.error.notFound")));
+
+        validateSeriesCancellationAccess(pivot, actingUserId);
+
+        final List<Match> targets = cancellableFutureSeriesTargets(pivot);
+        if (targets.isEmpty()) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        final List<Match> cancelledMatches = new ArrayList<>();
+        for (final Match target : targets) {
+            final boolean updated = matchDao.cancelMatch(target.getId(), actingUserId);
+            if (!updated) {
+                throw new MatchCancellationException(
+                        MatchCancellationFailureReason.FORBIDDEN,
+                        message("match.cancel.error.forbidden"));
+            }
+
+            final Match cancelledMatch =
+                    matchDao.findById(target.getId())
+                            .orElseThrow(
+                                    () ->
+                                            new MatchCancellationException(
+                                                    MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                                    message("match.cancel.error.notFound")));
+            cancelledMatches.add(cancelledMatch);
+        }
+
+        matchNotificationService.notifyRecurringMatchesCancelled(cancelledMatches);
+        return List.copyOf(cancelledMatches);
+    }
+
+    private void validateSeriesUpdateAccess(final Match pivot, final Long actingUserId) {
+        if (!pivot.getHostUserId().equals(actingUserId)) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+        }
+
+        if (!pivot.isRecurringOccurrence()) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_RECURRING,
+                    message("match.update.error.notRecurring"));
+        }
+
+        if (!isEditableMatch(pivot)) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_EDITABLE,
+                    message("match.update.error.notEditable"));
+        }
+    }
+
+    private void validateSeriesCancellationAccess(final Match pivot, final Long actingUserId) {
+        if (!pivot.getHostUserId().equals(actingUserId)) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        if (!pivot.isRecurringOccurrence()) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.NOT_RECURRING,
+                    message("match.cancel.error.notRecurring"));
+        }
+    }
+
+    private List<Match> editableFutureSeriesTargets(final Match pivot) {
+        if (!pivot.isRecurringOccurrence() || pivot.getSeriesOccurrenceIndex() == null) {
+            return List.of();
+        }
+
+        final int pivotIndex = pivot.getSeriesOccurrenceIndex();
+        final Instant now = Instant.now(clock);
+        return matchDao.findSeriesOccurrences(pivot.getSeriesId()).stream()
+                .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() != null)
+                .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() >= pivotIndex)
+                .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
+                .filter(MatchServiceImpl::isEditableMatch)
+                .toList();
+    }
+
+    private List<Match> cancellableFutureSeriesTargets(final Match pivot) {
+        if (!pivot.isRecurringOccurrence()) {
+            return List.of();
+        }
+
+        final Instant now = Instant.now(clock);
+        return matchDao.findSeriesOccurrences(pivot.getSeriesId()).stream()
+                .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
+                .filter(MatchServiceImpl::isEditableMatch)
+                .toList();
+    }
+
+    private static boolean isEditableMatch(final Match match) {
+        return EventStatus.fromDbValue(match.getStatus())
+                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
+                .orElse(true);
+    }
+
+    @Override
     public Optional<Match> findMatchById(final Long matchId) {
         return matchDao.findById(matchId);
     }
@@ -201,6 +465,14 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
         return matchDao.findPublicMatchById(matchId);
+    }
+
+    @Override
+    public List<Match> findSeriesOccurrences(final Long seriesId) {
+        if (seriesId == null) {
+            return List.of();
+        }
+        return matchDao.findSeriesOccurrences(seriesId);
     }
 
     @Override
@@ -472,6 +744,103 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
+    private List<OccurrenceWindow> buildOccurrenceWindows(
+            final CreateMatchRequest request, final CreateRecurrenceRequest recurrence) {
+        if (recurrence == null
+                || recurrence.getFrequency() == null
+                || recurrence.getEndMode() == null) {
+            throw new IllegalArgumentException(message("match.recurrence.error.invalid"));
+        }
+
+        final ZoneId zoneId = resolveZone(recurrence.getZoneId());
+        final LocalDateTime firstLocalStart =
+                LocalDateTime.ofInstant(request.getStartsAt(), zoneId);
+        final Duration duration =
+                request.getEndsAt() == null
+                        ? null
+                        : Duration.between(request.getStartsAt(), request.getEndsAt());
+        final int occurrenceCount = resolveOccurrenceCount(firstLocalStart, recurrence);
+
+        return java.util.stream.IntStream.range(0, occurrenceCount)
+                .mapToObj(
+                        index -> {
+                            final LocalDateTime occurrenceLocalStart =
+                                    addFrequency(firstLocalStart, recurrence.getFrequency(), index);
+                            final Instant startsAt =
+                                    occurrenceLocalStart.atZone(zoneId).toInstant();
+                            final Instant endsAt =
+                                    duration == null ? null : startsAt.plus(duration);
+                            return new OccurrenceWindow(startsAt, endsAt);
+                        })
+                .toList();
+    }
+
+    private int resolveOccurrenceCount(
+            final LocalDateTime firstLocalStart, final CreateRecurrenceRequest recurrence) {
+        switch (recurrence.getEndMode()) {
+            case OCCURRENCE_COUNT:
+                return validateOccurrenceCount(recurrence.getOccurrenceCount());
+            case UNTIL_DATE:
+                return countOccurrencesUntilDate(firstLocalStart, recurrence);
+            default:
+                throw new IllegalArgumentException(message("match.recurrence.error.invalid"));
+        }
+    }
+
+    private int validateOccurrenceCount(final Integer occurrenceCount) {
+        if (occurrenceCount == null || occurrenceCount < MIN_RECURRING_OCCURRENCES) {
+            throw new IllegalArgumentException(message("match.recurrence.error.tooFewOccurrences"));
+        }
+        if (occurrenceCount > MAX_RECURRING_OCCURRENCES) {
+            throw new IllegalArgumentException(
+                    message("match.recurrence.error.tooManyOccurrences"));
+        }
+        return occurrenceCount;
+    }
+
+    private int countOccurrencesUntilDate(
+            final LocalDateTime firstLocalStart, final CreateRecurrenceRequest recurrence) {
+        final LocalDate untilDate = recurrence.getUntilDate();
+        if (untilDate == null || !untilDate.isAfter(firstLocalStart.toLocalDate())) {
+            throw new IllegalArgumentException(message("match.recurrence.error.untilDate"));
+        }
+
+        int count = 0;
+        LocalDateTime occurrenceStart = firstLocalStart;
+        while (!occurrenceStart.toLocalDate().isAfter(untilDate)) {
+            count++;
+            if (count > MAX_RECURRING_OCCURRENCES) {
+                throw new IllegalArgumentException(
+                        message("match.recurrence.error.tooManyOccurrences"));
+            }
+            occurrenceStart = addFrequency(firstLocalStart, recurrence.getFrequency(), count);
+        }
+
+        if (count < MIN_RECURRING_OCCURRENCES) {
+            throw new IllegalArgumentException(message("match.recurrence.error.tooFewOccurrences"));
+        }
+        return count;
+    }
+
+    private static LocalDateTime addFrequency(
+            final LocalDateTime firstLocalStart,
+            final RecurrenceFrequency frequency,
+            final int index) {
+        switch (frequency) {
+            case DAILY:
+                return firstLocalStart.plusDays(index);
+            case MONTHLY:
+                return firstLocalStart.plusMonths(index);
+            case WEEKLY:
+            default:
+                return firstLocalStart.plusWeeks(index);
+        }
+    }
+
+    private static ZoneId resolveZone(final ZoneId zoneId) {
+        return zoneId == null ? ZoneId.systemDefault() : zoneId;
+    }
+
     private String message(final String code) {
         final Locale locale = LocaleContextHolder.getLocale();
         return messageSource.getMessage(
@@ -521,4 +890,6 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private record DateRange(Instant start, Instant endExclusive) {}
+
+    private record OccurrenceWindow(Instant startsAt, Instant endsAt) {}
 }

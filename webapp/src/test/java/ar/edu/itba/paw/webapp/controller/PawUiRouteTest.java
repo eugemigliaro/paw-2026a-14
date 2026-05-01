@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
@@ -19,6 +20,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
+import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchCancellationFailureReason;
 import ar.edu.itba.paw.services.MatchParticipationService;
@@ -28,6 +30,7 @@ import ar.edu.itba.paw.services.MatchUpdateFailureReason;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
+import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationFailureReason;
@@ -36,6 +39,7 @@ import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
+import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
@@ -55,6 +59,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -84,7 +89,28 @@ class PawUiRouteTest {
     private AtomicReference<String> lastSportsFilter;
     private AtomicReference<Long> lastReservedMatchId;
     private AtomicReference<Long> lastReservedUserId;
+    private AtomicReference<Long> lastCancelledReservationMatchId;
+    private AtomicReference<Long> lastCancelledReservationUserId;
+    private AtomicReference<Long> lastHostCancelledMatchId;
+    private AtomicReference<Long> lastHostCancelledUserId;
+    private AtomicReference<Long> lastHostSeriesUpdatedMatchId;
+    private AtomicReference<Long> lastHostSeriesUpdatedUserId;
+    private AtomicReference<Long> lastHostSeriesCancelledMatchId;
+    private AtomicReference<Long> lastHostSeriesCancelledUserId;
+    private AtomicReference<Long> lastCancelledSeriesMatchId;
+    private AtomicReference<Long> lastCancelledSeriesUserId;
+    private AtomicReference<Long> lastSeriesJoinRequestMatchId;
+    private AtomicReference<Long> lastSeriesJoinRequestUserId;
     private AtomicReference<MatchReservationException> reservationFailure;
+    private AtomicReference<MatchParticipationException> reservationCancellationFailure;
+    private AtomicReference<MatchReservationException> seriesReservationFailure;
+    private AtomicReference<MatchReservationException> seriesCancellationFailure;
+    private AtomicReference<MatchParticipationException> seriesJoinRequestFailure;
+    private AtomicReference<Boolean> currentUserHasReservation;
+    private AtomicReference<Boolean> currentUserHasSeriesReservation;
+    private AtomicReference<Boolean> currentUserHasSeriesJoinRequest;
+    private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
+    private AtomicReference<UpdateMatchRequest> lastUpdateMatchRequest;
 
     @BeforeEach
     void setUp() {
@@ -99,7 +125,28 @@ class PawUiRouteTest {
         lastSportsFilter = new AtomicReference<>();
         lastReservedMatchId = new AtomicReference<>();
         lastReservedUserId = new AtomicReference<>();
+        lastCancelledReservationMatchId = new AtomicReference<>();
+        lastCancelledReservationUserId = new AtomicReference<>();
+        lastHostCancelledMatchId = new AtomicReference<>();
+        lastHostCancelledUserId = new AtomicReference<>();
+        lastHostSeriesUpdatedMatchId = new AtomicReference<>();
+        lastHostSeriesUpdatedUserId = new AtomicReference<>();
+        lastHostSeriesCancelledMatchId = new AtomicReference<>();
+        lastHostSeriesCancelledUserId = new AtomicReference<>();
+        lastCancelledSeriesMatchId = new AtomicReference<>();
+        lastCancelledSeriesUserId = new AtomicReference<>();
+        lastSeriesJoinRequestMatchId = new AtomicReference<>();
+        lastSeriesJoinRequestUserId = new AtomicReference<>();
         reservationFailure = new AtomicReference<>();
+        reservationCancellationFailure = new AtomicReference<>();
+        seriesReservationFailure = new AtomicReference<>();
+        seriesCancellationFailure = new AtomicReference<>();
+        seriesJoinRequestFailure = new AtomicReference<>();
+        currentUserHasReservation = new AtomicReference<>(false);
+        currentUserHasSeriesReservation = new AtomicReference<>(false);
+        currentUserHasSeriesJoinRequest = new AtomicReference<>(false);
+        lastCreateMatchRequest = new AtomicReference<>();
+        lastUpdateMatchRequest = new AtomicReference<>();
 
         final Match realMatch =
                 new Match(
@@ -165,12 +212,200 @@ class PawUiRouteTest {
                         "cancelled",
                         2,
                         null);
+        final Match privateInviteOnlyMatch =
+                new Match(
+                        51L,
+                        Sport.PADEL,
+                        7L,
+                        "Members Club",
+                        "Invite Night Padel",
+                        "Private doubles session",
+                        Instant.parse("2026-04-10T21:00:00Z"),
+                        Instant.parse("2026-04-10T22:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "private",
+                        "invite_only",
+                        "open",
+                        2,
+                        null);
+        final Match recurringMatch =
+                new Match(
+                        46L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-09T18:00:00Z"),
+                        Instant.parse("2026-04-09T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        1,
+                        null,
+                        600L,
+                        1);
+        final Match recurringSecondOccurrence =
+                new Match(
+                        47L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-16T18:00:00Z"),
+                        Instant.parse("2026-04-16T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        0,
+                        null,
+                        600L,
+                        2);
+        final Match recurringPastOccurrence =
+                new Match(
+                        48L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-03-26T18:00:00Z"),
+                        Instant.parse("2026-03-26T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        4,
+                        null,
+                        600L,
+                        0);
+        final Match recurringInProgressOccurrence =
+                new Match(
+                        55L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-04T23:00:00Z"),
+                        Instant.parse("2026-04-05T01:00:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        4,
+                        null,
+                        600L,
+                        1);
+        final Match recurringFullOccurrence =
+                new Match(
+                        49L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-23T18:00:00Z"),
+                        Instant.parse("2026-04-23T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "open",
+                        8,
+                        null,
+                        600L,
+                        3);
+        final Match recurringCancelledOccurrence =
+                new Match(
+                        50L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Weekly Padel",
+                        "Friendly recurring session",
+                        Instant.parse("2026-04-30T18:00:00Z"),
+                        Instant.parse("2026-04-30T19:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "direct",
+                        "cancelled",
+                        0,
+                        null,
+                        600L,
+                        4);
+        final Match approvalRecurringMatch =
+                new Match(
+                        52L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Approval Weekly Padel",
+                        "Recurring session with host approval",
+                        Instant.parse("2026-04-09T20:00:00Z"),
+                        Instant.parse("2026-04-09T21:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "approval_required",
+                        "open",
+                        1,
+                        null,
+                        700L,
+                        1);
+        final Match approvalRecurringSecondOccurrence =
+                new Match(
+                        53L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Approval Weekly Padel",
+                        "Recurring session with host approval",
+                        Instant.parse("2026-04-16T20:00:00Z"),
+                        Instant.parse("2026-04-16T21:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "approval_required",
+                        "open",
+                        0,
+                        null,
+                        700L,
+                        2);
+        final Match approvalRecurringPastOccurrence =
+                new Match(
+                        54L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Approval Weekly Padel",
+                        "Recurring session with host approval",
+                        Instant.parse("2026-03-26T20:00:00Z"),
+                        Instant.parse("2026-03-26T21:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "approval_required",
+                        "open",
+                        4,
+                        null,
+                        700L,
+                        0);
 
         final MatchService matchService =
                 new MatchService() {
                     @Override
-                    public Match createMatch(
-                            final ar.edu.itba.paw.services.CreateMatchRequest request) {
+                    public Match createMatch(final CreateMatchRequest request) {
+                        lastCreateMatchRequest.set(request);
                         return new Match(
                                 43L,
                                 request.getSport(),
@@ -183,9 +418,12 @@ class PawUiRouteTest {
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
+                                request.getJoinPolicy(),
                                 request.getStatus(),
                                 0,
-                                null);
+                                null,
+                                request.isRecurring() ? 600L : null,
+                                request.isRecurring() ? 1 : null);
                     }
 
                     @Override
@@ -202,12 +440,59 @@ class PawUiRouteTest {
                         if (matchId == 45L) {
                             return Optional.of(cancelledFutureMatch);
                         }
+                        if (matchId == 51L) {
+                            return Optional.of(privateInviteOnlyMatch);
+                        }
+                        if (matchId == 46L) {
+                            return Optional.of(recurringMatch);
+                        }
+                        if (matchId == 47L) {
+                            return Optional.of(recurringSecondOccurrence);
+                        }
+                        if (matchId == 48L) {
+                            return Optional.of(recurringPastOccurrence);
+                        }
+                        if (matchId == 55L) {
+                            return Optional.of(recurringInProgressOccurrence);
+                        }
+                        if (matchId == 49L) {
+                            return Optional.of(recurringFullOccurrence);
+                        }
+                        if (matchId == 50L) {
+                            return Optional.of(recurringCancelledOccurrence);
+                        }
+                        if (matchId == 52L) {
+                            return Optional.of(approvalRecurringMatch);
+                        }
+                        if (matchId == 53L) {
+                            return Optional.of(approvalRecurringSecondOccurrence);
+                        }
+                        if (matchId == 54L) {
+                            return Optional.of(approvalRecurringPastOccurrence);
+                        }
                         return Optional.empty();
                     }
 
                     @Override
                     public Optional<Match> findPublicMatchById(final Long matchId) {
                         return findMatchById(matchId);
+                    }
+
+                    @Override
+                    public List<Match> findSeriesOccurrences(final Long seriesId) {
+                        if (Long.valueOf(600L).equals(seriesId)) {
+                            return List.of(
+                                    recurringPastOccurrence, recurringInProgressOccurrence,
+                                    recurringMatch, recurringSecondOccurrence,
+                                    recurringFullOccurrence, recurringCancelledOccurrence);
+                        }
+                        if (Long.valueOf(700L).equals(seriesId)) {
+                            return List.of(
+                                    approvalRecurringPastOccurrence,
+                                    approvalRecurringMatch,
+                                    approvalRecurringSecondOccurrence);
+                        }
+                        return List.of();
                     }
 
                     @Override
@@ -230,7 +515,7 @@ class PawUiRouteTest {
                     public Match updateMatch(
                             final Long matchId,
                             final Long actingUserId,
-                            final ar.edu.itba.paw.services.UpdateMatchRequest request) {
+                            final UpdateMatchRequest request) {
                         if (matchId != 42L) {
                             throw new MatchUpdateException(
                                     MatchUpdateFailureReason.MATCH_NOT_FOUND, "Missing match");
@@ -244,6 +529,7 @@ class PawUiRouteTest {
                                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
                                     "Capacity too low");
                         }
+                        lastUpdateMatchRequest.set(request);
                         return new Match(
                                 matchId,
                                 request.getSport(),
@@ -256,14 +542,57 @@ class PawUiRouteTest {
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
+                                request.getJoinPolicy(),
                                 request.getStatus(),
                                 0,
                                 request.getBannerImageId());
                     }
 
                     @Override
+                    public List<Match> updateSeriesFromOccurrence(
+                            final Long matchId,
+                            final Long actingUserId,
+                            final UpdateMatchRequest request) {
+                        if (matchId != 46L && matchId != 47L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.MATCH_NOT_FOUND, "Missing match");
+                        }
+                        if (actingUserId != 7L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.FORBIDDEN, "Forbidden");
+                        }
+                        if (request.getMaxPlayers() < 2) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                                    "Capacity too low");
+                        }
+                        lastHostSeriesUpdatedMatchId.set(matchId);
+                        lastHostSeriesUpdatedUserId.set(actingUserId);
+                        lastUpdateMatchRequest.set(request);
+                        return List.of(
+                                new Match(
+                                        matchId,
+                                        request.getSport(),
+                                        actingUserId,
+                                        request.getAddress(),
+                                        request.getTitle(),
+                                        request.getDescription(),
+                                        request.getStartsAt(),
+                                        request.getEndsAt(),
+                                        request.getMaxPlayers(),
+                                        request.getPricePerPlayer(),
+                                        request.getVisibility(),
+                                        request.getJoinPolicy(),
+                                        request.getStatus(),
+                                        0,
+                                        request.getBannerImageId(),
+                                        600L,
+                                        matchId == 46L ? 1 : 2));
+                    }
+
+                    @Override
                     public Match cancelMatch(final Long matchId, final Long actingUserId) {
-                        if (matchId != 42L) {
+                        if (matchId != 42L && matchId != 47L) {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                     "Missing match");
@@ -272,6 +601,8 @@ class PawUiRouteTest {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.FORBIDDEN, "Forbidden");
                         }
+                        lastHostCancelledMatchId.set(matchId);
+                        lastHostCancelledUserId.set(actingUserId);
                         return new Match(
                                 matchId,
                                 Sport.PADEL,
@@ -284,9 +615,47 @@ class PawUiRouteTest {
                                 8,
                                 BigDecimal.TEN,
                                 "public",
+                                "direct",
                                 "cancelled",
                                 2,
-                                null);
+                                null,
+                                matchId == 47L ? 600L : null,
+                                matchId == 47L ? 2 : null);
+                    }
+
+                    @Override
+                    public List<Match> cancelSeriesFromOccurrence(
+                            final Long matchId, final Long actingUserId) {
+                        if (matchId != 46L && matchId != 47L) {
+                            throw new MatchCancellationException(
+                                    MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                    "Missing match");
+                        }
+                        if (actingUserId != 7L) {
+                            throw new MatchCancellationException(
+                                    MatchCancellationFailureReason.FORBIDDEN, "Forbidden");
+                        }
+                        lastHostSeriesCancelledMatchId.set(matchId);
+                        lastHostSeriesCancelledUserId.set(actingUserId);
+                        return List.of(
+                                new Match(
+                                        matchId,
+                                        Sport.PADEL,
+                                        actingUserId,
+                                        "Downtown Club",
+                                        "Cancelled Series",
+                                        "Cancelled Description",
+                                        Instant.parse("2026-04-09T18:00:00Z"),
+                                        Instant.parse("2026-04-09T19:30:00Z"),
+                                        8,
+                                        BigDecimal.TEN,
+                                        "public",
+                                        "direct",
+                                        "cancelled",
+                                        1,
+                                        null,
+                                        600L,
+                                        matchId == 46L ? 1 : 2));
                     }
 
                     @Override
@@ -357,7 +726,25 @@ class PawUiRouteTest {
                 new MatchReservationService() {
                     @Override
                     public boolean hasActiveReservation(final Long matchId, final Long userId) {
-                        return false;
+                        if (Boolean.TRUE.equals(currentUserHasReservation.get())
+                                && userId == 9L
+                                && (matchId == 42L || matchId == 51L)) {
+                            return true;
+                        }
+                        return Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
+                                && userId == 9L
+                                && (matchId == 46L || matchId == 47L);
+                    }
+
+                    @Override
+                    public Set<Long> findActiveFutureReservationMatchIdsForSeries(
+                            final Long seriesId, final Long userId) {
+                        if (Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
+                                && userId == 9L
+                                && seriesId == 600L) {
+                            return Set.of(46L, 47L);
+                        }
+                        return Set.of();
                     }
 
                     @Override
@@ -370,6 +757,28 @@ class PawUiRouteTest {
                         lastReservedMatchId.set(matchId);
                         lastReservedUserId.set(userId);
                     }
+
+                    @Override
+                    public void reserveSeries(final Long matchId, final Long userId) {
+                        final MatchReservationException failure = seriesReservationFailure.get();
+                        if (failure != null) {
+                            throw failure;
+                        }
+
+                        lastReservedMatchId.set(matchId);
+                        lastReservedUserId.set(userId);
+                    }
+
+                    @Override
+                    public void cancelSeriesReservations(final Long matchId, final Long userId) {
+                        final MatchReservationException failure = seriesCancellationFailure.get();
+                        if (failure != null) {
+                            throw failure;
+                        }
+
+                        lastCancelledSeriesMatchId.set(matchId);
+                        lastCancelledSeriesUserId.set(userId);
+                    }
                 };
 
         final MatchParticipationService matchParticipationService =
@@ -380,13 +789,44 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public void requestToJoinSeries(final Long matchId, final Long userId) {
+                        final MatchParticipationException failure = seriesJoinRequestFailure.get();
+                        if (failure != null) {
+                            throw failure;
+                        }
+
+                        lastSeriesJoinRequestMatchId.set(matchId);
+                        lastSeriesJoinRequestUserId.set(userId);
+                    }
+
+                    @Override
                     public void cancelJoinRequest(final Long matchId, final Long userId) {
                         // No-op for route rendering tests.
                     }
 
                     @Override
                     public boolean hasPendingRequest(final Long matchId, final Long userId) {
-                        return false;
+                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
+                                && userId == 9L
+                                && (matchId == 52L || matchId == 53L);
+                    }
+
+                    @Override
+                    public boolean hasPendingSeriesRequest(final Long matchId, final Long userId) {
+                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
+                                && userId == 9L
+                                && (matchId == 52L || matchId == 53L);
+                    }
+
+                    @Override
+                    public Set<Long> findPendingFutureRequestMatchIdsForSeries(
+                            final Long seriesId, final Long userId) {
+                        if (Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
+                                && userId == 9L
+                                && seriesId == 700L) {
+                            return Set.of(52L, 53L);
+                        }
+                        return Set.of();
                     }
 
                     @Override
@@ -404,13 +844,32 @@ class PawUiRouteTest {
                     @Override
                     public void removeParticipant(
                             final Long matchId, final Long hostUserId, final Long targetUserId) {
-                        // No-op for route rendering tests.
+                        if (hostUserId.equals(targetUserId)) {
+                            final MatchParticipationException failure =
+                                    reservationCancellationFailure.get();
+                            if (failure != null) {
+                                throw failure;
+                            }
+
+                            lastCancelledReservationMatchId.set(matchId);
+                            lastCancelledReservationUserId.set(targetUserId);
+                        }
                     }
 
                     @Override
                     public List<User> findPendingRequests(
                             final Long matchId, final Long hostUserId) {
                         return List.of();
+                    }
+
+                    @Override
+                    public List<PendingJoinRequest> findPendingRequestsForHost(
+                            final Long hostUserId) {
+                        return List.of(
+                                new PendingJoinRequest(
+                                        approvalRecurringMatch,
+                                        new User(9L, "player@test.com", "player-account"),
+                                        true));
                     }
 
                     @Override
@@ -793,12 +1252,17 @@ class PawUiRouteTest {
                                         matchParticipationService,
                                         playerReviewService,
                                         userService,
-                                        messageSource),
+                                        messageSource,
+                                        fixedClock),
                                 new PublicProfileController(
                                         userService, playerReviewService, messageSource),
+                                new PlayerParticipationController(
+                                        matchParticipationService, messageSource),
                                 new AccountController(userService, messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
+                                new HostParticipationController(
+                                        matchService, matchParticipationService, messageSource),
                                 new MatchDashboardController(
                                         matchService, matchParticipationService, messageSource),
                                 new ErrorPageController(messageSource),
@@ -951,6 +1415,212 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getRealMatchDetailsRouteForJoinedUserExposesReservationCancellation() throws Exception {
+        currentUserHasReservation.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "reservationCancelPath",
+                                        "/matches/42/reservations/cancel"));
+    }
+
+    @Test
+    void getPrivateInviteOnlyMatchDetailsForJoinedUserExposesReservationCancellation()
+            throws Exception {
+        currentUserHasReservation.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/51"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "reservationCancelPath",
+                                        "/matches/51/reservations/cancel"));
+    }
+
+    @Test
+    void getPrivateInviteOnlyMatchDetailsForHostExposesDirectReservation() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/51"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("isInvitedPlayer", false));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteExposesRecurringOccurrenceStates() throws Exception {
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(6))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("Completed"))))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("In progress")),
+                                                                Matchers.hasProperty(
+                                                                        "statusTone",
+                                                                        Matchers.is(
+                                                                                "in-progress")))))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("Full"))))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("Cancelled")),
+                                                                Matchers.hasProperty(
+                                                                        "href",
+                                                                        Matchers.nullValue()))))))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationPath",
+                                        "/matches/46/recurring-reservations"));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteLocalizesInProgressOccurrenceState() throws Exception {
+        mockMvc.perform(get("/matches/46").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("En curso"))))));
+    }
+
+    @Test
+    void getRecurringApprovalRequiredMatchDetailsRouteExposesSingleAndSeriesJoinRequests()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/52"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("joinRequestEnabled", true))
+                .andExpect(model().attribute("joinRequestPath", "/matches/52/join-requests"))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", true))
+                .andExpect(model().attribute("seriesJoinRequestPending", false))
+                .andExpect(
+                        model().attribute(
+                                        "seriesJoinRequestPath",
+                                        "/matches/52/recurring-join-requests"));
+    }
+
+    @Test
+    void getRecurringApprovalRequiredMatchDetailsRouteShowsSeriesJoinPendingNotice()
+            throws Exception {
+        currentUserHasSeriesJoinRequest.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/52"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("hasPendingJoinRequest", false))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestPending", true));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "occurrences",
+                                                Matchers.hasItem(
+                                                        Matchers.allOf(
+                                                                Matchers.hasProperty(
+                                                                        "statusLabel",
+                                                                        Matchers.is("Cancelled")),
+                                                                Matchers.hasProperty(
+                                                                        "href",
+                                                                        Matchers.is(
+                                                                                "/matches/50")))))));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteForJoinedUserExposesSeriesCancellation() throws Exception {
+        currentUserHasSeriesReservation.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "reservationCancelPath", "/matches/46/reservations/cancel"))
+                .andExpect(model().attribute("seriesCancellationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationCancelPath",
+                                        "/matches/46/recurring-reservations/cancel"));
+    }
+
+    @Test
+    void getPastRecurringMatchDetailsRouteExposesCompletedNotice() throws Exception {
+        mockMvc.perform(get("/matches/48"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("reservationEnabled", false))
+                .andExpect(
+                        model().attribute("eventStateNotice", "This event has already occurred."));
+    }
+
+    @Test
     void getRealMatchDetailsRouteForHostExposesManagementActions() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -959,8 +1629,43 @@ class PawUiRouteTest {
                 .andExpect(model().attribute("hostCanManage", true))
                 .andExpect(model().attribute("hostCanEdit", true))
                 .andExpect(model().attribute("hostCanCancel", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("seriesReservationEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
                 .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteForHostExposesSeriesManagementActions() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("hostCanEditSeries", true))
+                .andExpect(model().attribute("hostCanCancelSeries", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(model().attribute("hostSeriesEditPath", "/host/matches/46/series/edit"))
+                .andExpect(
+                        model().attribute(
+                                        "hostSeriesCancelPath", "/host/matches/46/series/cancel"));
+    }
+
+    @Test
+    void getApprovalRequiredMatchDetailsRouteForHostHidesJoinRequestActions() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/52"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attribute("seriesJoinRequestEnabled", false))
+                .andExpect(model().attribute("hasPendingJoinRequest", false));
     }
 
     @Test
@@ -984,6 +1689,19 @@ class PawUiRouteTest {
                         model().attribute(
                                         "hostActionNotice",
                                         "Tu evento fue actualizado correctamente."));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteWithSpanishSeriesHostActionLocalizesNotice() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/46").param("hostAction", "seriesUpdated").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "hostActionNotice",
+                                        "Las pr\u00f3ximas fechas recurrentes "
+                                                + "fueron actualizadas correctamente."));
     }
 
     @Test
@@ -1016,6 +1734,167 @@ class PawUiRouteTest {
                         model().attribute(
                                         "reservationError",
                                         "Tu cuenta ya tiene una reserva confirmada para este evento."));
+    }
+
+    @Test
+    void postReservationCancelWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/matches/42/reservations/cancel"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postReservationCancelAsAuthenticatedUserRedirectsToCancelledEvent() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/42/reservations/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42?reservation=cancelled"));
+
+        Assertions.assertEquals(42L, lastCancelledReservationMatchId.get());
+        Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+    }
+
+    @Test
+    void postRecurringOccurrenceReservationCancelAsAuthenticatedUserCancelsOnlySelectedDate()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/46/reservations/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/46?reservation=cancelled"));
+
+        Assertions.assertEquals(46L, lastCancelledReservationMatchId.get());
+        Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+        Assertions.assertNull(lastCancelledSeriesMatchId.get());
+        Assertions.assertNull(lastCancelledSeriesUserId.get());
+    }
+
+    @Test
+    void postPrivateInviteOnlyReservationCancelRedirectsToUpcomingMatches() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/51/reservations/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/player/matches/upcoming"));
+
+        Assertions.assertEquals(51L, lastCancelledReservationMatchId.get());
+        Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+    }
+
+    @Test
+    void postReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        reservationCancellationFailure.set(
+                new MatchParticipationException("not_joined", "No active reservation"));
+
+        mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "reservationError",
+                                        "No ten\u00e9s una reserva activa para este evento."));
+    }
+
+    @Test
+    void postSeriesReservationRequestWithoutAuthenticatedUserReturnsUnauthorized()
+            throws Exception {
+        mockMvc.perform(post("/matches/46/recurring-reservations"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postSeriesReservationRequestAsAuthenticatedUserRedirectsToConfirmedEvent()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/46/recurring-reservations"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/46?reservation=recurringConfirmed"));
+
+        Assertions.assertEquals(46L, lastReservedMatchId.get());
+        Assertions.assertEquals(9L, lastReservedUserId.get());
+    }
+
+    @Test
+    void postSeriesReservationRequestWithSpanishLocaleLocalizesReservationErrors()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        seriesReservationFailure.set(
+                new MatchReservationException("series_already_joined", "Already joined"));
+
+        mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationError",
+                                        "Tu cuenta ya tiene reservas confirmadas "
+                                                + "para las fechas futuras recurrentes."));
+    }
+
+    @Test
+    void postSeriesReservationCancelWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/matches/46/recurring-reservations/cancel"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postSeriesReservationCancelAsAuthenticatedUserRedirectsToCancelledEvent()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/46/recurring-reservations/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/46?reservation=recurringCancelled"));
+
+        Assertions.assertEquals(46L, lastCancelledSeriesMatchId.get());
+        Assertions.assertEquals(9L, lastCancelledSeriesUserId.get());
+    }
+
+    @Test
+    void postSeriesReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        seriesCancellationFailure.set(
+                new MatchReservationException("series_not_joined", "No future reservations"));
+
+        mockMvc.perform(post("/matches/46/recurring-reservations/cancel").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationError",
+                                        "No ten\u00e9s reservas futuras para este evento recurrente."));
+    }
+
+    @Test
+    void postSeriesJoinRequestWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/matches/52/recurring-join-requests"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postSeriesJoinRequestAsAuthenticatedUserRedirectsToRecurringRequestedEvent()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/52/recurring-join-requests"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/52?join=recurringRequested"));
+
+        Assertions.assertEquals(52L, lastSeriesJoinRequestMatchId.get());
+        Assertions.assertEquals(9L, lastSeriesJoinRequestUserId.get());
+    }
+
+    @Test
+    void postSeriesJoinRequestFailureRedirectsWithJoinErrorCode() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+        seriesJoinRequestFailure.set(
+                new MatchParticipationException("series_already_pending", "Already requested"));
+
+        mockMvc.perform(post("/matches/52/recurring-join-requests"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/52?joinError=series_already_pending"));
     }
 
     @Test
@@ -1127,6 +2006,129 @@ class PawUiRouteTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/43"));
+
+        Assertions.assertNotNull(lastCreateMatchRequest.get());
+        Assertions.assertFalse(lastCreateMatchRequest.get().isRecurring());
+    }
+
+    @Test
+    void postHostPublishCreatesRecurringMatchWithOccurrenceCount() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "weekly")
+                                .param("recurrenceEndMode", "occurrence_count")
+                                .param("recurrenceOccurrenceCount", "3")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        final CreateMatchRequest request = lastCreateMatchRequest.get();
+        Assertions.assertNotNull(request);
+        Assertions.assertTrue(request.isRecurring());
+        Assertions.assertEquals("weekly", request.getRecurrence().getFrequency().getValue());
+        Assertions.assertEquals(3, request.getRecurrence().getOccurrenceCount());
+    }
+
+    @Test
+    void postHostPublishCreatesRecurringMatchWithUntilDate() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "weekly")
+                                .param("recurrenceEndMode", "until_date")
+                                .param("recurrenceUntilDate", "2099-04-24")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        final CreateMatchRequest request = lastCreateMatchRequest.get();
+        Assertions.assertNotNull(request);
+        Assertions.assertTrue(request.isRecurring());
+        Assertions.assertEquals("until_date", request.getRecurrence().getEndMode().getValue());
+        Assertions.assertEquals(LocalDate.of(2099, 4, 24), request.getRecurrence().getUntilDate());
+    }
+
+    @Test
+    void postHostPublishRejectsInvalidRecurrenceFrequency() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "yearly")
+                                .param("recurrenceEndMode", "occurrence_count")
+                                .param("recurrenceOccurrenceCount", "3")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(
+                        model().attributeHasFieldErrors("createEventForm", "recurrenceFrequency"));
+    }
+
+    @Test
+    void postHostPublishRejectsRecurringUntilDateTooSoonForFrequency() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("recurring", "true")
+                                .param("recurrenceFrequency", "weekly")
+                                .param("recurrenceEndMode", "until_date")
+                                .param("recurrenceUntilDate", "2099-04-12")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(
+                        model().attributeHasFieldErrors("createEventForm", "recurrenceUntilDate"));
     }
 
     @Test
@@ -1239,6 +2241,10 @@ class PawUiRouteTest {
                                         "createEventForm",
                                         Matchers.allOf(
                                                 Matchers.hasProperty(
+                                                        "visibility", Matchers.is("public")),
+                                                Matchers.hasProperty(
+                                                        "joinPolicy", Matchers.is("direct")),
+                                                Matchers.hasProperty(
                                                         "endDate",
                                                         Matchers.is(LocalDate.of(2026, 4, 6))),
                                                 Matchers.hasProperty(
@@ -1273,6 +2279,31 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getHostSeriesEditRouteRendersPrefilledFormForHost() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/47/series/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attribute("isEditMode", true))
+                .andExpect(model().attribute("isSeriesEditMode", true))
+                .andExpect(model().attribute("formAction", "/host/matches/47/series/edit"))
+                .andExpect(model().attribute("formTitle", "Edit recurring dates"))
+                .andExpect(
+                        model().attribute(
+                                        "createEventForm",
+                                        Matchers.hasProperty(
+                                                "title", Matchers.is("Weekly Padel"))));
+    }
+
+    @Test
+    void getHostSeriesEditRouteForSingleEventReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/matches/42/series/edit")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void postHostEditRedirectsToDetailOnSuccess() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1292,6 +2323,59 @@ class PawUiRouteTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+    }
+
+    @Test
+    void postHostSeriesEditRedirectsToDetailOnSuccess() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/47/series/edit")
+                                .param("title", "Updated Weekly Padel")
+                                .param("description", "Updated recurring game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/47?hostAction=seriesUpdated"));
+
+        Assertions.assertEquals(47L, lastHostSeriesUpdatedMatchId.get());
+        Assertions.assertEquals(7L, lastHostSeriesUpdatedUserId.get());
+        Assertions.assertEquals("Updated Weekly Padel", lastUpdateMatchRequest.get().getTitle());
+    }
+
+    @Test
+    void postHostEditPersistsPrivateVisibilityAsInviteOnly() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/42/edit")
+                                .param("title", "Updated Private Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "private")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+
+        final UpdateMatchRequest request = lastUpdateMatchRequest.get();
+        Assertions.assertNotNull(request);
+        Assertions.assertEquals("private", request.getVisibility());
+        Assertions.assertEquals("invite_only", request.getJoinPolicy());
     }
 
     @Test
@@ -1419,6 +2503,38 @@ class PawUiRouteTest {
     }
 
     @Test
+    void postHostCancelRecurringOccurrenceRedirectsToSelectedOccurrence() throws Exception {
+        // Arrange
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        // Exercise and Assert
+        mockMvc.perform(post("/host/matches/47/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/47?hostAction=cancelled"));
+        Assertions.assertEquals(47L, lastHostCancelledMatchId.get());
+        Assertions.assertEquals(7L, lastHostCancelledUserId.get());
+    }
+
+    @Test
+    void postHostCancelRecurringSeriesRedirectsToSelectedOccurrence() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(post("/host/matches/47/series/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/47?hostAction=seriesCancelled"));
+
+        Assertions.assertEquals(47L, lastHostSeriesCancelledMatchId.get());
+        Assertions.assertEquals(7L, lastHostSeriesCancelledUserId.get());
+    }
+
+    @Test
+    void postHostCancelRecurringSeriesForSingleEventReturnsNotFound() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(post("/host/matches/42/series/cancel")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void postHostCancelForCompletedEventReturnsNotFound() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1434,6 +2550,18 @@ class PawUiRouteTest {
                 .andExpect(view().name("matches/list"))
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attributeExists("listTitle"));
+    }
+
+    @Test
+    void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/host/requests"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/participation/requests"))
+                .andExpect(model().attribute("aggregateRequests", true))
+                .andExpect(model().attributeExists("pendingRequests"))
+                .andExpect(model().attribute("matchesUrl", "/host/matches"));
     }
 
     @Test

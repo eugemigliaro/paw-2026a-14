@@ -12,7 +12,7 @@
 <c:url var="cssBaseHref" value="/css/base.css" />
 <c:url var="cssEventCardsHref" value="/css/event-cards.css" />
 <c:url var="cssFeedHref" value="/css/feed.css?v=20260410" />
-<c:url var="cssEventDetailHref" value="/css/event-detail.css" />
+<c:url var="cssEventDetailHref" value="/css/event-detail.css?v=20260428" />
 <c:url var="cssHostCreateHref" value="/css/host-create.css" />
 <c:url var="cssVerificationHref" value="/css/verification.css" />
 <c:url var="cssErrorsHref" value="/css/errors.css" />
@@ -28,6 +28,7 @@
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
 <c:url var="overflowMenuHref" value="/js/overflow-menu.js" />
 <c:url var="filterDropdownsHref" value="/js/filter-dropdowns.js" />
+<c:url var="recurrenceScheduleHref" value="/js/recurrence-schedule.js?v=20260428" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
 <link rel="stylesheet" href="${cssComponentsHref}" />
 <link rel="stylesheet" href="${cssBaseHref}" />
@@ -49,3 +50,4 @@
 <script defer src="${hostJoinPolicyGuardHref}"></script>
 <script defer src="${overflowMenuHref}"></script>
 <script defer src="${filterDropdownsHref}"></script>
+<script defer src="${recurrenceScheduleHref}"></script>

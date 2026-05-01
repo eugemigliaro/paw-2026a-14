@@ -2,5 +2,6 @@ package ar.edu.itba.paw.services;
 
 public enum MatchCancellationFailureReason {
     MATCH_NOT_FOUND,
-    FORBIDDEN
+    FORBIDDEN,
+    NOT_RECURRING
 }

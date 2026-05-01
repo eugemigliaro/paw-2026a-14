@@ -77,6 +77,25 @@ public class PlayerParticipationController {
         }
     }
 
+    @PostMapping({
+        "/matches/{matchId}/recurring-join-requests",
+        "/matches/{matchId}/series-join-requests"
+    })
+    public ModelAndView requestToJoinSeries(
+            @PathVariable("matchId") final String matchId, final Locale locale) {
+        final long userId = requireAuthenticatedUserId();
+        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
+
+        try {
+            matchParticipationService.requestToJoinSeries(resolvedMatchId, userId);
+            return new ModelAndView(
+                    "redirect:/matches/" + resolvedMatchId + "?join=recurringRequested");
+        } catch (final MatchParticipationException e) {
+            return new ModelAndView(
+                    "redirect:/matches/" + resolvedMatchId + "?joinError=" + e.getCode());
+        }
+    }
+
     @PostMapping("/matches/{matchId}/join-requests/cancel")
     public ModelAndView cancelJoinRequest(
             @PathVariable("matchId") final String matchId, final Locale locale) {
@@ -104,7 +123,8 @@ public class PlayerParticipationController {
                 "shell",
                 ShellViewModelFactory.playerShell(
                         messageSource, resolvedLocale, "/player/matches/invites"));
-        mav.addObject("invitedMatches", toInvitedMatchViewModels(invitedMatches, resolvedLocale));
+        mav.addObject(
+                "invitedMatches", toInvitedMatchViewModels(invitedMatches, userId, resolvedLocale));
         mav.addObject(
                 "emptyMessage",
                 messageSource.getMessage("player.invites.empty", null, resolvedLocale));
@@ -142,14 +162,18 @@ public class PlayerParticipationController {
     }
 
     private java.util.List<InvitedMatchViewModel> toInvitedMatchViewModels(
-            final java.util.List<Match> matches, final Locale locale) {
+            final java.util.List<Match> matches, final long userId, final Locale locale) {
         return matches.stream()
                 .map(
-                        m ->
-                                new InvitedMatchViewModel(
-                                        toCard(m, locale),
-                                        "/matches/" + m.getId() + "/invites/accept",
-                                        "/matches/" + m.getId() + "/invites/decline"))
+                        m -> {
+                            final boolean seriesInvite =
+                                    matchParticipationService.isSeriesInvitation(m.getId(), userId);
+                            return new InvitedMatchViewModel(
+                                    toCard(m, locale),
+                                    "/matches/" + m.getId() + "/invites/accept",
+                                    "/matches/" + m.getId() + "/invites/decline",
+                                    seriesInvite);
+                        })
                 .toList();
     }
 

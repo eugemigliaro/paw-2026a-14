@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -95,6 +96,23 @@ public class HostParticipationController {
         return mav;
     }
 
+    @GetMapping("/host/requests")
+    public ModelAndView showAllPendingRequests(final Locale locale) {
+        final long hostUserId = requireAuthenticatedUserId();
+        final List<PendingJoinRequest> pending =
+                matchParticipationService.findPendingRequestsForHost(hostUserId);
+
+        final ModelAndView mav = new ModelAndView("host/participation/requests");
+        mav.addObject(
+                "shell", ShellViewModelFactory.hostShell(messageSource, locale, "/host/requests"));
+        mav.addObject("aggregateRequests", true);
+        mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
+        mav.addObject(
+                "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
+        mav.addObject("matchesUrl", "/host/matches");
+        return mav;
+    }
+
     @PostMapping("/host/matches/{matchId}/requests/{userId}/approve")
     public ModelAndView approveRequest(
             @PathVariable("matchId") final String matchId,
@@ -181,10 +199,15 @@ public class HostParticipationController {
         }
 
         try {
+            final boolean includeSeries =
+                    inviteForm.isInviteSeries() && match.getSeriesId() != null;
             matchParticipationService.inviteUser(
-                    resolvedMatchId, hostUserId, inviteForm.getEmail());
+                    resolvedMatchId, hostUserId, inviteForm.getEmail(), includeSeries);
             return new ModelAndView(
-                    "redirect:/host/matches/" + resolvedMatchId + "/invites?action=invited");
+                    "redirect:/host/matches/"
+                            + resolvedMatchId
+                            + "/invites?action="
+                            + (includeSeries ? "seriesInvited" : "invited"));
         } catch (final MatchParticipationException e) {
             final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
             return buildInviteView(
@@ -211,6 +234,7 @@ public class HostParticipationController {
         mav.addObject("matchId", matchId);
         mav.addObject("inviteForm", form);
         mav.addObject("inviteError", inviteError);
+        mav.addObject("seriesInviteAvailable", match.getSeriesId() != null);
         mav.addObject("pendingInvites", toInviteParticipantViewModels(pending));
         mav.addObject("acceptedParticipants", toRosterViewModels(accepted, matchId));
         mav.addObject("declinedInvites", toInviteParticipantViewModels(declined));
@@ -233,6 +257,21 @@ public class HostParticipationController {
                 return messageSource.getMessage("host.invites.error.isHost", null, locale);
             case "closed":
                 return messageSource.getMessage("host.invites.error.closed", null, locale);
+            case "series_started":
+                return messageSource.getMessage("host.invites.error.seriesStarted", null, locale);
+            case "series_closed":
+                return messageSource.getMessage("host.invites.error.seriesClosed", null, locale);
+            case "series_already_joined":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyJoined", null, locale);
+            case "series_already_invited":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyInvited", null, locale);
+            case "series_already_covered":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyCovered", null, locale);
+            case "series_full":
+                return messageSource.getMessage("host.invites.error.seriesFull", null, locale);
             default:
                 return messageSource.getMessage("host.invites.error.generic", null, locale);
         }
@@ -307,6 +346,34 @@ public class HostParticipationController {
                                                 + u.getId()
                                                 + "/reject",
                                         profileHrefFor(u)))
+                .toList();
+    }
+
+    private List<PendingRequestViewModel> toHostPendingRequestViewModels(
+            final List<PendingJoinRequest> requests) {
+        return requests.stream()
+                .map(
+                        request -> {
+                            final User user = request.getUser();
+                            final Match match = request.getMatch();
+                            final Long matchId = match.getId();
+                            return new PendingRequestViewModel(
+                                    user.getUsername(),
+                                    avatarLabel(user.getUsername()),
+                                    "/host/matches/"
+                                            + matchId
+                                            + "/requests/"
+                                            + user.getId()
+                                            + "/approve",
+                                    "/host/matches/"
+                                            + matchId
+                                            + "/requests/"
+                                            + user.getId()
+                                            + "/reject",
+                                    match.getTitle(),
+                                    "/matches/" + matchId,
+                                    request.isSeriesRequest());
+                        })
                 .toList();
     }
 

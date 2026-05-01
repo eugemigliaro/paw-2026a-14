@@ -75,11 +75,27 @@
 
 									<div class="pending-join-card__footer">
 										<span class="pending-join-card__status">
-											<spring:message code="player.invites.statusLabel" />
+											<c:choose>
+												<c:when test="${item.seriesInvite}">
+													<spring:message code="player.invites.seriesStatusLabel" />
+												</c:when>
+												<c:otherwise>
+													<spring:message code="player.invites.statusLabel" />
+												</c:otherwise>
+											</c:choose>
 										</span>
 										<div class="pending-join-card__actions">
 											<c:url var="acceptAction" value="${item.acceptUrl}" />
-											<spring:message var="acceptingLabel" code="player.invites.accepting" />
+											<c:choose>
+												<c:when test="${item.seriesInvite}">
+													<spring:message var="acceptingLabel" code="player.invites.acceptingSeries" />
+													<spring:message var="acceptLabel" code="player.invites.acceptSeries" />
+												</c:when>
+												<c:otherwise>
+													<spring:message var="acceptingLabel" code="player.invites.accepting" />
+													<spring:message var="acceptLabel" code="player.invites.accept" />
+												</c:otherwise>
+											</c:choose>
 											<form
 												method="post"
 												action="${acceptAction}"
@@ -88,11 +104,19 @@
 												class="pending-join-card__cancel-form"
 											>
 												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-												<spring:message var="acceptLabel" code="player.invites.accept" />
 												<ui:button label="${acceptLabel}" type="submit" />
 											</form>
 											<c:url var="declineAction" value="${item.declineUrl}" />
-											<spring:message var="decliningLabel" code="player.invites.declining" />
+											<c:choose>
+												<c:when test="${item.seriesInvite}">
+													<spring:message var="decliningLabel" code="player.invites.decliningSeries" />
+													<spring:message var="declineLabel" code="player.invites.declineSeries" />
+												</c:when>
+												<c:otherwise>
+													<spring:message var="decliningLabel" code="player.invites.declining" />
+													<spring:message var="declineLabel" code="player.invites.decline" />
+												</c:otherwise>
+											</c:choose>
 											<form
 												method="post"
 												action="${declineAction}"
@@ -101,7 +125,6 @@
 												class="pending-join-card__cancel-form"
 											>
 												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-												<spring:message var="declineLabel" code="player.invites.decline" />
 												<ui:button label="${declineLabel}" type="submit" variant="secondary" />
 											</form>
 										</div>
