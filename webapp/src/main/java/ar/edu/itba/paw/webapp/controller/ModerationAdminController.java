@@ -15,9 +15,13 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -47,9 +51,18 @@ public class ModerationAdminController {
     }
 
     @GetMapping
-    public ModelAndView showReports(final Locale locale) {
+    public ModelAndView showReports(
+            @RequestParam(value = "type", required = false) final List<String> typeFilters,
+            @RequestParam(value = "status", required = false) final List<String> statusFilters,
+            final Locale locale) {
+
+        final List<ReportTargetType> selectedTypes =
+                parseEnumFilters(typeFilters, ReportTargetType::fromDbValue);
+        final List<ReportStatus> selectedStatuses =
+                parseEnumFilters(statusFilters, ReportStatus::fromDbValue);
+
         final List<ModerationReportViewModel> reports =
-                moderationService.findActiveReports().stream()
+                moderationService.findReports(selectedTypes, selectedStatuses).stream()
                         .map(report -> toViewModel(report, locale))
                         .toList();
 
@@ -65,12 +78,17 @@ public class ModerationAdminController {
                 "pageDescription",
                 messageSource.getMessage("admin.reports.description", null, locale));
         mav.addObject(
-                "activeReportCountLabel",
+                "reportCountLabel",
                 messageSource.getMessage(
                         "admin.reports.count", new Object[] {reports.size()}, locale));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("admin.reports.empty", null, locale));
         mav.addObject("reports", reports);
+        mav.addObject(
+                "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
+        mav.addObject(
+                "selectedStatuses",
+                selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
         return mav;
     }
 
@@ -252,6 +270,20 @@ public class ModerationAdminController {
                         .withLocale(locale)
                         .withZone(ZoneId.systemDefault())
                         .format(instant);
+    }
+
+    private static <T> List<T> parseEnumFilters(
+            final List<String> rawValues, final Function<String, Optional<T>> parser) {
+        if (rawValues == null || rawValues.isEmpty()) {
+            return List.of();
+        }
+        final Set<T> parsed =
+                rawValues.stream()
+                        .filter(value -> value != null && !value.isBlank())
+                        .map(parser)
+                        .flatMap(Optional::stream)
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+        return List.copyOf(parsed);
     }
 
     private BanAppealViewModel banAppealViewModel(

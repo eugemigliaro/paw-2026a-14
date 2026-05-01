@@ -26,7 +26,10 @@ public interface ModerationReportDao {
     List<ModerationReport> findReportsByReporter(
             Long reporterUserId, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
-    List<ModerationReport> findActiveReports();
+    List<ModerationReport> findReports();
+
+    List<ModerationReport> findReports(
+            List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
     Optional<ModerationReport> findLatestUserBanReportByTargetUserId(Long targetUserId);
 

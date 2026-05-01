@@ -31,7 +31,10 @@ public interface ModerationService {
             ReportReason reason,
             String details);
 
-    List<ModerationReport> findActiveReports();
+    List<ModerationReport> findReports();
+
+    List<ModerationReport> findReports(
+            List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
     List<ModerationReport> findReportsByReporter(Long reporterUserId);
 

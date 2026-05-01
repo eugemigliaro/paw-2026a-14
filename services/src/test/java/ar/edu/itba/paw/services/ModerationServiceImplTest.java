@@ -293,12 +293,12 @@ public class ModerationServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(moderationReportDao.findActiveReports()).thenReturn(List.of());
+        Mockito.when(moderationReportDao.findReports()).thenReturn(List.of());
         Mockito.when(userBanDao.findPendingAppeals()).thenReturn(List.of(appealedBan));
         Mockito.when(moderationReportDao.findLatestUserBanReportByTargetUserId(88L))
                 .thenReturn(Optional.of(resolvedBanReport));
 
-        final List<ModerationReport> reports = moderationService.findActiveReports();
+        final List<ModerationReport> reports = moderationService.findReports();
 
         Assertions.assertEquals(1, reports.size());
         Assertions.assertEquals(91L, reports.get(0).getId());

@@ -122,7 +122,8 @@ public class ModerationReportJdbcDaoTest {
                 NOW,
                 ReportStatus.RESOLVED);
 
-        final List<ModerationReport> activeReports = moderationReportDao.findActiveReports();
+        final List<ModerationReport> activeReports =
+                moderationReportDao.findReports(List.of(), List.of(ReportStatus.PENDING));
         final int activeCount = moderationReportDao.countActiveReportsByReporter(1L);
 
         Assertions.assertEquals(1, activeReports.size());

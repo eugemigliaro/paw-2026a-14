@@ -59,8 +59,7 @@ class ModerationAdminControllerTest {
 
     @Test
     void getReportsRendersAdminQueue() throws Exception {
-        Mockito.when(moderationService.findActiveReports())
-                .thenReturn(List.of(sampleAppealedReport()));
+        Mockito.when(moderationService.findReports()).thenReturn(List.of(sampleAppealedReport()));
 
         mockMvc.perform(get("/admin/reports").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())

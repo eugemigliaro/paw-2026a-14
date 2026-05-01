@@ -190,8 +190,31 @@ public class ModerationServiceImpl implements ModerationService {
     }
 
     @Override
-    public List<ModerationReport> findActiveReports() {
-        final List<ModerationReport> activeReports = moderationReportDao.findActiveReports();
+    public List<ModerationReport> findReports() {
+        final List<ModerationReport> activeReports = moderationReportDao.findReports();
+        final List<Long> existingIds =
+                activeReports.stream().map(ModerationReport::getId).collect(Collectors.toList());
+        final List<ModerationReport> reportsWithPendingBanAppeals =
+                userBanDao.findPendingAppeals().stream()
+                        .map(UserBan::getUserId)
+                        .distinct()
+                        .map(moderationReportDao::findLatestUserBanReportByTargetUserId)
+                        .flatMap(Optional::stream)
+                        .filter(report -> !existingIds.contains(report.getId()))
+                        .toList();
+        if (reportsWithPendingBanAppeals.isEmpty()) {
+            return activeReports;
+        }
+        return Stream.concat(activeReports.stream(), reportsWithPendingBanAppeals.stream())
+                .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
+                .toList();
+    }
+
+    @Override
+    public List<ModerationReport> findReports(
+            List<ReportTargetType> targetTypes, List<ReportStatus> statuses) {
+        final List<ModerationReport> activeReports =
+                moderationReportDao.findReports(targetTypes, statuses);
         final List<Long> existingIds =
                 activeReports.stream().map(ModerationReport::getId).collect(Collectors.toList());
         final List<ModerationReport> reportsWithPendingBanAppeals =

@@ -155,13 +155,25 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
     }
 
     @Override
-    public List<ModerationReport> findActiveReports() {
+    public List<ModerationReport> findReports() {
         return jdbcTemplate.query(
-                "SELECT * FROM moderation_reports WHERE status IN (?,?,?) ORDER BY updated_at DESC, id DESC",
-                MODERATION_REPORT_ROW_MAPPER,
-                new SqlParameterValue(Types.OTHER, ReportStatus.PENDING.getDbValue()),
-                new SqlParameterValue(Types.OTHER, ReportStatus.UNDER_REVIEW.getDbValue()),
-                new SqlParameterValue(Types.OTHER, ReportStatus.APPEALED.getDbValue()));
+                "SELECT * FROM moderation_reports ORDER BY updated_at DESC, id DESC",
+                MODERATION_REPORT_ROW_MAPPER);
+    }
+
+    @Override
+    public List<ModerationReport> findReports(
+            List<ReportTargetType> targetTypes, List<ReportStatus> statuses) {
+        final StringBuilder sql = new StringBuilder("SELECT * FROM moderation_reports");
+        final List<Object> args = new LinkedList<>();
+
+        sql.append(" WHERE 1=1");
+
+        appendEnumFilter(sql, args, "target_type", targetTypes);
+        appendEnumFilter(sql, args, "status", statuses);
+
+        sql.append(" ORDER BY created_at DESC, id DESC");
+        return jdbcTemplate.query(sql.toString(), MODERATION_REPORT_ROW_MAPPER, args.toArray());
     }
 
     @Override
