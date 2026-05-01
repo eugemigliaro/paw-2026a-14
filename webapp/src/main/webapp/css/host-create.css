@@ -19,6 +19,7 @@
 
 .form-card,
 .upload-card {
+	align-self: start;
 	padding: 1.15rem;
 }
 

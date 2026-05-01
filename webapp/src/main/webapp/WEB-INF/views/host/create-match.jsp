@@ -13,32 +13,36 @@
 					<body>
 						<div class="app-shell">
 							<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
-					<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
-					<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
-					<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
-					<spring:message var="sportPadel" code="sport.padel" />
-					<spring:message var="sportFootball" code="sport.football" />
-					<spring:message var="sportTennis" code="sport.tennis" />
-					<spring:message var="sportBasketball" code="sport.basketball" />
-					<spring:message var="visibilityPlaceholder" code="host.form.visibility.placeholder" />
-					<spring:message var="visibilityPublic" code="host.form.visibility.public" />
-					<spring:message var="visibilityPrivate" code="host.form.visibility.private" />
-					<spring:message var="joinPolicyPlaceholder" code="host.form.joinPolicy.placeholder" />
-					<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
-					<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
-					<spring:message var="sportOther" code="sport.other" />
-					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
-					<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
-					<spring:message var="durationCustom" code="host.form.duration.custom" />
-					<spring:message var="durationLabel" code="host.form.duration" />
-					<spring:message var="recurrenceFrequencyPlaceholder" code="host.form.recurrence.frequency.placeholder" />
-					<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
-					<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
-					<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
-					<spring:message var="recurrenceEndModePlaceholder" code="host.form.recurrence.endMode.placeholder" />
-					<spring:message var="recurrenceEndUntilDate" code="host.form.recurrence.endMode.untilDate" />
-					<spring:message var="recurrenceEndOccurrenceCount" code="host.form.recurrence.endMode.occurrenceCount" />
-					<c:url var="resolvedFormAction" value="${formAction}" />
+								<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
+								<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
+								<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
+								<spring:message var="sportPadel" code="sport.padel" />
+								<spring:message var="sportFootball" code="sport.football" />
+								<spring:message var="sportTennis" code="sport.tennis" />
+								<spring:message var="sportBasketball" code="sport.basketball" />
+								<spring:message var="visibilityPlaceholder" code="host.form.visibility.placeholder" />
+								<spring:message var="visibilityPublic" code="host.form.visibility.public" />
+								<spring:message var="visibilityPrivate" code="host.form.visibility.private" />
+								<spring:message var="joinPolicyPlaceholder" code="host.form.joinPolicy.placeholder" />
+								<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
+								<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
+								<spring:message var="sportOther" code="sport.other" />
+								<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
+								<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
+								<spring:message var="durationCustom" code="host.form.duration.custom" />
+								<spring:message var="durationLabel" code="host.form.duration" />
+								<spring:message var="recurrenceFrequencyPlaceholder"
+									code="host.form.recurrence.frequency.placeholder" />
+								<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
+								<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
+								<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
+								<spring:message var="recurrenceEndModePlaceholder"
+									code="host.form.recurrence.endMode.placeholder" />
+								<spring:message var="recurrenceEndUntilDate"
+									code="host.form.recurrence.endMode.untilDate" />
+								<spring:message var="recurrenceEndOccurrenceCount"
+									code="host.form.recurrence.endMode.occurrenceCount" />
+								<c:url var="resolvedFormAction" value="${formAction}" />
 
 								<main class="page-shell">
 									<ui:returnButton />
@@ -237,162 +241,14 @@
 												</div>
 											</article>
 
-						<c:if test="${not isEditMode}">
-							<article class="panel form-card recurrence-card">
-								<span class="detail-label"><spring:message code="host.section.recurrence" /></span>
-								<h2 class="form-card__title">
-									<spring:message code="host.section.recurrence.subtitle" />
-								</h2>
-								<div class="create-stack">
-									<label class="recurrence-toggle" for="match-recurring">
-										<form:checkbox
-											path="recurring"
-											id="match-recurring"
-											cssClass="recurrence-toggle__input"
-										/>
-										<span class="recurrence-toggle__copy">
-											<span class="recurrence-toggle__title">
-												<spring:message code="host.form.recurrence.enabled" />
-											</span>
-											<span class="recurrence-toggle__hint">
-												<spring:message code="host.form.recurrence.enabled.hint" />
-											</span>
-										</span>
-									</label>
-
-									<div class="create-stack recurrence-settings" id="recurrence-settings">
-										<label class="field" for="match-recurrence-frequency">
-											<span class="field__label"><spring:message code="host.form.recurrence.frequency" /></span>
-											<span class="field__select-wrap">
-												<form:select
-													path="recurrenceFrequency"
-													id="match-recurrence-frequency"
-													cssClass="field__control field__control--select"
-												>
-													<form:option value="" label="${recurrenceFrequencyPlaceholder}" />
-													<form:option value="daily" label="${recurrenceDaily}" />
-													<form:option value="weekly" label="${recurrenceWeekly}" />
-													<form:option value="monthly" label="${recurrenceMonthly}" />
-												</form:select>
-											</span>
-											<form:errors
-												path="recurrenceFrequency"
-												cssClass="field__error"
-												element="span"
-											/>
-										</label>
-
-										<label class="field" for="match-recurrence-end-mode">
-											<span class="field__label"><spring:message code="host.form.recurrence.endMode" /></span>
-											<span class="field__select-wrap">
-												<form:select
-													path="recurrenceEndMode"
-													id="match-recurrence-end-mode"
-													cssClass="field__control field__control--select"
-												>
-													<form:option value="" label="${recurrenceEndModePlaceholder}" />
-													<form:option value="until_date" label="${recurrenceEndUntilDate}" />
-													<form:option value="occurrence_count" label="${recurrenceEndOccurrenceCount}" />
-												</form:select>
-											</span>
-											<form:errors
-												path="recurrenceEndMode"
-												cssClass="field__error"
-												element="span"
-											/>
-										</label>
-
-										<label class="field" for="match-recurrence-until-date" id="recurrence-until-date-field">
-											<span class="field__label"><spring:message code="host.form.recurrence.untilDate" /></span>
-											<form:input
-												path="recurrenceUntilDate"
-												id="match-recurrence-until-date"
-												type="date"
-												cssClass="field__control"
-											/>
-											<span class="field__hint"><spring:message code="host.form.recurrence.untilDate.hint" /></span>
-											<form:errors
-												path="recurrenceUntilDate"
-												cssClass="field__error"
-												element="span"
-											/>
-										</label>
-
-										<label class="field" for="match-recurrence-occurrence-count" id="recurrence-count-field">
-											<span class="field__label"><spring:message code="host.form.recurrence.occurrenceCount" /></span>
-											<form:input
-												path="recurrenceOccurrenceCount"
-												id="match-recurrence-occurrence-count"
-												type="number"
-												min="2"
-												max="52"
-												cssClass="field__control"
-											/>
-											<span class="field__hint"><spring:message code="host.form.recurrence.occurrenceCount.hint" /></span>
-											<form:errors
-												path="recurrenceOccurrenceCount"
-												cssClass="field__error"
-												element="span"
-											/>
-										</label>
-									</div>
-								</div>
-							</article>
-						</c:if>
-
-						<article class="panel form-card">
-							<span class="detail-label"><spring:message code="host.section.capacity" /></span>
-							<h2 class="form-card__title">
-								<spring:message code="host.section.capacity.subtitle" />
-							</h2>
-							<div class="form-card__grid form-card__grid--three">
-								<label class="field" for="match-capacity">
-									<span class="field__label"><spring:message code="host.form.capacity" /></span>
-									<form:input
-										path="maxPlayers"
-										id="match-capacity"
-										type="number"
-										min="1"
-										cssClass="field__control"
-										required="required"
-									/>
-									<form:errors
-										path="maxPlayers"
-										cssClass="field__error"
-										element="span"
-									/>
-								</label>
-
-											<!-- capacity (3) -->
 											<article class="panel form-card">
 												<span class="detail-label">
-													<spring:message code="host.section.capacity" />
+													<spring:message code="host.section.visibility" />
 												</span>
 												<h2 class="form-card__title">
-													<spring:message code="host.section.capacity.subtitle" />
+													<spring:message code="host.section.visibility.subtitle" />
 												</h2>
-												<div class="form-card__grid form-card__grid--three">
-													<label class="field" for="match-capacity">
-														<span class="field__label">
-															<spring:message code="host.form.capacity" />
-														</span>
-														<form:input path="maxPlayers" id="match-capacity" type="number"
-															min="1" cssClass="field__control" required="required" />
-														<form:errors path="maxPlayers" cssClass="field__error"
-															element="span" />
-													</label>
-
-													<label class="field" for="match-price">
-														<span class="field__label">
-															<spring:message code="host.form.pricePerPlayer" />
-														</span>
-														<form:input path="pricePerPlayer" id="match-price" type="number"
-															min="0" step="0.01" cssClass="field__control"
-															required="required" />
-														<form:errors path="pricePerPlayer" cssClass="field__error"
-															element="span" />
-													</label>
-
+												<div class="form-card__grid">
 													<label class="field" for="match-visibility">
 														<span class="field__label">
 															<spring:message code="host.form.visibility" />
@@ -404,7 +260,6 @@
 																		class="field__control account-readonly-control account-readonly-control--muted"
 																		value="${createEventForm.visibility}"
 																		readonly="readonly" aria-readonly="true" />
-
 																	<span class="account-locked-field__icon"
 																		aria-hidden="true">
 																		<svg viewBox="0 0 24 24" focusable="false">
@@ -420,9 +275,10 @@
 															</c:when>
 															<c:otherwise>
 																<ui:eventsFilterToggle id="match-visibility-toggle"
-																	currentValue="${createEventForm.visibility}" inputName="visibility"
-																	leftValue="public" rightValue="private"
-																	leftLabel="${visibilityPublic}" rightLabel="${visibilityPrivate}"
+																	currentValue="${createEventForm.visibility}"
+																	inputName="visibility" leftValue="public"
+																	rightValue="private" leftLabel="${visibilityPublic}"
+																	rightLabel="${visibilityPrivate}"
 																	forceLeftOnEmpty="${false}" />
 																<form:errors path="visibility" cssClass="field__error"
 																	element="span" />
@@ -455,11 +311,13 @@
 																	value="${createEventForm.joinPolicy}" />
 															</c:when>
 															<c:otherwise>
-																	<ui:eventsFilterToggle id="match-join-policy-toggle"
-																		currentValue="${createEventForm.joinPolicy}" inputName="joinPolicy"
-																		leftValue="direct" rightValue="approval_required"
-																		leftLabel="${joinPolicyDirect}" rightLabel="${joinPolicyApproval}"
-																		forceLeftOnEmpty="${false}" />
+																<ui:eventsFilterToggle id="match-join-policy-toggle"
+																	currentValue="${createEventForm.joinPolicy}"
+																	inputName="joinPolicy" leftValue="direct"
+																	rightValue="approval_required"
+																	leftLabel="${joinPolicyDirect}"
+																	rightLabel="${joinPolicyApproval}"
+																	forceLeftOnEmpty="${false}" />
 																<form:errors path="joinPolicy" cssClass="field__error"
 																	element="span" />
 															</c:otherwise>
@@ -467,6 +325,147 @@
 													</label>
 												</div>
 											</article>
+
+											<article class="panel form-card">
+												<span class="detail-label">
+													<spring:message code="host.section.capacity" />
+												</span>
+												<h2 class="form-card__title">
+													<spring:message code="host.section.capacity.subtitle" />
+												</h2>
+												<div class="form-card__grid">
+													<label class="field" for="match-capacity">
+														<span class="field__label">
+															<spring:message code="host.form.capacity" />
+														</span>
+														<form:input path="maxPlayers" id="match-capacity" type="number"
+															min="1" cssClass="field__control" required="required" />
+														<form:errors path="maxPlayers" cssClass="field__error"
+															element="span" />
+													</label>
+
+													<label class="field" for="match-price">
+														<span class="field__label">
+															<spring:message code="host.form.pricePerPlayer" />
+														</span>
+														<form:input path="pricePerPlayer" id="match-price" type="number"
+															min="0" step="0.01" cssClass="field__control"
+															required="required" />
+														<form:errors path="pricePerPlayer" cssClass="field__error"
+															element="span" />
+													</label>
+												</div>
+											</article>
+
+											<c:if test="${not isEditMode}">
+												<article class="panel form-card recurrence-card">
+													<span class="detail-label">
+														<spring:message code="host.section.recurrence" />
+													</span>
+													<h2 class="form-card__title">
+														<spring:message code="host.section.recurrence.subtitle" />
+													</h2>
+													<div class="create-stack">
+														<label class="recurrence-toggle" for="match-recurring">
+															<form:checkbox path="recurring" id="match-recurring"
+																cssClass="recurrence-toggle__input" />
+															<span class="recurrence-toggle__copy">
+																<span class="recurrence-toggle__title">
+																	<spring:message
+																		code="host.form.recurrence.enabled" />
+																</span>
+																<span class="recurrence-toggle__hint">
+																	<spring:message
+																		code="host.form.recurrence.enabled.hint" />
+																</span>
+															</span>
+														</label>
+
+														<div class="create-stack recurrence-settings"
+															id="recurrence-settings">
+															<label class="field" for="match-recurrence-frequency">
+																<span class="field__label">
+																	<spring:message
+																		code="host.form.recurrence.frequency" />
+																</span>
+																<span class="field__select-wrap">
+																	<form:select path="recurrenceFrequency"
+																		id="match-recurrence-frequency"
+																		cssClass="field__control field__control--select">
+																		<form:option value=""
+																			label="${recurrenceFrequencyPlaceholder}" />
+																		<form:option value="daily"
+																			label="${recurrenceDaily}" />
+																		<form:option value="weekly"
+																			label="${recurrenceWeekly}" />
+																		<form:option value="monthly"
+																			label="${recurrenceMonthly}" />
+																	</form:select>
+																</span>
+																<form:errors path="recurrenceFrequency"
+																	cssClass="field__error" element="span" />
+															</label>
+
+															<label class="field" for="match-recurrence-end-mode">
+																<span class="field__label">
+																	<spring:message
+																		code="host.form.recurrence.endMode" />
+																</span>
+																<span class="field__select-wrap">
+																	<form:select path="recurrenceEndMode"
+																		id="match-recurrence-end-mode"
+																		cssClass="field__control field__control--select">
+																		<form:option value=""
+																			label="${recurrenceEndModePlaceholder}" />
+																		<form:option value="until_date"
+																			label="${recurrenceEndUntilDate}" />
+																		<form:option value="occurrence_count"
+																			label="${recurrenceEndOccurrenceCount}" />
+																	</form:select>
+																</span>
+																<form:errors path="recurrenceEndMode"
+																	cssClass="field__error" element="span" />
+															</label>
+
+															<label class="field" for="match-recurrence-until-date"
+																id="recurrence-until-date-field">
+																<span class="field__label">
+																	<spring:message
+																		code="host.form.recurrence.untilDate" />
+																</span>
+																<form:input path="recurrenceUntilDate"
+																	id="match-recurrence-until-date" type="date"
+																	cssClass="field__control" />
+																<span class="field__hint">
+																	<spring:message
+																		code="host.form.recurrence.untilDate.hint" />
+																</span>
+																<form:errors path="recurrenceUntilDate"
+																	cssClass="field__error" element="span" />
+															</label>
+
+															<label class="field" for="match-recurrence-occurrence-count"
+																id="recurrence-count-field">
+																<span class="field__label">
+																	<spring:message
+																		code="host.form.recurrence.occurrenceCount" />
+																</span>
+																<form:input path="recurrenceOccurrenceCount"
+																	id="match-recurrence-occurrence-count" type="number"
+																	min="2" max="52" cssClass="field__control" />
+																<span class="field__hint">
+																	<spring:message
+																		code="host.form.recurrence.occurrenceCount.hint" />
+																</span>
+																<form:errors path="recurrenceOccurrenceCount"
+																	cssClass="field__error" element="span" />
+															</label>
+														</div>
+													</div>
+												</article>
+											</c:if>
+
+
 											<!-- image upload -->
 											<article class="panel upload-card">
 												<span class="detail-label">
@@ -510,18 +509,18 @@
 								</main>
 						</div>
 
-		<script>
-			(function () {
-				var visibilityToggle = document.getElementById('match-visibility-toggle');
-				var joinPolicyField = document.getElementById('join-policy-field');
-				var joinPolicyToggle = document.getElementById('match-join-policy-toggle');
-				var recurringCheckbox = document.getElementById('match-recurring');
-				var recurrenceSettings = document.getElementById('recurrence-settings');
-				var recurrenceEndModeSelect = document.getElementById('match-recurrence-end-mode');
-				var recurrenceUntilDateField = document.getElementById('recurrence-until-date-field');
-				var recurrenceCountField = document.getElementById('recurrence-count-field');
-				var recurrenceUntilDateInput = document.getElementById('match-recurrence-until-date');
-				var recurrenceCountInput = document.getElementById('match-recurrence-occurrence-count');
+						<script>
+							(function () {
+								var visibilityToggle = document.getElementById('match-visibility-toggle');
+								var joinPolicyField = document.getElementById('join-policy-field');
+								var joinPolicyToggle = document.getElementById('match-join-policy-toggle');
+								var recurringCheckbox = document.getElementById('match-recurring');
+								var recurrenceSettings = document.getElementById('recurrence-settings');
+								var recurrenceEndModeSelect = document.getElementById('match-recurrence-end-mode');
+								var recurrenceUntilDateField = document.getElementById('recurrence-until-date-field');
+								var recurrenceCountField = document.getElementById('recurrence-count-field');
+								var recurrenceUntilDateInput = document.getElementById('match-recurrence-until-date');
+								var recurrenceCountInput = document.getElementById('match-recurrence-occurrence-count');
 
 								function initializeBinaryToggle(toggleRoot) {
 									if (!toggleRoot) {
@@ -552,45 +551,45 @@
 											syncUi(nextValue);
 										});
 									});
-				function updateRecurrenceEndFields() {
-					if (!recurrenceEndModeSelect || !recurrenceUntilDateField || !recurrenceCountField) {
-						return;
-					}
+									function updateRecurrenceEndFields() {
+										if (!recurrenceEndModeSelect || !recurrenceUntilDateField || !recurrenceCountField) {
+											return;
+										}
 
-					var mode = recurrenceEndModeSelect.value;
-					recurrenceUntilDateField.style.display = mode === 'until_date' ? '' : 'none';
-					recurrenceCountField.style.display = mode === 'occurrence_count' ? '' : 'none';
-					if (mode === 'until_date' && recurrenceCountInput) {
-						recurrenceCountInput.value = '';
-					}
-					if (mode === 'occurrence_count' && recurrenceUntilDateInput) {
-						recurrenceUntilDateInput.value = '';
-					}
-				}
+										var mode = recurrenceEndModeSelect.value;
+										recurrenceUntilDateField.style.display = mode === 'until_date' ? '' : 'none';
+										recurrenceCountField.style.display = mode === 'occurrence_count' ? '' : 'none';
+										if (mode === 'until_date' && recurrenceCountInput) {
+											recurrenceCountInput.value = '';
+										}
+										if (mode === 'occurrence_count' && recurrenceUntilDateInput) {
+											recurrenceUntilDateInput.value = '';
+										}
+									}
 
-				function updateRecurrenceSettings() {
-					if (!recurringCheckbox || !recurrenceSettings) {
-						return;
-					}
+									function updateRecurrenceSettings() {
+										if (!recurringCheckbox || !recurrenceSettings) {
+											return;
+										}
 
-					recurrenceSettings.style.display = recurringCheckbox.checked ? '' : 'none';
-					updateRecurrenceEndFields();
-				}
+										recurrenceSettings.style.display = recurringCheckbox.checked ? '' : 'none';
+										updateRecurrenceEndFields();
+									}
 
-				if (recurringCheckbox) {
-					recurringCheckbox.addEventListener('change', updateRecurrenceSettings);
-				}
-				if (recurrenceEndModeSelect) {
-					recurrenceEndModeSelect.addEventListener('change', updateRecurrenceEndFields);
-				}
-				updateRecurrenceSettings();
+									if (recurringCheckbox) {
+										recurringCheckbox.addEventListener('change', updateRecurrenceSettings);
+									}
+									if (recurrenceEndModeSelect) {
+										recurrenceEndModeSelect.addEventListener('change', updateRecurrenceEndFields);
+									}
+									updateRecurrenceSettings();
 
-				var presetInputs = document.querySelectorAll('input[name="durationPresetUi"]');
-				var startDateInput = document.getElementById('match-date');
-				var startTimeInput = document.getElementById('match-time');
-				var endDateInput = document.getElementById('match-end-date');
-				var endTimeInput = document.getElementById('match-end-time');
-				var activeMode = null;
+									var presetInputs = document.querySelectorAll('input[name="durationPresetUi"]');
+									var startDateInput = document.getElementById('match-date');
+									var startTimeInput = document.getElementById('match-time');
+									var endDateInput = document.getElementById('match-end-date');
+									var endTimeInput = document.getElementById('match-end-time');
+									var activeMode = null;
 
 									syncUi(hiddenInput.value);
 									return hiddenInput;
