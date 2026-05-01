@@ -279,7 +279,7 @@
 																	inputName="visibility" leftValue="public"
 																	rightValue="private" leftLabel="${visibilityPublic}"
 																	rightLabel="${visibilityPrivate}"
-																	forceLeftOnEmpty="${false}" />
+																	forceLeftOnEmpty="${true}" />
 																<form:errors path="visibility" cssClass="field__error"
 																	element="span" />
 															</c:otherwise>
@@ -317,7 +317,7 @@
 																	rightValue="approval_required"
 																	leftLabel="${joinPolicyDirect}"
 																	rightLabel="${joinPolicyApproval}"
-																	forceLeftOnEmpty="${false}" />
+																	forceLeftOnEmpty="${true}" />
 																<form:errors path="joinPolicy" cssClass="field__error"
 																	element="span" />
 															</c:otherwise>

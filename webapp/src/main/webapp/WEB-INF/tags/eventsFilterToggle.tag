@@ -27,6 +27,11 @@
 <c:set var="isRightSelected" value="${resolvedCurrentValue eq resolvedRightValue}" />
 <c:set var="isLeftSelected" value="${resolvedCurrentValue eq resolvedLeftValue or (resolvedForceLeftOnEmpty and empty resolvedCurrentValue and not isRightSelected)}" />
 
+<c:set var="finalInputValue" value="${resolvedCurrentValue}" />
+<c:if test="${empty resolvedCurrentValue and isLeftSelected}">
+    <c:set var="finalInputValue" value="${resolvedLeftValue}" />
+</c:if>
+
 <c:set var="wrapperClasses" value="events-toggle-wrapper" />
 <c:if test="${not empty className}">
     <c:set var="wrapperClasses" value="${wrapperClasses} ${className}" />
@@ -35,7 +40,7 @@
 <div class="${wrapperClasses}" data-events-toggle="true" data-events-toggle-right-value="${resolvedRightValue}"
     <c:if test="${not empty id}">id="${id}"</c:if>>
     <c:if test="${not empty inputName}">
-        <input type="hidden" name="${inputName}" value="${resolvedCurrentValue}" data-events-toggle-input="true" />
+        <input type="hidden" name="${inputName}" value="${finalInputValue}" data-events-toggle-input="true" />
     </c:if>
     <div class="events-toggle-slider ${isRightSelected ? 'right' : ''}" data-events-toggle-slider="true"></div>
     <button type="button" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="${resolvedLeftValue}">
