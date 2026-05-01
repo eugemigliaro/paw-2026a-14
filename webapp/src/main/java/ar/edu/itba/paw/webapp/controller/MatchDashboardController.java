@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
+import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
@@ -56,15 +57,18 @@ public class MatchDashboardController {
 
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
+    private final MatchReservationService matchReservationService;
     private final MessageSource messageSource;
 
     @Autowired
     public MatchDashboardController(
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
+            final MatchReservationService matchReservationService,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
+        this.matchReservationService = matchReservationService;
         this.messageSource = messageSource;
     }
 
@@ -427,6 +431,8 @@ public class MatchDashboardController {
         final ModelAndView mav = new ModelAndView(view);
         final ZoneId zoneId = ZoneId.of(timezone);
         final DateRangeBounds dateBounds = dateRangeBounds(path, ZoneId.of(timezone));
+        final Long currentUserId =
+                CurrentAuthenticatedUser.get().map(user -> user.getUserId()).orElse(null);
 
         mav.addObject("shell", shell);
         mav.addObject("pageTitleCode", pageTitleCode);
@@ -465,7 +471,14 @@ public class MatchDashboardController {
         mav.addObject(
                 "events",
                 result.getItems().stream()
-                        .map(match -> toCard(match, zoneId, locale, path.startsWith("/host/")))
+                        .map(
+                                match ->
+                                        toCard(
+                                                match,
+                                                zoneId,
+                                                locale,
+                                                path.startsWith("/host/"),
+                                                currentUserId))
                         .toList());
         mav.addObject(
                 "paginationItems",
@@ -764,7 +777,8 @@ public class MatchDashboardController {
             final Match match,
             final ZoneId zoneId,
             final Locale locale,
-            final boolean hostDashboardView) {
+            final boolean hostDashboardView,
+            final Long currentUserId) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
         final String schedule =
@@ -782,6 +796,8 @@ public class MatchDashboardController {
         final String badge =
                 messageSource.getMessage(
                         "match.status." + match.getStatus(), null, match.getStatus(), locale);
+        final RelationshipBadge relationshipBadge =
+                relationshipBadgeFor(match, currentUserId, locale);
 
         final String cardHref = "/matches/" + match.getId();
 
@@ -800,9 +816,45 @@ public class MatchDashboardController {
                 timeLabel,
                 priceLabel,
                 badge,
+                relationshipBadge == null ? null : relationshipBadge.type(),
+                relationshipBadge == null ? null : relationshipBadge.label(),
+                recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private RelationshipBadge relationshipBadgeFor(
+            final Match match, final Long currentUserId, final Locale locale) {
+        if (currentUserId == null) {
+            return null;
+        }
+        if (currentUserId.equals(match.getHostUserId())) {
+            return relationshipBadge("my_event", locale);
+        }
+        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
+            return relationshipBadge("pending", locale);
+        }
+        if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            return relationshipBadge("invited", locale);
+        }
+        if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            return relationshipBadge("going", locale);
+        }
+        return null;
+    }
+
+    private RelationshipBadge relationshipBadge(final String type, final Locale locale) {
+        return new RelationshipBadge(
+                type, messageSource.getMessage("event.relationship." + type, null, locale));
+    }
+
+    private record RelationshipBadge(String type, String label) {}
+
+    private String recurringLabelFor(final Match match, final Locale locale) {
+        return match.isRecurringOccurrence()
+                ? messageSource.getMessage("event.recurringBadge", null, locale)
+                : null;
     }
 
     private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {

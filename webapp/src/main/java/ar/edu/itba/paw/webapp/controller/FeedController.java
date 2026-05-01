@@ -9,8 +9,11 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.services.MatchParticipationService;
+import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
+import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
@@ -43,11 +46,19 @@ public class FeedController {
     private static final int PAGE_SIZE = 12;
 
     private final MatchService matchService;
+    private final MatchParticipationService matchParticipationService;
+    private final MatchReservationService matchReservationService;
     private final MessageSource messageSource;
 
     @Autowired
-    public FeedController(final MatchService matchService, final MessageSource messageSource) {
+    public FeedController(
+            final MatchService matchService,
+            final MatchParticipationService matchParticipationService,
+            final MatchReservationService matchReservationService,
+            final MessageSource messageSource) {
         this.matchService = matchService;
+        this.matchParticipationService = matchParticipationService;
+        this.matchReservationService = matchReservationService;
         this.messageSource = messageSource;
     }
 
@@ -97,6 +108,8 @@ public class FeedController {
             final String email) {
 
         final ZoneId zoneId = parseZone(filters.timezone());
+        final Long currentUserId =
+                CurrentAuthenticatedUser.get().map(user -> user.getUserId()).orElse(null);
 
         return new FeedPageViewModel(
                 "",
@@ -106,7 +119,9 @@ public class FeedController {
                 messageSource.getMessage("feed.search.button", null, locale),
                 List.of(),
                 buildFilterGroups(query, filters, locale, email),
-                result.getItems().stream().map(match -> toCard(match, zoneId, locale)).toList(),
+                result.getItems().stream()
+                        .map(match -> toCard(match, zoneId, locale, currentUserId))
+                        .toList(),
                 result.getPage(),
                 result.getTotalPages(),
                 buildPaginationItems(
@@ -254,7 +269,8 @@ public class FeedController {
                                         isSportSelected(selectedSports, Sport.PADEL)))));
     }
 
-    private EventCardViewModel toCard(final Match match, final ZoneId zoneId, final Locale locale) {
+    private EventCardViewModel toCard(
+            final Match match, final ZoneId zoneId, final Locale locale, final Long currentUserId) {
         final Locale resolvedLocale = resolvedLocale(locale);
         final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
         final String schedule = scheduleFormatter(resolvedLocale).format(startsAt);
@@ -265,6 +281,8 @@ public class FeedController {
                         .withLocale(resolvedLocale)
                         .format(startsAt);
         final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
+        final RelationshipBadge relationshipBadge =
+                relationshipBadgeFor(match, currentUserId, locale);
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
@@ -278,9 +296,45 @@ public class FeedController {
                 priceLabel,
                 messageSource.getMessage(
                         "event.spotsLeft", new Object[] {match.getAvailableSpots()}, locale),
+                relationshipBadge == null ? null : relationshipBadge.type(),
+                relationshipBadge == null ? null : relationshipBadge.label(),
+                recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private RelationshipBadge relationshipBadgeFor(
+            final Match match, final Long currentUserId, final Locale locale) {
+        if (currentUserId == null) {
+            return null;
+        }
+        if (currentUserId.equals(match.getHostUserId())) {
+            return relationshipBadge("my_event", locale);
+        }
+        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
+            return relationshipBadge("pending", locale);
+        }
+        if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            return relationshipBadge("invited", locale);
+        }
+        if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            return relationshipBadge("going", locale);
+        }
+        return null;
+    }
+
+    private RelationshipBadge relationshipBadge(final String type, final Locale locale) {
+        return new RelationshipBadge(
+                type, messageSource.getMessage("event.relationship." + type, null, locale));
+    }
+
+    private record RelationshipBadge(String type, String label) {}
+
+    private String recurringLabelFor(final Match match, final Locale locale) {
+        return match.isRecurringOccurrence()
+                ? messageSource.getMessage("event.recurringBadge", null, locale)
+                : null;
     }
 
     private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {

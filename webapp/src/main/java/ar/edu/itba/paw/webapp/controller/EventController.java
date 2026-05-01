@@ -375,7 +375,7 @@ public class EventController {
             final Locale locale) {
         final Optional<User> host = userService.findById(match.getHostUserId());
         return new EventDetailPageViewModel(
-                toCard(match, locale),
+                toCard(match, locale, currentUserId),
                 null,
                 null,
                 host.map(User::getUsername)
@@ -394,7 +394,7 @@ public class EventController {
                 buildBookingDetails(match, locale),
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
-                loadNearbyMatches(match.getId(), locale),
+                loadNearbyMatches(match.getId(), currentUserId, locale),
                 toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale));
     }
 
@@ -474,19 +474,22 @@ public class EventController {
     }
 
     private List<EventCardViewModel> loadNearbyMatches(
-            final Long currentMatchId, final Locale locale) {
+            final Long currentMatchId, final Long currentUserId, final Locale locale) {
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
                         "", null, null, null, "soonest", 1, 4, null, null, null);
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)
-                .map(match -> toCard(match, locale))
+                .map(match -> toCard(match, locale, currentUserId))
                 .toList();
     }
 
-    private EventCardViewModel toCard(final Match match, final Locale locale) {
+    private EventCardViewModel toCard(
+            final Match match, final Locale locale, final Long currentUserId) {
         final ZonedDateTime startsAt = match.getStartsAt().atZone(ZoneId.systemDefault());
+        final RelationshipBadge relationshipBadge =
+                relationshipBadgeFor(match, currentUserId, locale);
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
                 "/matches/" + match.getId(),
@@ -500,9 +503,45 @@ public class EventController {
                         .format(startsAt),
                 toPriceLabel(match.getPricePerPlayer(), locale),
                 buildAvailabilityLabel(match, locale),
+                relationshipBadge == null ? null : relationshipBadge.type(),
+                relationshipBadge == null ? null : relationshipBadge.label(),
+                recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private RelationshipBadge relationshipBadgeFor(
+            final Match match, final Long currentUserId, final Locale locale) {
+        if (currentUserId == null) {
+            return null;
+        }
+        if (currentUserId.equals(match.getHostUserId())) {
+            return relationshipBadge("my_event", locale);
+        }
+        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
+            return relationshipBadge("pending", locale);
+        }
+        if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            return relationshipBadge("invited", locale);
+        }
+        if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            return relationshipBadge("going", locale);
+        }
+        return null;
+    }
+
+    private RelationshipBadge relationshipBadge(final String type, final Locale locale) {
+        return new RelationshipBadge(
+                type, messageSource.getMessage("event.relationship." + type, null, locale));
+    }
+
+    private record RelationshipBadge(String type, String label) {}
+
+    private String recurringLabelFor(final Match match, final Locale locale) {
+        return match.isRecurringOccurrence()
+                ? messageSource.getMessage("event.recurringBadge", null, locale)
+                : null;
     }
 
     private List<EventOccurrenceViewModel> toOccurrenceViewModels(

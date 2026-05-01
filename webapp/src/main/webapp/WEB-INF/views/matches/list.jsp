@@ -213,15 +213,29 @@
 															loading="lazy"
 															decoding="async"/>
 													</c:if>
-													<span class="event-card__badge">
-														<c:out value="${event.badge}" />
-													</span>
+													<div class="event-card__media-badges">
+														<span class="event-card__badge">
+															<c:out value="${event.badge}" />
+														</span>
+														<c:if test="${event.relationshipBadge}">
+															<span class="event-badge event-badge--${event.relationshipBadgeType}">
+																<c:out value="${event.relationshipBadgeLabel}" />
+															</span>
+														</c:if>
+													</div>
 												</div>
 
 												<div class="event-card__body">
-													<span class="event-card__sport">
-														<c:out value="${event.sport}" />
-													</span>
+													<div class="event-card__sport-row">
+														<span class="event-card__sport">
+															<c:out value="${event.sport}" />
+														</span>
+														<c:if test="${event.recurring}">
+															<span class="event-card__recurring">
+																<c:out value="${event.recurringLabel}" />
+															</span>
+														</c:if>
+													</div>
 
 													<h2 class="event-card__title">
 														<c:out value="${event.title}" />

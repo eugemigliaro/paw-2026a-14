@@ -299,6 +299,9 @@ public final class PawUiViewModels {
         private final String timeLabel;
         private final String priceLabel;
         private final String badge;
+        private final String relationshipBadgeType;
+        private final String relationshipBadgeLabel;
+        private final String recurringLabel;
         private final String level;
         private final String mediaClass;
         private final String bannerImageUrl;
@@ -314,6 +317,9 @@ public final class PawUiViewModels {
                 final String timeLabel,
                 final String priceLabel,
                 final String badge,
+                final String relationshipBadgeType,
+                final String relationshipBadgeLabel,
+                final String recurringLabel,
                 final String level,
                 final String mediaClass,
                 final String bannerImageUrl) {
@@ -327,9 +333,45 @@ public final class PawUiViewModels {
             this.timeLabel = timeLabel;
             this.priceLabel = priceLabel;
             this.badge = badge;
+            this.relationshipBadgeType = relationshipBadgeType;
+            this.relationshipBadgeLabel = relationshipBadgeLabel;
+            this.recurringLabel = recurringLabel;
             this.level = level;
             this.mediaClass = mediaClass;
             this.bannerImageUrl = bannerImageUrl;
+        }
+
+        public EventCardViewModel(
+                final String id,
+                final String href,
+                final String sport,
+                final String title,
+                final String venue,
+                final String schedule,
+                final String dateLabel,
+                final String timeLabel,
+                final String priceLabel,
+                final String badge,
+                final String level,
+                final String mediaClass,
+                final String bannerImageUrl) {
+            this(
+                    id,
+                    href,
+                    sport,
+                    title,
+                    venue,
+                    schedule,
+                    dateLabel,
+                    timeLabel,
+                    priceLabel,
+                    badge,
+                    null,
+                    null,
+                    null,
+                    level,
+                    mediaClass,
+                    bannerImageUrl);
         }
 
         public EventCardViewModel(
@@ -355,6 +397,9 @@ public final class PawUiViewModels {
                     null,
                     priceLabel,
                     badge,
+                    null,
+                    null,
+                    null,
                     level,
                     mediaClass,
                     bannerImageUrl);
@@ -398,6 +443,33 @@ public final class PawUiViewModels {
 
         public String getBadge() {
             return badge;
+        }
+
+        public String getRelationshipBadgeType() {
+            return relationshipBadgeType;
+        }
+
+        public String getRelationshipBadgeLabel() {
+            return relationshipBadgeLabel;
+        }
+
+        public boolean hasRelationshipBadge() {
+            return relationshipBadgeType != null
+                    && !relationshipBadgeType.isBlank()
+                    && relationshipBadgeLabel != null
+                    && !relationshipBadgeLabel.isBlank();
+        }
+
+        public boolean isRelationshipBadge() {
+            return hasRelationshipBadge();
+        }
+
+        public String getRecurringLabel() {
+            return recurringLabel;
+        }
+
+        public boolean isRecurring() {
+            return recurringLabel != null && !recurringLabel.isBlank();
         }
 
         public String getLevel() {

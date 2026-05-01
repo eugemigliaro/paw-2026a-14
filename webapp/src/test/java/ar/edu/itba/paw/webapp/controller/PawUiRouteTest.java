@@ -1245,7 +1245,11 @@ class PawUiRouteTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new FeedController(matchService, messageSource),
+                                new FeedController(
+                                        matchService,
+                                        matchParticipationService,
+                                        matchReservationService,
+                                        messageSource),
                                 new EventController(
                                         matchService,
                                         matchReservationService,
@@ -1264,7 +1268,10 @@ class PawUiRouteTest {
                                 new HostParticipationController(
                                         matchService, matchParticipationService, messageSource),
                                 new MatchDashboardController(
-                                        matchService, matchParticipationService, messageSource),
+                                        matchService,
+                                        matchParticipationService,
+                                        matchReservationService,
+                                        messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(accountAuthService, messageSource))
                         .setViewResolvers(viewResolver)
