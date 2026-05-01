@@ -68,6 +68,15 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void eventsListUsesReusableEventsToggleTag() throws IOException {
+        final Path toggleTagPath = Path.of("src/main/webapp/WEB-INF/tags/eventsFilterToggle.tag");
+        final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+
+        assertTrue(Files.exists(toggleTagPath));
+        assertTrue(eventsList.contains("<ui:eventsFilterToggle"));
+    }
+
+    @Test
     void authCssExists() {
         assertTrue(Files.exists(Path.of("src/main/webapp/css/auth.css")));
     }

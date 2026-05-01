@@ -87,20 +87,7 @@
 												</form:form>
 
 												<!-- Toggle -->
-												<div class="events-toggle-wrapper" id="eventsToggle">
-													<div class="events-toggle-slider ${param.filter eq 'past' ? 'right' : ''}"
-														id="eventsSlider"></div>
-													<button
-														class="events-toggle-btn ${empty param.filter or param.filter ne 'past' ? 'active' : ''}"
-														data-value="upcoming">
-														<spring:message code="filter.upcoming" text="Upcoming" />
-													</button>
-													<button
-														class="events-toggle-btn ${param.filter eq 'past' ? 'active' : ''}"
-														data-value="past">
-														<spring:message code="filter.past" text="Past" />
-													</button>
-												</div>
+														<ui:eventsFilterToggle currentFilter="${param.filter}" />
 											</div>
 										</div>
 
@@ -565,31 +552,32 @@
 							</div>
 						</body>
 						<script>
-							const eventsButtons = document.querySelectorAll(".events-toggle-btn");
-							const eventsSlider = document.getElementById("eventsSlider");
+							document.querySelectorAll("[data-events-toggle='true']").forEach(toggleRoot => {
+								const eventsButtons = toggleRoot.querySelectorAll(".events-toggle-btn");
+								const eventsSlider = toggleRoot.querySelector("[data-events-toggle-slider='true']");
 
-							eventsButtons.forEach((btn, index) => {
-								btn.addEventListener("click", () => {
-									// Move slider
-									if (index === 1) {
-										eventsSlider.classList.add("right");
-									} else {
-										eventsSlider.classList.remove("right");
-									}
+								if (!eventsButtons.length || !eventsSlider) {
+									return;
+								}
 
-									eventsButtons.forEach(b => b.classList.remove("active"));
-									btn.classList.add("active");
+								eventsButtons.forEach(btn => {
+									btn.addEventListener("click", () => {
+										const value = btn.dataset.value;
+										const isPast = value === "past";
 
-									// Navigate with new filter parameter
-									const value = btn.dataset.value;
-									const currentUrl = new URL(window.location);
-									if (value === "past") {
-										currentUrl.searchParams.set("filter", "past");
-									} else {
-										currentUrl.searchParams.delete("filter");
-									}
-									currentUrl.searchParams.set("page", "1"); // Reset to first page when changing filter
-									window.location.href = currentUrl.toString();
+										eventsSlider.classList.toggle("right", isPast);
+										eventsButtons.forEach(b => b.classList.remove("active"));
+										btn.classList.add("active");
+
+										const currentUrl = new URL(window.location);
+										if (isPast) {
+											currentUrl.searchParams.set("filter", "past");
+										} else {
+											currentUrl.searchParams.delete("filter");
+										}
+										currentUrl.searchParams.set("page", "1");
+										window.location.href = currentUrl.toString();
+									});
 								});
 							});
 						</script>

@@ -246,40 +246,73 @@
 														<span class="field__label">
 															<spring:message code="host.form.visibility" />
 														</span>
-														<span class="field__select-wrap">
-															<form:select path="visibility" id="match-visibility"
-																cssClass="field__control field__control--select"
-																required="required">
-																<form:option value=""
-																	label="${visibilityPlaceholder}" />
-																<form:option value="public"
-																	label="${visibilityPublic}" />
-																<form:option value="private"
-																	label="${visibilityPrivate}" />
-															</form:select>
-														</span>
-														<form:errors path="visibility" cssClass="field__error"
-															element="span" />
+														<c:choose>
+															<c:when test="${isEditMode}">
+																<div class="account-locked-field">
+																	<input type="text"
+																		class="field__control account-readonly-control account-readonly-control--muted"
+																		value="${createEventForm.visibility}"
+																		readonly="readonly" aria-readonly="true" />
+
+																	<span class="account-locked-field__icon"
+																		aria-hidden="true">
+																		<svg viewBox="0 0 24 24" focusable="false">
+																			<path
+																				d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
+																			<rect x="6.5" y="10" width="11" height="9"
+																				rx="2.2" />
+																		</svg>
+																	</span>
+																</div>
+																<input type="hidden" name="visibility"
+																	value="${createEventForm.visibility}" />
+															</c:when>
+															<c:otherwise>
+																<ui:eventsFilterToggle id="match-visibility-toggle"
+																	currentValue="${createEventForm.visibility}" inputName="visibility"
+																	leftValue="public" rightValue="private"
+																	leftLabel="${visibilityPublic}" rightLabel="${visibilityPrivate}"
+																	forceLeftOnEmpty="${false}" />
+																<form:errors path="visibility" cssClass="field__error"
+																	element="span" />
+															</c:otherwise>
+														</c:choose>
 													</label>
 
 													<label class="field" for="match-join-policy" id="join-policy-field">
 														<span class="field__label">
 															<spring:message code="host.form.joinPolicy" />
 														</span>
-														<span class="field__select-wrap">
-															<form:select path="joinPolicy" id="match-join-policy"
-																cssClass="field__control field__control--select"
-																required="required">
-																<form:option value=""
-																	label="${joinPolicyPlaceholder}" />
-																<form:option value="direct"
-																	label="${joinPolicyDirect}" />
-																<form:option value="approval_required"
-																	label="${joinPolicyApproval}" />
-															</form:select>
-														</span>
-														<form:errors path="joinPolicy" cssClass="field__error"
-															element="span" />
+														<c:choose>
+															<c:when test="${isEditMode}">
+																<div class="account-locked-field">
+																	<input type="text"
+																		class="field__control account-readonly-control account-readonly-control--muted"
+																		value="${createEventForm.joinPolicy}"
+																		readonly="readonly" aria-readonly="true" />
+																	<span class="account-locked-field__icon"
+																		aria-hidden="true">
+																		<svg viewBox="0 0 24 24" focusable="false">
+																			<path
+																				d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
+																			<rect x="6.5" y="10" width="11" height="9"
+																				rx="2.2" />
+																		</svg>
+																	</span>
+																</div>
+																<input type="hidden" name="joinPolicy"
+																	value="${createEventForm.joinPolicy}" />
+															</c:when>
+															<c:otherwise>
+																	<ui:eventsFilterToggle id="match-join-policy-toggle"
+																		currentValue="${createEventForm.joinPolicy}" inputName="joinPolicy"
+																		leftValue="direct" rightValue="approval_required"
+																		leftLabel="${joinPolicyDirect}" rightLabel="${joinPolicyApproval}"
+																		forceLeftOnEmpty="${false}" />
+																<form:errors path="joinPolicy" cssClass="field__error"
+																	element="span" />
+															</c:otherwise>
+														</c:choose>
 													</label>
 												</div>
 											</article>
@@ -327,22 +360,68 @@
 						</div>
 						<script>
 							(function () {
-								var visibilitySelect = document.getElementById('match-visibility');
+								var visibilityToggle = document.getElementById('match-visibility-toggle');
 								var joinPolicyField = document.getElementById('join-policy-field');
-								var joinPolicySelect = document.getElementById('match-join-policy');
+								var joinPolicyToggle = document.getElementById('match-join-policy-toggle');
 
-								if (visibilitySelect && joinPolicyField && joinPolicySelect) {
+								function initializeBinaryToggle(toggleRoot) {
+									if (!toggleRoot) {
+										return null;
+									}
+
+									var slider = toggleRoot.querySelector('[data-events-toggle-slider="true"]');
+									var hiddenInput = toggleRoot.querySelector('[data-events-toggle-input="true"]');
+									var buttons = toggleRoot.querySelectorAll('.events-toggle-btn');
+									var rightValue = toggleRoot.getAttribute('data-events-toggle-right-value');
+
+									if (!slider || !hiddenInput || !buttons.length) {
+										return hiddenInput;
+									}
+
+									function syncUi(nextValue) {
+										buttons.forEach(function (button) {
+											var isActive = button.getAttribute('data-value') === nextValue;
+											button.classList.toggle('active', isActive);
+										});
+										slider.classList.toggle('right', nextValue === rightValue);
+									}
+
+									buttons.forEach(function (button) {
+										button.addEventListener('click', function () {
+											var nextValue = button.getAttribute('data-value');
+											hiddenInput.value = nextValue;
+											syncUi(nextValue);
+										});
+									});
+
+									syncUi(hiddenInput.value);
+									return hiddenInput;
+								}
+
+								var visibilityInput = initializeBinaryToggle(visibilityToggle);
+								var joinPolicyInput = initializeBinaryToggle(joinPolicyToggle);
+
+								if (visibilityInput && joinPolicyField && joinPolicyInput) {
 
 									function updateJoinPolicyVisibility() {
-										var isPrivate = visibilitySelect.value === 'private';
+										var isPrivate = visibilityInput.value === 'private';
 										joinPolicyField.style.display = isPrivate ? 'none' : '';
 
 										if (isPrivate) {
-											joinPolicySelect.value = '';
+											joinPolicyInput.value = '';
+											joinPolicyToggle
+												.querySelectorAll('.events-toggle-btn')
+												.forEach(function (button) {
+													button.classList.remove('active');
+												});
 										}
 									}
 
-									visibilitySelect.addEventListener('change', updateJoinPolicyVisibility);
+									visibilityToggle
+										.querySelectorAll('.events-toggle-btn')
+										.forEach(function (button) {
+											button.addEventListener('click', updateJoinPolicyVisibility);
+										});
 									updateJoinPolicyVisibility();
 								}
 
