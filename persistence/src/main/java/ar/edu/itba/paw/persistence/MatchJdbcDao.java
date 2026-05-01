@@ -354,6 +354,7 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(BASE_FROM);
         sql.append(" WHERE m.host_user_id = ?");
         params.add(hostUserId);
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -399,6 +400,7 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(BASE_FROM);
         sql.append(" WHERE m.host_user_id = ?");
         params.add(hostUserId);
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -448,6 +450,7 @@ public class MatchJdbcDao implements MatchDao {
                         + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -498,6 +501,7 @@ public class MatchJdbcDao implements MatchDao {
                         + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
