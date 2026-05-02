@@ -11,12 +11,38 @@
 	gap: 1.8rem;
 }
 
+
+
+.detail-top--host-view {
+	align-items: stretch;
+}
+
+.detail-top__sidebar.detail-top__sidebar--host-view {
+	align-self: flex-start;
+	display: flex;
+	flex-direction: column;
+	flex: 0 0 32rem;
+	gap: 1rem;
+	position: sticky;
+	top: 6.2rem;
+}
+
+.detail-top--host-view .event-hero {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.detail-top__sidebar.detail-top__sidebar--host-view > * {
+	width: 100%;
+}
+
 .event-hero {
 	align-items: end;
 	border-radius: 32px;
 	color: #f7fcfa;
 	display: grid;
 	flex: 1 1 0;
+	min-width: 0;
 	isolation: isolate;
 	min-height: clamp(20rem, 42vh, 27rem);
 	overflow: hidden;
@@ -26,7 +52,7 @@
 
 .detail-top__sidebar {
 	display: flex;
-	flex: 0 0 24rem;
+	flex: 0 0 clamp(22rem, 40%, 38rem);
 }
 
 .detail-top__sidebar .booking-panel {
@@ -217,36 +243,6 @@
 	line-height: 1.65;
 	margin: 0;
 	max-width: 38rem;
-}
-
-.event-hero__status-list {
-	display: grid;
-	gap: 0.75rem;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-
-.event-hero__status-item {
-	background: rgba(10, 22, 20, 0.28);
-	backdrop-filter: blur(10px);
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	border-radius: 20px;
-	display: grid;
-	gap: 0.32rem;
-	min-height: 4.8rem;
-	padding: 0.95rem 1rem;
-}
-
-.event-hero__status-item .detail-label {
-	color: rgba(244, 251, 249, 0.72);
-}
-
-.event-hero__status-item strong {
-	color: #ffffff;
-	font-size: 0.98rem;
-	line-height: 1.35;
 }
 
 .detail-layout {
@@ -545,6 +541,8 @@
 	margin: 0;
 	padding: 0;
 	white-space: pre-line;
+	overflow-wrap: break-word;
+	word-break: break-word;
 }
 
 .booking-panel {
@@ -553,6 +551,34 @@
 	padding: 1.3rem;
 	position: sticky;
 	top: 6.2rem;
+	animation: event-detail-rise 0.6s ease-out both;
+	animation-delay: 0.08s;
+}
+
+.event-info-panel,
+.player-actions-panel {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	gap: 1rem;
+	padding: 1.3rem;
+	animation: event-detail-rise 0.6s ease-out both;
+}
+
+.event-info-panel {
+	animation-delay: 0.12s;
+}
+
+.player-actions-panel {
+	animation-delay: 0.16s;
+}
+
+.host-panel {
+	display: grid;
+	gap: 1rem;
+	padding: 1.3rem;
+	position: relative;
+	z-index: 10;
 	animation: event-detail-rise 0.6s ease-out both;
 	animation-delay: 0.08s;
 }
@@ -602,18 +628,18 @@
 	margin: 0;
 }
 
-.booking-panel__host-note {
+.host-panel__note {
 	display: grid;
 	gap: 0.28rem;
 	margin-right: 3.4rem;
 }
 
-.booking-panel__host-note .detail-label,
-.booking-panel__host-note p {
+.host-panel__note .detail-label,
+.host-panel__note p {
 	margin: 0;
 }
 
-.booking-panel__host-note p:last-child {
+.host-panel__note p:last-child {
 	color: var(--text-secondary);
 	font-size: 0.96rem;
 	line-height: 1.5;
@@ -624,6 +650,7 @@
 	display: flex;
 	gap: 1rem;
 	justify-content: space-between;
+	overflow: hidden;
 }
 
 .booking-panel__overflow-menu {
@@ -638,6 +665,18 @@
 	top: calc(100% + 0.35rem);
 }
 
+.host-panel__overflow-menu {
+	position: absolute;
+	right: 1.3rem;
+	top: 1.3rem;
+	z-index: 5;
+}
+
+.host-panel__overflow-menu .overflow-menu__panel {
+	right: 0;
+	top: calc(100% + 0.35rem);
+}
+
 .booking-panel__detail-row dt,
 .booking-panel__detail-row dd {
 	margin: 0;
@@ -646,11 +685,18 @@
 .booking-panel__detail-row dt {
 	color: var(--text-secondary);
 	font-size: 0.9rem;
+	flex-shrink: 0;
+	white-space: nowrap;
 }
 
 .booking-panel__detail-row dd {
 	font-weight: 700;
 	text-align: right;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	min-width: 0;
+	max-width: 70%;
 }
 
 .booking-panel__request-form {
@@ -731,8 +777,13 @@
 	}
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 768px) {
 	.detail-top {
+		flex-direction: column;
+	}
+
+	.detail-top--host-view {
+		display: flex;
 		flex-direction: column;
 	}
 
@@ -740,7 +791,20 @@
 		position: static;
 	}
 
+	.detail-top__sidebar--host-view {
+		position: static;
+		top: auto;
+	}
+
+	.host-panel {
+		position: relative;
+	}
+
 	.detail-top__sidebar {
+		flex-basis: auto;
+	}
+
+	.detail-top--host-view .detail-top__sidebar {
 		flex-basis: auto;
 	}
 }
@@ -751,7 +815,6 @@
 		padding: 1.5rem 1.2rem 1.4rem;
 	}
 
-	.event-hero__status-list,
 	.participant-list {
 		grid-template-columns: 1fr 1fr;
 	}
@@ -781,7 +844,6 @@
 		font-size: clamp(2.4rem, 12vw, 3.4rem);
 	}
 
-	.event-hero__status-list,
 	.participant-list {
 		grid-template-columns: 1fr;
 	}
@@ -796,7 +858,21 @@
 		padding: 1.15rem;
 	}
 
+	.event-info-panel,
+	.player-actions-panel {
+		padding: 1.15rem;
+	}
+
+	.host-panel {
+		padding: 1.15rem;
+	}
+
 	.booking-panel__overflow-menu {
+		right: 1.15rem;
+		top: 1.15rem;
+	}
+
+	.host-panel__overflow-menu {
 		right: 1.15rem;
 		top: 1.15rem;
 	}
@@ -807,7 +883,13 @@
 		right: 0;
 	}
 
-	.booking-panel__host-note {
+	.host-panel__overflow-menu .overflow-menu__panel {
+		left: auto;
+		min-width: min(12rem, calc(100vw - 4rem));
+		right: 0;
+	}
+
+	.host-panel__note {
 		margin-right: 3.1rem;
 	}
 }
