@@ -18,7 +18,6 @@
 					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>
 				</header>
 
-				<%-- Flash notices --%>
 				<c:if test="${param.action eq 'appealed'}">
 					<div class="notice notice--success"><spring:message code="reports.mine.action.appealed" /></div>
 				</c:if>
@@ -32,10 +31,9 @@
 					</div>
 				</c:if>
 
-				<%-- Report summary card --%>
 				<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetTypeCode}" />
-				<spring:message var="reasonLabel" code="admin.reports.reason.${report.reasonCode}" />
-				<spring:message var="statusLabel" code="admin.reports.status.${report.statusCode}" />
+				<spring:message var="reasonLabel"     code="admin.reports.reason.${report.reasonCode}" />
+				<spring:message var="statusLabel"     code="admin.reports.status.${report.statusCode}" />
 
 				<ui:card className="report-section">
 					<div class="section-head">
@@ -57,28 +55,27 @@
 						</div>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="moderation.report.reason" /></dt>
-							<dd><span class="chip chip--muted"><c:out value="${reasonLabel}" /></span></dd>
+							<dd><span class="report-card__reason-chip"><c:out value="${reasonLabel}" /></span></dd>
 						</div>
 						<c:if test="${not empty report.details}">
-						<div class="report-section-field">
-							<dt class="detail-label"><spring:message code="admin.reports.details" /></dt>
-							<dd class="body-copy"><c:out value="${report.details}" /></dd>
-						</div>
+							<div class="report-section-field">
+								<dt class="detail-label"><spring:message code="admin.reports.details" /></dt>
+								<dd class="body-copy"><c:out value="${report.details}" /></dd>
+							</div>
 						</c:if>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
 							<dd><c:out value="${report.createdAtLabel}" /></dd>
 						</div>
 						<c:if test="${not empty report.updatedAtLabel}">
-						<div class="report-section-field report-section-field__row">
-							<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
-							<dd><c:out value="${report.updatedAtLabel}" /></dd>
-						</div>
+							<div class="report-section-field report-section-field__row">
+								<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
+								<dd><c:out value="${report.updatedAtLabel}" /></dd>
+							</div>
 						</c:if>
 					</dl>
 				</ui:card>
 
-				<%-- Resolution card --%>
 				<c:if test="${not empty report.resolutionCode}">
 					<spring:message var="resolutionLabel" code="reports.mine.resolution.${report.resolutionCode}" />
 					<ui:card className="report-section">
@@ -91,26 +88,25 @@
 								<dd><c:out value="${resolutionLabel}" /></dd>
 							</div>
 							<c:if test="${not empty report.resolutionDetails}">
-							<div class="report-section-field">
-								<dt class="detail-label"><spring:message code="reports.mine.resolutionDetails" /></dt>
-								<dd class="body-copy"><c:out value="${report.resolutionDetails}" /></dd>
-							</div>
+								<div class="report-section-field">
+									<dt class="detail-label"><spring:message code="reports.mine.resolutionDetails" /></dt>
+									<dd class="body-copy"><c:out value="${report.resolutionDetails}" /></dd>
+								</div>
 							</c:if>
 							<c:if test="${not empty report.reviewedAtLabel}">
-							<div class="report-section-field report-section-field__row">
-								<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
-								<dd><c:out value="${report.reviewedAtLabel}" /></dd>
-							</div>
+								<div class="report-section-field report-section-field__row">
+									<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
+									<dd><c:out value="${report.reviewedAtLabel}" /></dd>
+								</div>
 							</c:if>
 						</dl>
 					</ui:card>
 				</c:if>
 
-				<%-- Appeal card --%>
 				<c:if test="${not empty report.appealReason}">
 					<ui:card className="report-section">
 						<div class="section-head">
-							<h2 class="field__label"><spring:message code="reports.mine.appeal" /></h2>
+							<h2 class="field__label"><spring:message code="admin.reports.section.appeal" /></h2>
 						</div>
 						<dl class="stack report-section__top">
 							<div class="report-section-field">
@@ -118,29 +114,43 @@
 								<dd class="body-copy"><c:out value="${report.appealReason}" /></dd>
 							</div>
 							<c:if test="${not empty report.appealedAtLabel}">
-							<div class="report-section-field report-section-field__row">
-								<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
-								<dd><c:out value="${report.appealedAtLabel}" /></dd>
-							</div>
-							</c:if>
-							<c:if test="${not empty report.appealResolutionCode}">
-								<spring:message var="appealResolutionLabel" code="admin.reports.appealDecision.${report.appealResolutionCode}" />
 								<div class="report-section-field report-section-field__row">
-									<dt class="detail-label"><spring:message code="reports.mine.appealResolution" /></dt>
-									<dd><c:out value="${appealResolutionLabel}" /></dd>
+									<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
+									<dd><c:out value="${report.appealedAtLabel}" /></dd>
 								</div>
-							</c:if>
-							<c:if test="${not empty report.appealResolvedAtLabel}">
-							<div class="report-section-field report-section-field__row">
-								<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
-								<dd><c:out value="${report.appealResolvedAtLabel}" /></dd>
-							</div>
 							</c:if>
 						</dl>
 					</ui:card>
 				</c:if>
 
-				<%-- Appeal form card --%>
+				<c:if test="${not empty report.appealReason}">
+					<ui:card className="report-section">
+						<div class="section-head">
+							<h2 class="field__label"><spring:message code="admin.reports.section.appealResolution" /></h2>
+						</div>
+						<c:choose>
+							<c:when test="${not empty report.appealResolutionCode}">
+								<spring:message var="appealResolutionLabel" code="admin.reports.appealDecision.${report.appealResolutionCode}" />
+								<dl class="stack report-section__top">
+									<div class="report-section-field report-section-field__row">
+										<dt class="detail-label"><spring:message code="reports.mine.appealResolution" /></dt>
+										<dd><c:out value="${appealResolutionLabel}" /></dd>
+									</div>
+									<c:if test="${not empty report.appealResolvedAtLabel}">
+										<div class="report-section-field report-section-field__row">
+											<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
+											<dd><c:out value="${report.appealResolvedAtLabel}" /></dd>
+										</div>
+									</c:if>
+								</dl>
+							</c:when>
+							<c:otherwise>
+								<p class="report-section__top body-copy"><spring:message code="admin.reports.section.empty" /></p>
+							</c:otherwise>
+						</c:choose>
+					</ui:card>
+				</c:if>
+
 				<c:if test="${appealAllowed}">
 					<ui:card className="report-section">
 						<div class="section-head">
