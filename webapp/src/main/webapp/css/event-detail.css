@@ -502,6 +502,10 @@
 	animation-delay: 0.16s;
 }
 
+.player-actions-panel__title {
+	margin: 0;
+}
+
 .host-panel {
 	display: grid;
 	gap: 1rem;
@@ -543,6 +547,15 @@
 	display: flex;
 	justify-content: flex-end;
 	min-width: 0;
+}
+
+.event-info-panel--hosted-by .event-info-panel__row {
+	align-items: center;
+}
+
+.event-info-panel--hosted-by .event-info-panel__row dt,
+.event-info-panel--hosted-by .event-info-panel__row dd {
+	align-items: center;
 }
 
 .event-info-panel__row dd.event-info-panel__value--truncate {

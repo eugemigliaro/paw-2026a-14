@@ -385,7 +385,10 @@
 								</article>
 
 								<article class="panel player-actions-panel">
-									<c:if test="${reservationConfirmed}">
+									<p class="detail-label player-actions-panel__title">
+										<spring:message code="event.booking.playerActions" />
+									</p>
+									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
 										</p>
@@ -745,7 +748,10 @@
 								</article>
 
 								<article class="panel booking-panel">
-									<c:if test="${reservationConfirmed}">
+									<p class="detail-label player-actions-panel__title">
+										<spring:message code="event.booking.playerActions" />
+									</p>
+									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
 										</p>
