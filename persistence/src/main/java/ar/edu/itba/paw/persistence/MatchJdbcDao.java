@@ -225,6 +225,20 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
+    public boolean restoreMatch(final Long matchId) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', deleted = FALSE,"
+                                + " deleted_at = NULL, deleted_by_user_id = NULL,"
+                                + " delete_reason = NULL, updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ?",
+                        matchId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
     public Optional<Match> findById(final Long matchId) {
         final String sql =
                 MATCH_SELECT_WITH_JOINED_PLAYERS + BASE_FROM + " WHERE m.id = ? GROUP BY m.id";

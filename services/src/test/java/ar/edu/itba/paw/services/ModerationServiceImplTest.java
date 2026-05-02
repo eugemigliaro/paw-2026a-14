@@ -4,6 +4,8 @@ import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
@@ -17,9 +19,12 @@ import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.persistence.UserDao;
+import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
+import ar.edu.itba.paw.services.mail.UnbanMailTemplateData;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -87,9 +92,8 @@ public class ModerationServiceImplTest {
     }
 
     @Test
-    public void resolveReportWithUserBanCreatesUserBanAndResolvesReport() {
+    public void resolveReportWithUserBan_banExpiryIsInTheFuture() {
         final ModerationReport report = sampleUserReport();
-        final AtomicLong capturedReportId = new AtomicLong(-1L);
         final AtomicReference<Instant> capturedBannedUntil = new AtomicReference<>();
 
         Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://matchpoint.test");
@@ -142,7 +146,6 @@ public class ModerationServiceImplTest {
         Mockito.when(userBanDao.createBan(Mockito.anyLong(), Mockito.any()))
                 .thenAnswer(
                         invocation -> {
-                            capturedReportId.set(invocation.getArgument(0));
                             capturedBannedUntil.set(invocation.getArgument(1));
                             return new UserBan(
                                     10L, invocation.getArgument(0), invocation.getArgument(1));
@@ -167,16 +170,102 @@ public class ModerationServiceImplTest {
                         "Repeated abuse",
                         ReportStatus.RESOLVED);
 
-        Assertions.assertNotNull(resolved);
-        Assertions.assertEquals(77L, capturedReportId.get());
-        Assertions.assertNotNull(capturedBannedUntil.get());
-        Assertions.assertTrue(capturedBannedUntil.get().isAfter(FIXED_NOW));
+        Assertions.assertNotNull(resolved, "resolveReport must return the updated report");
+        Assertions.assertNotNull(
+                capturedBannedUntil.get(), "A ban expiry must have been supplied to the DAO");
+        Assertions.assertTrue(
+                capturedBannedUntil.get().isAfter(FIXED_NOW),
+                "Ban expiry must be strictly after the resolution instant");
     }
 
     @Test
-    public void resolveReviewContentDeleteAppliesReviewSoftDelete() {
+    public void resolveReportWithUserBan_banIsLinkedToSourceReport() {
+        final ModerationReport report = sampleUserReport();
+        final AtomicLong capturedLinkedReportId = new AtomicLong(-1L);
+
+        Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://matchpoint.test");
+        Mockito.when(
+                        matchService.findJoinedMatches(
+                                Mockito.anyLong(),
+                                Mockito.anyBoolean(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.anyInt(),
+                                Mockito.anyInt()))
+                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
+        Mockito.when(
+                        matchService.findHostedMatches(
+                                Mockito.anyLong(),
+                                Mockito.anyBoolean(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.anyInt(),
+                                Mockito.anyInt()))
+                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
+
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
+        Mockito.when(
+                        moderationReportDao.resolveReport(
+                                Mockito.eq(77L),
+                                Mockito.eq(99L),
+                                Mockito.eq(ReportResolution.USER_BANNED),
+                                Mockito.anyString(),
+                                Mockito.any(),
+                                Mockito.eq(ReportStatus.RESOLVED)))
+                .thenReturn(true);
+
+        Mockito.when(userBanDao.createBan(Mockito.anyLong(), Mockito.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedLinkedReportId.set(invocation.<Long>getArgument(0));
+                            return new UserBan(
+                                    10L, invocation.getArgument(0), invocation.getArgument(1));
+                        });
+
+        Mockito.when(userDao.findAccountById(88L))
+                .thenReturn(
+                        Optional.of(
+                                new UserAccount(
+                                        88L,
+                                        "reported@test.com",
+                                        "reported",
+                                        "{bcrypt}hash",
+                                        UserRole.USER,
+                                        FIXED_NOW)));
+
+        moderationService.resolveReport(
+                77L, 99L, ReportResolution.USER_BANNED, "Repeated abuse", ReportStatus.RESOLVED);
+
+        Assertions.assertEquals(
+                77L,
+                capturedLinkedReportId.get(),
+                "The ban must be linked to the originating report id");
+    }
+
+    @Test
+    public void resolveReviewReport_contentDeleted_softDeletesCorrectReview() {
         final ModerationReport report = sampleReviewReport();
         final String reason = "Inappropriate content";
+
+        final AtomicLong capturedReviewerUserId = new AtomicLong(-1L);
+        final AtomicLong capturedReviewedUserId = new AtomicLong(-1L);
+        final AtomicReference<String> capturedReason = new AtomicReference<>();
 
         Mockito.when(moderationReportDao.findById(45L)).thenReturn(Optional.of(report));
         Mockito.when(
@@ -192,11 +281,11 @@ public class ModerationServiceImplTest {
         Mockito.when(playerReviewDao.findByIdIncludingDeleted(123L))
                 .thenReturn(
                         Optional.of(
-                                new ar.edu.itba.paw.models.PlayerReview(
+                                new PlayerReview(
                                         123L,
                                         7L,
                                         8L,
-                                        ar.edu.itba.paw.models.PlayerReviewReaction.DISLIKE,
+                                        PlayerReviewReaction.DISLIKE,
                                         "bad",
                                         FIXED_NOW,
                                         FIXED_NOW,
@@ -204,34 +293,49 @@ public class ModerationServiceImplTest {
 
         Mockito.when(
                         playerReviewDao.softDeleteReview(
-                                Mockito.anyLong(),
-                                Mockito.anyLong(),
-                                Mockito.anyLong(),
-                                Mockito.anyString()))
-                .thenReturn(true);
+                                Mockito.anyLong(), Mockito.anyLong(),
+                                Mockito.anyLong(), Mockito.anyString()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedReviewerUserId.set(invocation.getArgument(0));
+                            capturedReviewedUserId.set(invocation.getArgument(1));
+                            capturedReason.set(invocation.getArgument(3));
+                            return true;
+                        });
 
         final ModerationReport resolved =
                 moderationService.resolveReport(
                         45L, 99L, ReportResolution.CONTENT_DELETED, reason, ReportStatus.RESOLVED);
 
         Assertions.assertNotNull(resolved);
-        Mockito.verify(playerReviewDao).softDeleteReview(7L, 8L, 99L, reason);
+        Assertions.assertEquals(
+                7L,
+                capturedReviewerUserId.get(),
+                "Soft-delete must target the reviewer identified by the stored review");
+        Assertions.assertEquals(
+                8L,
+                capturedReviewedUserId.get(),
+                "Soft-delete must target the reviewed user identified by the stored review");
+        Assertions.assertEquals(
+                reason,
+                capturedReason.get(),
+                "The resolution reason must be forwarded to the soft-delete call");
     }
 
     @Test
-    public void findReportsByReporterReturnsReportsFromDao() {
-        final List<ModerationReport> expectedReports = List.of(sampleUserReport());
+    public void findReportsByReporter_returnsExactlyTheReportsFromDao() {
+        final List<ModerationReport> expected = List.of(sampleUserReport());
         Mockito.when(moderationReportDao.findReportsByReporter(50L, List.of(), List.of()))
-                .thenReturn(expectedReports);
+                .thenReturn(expected);
 
-        final List<ModerationReport> reports =
+        final List<ModerationReport> actual =
                 moderationService.findReportsByReporter(50L, List.of(), List.of());
 
-        Assertions.assertEquals(expectedReports, reports);
+        Assertions.assertEquals(expected, actual);
     }
 
     @Test
-    public void findActiveReportsIncludesReportsFromDao() {
+    public void findReports_returnsAllReportsReturnedByDao() {
         final ModerationReport report = sampleUserReport();
         Mockito.when(moderationReportDao.findReports()).thenReturn(List.of(report));
 
@@ -242,18 +346,18 @@ public class ModerationServiceImplTest {
     }
 
     @Test
-    public void reportContentEnforcesLimit() {
+    public void reportContent_throwsModerationException_whenActiveReportLimitReached() {
         Mockito.when(moderationReportDao.countActiveReportsByReporter(50L)).thenReturn(3);
 
         Assertions.assertThrows(
-                ar.edu.itba.paw.services.exceptions.ModerationException.class,
+                ModerationException.class,
                 () ->
                         moderationService.reportContent(
                                 50L, ReportTargetType.USER, 88L, ReportReason.SPAM, "Too many"));
     }
 
     @Test
-    public void markReportUnderReviewDelegatesToDao() {
+    public void markReportUnderReview_returnsUpdatedReport() {
         final ModerationReport report = sampleUserReport();
         Mockito.when(
                         moderationReportDao.markUnderReview(
@@ -263,88 +367,163 @@ public class ModerationServiceImplTest {
 
         final ModerationReport result = moderationService.markReportUnderReview(77L, 99L);
 
-        Assertions.assertEquals(report, result);
-        Mockito.verify(moderationReportDao)
-                .markUnderReview(Mockito.eq(77L), Mockito.eq(99L), Mockito.any());
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(
+                77L, result.getId(), "Returned report id must match the requested report id");
     }
 
     @Test
-    public void appealReportDelegatesToDao() {
-        final ModerationReport report = sampleUserReport();
+    public void markReportUnderReview_throwsModerationException_whenDaoReturnsFalse() {
+        Mockito.when(
+                        moderationReportDao.markUnderReview(
+                                Mockito.eq(77L), Mockito.eq(99L), Mockito.any()))
+                .thenReturn(false);
+
+        Assertions.assertThrows(
+                ModerationException.class, () -> moderationService.markReportUnderReview(77L, 99L));
+    }
+
+    @Test
+    public void appealReport_storesSuppliedAppealText() {
+        final ModerationReport report = sampleUserReport(); // appealCount == 0
+        final AtomicReference<String> capturedAppealText = new AtomicReference<>();
+
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
         Mockito.when(
                         moderationReportDao.appealReport(
                                 Mockito.eq(77L), Mockito.anyString(), Mockito.any()))
-                .thenReturn(true);
+                .thenAnswer(
+                        invocation -> {
+                            capturedAppealText.set(invocation.getArgument(1));
+                            return true;
+                        });
 
-        moderationService.appealReport(77L, "Appeal");
+        moderationService.appealReport(77L, "Please reconsider");
 
-        Mockito.verify(moderationReportDao)
-                .appealReport(Mockito.eq(77L), Mockito.eq("Appeal"), Mockito.any());
+        Assertions.assertEquals(
+                "Please reconsider",
+                capturedAppealText.get(),
+                "The appeal text provided by the caller must reach the DAO unchanged");
     }
 
     @Test
-    public void finalizeReportAppealDelegatesToDao() {
-        final ModerationReport report = sampleUserReport();
-        final UserAccount account =
-                new UserAccount(88L, "test@test.com", "test", "hash", UserRole.USER, FIXED_NOW);
+    public void appealReport_throwsModerationException_whenAppealLimitAlreadyReached() {
+        final ModerationReport reportWithExistingAppeal =
+                new ModerationReport(
+                        77L,
+                        50L,
+                        ReportTargetType.USER,
+                        88L,
+                        ReportReason.HARASSMENT,
+                        "details",
+                        ReportStatus.RESOLVED,
+                        ReportResolution.USER_BANNED,
+                        "reason",
+                        99L,
+                        FIXED_NOW,
+                        "previous appeal",
+                        1 /* appealCount >= 1 */,
+                        FIXED_NOW,
+                        null,
+                        null,
+                        null,
+                        FIXED_NOW,
+                        FIXED_NOW);
 
-        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
-        Mockito.when(userDao.findAccountById(88L)).thenReturn(Optional.of(account));
-        Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://test.com");
-        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(88L), Mockito.any()))
-                .thenReturn(Optional.empty());
+        Mockito.when(moderationReportDao.findById(77L))
+                .thenReturn(Optional.of(reportWithExistingAppeal));
+
+        Assertions.assertThrows(
+                ModerationException.class,
+                () -> moderationService.appealReport(77L, "Second appeal attempt"),
+                "A second appeal must be rejected regardless of its content");
+    }
+
+    @Test
+    public void softDeleteReview_forwardsAllArgumentsToDao() {
+        final AtomicLong capturedReviewer = new AtomicLong();
+        final AtomicLong capturedReviewed = new AtomicLong();
+        final AtomicLong capturedDeletedBy = new AtomicLong();
+        final AtomicReference<String> capturedReason = new AtomicReference<>();
 
         Mockito.when(
-                        moderationReportDao.finalizeAppeal(
-                                Mockito.eq(77L),
-                                Mockito.eq(99L),
-                                Mockito.eq(AppealDecision.LIFTED),
-                                Mockito.any()))
-                .thenReturn(true);
+                        playerReviewDao.softDeleteReview(
+                                Mockito.anyLong(), Mockito.anyLong(),
+                                Mockito.anyLong(), Mockito.anyString()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedReviewer.set(invocation.getArgument(0));
+                            capturedReviewed.set(invocation.getArgument(1));
+                            capturedDeletedBy.set(invocation.getArgument(2));
+                            capturedReason.set(invocation.getArgument(3));
+                            return true;
+                        });
 
-        moderationService.finalizeReportAppeal(77L, 99L, AppealDecision.LIFTED);
+        final boolean result = moderationService.softDeleteReview(1L, 2L, "SPAM", 3L);
 
-        Mockito.verify(moderationReportDao)
-                .finalizeAppeal(
-                        Mockito.eq(77L),
-                        Mockito.eq(99L),
-                        Mockito.eq(AppealDecision.LIFTED),
-                        Mockito.any());
-        Mockito.verify(mailDispatchService).dispatch(Mockito.eq("test@test.com"), Mockito.any());
+        Assertions.assertTrue(result, "Should propagate the DAO's return value");
+        Assertions.assertEquals(1L, capturedReviewer.get(), "reviewerUserId must be forwarded");
+        Assertions.assertEquals(2L, capturedReviewed.get(), "reviewedUserId must be forwarded");
+        Assertions.assertEquals(3L, capturedDeletedBy.get(), "deletedByUserId must be forwarded");
+        Assertions.assertEquals("SPAM", capturedReason.get(), "reason must be forwarded");
     }
 
     @Test
-    public void softDeleteReviewDelegatesToDao() {
-        moderationService.softDeleteReview(1L, 2L, "SPAM", 3L);
-        Mockito.verify(playerReviewDao).softDeleteReview(1L, 2L, 3L, "SPAM");
-    }
+    public void restoreReview_forwardsUserIdsToDao() {
+        final AtomicLong capturedReviewer = new AtomicLong();
+        final AtomicLong capturedReviewed = new AtomicLong();
 
-    @Test
-    public void restoreReviewDelegatesToDao() {
+        Mockito.when(playerReviewDao.restoreReview(Mockito.anyLong(), Mockito.anyLong()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedReviewer.set(invocation.getArgument(0));
+                            capturedReviewed.set(invocation.getArgument(1));
+                            return true;
+                        });
+
         moderationService.restoreReview(1L, 2L);
-        Mockito.verify(playerReviewDao).restoreReview(1L, 2L);
+
+        Assertions.assertEquals(1L, capturedReviewer.get(), "reviewerUserId must be forwarded");
+        Assertions.assertEquals(2L, capturedReviewed.get(), "reviewedUserId must be forwarded");
     }
 
     @Test
-    public void softDeleteMatchDelegatesToDao() {
+    public void softDeleteMatch_forwardsAllArgumentsToDao() {
+        final AtomicLong capturedMatchId = new AtomicLong();
+        final AtomicLong capturedDeletedBy = new AtomicLong();
+        final AtomicReference<String> capturedReason = new AtomicReference<>();
+
+        Mockito.when(
+                        matchDao.softDeleteMatch(
+                                Mockito.anyLong(), Mockito.anyLong(), Mockito.anyString()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedMatchId.set(invocation.getArgument(0));
+                            capturedDeletedBy.set(invocation.getArgument(1));
+                            capturedReason.set(invocation.getArgument(2));
+                            return true;
+                        });
+
         moderationService.softDeleteMatch(10L, 99L, "Reason");
-        Mockito.verify(matchDao).softDeleteMatch(10L, 99L, "Reason");
+
+        Assertions.assertEquals(10L, capturedMatchId.get(), "matchId must be forwarded");
+        Assertions.assertEquals(99L, capturedDeletedBy.get(), "deletedByUserId must be forwarded");
+        Assertions.assertEquals("Reason", capturedReason.get(), "reason must be forwarded");
     }
 
     @Test
-    public void sendUnbanEmailUsesCurrentLocale() {
+    public void finalizeReportAppeal_propagatesActiveLocaleToUnbanEmailTemplate() {
         final Long userId = 88L;
         final Locale spanishLocale = Locale.of("es");
         final UserAccount account =
                 new UserAccount(userId, "test@test.com", "test", "hash", UserRole.USER, FIXED_NOW);
+        final AtomicReference<Locale> capturedLocale = new AtomicReference<>();
 
         org.springframework.context.i18n.LocaleContextHolder.setLocale(spanishLocale);
         try {
             Mockito.when(userDao.findAccountById(userId)).thenReturn(Optional.of(account));
             Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://test.com");
 
-            // We use a report to trigger the uplift which calls sendUnbanEmail
             final ModerationReport report =
                     new ModerationReport(
                             77L,
@@ -372,17 +551,24 @@ public class ModerationServiceImplTest {
                     .thenReturn(Optional.empty());
             Mockito.when(
                             moderationReportDao.finalizeAppeal(
-                                    Mockito.eq(77L),
-                                    Mockito.eq(99L),
-                                    Mockito.eq(AppealDecision.LIFTED),
-                                    Mockito.any()))
+                                    Mockito.eq(77L), Mockito.eq(99L),
+                                    Mockito.eq(AppealDecision.LIFTED), Mockito.any()))
                     .thenReturn(true);
+
+            Mockito.when(templateRenderer.renderUnbanNotification(Mockito.any()))
+                    .thenAnswer(
+                            invocation -> {
+                                final UnbanMailTemplateData data = invocation.getArgument(0);
+                                capturedLocale.set(data.getLocale());
+                                return Mockito.mock(MailContent.class);
+                            });
 
             moderationService.finalizeReportAppeal(77L, 99L, AppealDecision.LIFTED);
 
-            Mockito.verify(templateRenderer)
-                    .renderUnbanNotification(
-                            Mockito.argThat(data -> spanishLocale.equals(data.getLocale())));
+            Assertions.assertEquals(
+                    spanishLocale,
+                    capturedLocale.get(),
+                    "The locale active during the call must be used when rendering the unban email");
         } finally {
             org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
         }

@@ -70,5 +70,7 @@ public interface ModerationService {
 
     boolean softDeleteMatch(Long matchId, Long deletedByUserId, String deleteReason);
 
+    boolean restoreMatch(Long matchId);
+
     String resolveTargetName(ReportTargetType targetType, Long targetId);
 }

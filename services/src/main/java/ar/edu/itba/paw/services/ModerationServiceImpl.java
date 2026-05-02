@@ -364,6 +364,12 @@ public class ModerationServiceImpl implements ModerationService {
         return matchDao.softDeleteMatch(matchId, deletedByUserId, deleteReason);
     }
 
+    @Override
+    @Transactional
+    public boolean restoreMatch(final Long matchId) {
+        return matchDao.restoreMatch(matchId);
+    }
+
     private void validateReportRequest(
             final Long reporterUserId,
             final ReportTargetType targetType,
@@ -613,6 +619,17 @@ public class ModerationServiceImpl implements ModerationService {
                     userBanDao.findActiveBanForUser(report.getTargetId(), Instant.now(clock));
             ban.ifPresent(found -> userBanDao.upliftBan(found.getId()));
             sendUnbanEmail(report.getTargetId(), currentLocale());
+            return;
+        }
+        if (report.getTargetType() == ReportTargetType.MATCH) {
+            final Optional<Match> match = matchDao.findById(report.getTargetId());
+            if (match.isEmpty()) {
+                return;
+            }
+            if (!match.get().isDeleted()) {
+                throw new ModerationException("invalid_report", "Invalid match report target.");
+            }
+            matchDao.restoreMatch(match.get().getId());
             return;
         }
     }
