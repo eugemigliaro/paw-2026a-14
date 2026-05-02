@@ -16,7 +16,13 @@
 
 		<main class="page-shell account-shell">
 			<section class="panel account-panel">
-				<ui:returnButton />
+				<div class="public-profile-topbar">
+					<ui:returnButton />
+					<c:if test="${not empty accountPublicProfileHref}">
+						<c:url var="accountPublicProfileAction" value="${accountPublicProfileHref}" />
+						<ui:button label="${accountPublicProfileLabel}" href="${accountPublicProfileAction}" variant="secondary" />
+					</c:if>
+				</div>
 
 				<c:if test="${not empty accountUpdated}">
 					<p class="auth-notice auth-notice--success">
@@ -81,14 +87,11 @@
 							</section>
 						</div>
 
-						<div class="account-logout">
-							<ui:button label="${logoutLabel}" type="submit" form="logout-form" variant="danger" />
-						</div>
+
 					</div>
 
 					<div class="account-inline-right">
 						<div class="account-form">
-							<%-- Email (Read-only locked field) --%>
 							<label class="field" for="account-email">
 								<span class="field__label">
 									<spring:message code="form.email.label" />
@@ -108,7 +111,6 @@
 								</div>
 							</label>
 
-							<%-- First + Last name side by side --%>
 							<div class="account-summary__name-row">
 								<label class="field" for="account-name">
 									<span class="field__label">
@@ -154,8 +156,11 @@
 							</label>
 
 							<div class="account-edit-actions" id="account-edit-actions">
-								<ui:button label="${accountSaveLabel}" type="submit" id="account-save-button" />
-								<ui:button label="${accountCancelLabel}" variant="secondary" id="account-cancel-button" />
+								<ui:button label="${logoutLabel}" type="submit" form="logout-form" variant="danger" />
+								<div class="account-edit-actions__confirm" id="account-edit-confirm">
+									<ui:button label="${accountSaveLabel}" type="submit" id="account-save-button" />
+									<ui:button label="${accountCancelLabel}" variant="secondary" id="account-cancel-button" />
+								</div>
 							</div>
 						</div>
 					</div>
@@ -170,7 +175,7 @@
 			const form = document.getElementById('account-edit-form');
 			const editableFields = form.querySelectorAll('.account-field--editable');
 			const fileInput = document.getElementById('account-profile-image');
-			const actionsBar = document.getElementById('account-edit-actions');
+			const actionsBar = document.getElementById('account-edit-confirm');
 			const cancelButton = document.getElementById('account-cancel-button');
 
 			// Store original values
@@ -197,9 +202,9 @@
 				});
 
 				if (hasChanges) {
-					actionsBar.classList.add('account-edit-actions--visible');
+					actionsBar.classList.add('account-edit-actions__confirm--visible');
 				} else {
-					actionsBar.classList.remove('account-edit-actions--visible');
+					actionsBar.classList.remove('account-edit-actions__confirm--visible');
 				}
 			}
 
@@ -229,7 +234,7 @@
 						fileInput.value = '';
 					}
 					fileChanged = false;
-					actionsBar.classList.remove('account-edit-actions--visible');
+					actionsBar.classList.remove('account-edit-actions__confirm--visible');
 				});
 			}
 		});

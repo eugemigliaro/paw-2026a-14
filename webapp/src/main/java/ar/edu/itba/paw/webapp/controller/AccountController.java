@@ -181,6 +181,11 @@ public class AccountController {
         mav.addObject("accountProfile", user);
         mav.addObject("accountProfileForm", accountProfileForm);
         mav.addObject("accountEmail", user.getEmail());
+        mav.addObject("accountPublicProfileHref", "/users/" + user.getUsername());
+        mav.addObject(
+                "accountPublicProfileLabel",
+                messageSource.getMessage(
+                        "account.viewPublicProfile", null, "View public profile", locale));
         return mav;
     }
 
