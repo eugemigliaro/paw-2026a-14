@@ -148,10 +148,6 @@
 
 										<dl class="report-card__body stack">
 											<div class="report-section-field report-section-field__row">
-												<dt class="detail-label"><spring:message code="admin.reports.reporter" /></dt>
-												<dd><c:out value="${report.reporterUserId}" /></dd>
-											</div>
-											<div class="report-section-field report-section-field__row">
 												<dt class="detail-label"><spring:message code="admin.reports.target" /></dt>
 												<dd><c:out value="${report.targetKey}" /></dd>
 											</div>

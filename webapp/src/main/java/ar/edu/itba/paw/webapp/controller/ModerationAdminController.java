@@ -6,8 +6,10 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
 import ar.edu.itba.paw.models.ReportTargetType;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
@@ -49,12 +51,16 @@ public class ModerationAdminController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
+    private final UserService userService;
 
     @Autowired
     public ModerationAdminController(
-            final ModerationService moderationService, final MessageSource messageSource) {
+            final ModerationService moderationService,
+            final MessageSource messageSource,
+            final UserService userService) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
+        this.userService = userService;
     }
 
     @ModelAttribute("resolutionForm")
@@ -209,6 +215,26 @@ public class ModerationAdminController {
         if (showResolution) {
             mav.addObject("userBan", userBanViewModel(report, locale));
         }
+
+        Optional<User> reporterUsername = userService.findById(report.getReporterUserId());
+        Optional<User> reviewerUsername = userService.findById(report.getReviewedByUserId());
+
+        mav.addObject(
+                "reporterUsername",
+                reporterUsername.isPresent()
+                        ? reporterUsername.get().getUsername()
+                        : messageSource.getMessage(
+                                "moderation.target.user.fallback",
+                                new Object[] {report.getReporterUserId()},
+                                locale));
+        mav.addObject(
+                "reviewerUsername",
+                reviewerUsername.isPresent()
+                        ? reviewerUsername.get().getUsername()
+                        : messageSource.getMessage(
+                                "moderation.target.user.fallback",
+                                new Object[] {report.getReviewedByUserId()},
+                                locale));
 
         return mav;
     }

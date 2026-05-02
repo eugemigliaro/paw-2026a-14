@@ -38,7 +38,7 @@
 					<dl class="stack">
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="admin.reports.reporter" /></dt>
-							<dd><c:out value="${report.reporterUserId}" /></dd>
+							<dd><c:out value="${reporterUsername}" /></dd>
 						</div>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="admin.reports.target" /></dt>
@@ -83,7 +83,7 @@
 								<c:if test="${not empty report.reviewedByUserId}">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="admin.reports.reviewedBy" /></dt>
-										<dd><c:out value="${report.reviewedByUserId}" /></dd>
+										<dd><c:out value="${reviewerUsername}" /></dd>
 									</div>
 								</c:if>
 								<c:if test="${not empty report.reviewedAtLabel}">

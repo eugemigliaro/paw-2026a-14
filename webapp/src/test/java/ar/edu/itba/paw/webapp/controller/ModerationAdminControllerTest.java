@@ -17,6 +17,7 @@ import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import java.time.Instant;
 import java.util.List;
@@ -40,11 +41,13 @@ class ModerationAdminControllerTest {
 
     private MockMvc mockMvc;
     private ModerationService moderationService;
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
         moderationService = Mockito.mock(ModerationService.class);
+        userService = Mockito.mock(UserService.class);
 
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
@@ -52,7 +55,8 @@ class ModerationAdminControllerTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new ModerationAdminController(moderationService, messageSource()))
+                                new ModerationAdminController(
+                                        moderationService, messageSource(), userService))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
