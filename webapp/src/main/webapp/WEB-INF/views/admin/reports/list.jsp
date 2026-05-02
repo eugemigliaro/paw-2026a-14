@@ -158,7 +158,7 @@
 											<c:if test="${not empty report.details}">
 												<div class="report-section-field report-section-field__row">
 													<dt class="detail-label"><spring:message code="admin.reports.details" /></dt>
-													<dd><c:out value="${report.details}" /></dd>
+													<dd class="body-copy"><c:out value="${report.details}" /></dd>
 												</div>
 											</c:if>
 											<div class="report-section-field report-section-field__row">
@@ -174,82 +174,18 @@
 										</dl>
 
 										<div class="report-section-actions">
-											<c:if test="${report.statusCode eq 'pending' or report.statusCode eq 'under_review'}">
+											<c:if test="${report.statusCode eq 'pending'}">
 												<c:url var="reviewHref" value="/admin/reports/${report.id}/under-review" />
 												<form method="post" action="${reviewHref}" class="participant-manage-list__action-form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<spring:message var="reviewLabel" code="admin.reports.action.review" />
 													<ui:button label="${reviewLabel}" type="submit" variant="secondary" />
 												</form>
-
-												<!-- <c:url var="dismissHref" value="/admin/reports/${report.id}/dismiss" />
-												<form method="post" action="${dismissHref}" class="participant-manage-list__action-form">
-													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-													<spring:message var="dismissLabel" code="admin.reports.action.dismiss" />
-													<ui:button label="${dismissLabel}" type="submit" variant="secondary" />
-												</form> -->
-
-												<c:if test="${report.targetTypeCode eq 'match' or report.targetTypeCode eq 'review'}">
-													<c:url var="deleteContentHref" value="/admin/reports/${report.id}/delete-content" />
-													<form method="post" action="${deleteContentHref}" class="participant-manage-list__action-form">
-														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-														<spring:message var="deleteContentLabel" code="admin.reports.action.deleteContent" />
-														<ui:button label="${deleteContentLabel}" type="submit" variant="danger" />
-													</form>
-												</c:if>
-
-												<c:if test="${report.targetTypeCode eq 'user'}">
-													<c:url var="banUserHref" value="/admin/reports/${report.id}/ban-user" />
-													<form method="post" action="${banUserHref}" class="participant-manage-list__action-form report-ban-form">
-														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-														<input type="number" name="banDays" min="1" max="365" value="7" class="field__control report-ban-form__days" />
-														<spring:message var="banReasonPlaceholder" code="admin.reports.ban.reasonPlaceholder" />
-														<input type="text" name="banReason" maxlength="2000" class="field__control report-ban-form__reason" placeholder="${banReasonPlaceholder}" />
-														<spring:message var="banUserLabel" code="admin.reports.action.banUser" />
-														<ui:button label="${banUserLabel}" type="submit" variant="danger" />
-													</form>
-												</c:if> -->
 											</c:if>
-
 											<c:url var="viewDetailHref" value="/admin/reports/${report.id}" />
 											<spring:message var="viewDetailLabel" code="admin.reports.action.view" />
 											<ui:button label="${viewDetailLabel}" href="${viewDetailHref}" variant="primary" />
 										</div>
-
-										<!-- <c:if test="${report.appealed}">
-											<div class="report-appeal-panel panel">
-												<p class="participation-empty-state">
-													<spring:message code="admin.reports.appeal.pending" />
-												</p>
-												<c:url var="finalizeAppealHref" value="/admin/reports/${report.id}/finalize-appeal" />
-												<form method="post" action="${finalizeAppealHref}" class="stack">
-													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-													<spring:message var="appealResolutionLabel" code="admin.reports.appeal.resolution.label" />
-													<label class="field" for="appeal-resolution-${report.id}">
-														<span class="field__label"><c:out value="${appealResolutionLabel}" /></span>
-														<select id="appeal-resolution-${report.id}" name="appealResolution" class="field__control field__control--select">
-															<option value="dismissed">
-																<spring:message code="admin.reports.appeal.resolution.dismissed" />
-															</option>
-															<option value="warning">
-																<spring:message code="admin.reports.appeal.resolution.warning" />
-															</option>
-															<option value="content_deleted">
-																<spring:message code="admin.reports.appeal.resolution.content_deleted" />
-															</option>
-															<option value="user_banned">
-																<spring:message code="admin.reports.appeal.resolution.user_banned" />
-															</option>
-														</select>
-													</label>
-													<div>
-														<spring:message var="finalizeAppealLabel" code="admin.reports.appeal.finalize" />
-														<ui:button label="${finalizeAppealLabel}" type="submit" />
-													</div>
-												</form>
-											</div>
-										</c:if> -->
-
 									</ui:card>
 								</div>
 							</c:forEach>

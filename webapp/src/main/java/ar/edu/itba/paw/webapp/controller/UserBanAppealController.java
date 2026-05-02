@@ -53,7 +53,12 @@ public class UserBanAppealController {
         mav.addObject("banTitle", messageSource.getMessage("account.ban.title", null, locale));
         mav.addObject(
                 "banDescription",
-                messageSource.getMessage("account.ban.description", null, locale));
+                messageSource.getMessage(
+                        report.getAppealCount() > 0
+                                ? "account.ban.description"
+                                : "account.ban.description.appeal.available",
+                        null,
+                        locale));
         mav.addObject(
                 "banUntilLabel",
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)

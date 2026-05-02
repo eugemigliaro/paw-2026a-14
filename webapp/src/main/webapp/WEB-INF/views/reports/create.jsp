@@ -182,6 +182,9 @@
 										<button type="button" class="report-dropdown__item" data-value="aggressive_language">
 											<spring:message code="moderation.reason.aggressive_language" />
 										</button>
+										<button type="button" class="report-dropdown__item" data-value="spam">
+											<spring:message code="moderation.reason.spam" />
+										</button>
 										<button type="button" class="report-dropdown__item" data-value="harassment">
 											<spring:message code="moderation.reason.harassment" />
 										</button>
@@ -195,6 +198,7 @@
 									<form:select id="report-reason" path="reason" cssStyle="display: none;">
 										<form:option value="inappropriate_content"><spring:message code="moderation.reason.inappropriate_content" /></form:option>
 										<form:option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></form:option>
+										<form:option value="spam"><spring:message code="moderation.reason.spam" /></form:option>
 										<form:option value="harassment"><spring:message code="moderation.reason.harassment" /></form:option>
 										<form:option value="cheating"><spring:message code="moderation.reason.cheating" /></form:option>
 										<form:option value="other"><spring:message code="moderation.reason.other" /></form:option>

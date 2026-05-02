@@ -29,6 +29,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -40,6 +42,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ModerationServiceImpl implements ModerationService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ModerationServiceImpl.class);
 
     private static final int MAX_ACTIVE_REPORTS = 3;
     private static final int DEFAULT_REPORT_PAGE_SIZE = 24;
@@ -109,11 +113,13 @@ public class ModerationServiceImpl implements ModerationService {
         validateReportRequest(reporterUserId, targetType, targetId, reason);
 
         if (ReportTargetType.USER.equals(targetType) && targetId.equals(reporterUserId)) {
+            LOGGER.warn("Self report attempt by userId={}", reporterUserId);
             throw new ModerationException("self_report", "Cannot report yourself.");
         }
 
         if (moderationReportDao.countActiveReportsByReporter(reporterUserId)
                 >= MAX_ACTIVE_REPORTS) {
+            LOGGER.warn("Report limit reached for userId={}", reporterUserId);
             throw new ModerationException("report_limit", "Report limit reached.");
         }
 
@@ -125,21 +131,61 @@ public class ModerationServiceImpl implements ModerationService {
                                                 && report.getTargetId().equals(targetId)
                                                 && isActiveReport(report.getStatus()));
         if (duplicateReport) {
+            LOGGER.warn(
+                    "Duplicate report attempt by userId={} targetType={} targetId={}",
+                    reporterUserId,
+                    targetType,
+                    targetId);
             throw new ModerationException("duplicate_report", "Report already exists.");
         }
 
         try {
-            return moderationReportDao.createReport(
-                    reporterUserId, targetType, targetId, reason, normalizeText(details, 4000));
+            final ModerationReport report =
+                    moderationReportDao.createReport(
+                            reporterUserId,
+                            targetType,
+                            targetId,
+                            reason,
+                            normalizeText(details, 4000));
+            LOGGER.info(
+                    "Report created id={} reporterId={} targetType={} targetId={}",
+                    report.getId(),
+                    reporterUserId,
+                    targetType,
+                    targetId);
+            return report;
         } catch (DuplicateKeyException e) {
+            LOGGER.warn(
+                    "Duplicate report (DB) by userId={} targetType={} targetId={}",
+                    reporterUserId,
+                    targetType,
+                    targetId);
             throw new ModerationException("duplicate_report", "Report already exists.");
         } catch (DataIntegrityViolationException e) {
+            LOGGER.error(
+                    "Data integrity violation creating report by userId={} targetType={} targetId={}",
+                    reporterUserId,
+                    targetType,
+                    targetId,
+                    e);
             throw new ModerationException("invalid_report", "Invalid report data.");
         } catch (DataAccessException e) {
+            LOGGER.error(
+                    "DB error creating report by userId={} targetType={} targetId={}",
+                    reporterUserId,
+                    targetType,
+                    targetId,
+                    e);
             throw new ModerationException("report_failed", "Failed to create report.");
         } catch (ModerationException e) {
             throw e;
         } catch (Exception e) {
+            LOGGER.error(
+                    "Unexpected error creating report by userId={} targetType={} targetId={}",
+                    reporterUserId,
+                    targetType,
+                    targetId,
+                    e);
             throw new ModerationException("report_error", "An unexpected error occurred.");
         }
     }

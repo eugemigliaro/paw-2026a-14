@@ -40,7 +40,7 @@
 				<ui:card className="report-section">
 					<div class="section-head">
 						<h2 class="field__label"><spring:message code="report.page.summary.title" /></h2>
-						<div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+						<div class="report-section__badges">
 							<span class="report-type-badge report-type-badge--${report.targetTypeCode}">
 								<c:out value="${targetTypeLabel}" />
 							</span>
@@ -50,7 +50,7 @@
 						</div>
 					</div>
 
-					<dl class="stack" style="margin-top: 1.25rem;">
+					<dl class="stack report-section__top">
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="reports.mine.target" /></dt>
 							<dd><c:out value="${report.targetKey}" /></dd>
@@ -85,7 +85,7 @@
 						<div class="section-head">
 							<h2 class="field__label"><spring:message code="reports.mine.resolution" /></h2>
 						</div>
-						<dl class="stack" style="margin-top: 1.25rem;">
+						<dl class="stack report-section__top">
 							<div class="report-section-field report-section-field__row">
 								<dt class="detail-label"><spring:message code="reports.mine.resolution" /></dt>
 								<dd><c:out value="${resolutionLabel}" /></dd>
@@ -112,7 +112,7 @@
 						<div class="section-head">
 							<h2 class="field__label"><spring:message code="reports.mine.appealReason" /></h2>
 						</div>
-						<dl class="stack" style="margin-top: 1.25rem;">
+						<dl class="stack report-section__top">
 							<div class="report-section-field">
 								<dt class="detail-label"><spring:message code="reports.mine.appealReason" /></dt>
 								<dd class="body-copy"><c:out value="${report.appealReason}" /></dd>
@@ -147,7 +147,7 @@
 							<h2 id="appeal-form-title" class="field__label"><spring:message code="reports.mine.appealReason" /></h2>
 						</div>
 						<c:url var="appealAction" value="/reports/mine/${report.id}/appeal" />
-						<form method="post" action="${appealAction}" style="margin-top: 1.25rem;">
+						<form method="post" action="${appealAction}" class="report-section__top">
 							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 							<div class="report-section-field">
 								<label for="appeal-reason" class="detail-label">

@@ -311,3 +311,14 @@
 	text-transform: uppercase;
 	border-radius: 999px;
 }
+
+.report-section__badges {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.report-section__top {
+	margin-top: 1.25rem;
+}

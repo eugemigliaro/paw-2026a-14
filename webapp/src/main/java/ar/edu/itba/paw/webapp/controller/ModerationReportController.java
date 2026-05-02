@@ -28,6 +28,8 @@ import java.time.format.FormatStyle;
 import java.util.Locale;
 import java.util.function.Supplier;
 import javax.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -42,6 +44,8 @@ import org.springframework.web.servlet.ModelAndView;
 
 @Controller
 public class ModerationReportController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ModerationReportController.class);
 
     private final ModerationService moderationService;
     private final UserService userService;
@@ -194,10 +198,21 @@ public class ModerationReportController {
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
+            LOGGER.warn(
+                    "Report submission failed validation for user={} targetUser={} reason={} errors={}",
+                    currentUser.getUserId(),
+                    username,
+                    form.getReason(),
+                    errors.getAllErrors());
             return showUserReportPage(username, null, null, form, locale);
         }
 
         try {
+            LOGGER.info(
+                    "User {} is reporting user {} for reason: {}",
+                    currentUser.getUserId(),
+                    reportedUser.getId(),
+                    form.getReason());
             moderationService.reportContent(
                     currentUser.getUserId(),
                     ReportTargetType.USER,
@@ -228,10 +243,21 @@ public class ModerationReportController {
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
+            LOGGER.warn(
+                    "Report submission failed validation for user={} targetReview={} reason={} errors={}",
+                    currentUser.getUserId(),
+                    reviewId,
+                    form.getReason(),
+                    errors.getAllErrors());
             return showReviewReportPage(reviewId, null, null, form, locale);
         }
 
         try {
+            LOGGER.info(
+                    "User {} is reporting review {} for reason: {}",
+                    currentUser.getUserId(),
+                    review.getId(),
+                    form.getReason());
             moderationService.reportContent(
                     currentUser.getUserId(),
                     ReportTargetType.REVIEW,
@@ -262,10 +288,21 @@ public class ModerationReportController {
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
+            LOGGER.warn(
+                    "Report submission failed validation for user={} targetMatch={} reason={} errors={}",
+                    currentUser.getUserId(),
+                    matchId,
+                    form.getReason(),
+                    errors.getAllErrors());
             return showMatchReportPage(matchId, null, null, form, locale);
         }
 
         try {
+            LOGGER.info(
+                    "User {} is reporting match {} for reason: {}",
+                    currentUser.getUserId(),
+                    match.getId(),
+                    form.getReason());
             moderationService.reportContent(
                     currentUser.getUserId(),
                     ReportTargetType.MATCH,

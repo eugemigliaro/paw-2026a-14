@@ -114,7 +114,7 @@ public class ModerationAdminController {
                 "pageDescription",
                 messageSource.getMessage("admin.reports.detail.description", null, locale));
         mav.addObject("report", toViewModel(report, locale));
-        mav.addObject("banAppeal", banAppealViewModel(report, locale));
+        mav.addObject("userBan", userBanViewModel(report, locale));
         return mav;
     }
 
@@ -217,12 +217,19 @@ public class ModerationAdminController {
                 moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()),
                 report.getReason() == null ? "" : report.getReason().getDbValue(),
                 report.getStatus() == null ? "" : report.getStatus().getDbValue(),
+                report.getResolution() == null ? "" : report.getResolution().getDbValue(),
                 report.getDetails(),
                 report.getAppealReason(),
+                report.getResolutionDetails(),
                 report.getAppealCount(),
                 formatInstant(report.getCreatedAt(), locale),
                 formatInstant(report.getUpdatedAt(), locale),
                 formatInstant(report.getAppealedAt(), locale),
+                formatInstant(report.getReviewedAt(), locale),
+                report.getReviewedByUserId(),
+                report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
+                formatInstant(report.getAppealResolvedAt(), locale),
+                report.getAppealResolvedByUserId(),
                 isAppealed(report));
     }
 
@@ -253,8 +260,7 @@ public class ModerationAdminController {
         return List.copyOf(parsed);
     }
 
-    private BanAppealViewModel banAppealViewModel(
-            final ModerationReport report, final Locale locale) {
+    private UserBanViewModel userBanViewModel(final ModerationReport report, final Locale locale) {
         if (report.getTargetType() != ReportTargetType.USER) {
             return null;
         }
@@ -263,57 +269,30 @@ public class ModerationAdminController {
                 moderationService.findLatestBanForUser(report.getTargetId());
 
         if (latestBanForUser.isEmpty()
-                || report.getAppealCount() == 0
                 || !latestBanForUser.get().getModerationReportId().equals(report.getId())) {
             return null;
         }
 
-        return new BanAppealViewModel(
-                latestBanForUser.get().getId(),
-                report.getAppealReason(),
-                report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
-                formatInstant(report.getAppealedAt(), locale),
-                report.getAppealResolvedAt() == null);
+        final UserBan ban = latestBanForUser.get();
+        return new UserBanViewModel(
+                latestBanForUser.get().getId(), formatInstant(ban.getBannedUntil(), locale));
     }
 
-    public static final class BanAppealViewModel {
+    public static final class UserBanViewModel {
         private final Long banId;
-        private final String appealReason;
-        private final String appealDecisionCode;
-        private final String appealedAtLabel;
-        private final boolean pendingResolution;
+        private final String bannedUntilLabel;
 
-        private BanAppealViewModel(
-                final Long banId,
-                final String appealReason,
-                final String appealDecisionCode,
-                final String appealedAtLabel,
-                final boolean pendingResolution) {
+        private UserBanViewModel(final Long banId, final String bannedUntilLabel) {
             this.banId = banId;
-            this.appealReason = appealReason;
-            this.appealDecisionCode = appealDecisionCode;
-            this.appealedAtLabel = appealedAtLabel;
-            this.pendingResolution = pendingResolution;
+            this.bannedUntilLabel = bannedUntilLabel;
         }
 
         public Long getBanId() {
             return banId;
         }
 
-        public String getAppealReason() {
-            return appealReason;
-        }
-
-        public String getAppealDecisionCode() {
-            return appealDecisionCode;
-        }
-
-        public String getAppealedAtLabel() {
-            return appealedAtLabel;
-        }
-
-        public boolean isPendingResolution() {
-            return pendingResolution;
+        public String getBannedUntilLabel() {
+            return bannedUntilLabel;
         }
     }
 
@@ -324,12 +303,19 @@ public class ModerationAdminController {
         private final String targetKey;
         private final String reasonCode;
         private final String statusCode;
+        private final String resolutionCode;
         private final String details;
         private final String appealReason;
+        private final String resolutionDetails;
         private final int appealCount;
         private final String createdAtLabel;
         private final String updatedAtLabel;
         private final String appealedAtLabel;
+        private final String reviewedAtLabel;
+        private final Long reviewedByUserId;
+        private final String appealDecisionCode;
+        private final String appealResolvedAtLabel;
+        private final Long appealResolvedByUserId;
         private final boolean appealed;
 
         private ModerationReportViewModel(
@@ -339,12 +325,19 @@ public class ModerationAdminController {
                 final String targetKey,
                 final String reasonCode,
                 final String statusCode,
+                final String resolutionCode,
                 final String details,
                 final String appealReason,
+                final String resolutionDetails,
                 final int appealCount,
                 final String createdAtLabel,
                 final String updatedAtLabel,
                 final String appealedAtLabel,
+                final String reviewedAtLabel,
+                final Long reviewedByUserId,
+                final String appealDecisionCode,
+                final String appealResolvedAtLabel,
+                final Long appealResolvedByUserId,
                 final boolean appealed) {
             this.id = id;
             this.reporterUserId = reporterUserId;
@@ -352,12 +345,19 @@ public class ModerationAdminController {
             this.targetKey = targetKey;
             this.reasonCode = reasonCode;
             this.statusCode = statusCode;
+            this.resolutionCode = resolutionCode;
             this.details = details;
             this.appealReason = appealReason;
+            this.resolutionDetails = resolutionDetails;
             this.appealCount = appealCount;
             this.createdAtLabel = createdAtLabel;
             this.updatedAtLabel = updatedAtLabel;
             this.appealedAtLabel = appealedAtLabel;
+            this.reviewedAtLabel = reviewedAtLabel;
+            this.reviewedByUserId = reviewedByUserId;
+            this.appealDecisionCode = appealDecisionCode;
+            this.appealResolvedAtLabel = appealResolvedAtLabel;
+            this.appealResolvedByUserId = appealResolvedByUserId;
             this.appealed = appealed;
         }
 
@@ -385,12 +385,20 @@ public class ModerationAdminController {
             return statusCode;
         }
 
+        public String getResolutionCode() {
+            return resolutionCode;
+        }
+
         public String getDetails() {
             return details;
         }
 
         public String getAppealReason() {
             return appealReason;
+        }
+
+        public String getResolutionDetails() {
+            return resolutionDetails;
         }
 
         public int getAppealCount() {
@@ -407,6 +415,26 @@ public class ModerationAdminController {
 
         public String getAppealedAtLabel() {
             return appealedAtLabel;
+        }
+
+        public String getReviewedAtLabel() {
+            return reviewedAtLabel;
+        }
+
+        public Long getReviewedByUserId() {
+            return reviewedByUserId;
+        }
+
+        public String getAppealDecisionCode() {
+            return appealDecisionCode;
+        }
+
+        public String getAppealResolvedAtLabel() {
+            return appealResolvedAtLabel;
+        }
+
+        public Long getAppealResolvedByUserId() {
+            return appealResolvedByUserId;
         }
 
         public boolean isAppealed() {

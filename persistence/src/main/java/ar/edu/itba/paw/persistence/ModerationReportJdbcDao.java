@@ -66,7 +66,17 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
                         .withTableName("moderation_reports")
-                        .usingGeneratedKeyColumns("id");
+                        .usingGeneratedKeyColumns("id")
+                        .usingColumns(
+                                "reporter_user_id",
+                                "target_type",
+                                "target_id",
+                                "reason",
+                                "details",
+                                "status",
+                                "created_at",
+                                "updated_at",
+                                "appeal_count");
     }
 
     @Override

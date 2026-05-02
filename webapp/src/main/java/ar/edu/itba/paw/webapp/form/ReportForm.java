@@ -14,7 +14,7 @@ public class ReportForm {
 
     @Size(max = 4000, message = "{Size.reportForm.details}")
     @Pattern(
-            regexp = "^[\\p{L}\\p{N} ,.;:()\"'\\-\\/ .!?\\n]*$",
+            regexp = "^[\\p{L}\\p{N} ,.;:()\"'\\-\\/ .!?\\n@&_*+=\\[\\]{}\\$#%^~|<>\\\\]*$",
             message = "{Pattern.reportForm.details}")
     private String details;
 
