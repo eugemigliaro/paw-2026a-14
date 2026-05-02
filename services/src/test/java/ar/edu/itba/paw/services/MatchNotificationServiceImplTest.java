@@ -35,6 +35,7 @@ public class MatchNotificationServiceImplTest {
     @Mock private MailDispatchService mailDispatchService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private MessageSource messageSource;
+    @Mock private UserService userService;
 
     @BeforeEach
     public void setUp() {

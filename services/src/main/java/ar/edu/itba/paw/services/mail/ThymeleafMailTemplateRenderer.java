@@ -56,6 +56,149 @@ public class ThymeleafMailTemplateRenderer {
                 textMailTemplateEngine.process("match-updated", context));
     }
 
+    public MailContent renderPlayerJoinedNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.playerJoined.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.playerJoined.title",
+                        new Object[] {templateData.getActorName(), templateData.getMatchTitle()},
+                        locale));
+        context.setVariable("summary", message("mail.participation.playerJoined.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.playerJoined.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderJoinRequestReceivedNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.joinRequestReceived.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.joinRequestReceived.title",
+                        new Object[] {templateData.getActorName(), templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary", message("mail.participation.joinRequestReceived.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.joinRequestReceived.subject",
+                        new Object[] {templateData.getActorName()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderJoinRequestApprovedNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.requestApproved.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.requestApproved.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary", message("mail.participation.requestApproved.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.requestApproved.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderJoinRequestRejectedNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.requestRejected.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.requestRejected.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary", message("mail.participation.requestRejected.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.requestRejected.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderInviteAcceptedNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.inviteAccepted.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.inviteAccepted.title",
+                        new Object[] {templateData.getActorName(), templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary", message("mail.participation.inviteAccepted.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.inviteAccepted.subject",
+                        new Object[] {templateData.getActorName()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderInviteDeclinedNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.inviteDeclined.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.inviteDeclined.title",
+                        new Object[] {templateData.getActorName(), templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary", message("mail.participation.inviteDeclined.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.inviteDeclined.subject",
+                        new Object[] {templateData.getActorName()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
     public MailContent renderMatchCancelledNotification(
             final MatchLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());

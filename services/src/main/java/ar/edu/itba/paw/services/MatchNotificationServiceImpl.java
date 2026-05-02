@@ -23,17 +23,20 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
     private final MailDispatchService mailDispatchService;
     private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MessageSource messageSource;
+    private final UserService userService;
 
     @Autowired
     public MatchNotificationServiceImpl(
             final MatchParticipantDao matchParticipantDao,
             final MailDispatchService mailDispatchService,
             final ThymeleafMailTemplateRenderer templateRenderer,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final UserService userService) {
         this.matchParticipantDao = matchParticipantDao;
         this.mailDispatchService = mailDispatchService;
         this.templateRenderer = templateRenderer;
         this.messageSource = messageSource;
+        this.userService = userService;
     }
 
     @Override
@@ -42,7 +45,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
                 matchParticipantDao.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
             final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant, match);
+                    buildTemplateData(participant, match, null);
             final MailContent content =
                     templateRenderer.renderMatchUpdatedNotification(templateData);
             mailDispatchService.dispatch(participant.getEmail(), content);
@@ -55,7 +58,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
                 matchParticipantDao.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
             final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant, match);
+                    buildTemplateData(participant, match, null);
             final MailContent content =
                     templateRenderer.renderMatchCancelledNotification(templateData);
             mailDispatchService.dispatch(participant.getEmail(), content);
@@ -72,7 +75,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         for (final AffectedRecurringParticipant participant :
                 affectedParticipants(safeMatches).values()) {
             final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant.user(), participant.firstAffectedMatch());
+                    buildTemplateData(participant.user(), participant.firstAffectedMatch(), null);
             final MailContent content =
                     templateRenderer.renderRecurringMatchesUpdatedNotification(
                             templateData, participant.affectedOccurrenceCount());
@@ -90,12 +93,97 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         for (final AffectedRecurringParticipant participant :
                 affectedParticipants(safeMatches).values()) {
             final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant.user(), participant.firstAffectedMatch());
+                    buildTemplateData(participant.user(), participant.firstAffectedMatch(), null);
             final MailContent content =
                     templateRenderer.renderRecurringMatchesCancelledNotification(
                             templateData, participant.affectedOccurrenceCount());
             mailDispatchService.dispatch(participant.user().getEmail(), content);
         }
+    }
+
+    @Override
+    public void notifyHostPlayerJoined(final Match match, final User player) {
+        userService
+                .findById(match.getHostUserId())
+                .ifPresent(
+                        host -> {
+                            final MatchLifecycleMailTemplateData templateData =
+                                    buildTemplateData(
+                                            host,
+                                            match,
+                                            player.getName() + " " + player.getLastName());
+                            final MailContent content =
+                                    templateRenderer.renderPlayerJoinedNotification(templateData);
+                            mailDispatchService.dispatch(host.getEmail(), content);
+                        });
+    }
+
+    @Override
+    public void notifyHostJoinRequestReceived(final Match match, final User player) {
+        userService
+                .findById(match.getHostUserId())
+                .ifPresent(
+                        host -> {
+                            final MatchLifecycleMailTemplateData templateData =
+                                    buildTemplateData(
+                                            host,
+                                            match,
+                                            player.getName() + " " + player.getLastName());
+                            final MailContent content =
+                                    templateRenderer.renderJoinRequestReceivedNotification(
+                                            templateData);
+                            mailDispatchService.dispatch(host.getEmail(), content);
+                        });
+    }
+
+    @Override
+    public void notifyPlayerRequestApproved(final Match match, final User player) {
+        final MatchLifecycleMailTemplateData templateData = buildTemplateData(player, match, null);
+        final MailContent content =
+                templateRenderer.renderJoinRequestApprovedNotification(templateData);
+        mailDispatchService.dispatch(player.getEmail(), content);
+    }
+
+    @Override
+    public void notifyPlayerRequestRejected(final Match match, final User player) {
+        final MatchLifecycleMailTemplateData templateData = buildTemplateData(player, match, null);
+        final MailContent content =
+                templateRenderer.renderJoinRequestRejectedNotification(templateData);
+        mailDispatchService.dispatch(player.getEmail(), content);
+    }
+
+    @Override
+    public void notifyHostInviteAccepted(final Match match, final User player) {
+        userService
+                .findById(match.getHostUserId())
+                .ifPresent(
+                        host -> {
+                            final MatchLifecycleMailTemplateData templateData =
+                                    buildTemplateData(
+                                            host,
+                                            match,
+                                            player.getName() + " " + player.getLastName());
+                            final MailContent content =
+                                    templateRenderer.renderInviteAcceptedNotification(templateData);
+                            mailDispatchService.dispatch(host.getEmail(), content);
+                        });
+    }
+
+    @Override
+    public void notifyHostInviteDeclined(final Match match, final User player) {
+        userService
+                .findById(match.getHostUserId())
+                .ifPresent(
+                        host -> {
+                            final MatchLifecycleMailTemplateData templateData =
+                                    buildTemplateData(
+                                            host,
+                                            match,
+                                            player.getName() + " " + player.getLastName());
+                            final MailContent content =
+                                    templateRenderer.renderInviteDeclinedNotification(templateData);
+                            mailDispatchService.dispatch(host.getEmail(), content);
+                        });
     }
 
     private Map<String, AffectedRecurringParticipant> affectedParticipants(
@@ -141,7 +229,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
     }
 
     private MatchLifecycleMailTemplateData buildTemplateData(
-            final User recipient, final Match match) {
+            final User recipient, final Match match, final String actorName) {
         final Locale locale = LocaleContextHolder.getLocale();
         final String sportLabel =
                 messageSource.getMessage(
@@ -161,6 +249,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
                 match.getEndsAt(),
                 sportLabel,
                 statusLabel,
+                actorName,
                 locale);
     }
 }

@@ -34,6 +34,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private final MailDispatchService mailDispatchService;
     private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MessageSource messageSource;
+    private final MatchNotificationService matchNotificationService;
 
     public MatchParticipationServiceImpl(
             final MatchDao matchDao,
@@ -47,7 +48,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 clock,
                 (recipientEmail, content) -> {},
                 null,
-                new StaticMessageSource());
+                new StaticMessageSource(),
+                null);
     }
 
     @Autowired
@@ -58,7 +60,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             final Clock clock,
             final MailDispatchService mailDispatchService,
             final ThymeleafMailTemplateRenderer templateRenderer,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final MatchNotificationService matchNotificationService) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.userService = userService;
@@ -66,6 +69,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         this.mailDispatchService = mailDispatchService;
         this.templateRenderer = templateRenderer;
         this.messageSource = messageSource;
+        this.matchNotificationService = matchNotificationService;
     }
 
     // -------------------------------------------------------------------------
@@ -115,6 +119,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "already_pending", "You already have a pending join request for this event.");
         }
+
+        userService
+                .findById(userId)
+                .ifPresent(
+                        user ->
+                                matchNotificationService.notifyHostJoinRequestReceived(
+                                        match, user));
     }
 
     @Override
@@ -174,6 +185,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                             currentNow);
             throw buildSeriesJoinRequestFailure(currentEvaluation);
         }
+
+        userService
+                .findById(userId)
+                .ifPresent(
+                        user ->
+                                matchNotificationService.notifyHostJoinRequestReceived(
+                                        match, user));
     }
 
     @Override
@@ -232,6 +250,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 throw new MatchParticipationException(
                         "full", "The event is full; cannot approve more participants.");
             }
+            userService
+                    .findById(targetUserId)
+                    .ifPresent(
+                            user ->
+                                    matchNotificationService.notifyPlayerRequestApproved(
+                                            match, user));
             return;
         }
 
@@ -248,6 +272,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "no_pending_request", "No pending join request found for the specified user.");
         }
+
+        userService
+                .findById(targetUserId)
+                .ifPresent(
+                        user -> matchNotificationService.notifyPlayerRequestApproved(match, user));
     }
 
     @Override
@@ -260,6 +289,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "no_pending_request", "No pending join request found for the specified user.");
         }
+
+        userService
+                .findById(targetUserId)
+                .ifPresent(
+                        user -> matchNotificationService.notifyPlayerRequestRejected(match, user));
     }
 
     @Override
@@ -431,6 +465,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 throw new MatchParticipationException(
                         "no_invitation", "No pending invitation found for this series.");
             }
+            userService
+                    .findById(userId)
+                    .ifPresent(
+                            user -> matchNotificationService.notifyHostInviteAccepted(match, user));
             return;
         }
 
@@ -446,6 +484,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
         }
+
+        userService
+                .findById(userId)
+                .ifPresent(user -> matchNotificationService.notifyHostInviteAccepted(match, user));
     }
 
     @Override
@@ -466,6 +508,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 throw new MatchParticipationException(
                         "no_invitation", "No pending invitation found for this series.");
             }
+            userService
+                    .findById(userId)
+                    .ifPresent(
+                            user -> matchNotificationService.notifyHostInviteDeclined(match, user));
             return;
         }
 
@@ -473,6 +519,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
         }
+
+        userService
+                .findById(userId)
+                .ifPresent(user -> matchNotificationService.notifyHostInviteDeclined(match, user));
     }
 
     @Override

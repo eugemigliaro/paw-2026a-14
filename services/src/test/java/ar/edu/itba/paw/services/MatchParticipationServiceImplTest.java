@@ -36,6 +36,7 @@ public class MatchParticipationServiceImplTest {
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
+    @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchParticipationServiceImpl matchParticipationService;
@@ -51,7 +52,8 @@ public class MatchParticipationServiceImplTest {
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
                         mailDispatchService,
                         templateRenderer,
-                        new StaticMessageSource());
+                        new StaticMessageSource(),
+                        matchNotificationService);
     }
 
     @Test
