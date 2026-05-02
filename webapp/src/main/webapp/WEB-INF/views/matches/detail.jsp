@@ -15,43 +15,99 @@
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 
 			<main class="page-shell page-shell--detail">
-				<%-- When the viewer is the host, use a modifier that narrows the hero
-					and adds a second sidebar panel for host actions. --%>
 				<section class="detail-top ${hostViewer ? 'detail-top--host-view' : ''}">
-					<section
-						class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
-					>
-						<c:if test="${not empty eventPage.event.bannerImageUrl}">
-							<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
-							<img
-								class="event-hero__image"
-								src="${eventHeroBannerSrc}"
-								alt=""
-								loading="eager"
-								decoding="async"
-							/>
-						</c:if>
-						<div class="event-hero__content">
-							<span class="event-hero__badge"
-								><c:out value="${eventPage.event.sport}"
-							/></span>
-						<div class="event-hero__copy">
-							<c:if test="${not empty eventPage.heroSubtitle}">
-								<p class="event-hero__eyebrow">
-									<c:out value="${eventPage.heroSubtitle}" />
-									</p>
-								</c:if>
-								<h1 class="event-hero__title">
-									<c:out value="${eventPage.event.title}" />
-								</h1>
-								<c:if test="${not empty eventPage.heroMeta}">
-									<p class="event-hero__meta">
-										<c:out value="${eventPage.heroMeta}" />
-									</p>
-								</c:if>
+					<div class="detail-top__main">
+						<section
+							class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
+						>
+							<c:if test="${not empty eventPage.event.bannerImageUrl}">
+								<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
+								<img
+									class="event-hero__image"
+									src="${eventHeroBannerSrc}"
+									alt=""
+									loading="eager"
+									decoding="async"
+								/>
+							</c:if>
+							<div class="event-heading">
+								<span class="event-heading__badge"><c:out value="${eventPage.event.sport}" /></span>
+								<h1 class="event-heading__title"><c:out value="${eventPage.event.title}" /></h1>
 							</div>
-						</div>
-					</section>
+						</section>
+
+						<section
+							class="detail-section detail-section--about"
+							aria-labelledby="about-event-title"
+						>
+							<div class="section-head section-head--detail-compact">
+								<div>
+									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
+									<h2 id="about-event-title" class="detail-section__title">
+										<spring:message code="event.detail.aboutEvent" />
+									</h2>
+								</div>
+							</div>
+							<div class="detail-stack">
+								<c:forEach var="paragraph" items="${eventPage.aboutParagraphs}">
+									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
+								</c:forEach>
+							</div>
+						</section>
+
+						<section
+							class="detail-section detail-section--participants"
+							aria-labelledby="participant-section-title"
+						>
+							<div class="section-head section-head--detail-compact">
+								<div>
+									<h2 id="participant-section-title" class="detail-section__title">
+										<spring:message code="event.detail.whosJoining" />
+									</h2>
+								</div>
+								<span class="detail-section__meta"><c:out value="${eventPage.participantCountLabel}" /></span>
+							</div>
+
+							<c:choose>
+								<c:when test="${empty eventPage.participants}">
+									<div class="panel participant-empty-state">
+										<p class="participant-empty-state__title">
+											<spring:message code="event.detail.noPlayers" />
+										</p>
+										<p class="participant-empty-state__copy">
+											<c:out value="${eventPage.participantsEmptyState}" />
+										</p>
+									</div>
+								</c:when>
+								<c:otherwise>
+									<ul class="participant-list" aria-label="${participantsAria}">
+										<c:forEach var="participant" items="${eventPage.participants}">
+											<li class="participant-list__item">
+												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
+												<img
+													class="participant-list__avatar"
+													src="${participantProfileImageSrc}"
+													alt=""
+													aria-hidden="true"
+													loading="lazy"
+													decoding="async" />
+												<div class="participant-list__copy">
+													<c:url var="participantProfileHref" value="${participant.profileHref}" />
+													<a class="participant-list__name" href="${participantProfileHref}"><c:out value="${participant.username}" /></a>
+													<c:if test="${not empty participant.reviewHref}">
+														<c:url var="participantReviewHref" value="${participant.reviewHref}" />
+														<a class="participant-list__review-link" href="${participantReviewHref}">
+															<spring:message code="event.participants.review" />
+														</a>
+													</c:if>
+												</div>
+											</li>
+										</c:forEach>
+									</ul>
+								</c:otherwise>
+							</c:choose>
+						</section>
+					</div>
 
 					<aside class="detail-top__sidebar ${hostViewer ? 'detail-top__sidebar--host-view' : ''}">
 						<c:choose>
@@ -214,30 +270,117 @@
 								</article>
 
 								<article class="panel event-info-panel">
-									<div class="booking-panel__header">
-										<div class="booking-panel__header-copy">
-											<span class="detail-label"><spring:message code="event.booking.reserveSpot" /></span>
-											<h2 class="booking-panel__title">
-												<c:out value="${eventPage.bookingPrice}" />
-											</h2>
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<line x1="12" y1="1" x2="12" y2="23" />
+														<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.reserveSpot" />
+											</dt>
+											<dd><c:out value="${eventPage.bookingPrice}" /></dd>
 										</div>
-									</div>
+									</dl>
+								</article>
 
-									<div class="booking-panel__availability">
-										<div>
-											<span class="detail-label"><spring:message code="event.booking.availability" /></span>
-											<strong><c:out value="${eventPage.availabilityLabel}" /></strong>
+								<article class="panel event-info-panel">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+														<circle cx="9" cy="7" r="4" />
+														<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+														<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.availability" />
+											</dt>
+											<dd><c:out value="${eventPage.availabilityLabel}" /> &middot; <c:out value="${eventPage.participantCountLabel}" /></dd>
 										</div>
-										<span class="booking-panel__availability-meta"><c:out value="${eventPage.participantCountLabel}" /></span>
-									</div>
+									</dl>
+								</article>
 
-									<dl class="booking-panel__details">
-										<c:forEach var="detail" items="${eventPage.bookingDetails}">
-											<div class="booking-panel__detail-row">
-												<dt><c:out value="${detail.label}" /></dt>
-												<dd><c:out value="${detail.value}" /></dd>
-											</div>
-										</c:forEach>
+								<article class="panel event-info-panel">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+														<line x1="16" y1="2" x2="16" y2="6" />
+														<line x1="8" y1="2" x2="8" y2="6" />
+														<line x1="3" y1="10" x2="21" y2="10" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.date" />
+											</dt>
+											<dd><c:out value="${eventPage.bookingDetails[0].value}" /></dd>
+										</div>
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<circle cx="12" cy="12" r="10" />
+														<polyline points="12 6 12 12 16 14" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.time" />
+											</dt>
+											<dd><c:out value="${eventPage.bookingDetails[1].value}" /></dd>
+										</div>
+									</dl>
+								</article>
+
+								<article class="panel event-info-panel">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M12 22s8-4.35 8-11a8 8 0 1 0-16 0c0 6.65 8 11 8 11z" />
+														<circle cx="12" cy="11" r="3" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.venue" />
+											</dt>
+											<dd class="event-info-panel__value--truncate"><c:out value="${eventPage.bookingDetails[2].value}" /></dd>
+										</div>
+									</dl>
+								</article>
+
+								<article class="panel event-info-panel event-info-panel--hosted-by">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+														<circle cx="12" cy="7" r="4" />
+													</svg>
+												</span>
+												<spring:message code="event.detail.hostedBy" />
+											</dt>
+											<dd>
+												<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
+												<span class="event-info-panel__host">
+													<img class="event-info-panel__host-avatar" src="${hostProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+													<c:choose>
+														<c:when test="${not empty eventPage.hostProfileHref}">
+															<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
+															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${eventPage.hostLabel}" /></a>
+														</c:when>
+														<c:otherwise>
+															<span class="event-info-panel__host-name"><c:out value="${eventPage.hostLabel}" /></span>
+														</c:otherwise>
+													</c:choose>
+												</span>
+											</dd>
+										</div>
 									</dl>
 								</article>
 
@@ -486,16 +629,122 @@
 								</article>
 							</c:when>
 							<c:otherwise>
-								<article class="panel booking-panel">
-									<div class="booking-panel__header">
-										<div class="booking-panel__header-copy">
-											<span class="detail-label"><spring:message code="event.booking.reserveSpot" /></span>
-											<h2 class="booking-panel__title">
-												<c:out value="${eventPage.bookingPrice}" />
-											</h2>
+								<article class="panel event-info-panel">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<line x1="12" y1="1" x2="12" y2="23" />
+														<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.reserveSpot" />
+											</dt>
+											<dd><c:out value="${eventPage.bookingPrice}" /></dd>
 										</div>
-									</div>
+									</dl>
+								</article>
 
+								<article class="panel event-info-panel">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+														<circle cx="9" cy="7" r="4" />
+														<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+														<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.availability" />
+											</dt>
+											<dd><c:out value="${eventPage.availabilityLabel}" /> &middot; <c:out value="${eventPage.participantCountLabel}" /></dd>
+										</div>
+									</dl>
+								</article>
+
+								<article class="panel event-info-panel">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+														<line x1="16" y1="2" x2="16" y2="6" />
+														<line x1="8" y1="2" x2="8" y2="6" />
+														<line x1="3" y1="10" x2="21" y2="10" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.date" />
+											</dt>
+											<dd><c:out value="${eventPage.bookingDetails[0].value}" /></dd>
+										</div>
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<circle cx="12" cy="12" r="10" />
+														<polyline points="12 6 12 12 16 14" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.time" />
+											</dt>
+											<dd><c:out value="${eventPage.bookingDetails[1].value}" /></dd>
+										</div>
+									</dl>
+								</article>
+
+								<article class="panel event-info-panel">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M12 22s8-4.35 8-11a8 8 0 1 0-16 0c0 6.65 8 11 8 11z" />
+														<circle cx="12" cy="11" r="3" />
+													</svg>
+												</span>
+												<spring:message code="event.booking.venue" />
+											</dt>
+											<dd class="event-info-panel__value--truncate"><c:out value="${eventPage.bookingDetails[2].value}" /></dd>
+										</div>
+									</dl>
+								</article>
+
+								<article class="panel event-info-panel event-info-panel--hosted-by">
+									<dl class="event-info-panel__list">
+										<div class="booking-panel__detail-row event-info-panel__row">
+											<dt>
+												<span class="event-info-panel__icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+														<circle cx="12" cy="7" r="4" />
+													</svg>
+												</span>
+												<spring:message code="event.detail.hostedBy" />
+											</dt>
+											<dd>
+												<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
+												<span class="event-info-panel__host">
+													<img class="event-info-panel__host-avatar" src="${hostProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+													<c:choose>
+														<c:when test="${not empty eventPage.hostProfileHref}">
+															<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
+															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${eventPage.hostLabel}" /></a>
+														</c:when>
+														<c:otherwise>
+															<span class="event-info-panel__host-name"><c:out value="${eventPage.hostLabel}" /></span>
+														</c:otherwise>
+													</c:choose>
+												</span>
+											</dd>
+										</div>
+									</dl>
+								</article>
+
+								<article class="panel booking-panel">
 									<c:if test="${reservationConfirmed}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
@@ -523,23 +772,6 @@
 											<c:out value="${eventStateNotice}" />
 										</p>
 									</c:if>
-
-									<div class="booking-panel__availability">
-										<div>
-											<span class="detail-label"><spring:message code="event.booking.availability" /></span>
-											<strong><c:out value="${eventPage.availabilityLabel}" /></strong>
-										</div>
-										<span class="booking-panel__availability-meta"><c:out value="${eventPage.participantCountLabel}" /></span>
-									</div>
-
-									<dl class="booking-panel__details">
-										<c:forEach var="detail" items="${eventPage.bookingDetails}">
-											<div class="booking-panel__detail-row">
-												<dt><c:out value="${detail.label}" /></dt>
-												<dd><c:out value="${detail.value}" /></dd>
-											</div>
-										</c:forEach>
-									</dl>
 
 									<c:if test="${joinRequested}">
 										<p class="booking-panel__notice booking-panel__notice--success">
@@ -762,143 +994,9 @@
 					</aside>
 				</section>
 
-				<section class="detail-layout">
-					<div class="detail-layout__main">
-						<article class="panel host-card">
-							<div class="host-card__main">
-								<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
-								<img
-									class="host-card__avatar"
-									src="${hostProfileImageSrc}"
-									alt=""
-									aria-hidden="true"
-									loading="lazy"
-									decoding="async" />
-								<div class="host-card__copy">
-									<span class="detail-label"><spring:message code="event.detail.hostedBy" /></span>
-									<c:choose>
-										<c:when test="${not empty eventPage.hostProfileHref}">
-											<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
-											<a class="host-card__name" href="${hostProfileHref}">
-												<c:out value="${eventPage.hostLabel}" />
-											</a>
-										</c:when>
-										<c:otherwise>
-											<strong class="host-card__name"><c:out value="${eventPage.hostLabel}" /></strong>
-										</c:otherwise>
-									</c:choose>
-								</div>
-							</div>
-						</article>
-
-						<section
-							class="detail-section detail-section--about"
-							aria-labelledby="about-event-title"
-						>
-							<div
-								class="section-head section-head--detail-compact"
-							>
-								<div>
-									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
-									<h2
-										id="about-event-title"
-										class="detail-section__title"
-									>
-										<spring:message code="event.detail.aboutEvent" />
-									</h2>
-								</div>
-							</div>
-							<div class="detail-stack">
-								<c:forEach
-									var="paragraph"
-									items="${eventPage.aboutParagraphs}"
-								>
-									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
-								</c:forEach>
-							</div>
-						</section>
-
-						<section
-							class="detail-section detail-section--participants"
-							aria-labelledby="participant-section-title"
-						>
-							<div
-								class="section-head section-head--detail-compact"
-							>
-								<div>
-									<h2
-										id="participant-section-title"
-										class="detail-section__title"
-									>
-										<spring:message code="event.detail.whosJoining" />
-									</h2>
-								</div>
-								<span class="detail-section__meta"
-									><c:out
-										value="${eventPage.participantCountLabel}"
-								/></span>
-							</div>
-
-							<c:choose>
-								<c:when test="${empty eventPage.participants}">
-									<div class="panel participant-empty-state">
-										<p
-											class="participant-empty-state__title"
-										>
-											<spring:message code="event.detail.noPlayers" />
-										</p>
-										<p
-											class="participant-empty-state__copy"
-										>
-											<c:out
-												value="${eventPage.participantsEmptyState}"
-											/>
-										</p>
-									</div>
-								</c:when>
-								<c:otherwise>
-									<ul
-										class="participant-list"
-										aria-label="${participantsAria}"
-									>
-										<c:forEach
-											var="participant"
-											items="${eventPage.participants}"
-										>
-											<li class="participant-list__item">
-												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
-												<img
-													class="participant-list__avatar"
-													src="${participantProfileImageSrc}"
-													alt=""
-													aria-hidden="true"
-													loading="lazy"
-													decoding="async" />
-												<div
-													class="participant-list__copy"
-												>
-													<c:url var="participantProfileHref" value="${participant.profileHref}" />
-													<a
-														class="participant-list__name"
-														href="${participantProfileHref}"
-														><c:out
-															value="${participant.username}"
-													/></a>
-													<c:if test="${not empty participant.reviewHref}">
-														<c:url var="participantReviewHref" value="${participant.reviewHref}" />
-														<a class="participant-list__review-link" href="${participantReviewHref}">
-															<spring:message code="event.participants.review" />
-														</a>
-													</c:if>
-												</div>
-											</li>
-										</c:forEach>
-									</ul>
-								</c:otherwise>
-							</c:choose>
-						</section>
-
-						<c:if test="${not empty eventPage.occurrences}">
+				<c:if test="${not empty eventPage.occurrences}">
+					<section class="detail-layout">
+						<div class="detail-layout__main">
 							<c:set var="recurrencePreviewLimit" value="3" />
 							<c:set var="recurrenceScheduleCollapsed" value="${fn:length(eventPage.occurrences) > recurrencePreviewLimit}" />
 							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
@@ -958,11 +1056,9 @@
 									</button>
 								</c:if>
 							</section>
-						</c:if>
-
-					</div>
-
-				</section>
+						</div>
+					</section>
+				</c:if>
 
 				<section class="detail-recommendations">
 					<div class="section-head">
