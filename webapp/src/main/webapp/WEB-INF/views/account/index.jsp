@@ -1,118 +1,239 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-	<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-		<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-			<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
-				<!DOCTYPE html>
-				<html lang="${pageContext.response.locale.language}">
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<!DOCTYPE html>
+<html lang="${pageContext.response.locale.language}">
 
-				<head>
-					<%@ include file="/WEB-INF/views/includes/head.jspf" %>
-				</head>
+<head>
+	<%@ include file="/WEB-INF/views/includes/head.jspf" %>
+</head>
 
-				<body>
-					<div class="app-shell">
-						<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
+<body>
+	<div class="app-shell">
+		<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
-							<main class="page-shell account-shell">
-								<section class="panel account-panel">
-									<ui:returnButton />
+		<main class="page-shell account-shell">
+			<section class="panel account-panel">
+				<ui:returnButton />
 
-									<%-- MOVED UP: image variables declared earlier so image can appear first --%>
-										<spring:message code="account.phone.empty" var="accountPhoneEmptyLabel" />
-										<c:set var="accountPhoneValue"
-											value="${empty accountProfile.phone ? accountPhoneEmptyLabel : accountProfile.phone}" />
-										<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
+				<c:if test="${not empty accountUpdated}">
+					<p class="auth-notice auth-notice--success">
+						<c:out value="${accountUpdated}" />
+					</p>
+				</c:if>
 
-										<div class="account-profile-header">
-											<div class="field">
-												<span class="field__label">
-													<spring:message code="account.profileImage.field" />
-												</span>
-												<section class="account-profile-media"
-													aria-label="<c:out value='${accountProfileImageAlt}' />">
-													<img class="account-profile-media__image"
-														src="${accountProfileImageSrc}"
-														alt="<c:out value='${accountProfileImageAlt}' />"
-														loading="eager" decoding="async" />
-												</section>
-											</div>
+				<spring:message var="usernamePlaceholder" code="form.username.placeholder" />
+				<spring:message var="namePlaceholder" code="form.name.placeholder" />
+				<spring:message var="lastNamePlaceholder" code="form.lastName.placeholder" />
+				<spring:message var="phonePlaceholder" code="form.phone.placeholder" />
+				<spring:message var="profileImageLabel" code="account.profileImage.field" />
+				<c:url var="accountAction" value="/account/edit" />
+				<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
 
-											<div class="account-actions account-actions--top">
-												<c:url var="accountEditHref" value="/account/edit" />
-												<ui:button label="${accountEditLabel}" href="${accountEditHref}"
-													variant="secondary" />
-											</div>
-										</div>
+				<c:url var="logoutAction" value="/logout" />
+				<form id="logout-form" method="post" action="${logoutAction}" style="display: none;">
+					<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+				</form>
 
-										<c:if test="${not empty accountUpdated}">
-											<p class="auth-notice auth-notice--success">
-												<c:out value="${accountUpdated}" />
-											</p>
-										</c:if>
+				<form:form method="post" action="${accountAction}" modelAttribute="accountProfileForm"
+					cssClass="account-inline-layout" id="account-edit-form" enctype="multipart/form-data"
+					novalidate="novalidate">
+					<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 
+					<div class="account-inline-left">
+						<div class="field">
+							<span class="field__label">
+								<c:out value="${profileImageLabel}" />
+							</span>
+							<section class="account-profile-media account-profile-media--editable">
+								<div class="account-profile-media__preview">
+									<img class="account-profile-media__image" src="${accountProfileImageSrc}"
+										alt="<c:out value='${accountProfileImageAlt}' />" loading="eager"
+										decoding="async" />
+									<div class="account-profile-media__copy">
+										<h2 class="account-profile-media__title">
+											<c:out value="${accountProfileImageTitle}" />
+										</h2>
+										<p class="account-profile-media__description">
+											<c:out value="${accountProfileImageDescription}" />
+										</p>
+									</div>
+								</div>
 
-										<div class="account-summary">
-											<label class="field" for="account-email">
-												<span class="field__label">
-													<spring:message code="form.email.label" />
-												</span>
-												<input id="account-email" type="email"
-													class="field__control account-readonly-control account-readonly-control"
-													value="<c:out value='${accountProfile.email}' />"
-													readonly="readonly" aria-readonly="true" />
-											</label>
+								<c:if test="${not empty accountProfileImageError}">
+									<p class="auth-notice auth-notice--error">
+										<c:out value="${accountProfileImageError}" />
+									</p>
+								</c:if>
 
-											<div class="account-summary__name-row">
-												<label class="field" for="account-name">
-													<span class="field__label">
-														<spring:message code="form.name.label" />
-													</span>
-													<input id="account-name" type="text"
-														class="field__control account-readonly-control"
-														value="<c:out value='${accountProfile.name}' />"
-														readonly="readonly" aria-readonly="true" />
-												</label>
-												<label class="field" for="account-last-name">
-													<span class="field__label">
-														<spring:message code="form.lastName.label" />
-													</span>
-													<input id="account-last-name" type="text"
-														class="field__control account-readonly-control"
-														value="<c:out value='${accountProfile.lastName}' />"
-														readonly="readonly" aria-readonly="true" />
-												</label>
-											</div>
+								<label class="field" for="account-profile-image">
+									<span class="field__label">
+										<c:out value="${profileImageLabel}" />
+									</span>
+									<input id="account-profile-image" name="profileImage" type="file"
+										class="field__control" accept="image/png,image/jpeg,image/webp,image/gif" />
+								</label>
+								<p class="auth-links__meta">
+									<c:out value="${accountProfileImageHint}" />
+								</p>
+							</section>
+						</div>
 
-
-											<label class="field" for="account-username">
-												<span class="field__label">
-													<spring:message code="form.username.label" />
-												</span>
-												<input id="account-username" type="text"
-													class="field__control account-readonly-control"
-													value="<c:out value='${accountProfile.username}' />"
-													readonly="readonly" aria-readonly="true" />
-											</label>
-
-											<label class="field" for="account-phone">
-												<span class="field__label">
-													<spring:message code="form.phone.label" />
-												</span>
-												<input id="account-phone" type="tel"
-													class="field__control account-readonly-control"
-													value="<c:out value='${accountPhoneValue}' />" readonly="readonly"
-													aria-readonly="true" />
-											</label>
-										</div>
-
-										<c:url var="logoutAction" value="/logout" />
-										<form method="post" action="${logoutAction}" class="account-logout">
-											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-											<ui:button label="${logoutLabel}" type="submit" variant="danger" />
-										</form>
-								</section>
-							</main>
+						<div class="account-logout">
+							<ui:button label="${logoutLabel}" type="submit" form="logout-form" variant="danger" />
+						</div>
 					</div>
-				</body>
 
-				</html>
+					<div class="account-inline-right">
+						<div class="account-form">
+							<%-- Email (Read-only locked field) --%>
+							<label class="field" for="account-email">
+								<span class="field__label">
+									<spring:message code="form.email.label" />
+								</span>
+								<div class="account-locked-field">
+									<input id="account-email" type="email"
+										class="field__control account-readonly-control account-locked-field__control account-readonly-control--muted"
+										value="<c:out value='${accountEmail}' />" disabled="disabled"
+										aria-disabled="true" readonly="readonly" aria-readonly="true"
+										autocomplete="email" />
+									<span class="account-locked-field__icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
+											<rect x="6.5" y="10" width="11" height="9" rx="2.2" />
+										</svg>
+									</span>
+								</div>
+							</label>
+
+							<%-- First + Last name side by side --%>
+							<div class="account-summary__name-row">
+								<label class="field" for="account-name">
+									<span class="field__label">
+										<spring:message code="form.name.label" />
+									</span>
+									<form:input path="name" id="account-name"
+										cssClass="field__control account-readonly-control account-field--editable"
+										placeholder="${namePlaceholder}" required="required"
+										autocomplete="given-name" readonly="true" />
+									<form:errors path="name" cssClass="field__error" element="span" />
+								</label>
+								<label class="field" for="account-last-name">
+									<span class="field__label">
+										<spring:message code="form.lastName.label" />
+									</span>
+									<form:input path="lastName" id="account-last-name"
+										cssClass="field__control account-readonly-control account-field--editable"
+										placeholder="${lastNamePlaceholder}" required="required"
+										autocomplete="family-name" readonly="true" />
+									<form:errors path="lastName" cssClass="field__error" element="span" />
+								</label>
+							</div>
+
+							<label class="field" for="account-username">
+								<span class="field__label">
+									<spring:message code="form.username.label" />
+								</span>
+								<form:input path="username" id="account-username"
+									cssClass="field__control account-readonly-control account-field--editable"
+									placeholder="${usernamePlaceholder}" required="required"
+									autocomplete="username" readonly="true" />
+								<form:errors path="username" cssClass="field__error" element="span" />
+							</label>
+
+							<label class="field" for="account-phone">
+								<span class="field__label">
+									<spring:message code="form.phone.label" />
+								</span>
+								<form:input path="phone" id="account-phone" type="tel"
+									cssClass="field__control account-readonly-control account-field--editable"
+									placeholder="${phonePlaceholder}" autocomplete="tel" readonly="true" />
+								<form:errors path="phone" cssClass="field__error" element="span" />
+							</label>
+
+							<div class="account-edit-actions" id="account-edit-actions">
+								<ui:button label="${accountSaveLabel}" type="submit" id="account-save-button" />
+								<ui:button label="${accountCancelLabel}" variant="secondary" id="account-cancel-button" />
+							</div>
+						</div>
+					</div>
+				</form:form>
+
+			</section>
+		</main>
+	</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+			const form = document.getElementById('account-edit-form');
+			const editableFields = form.querySelectorAll('.account-field--editable');
+			const fileInput = document.getElementById('account-profile-image');
+			const actionsBar = document.getElementById('account-edit-actions');
+			const cancelButton = document.getElementById('account-cancel-button');
+
+			// Store original values
+			const originalValues = new Map();
+			editableFields.forEach(field => {
+				originalValues.set(field, field.value);
+			});
+			let fileChanged = false;
+
+			// Enter edit mode
+			function enterEditMode() {
+				editableFields.forEach(field => {
+					field.removeAttribute('readonly');
+					field.classList.remove('account-readonly-control');
+				});
+			}
+
+			function checkForChanges() {
+				let hasChanges = fileChanged;
+				editableFields.forEach(field => {
+					if (field.value !== originalValues.get(field)) {
+						hasChanges = true;
+					}
+				});
+
+				if (hasChanges) {
+					actionsBar.classList.add('account-edit-actions--visible');
+				} else {
+					actionsBar.classList.remove('account-edit-actions--visible');
+				}
+			}
+
+			editableFields.forEach(field => {
+				field.addEventListener('focus', enterEditMode);
+				field.addEventListener('click', enterEditMode);
+				field.addEventListener('input', checkForChanges);
+			});
+
+			if (fileInput) {
+				fileInput.addEventListener('change', () => {
+					fileChanged = !!fileInput.value;
+					checkForChanges();
+				});
+			}
+
+			if (cancelButton) {
+				cancelButton.addEventListener('click', (e) => {
+					e.preventDefault();
+					// Restore original values
+					editableFields.forEach(field => {
+						field.value = originalValues.get(field);
+						field.setAttribute('readonly', 'true');
+						field.classList.add('account-readonly-control');
+					});
+					if (fileInput) {
+						fileInput.value = '';
+					}
+					fileChanged = false;
+					actionsBar.classList.remove('account-edit-actions--visible');
+				});
+			}
+		});
+	</script>
+</body>
+
+</html>

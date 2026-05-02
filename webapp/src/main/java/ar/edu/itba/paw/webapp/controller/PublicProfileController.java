@@ -112,7 +112,7 @@ public class PublicProfileController {
                 .filter(principal -> principal.getUserId().equals(user.getId()))
                 .ifPresent(
                         principal -> {
-                            mav.addObject("profileEditHref", "/account/edit");
+                            mav.addObject("profileEditHref", "/account");
                             mav.addObject(
                                     "profileEditLabel",
                                     messageSource.getMessage(

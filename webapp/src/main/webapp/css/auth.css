@@ -184,7 +184,39 @@
 }
 
 .account-shell {
-	max-width: 760px;
+	max-width: 900px;
+}
+
+.account-inline-layout {
+	display: grid;
+	grid-template-columns: 280px 1fr;
+	gap: 2rem;
+	align-items: start;
+}
+
+.account-inline-left {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.account-inline-right {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.account-edit-actions {
+	display: none;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	margin-top: 1rem;
+}
+
+.account-edit-actions--visible {
+	display: flex;
+}
+
+.account-field--editable {
+	cursor: text;
 }
 
 .account-panel {
@@ -340,6 +372,10 @@
 	.account-panel__header {
 		align-items: stretch;
 		flex-direction: column;
+	}
+
+	.account-inline-layout {
+		grid-template-columns: 1fr;
 	}
 
 	.account-profile-media__preview {

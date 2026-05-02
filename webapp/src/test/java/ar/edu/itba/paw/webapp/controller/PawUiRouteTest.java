@@ -2676,22 +2676,13 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
                 .andExpect(model().attributeExists("accountProfile"))
+                .andExpect(model().attributeExists("accountProfileForm"))
                 .andExpect(model().attributeExists("shell"));
     }
 
     @Test
     void getAccountRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(get("/account")).andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void getAccountEditRouteRendersEditablePageForAuthenticatedUsers() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/account/edit"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("account/edit"))
-                .andExpect(model().attributeExists("accountProfileForm"));
     }
 
     @Test
@@ -2761,7 +2752,7 @@ class PawUiRouteTest {
                                 .param("lastName", "Rivera")
                                 .param("phone", "+1 555 123 4567"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("account/edit"))
+                .andExpect(view().name("account/index"))
                 .andExpect(model().attribute("accountProfileImageError", expectedMessage));
     }
 
@@ -2893,7 +2884,7 @@ class PawUiRouteTest {
 
         mockMvc.perform(get("/users/host-player"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("profileEditHref", "/account/edit"))
+                .andExpect(model().attribute("profileEditHref", "/account"))
                 .andExpect(model().attribute("reviewFormVisible", false));
     }
 
