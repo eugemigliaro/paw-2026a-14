@@ -1,36 +1,52 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const dropdown = document.getElementById('reason-dropdown');
-    const toggle = document.getElementById('reason-toggle');
-    const label = document.getElementById('selected-reason-label');
-    const select = document.getElementById('report-reason');
-    const items = dropdown.querySelectorAll('.report-dropdown__item');
+    const dropdowns = document.querySelectorAll('.report-dropdown');
 
-    toggle.addEventListener('click', function() {
-        dropdown.classList.toggle('is-open');
-    });
+    dropdowns.forEach(dropdown => {
+        const toggle = dropdown.querySelector('.report-dropdown__toggle');
+        const label = dropdown.querySelector('[id^="selected-"][id$="-label"]') || dropdown.querySelector('.report-dropdown__label');
+        const select = dropdown.querySelector('select');
+        const items = dropdown.querySelectorAll('.report-dropdown__item');
 
-    items.forEach(item => {
-        item.addEventListener('click', function() {
-            const value = this.dataset.value;
-            const text = this.innerText;
+        if (!toggle || !items.length || !select) return;
 
-            // Update selection
-            select.value = value;
-            label.innerText = text;
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // Close other dropdowns first
+            dropdowns.forEach(other => {
+                if (other !== dropdown) other.classList.remove('is-open');
+            });
+            dropdown.classList.toggle('is-open');
+        });
 
-            // Update active state
-            items.forEach(i => i.classList.remove('report-dropdown__item--active'));
-            this.classList.add('report-dropdown__item--active');
+        items.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const value = this.dataset.value;
+                const text = this.innerText;
 
-            // Close dropdown
-            dropdown.classList.remove('is-open');
+                // Update selection
+                select.value = value;
+                if (label) label.innerText = text;
+
+                // Update active state
+                items.forEach(i => i.classList.remove('report-dropdown__item--active'));
+                this.classList.add('report-dropdown__item--active');
+
+                // Close dropdown
+                dropdown.classList.remove('is-open');
+                
+                // Trigger change event on select
+                select.dispatchEvent(new Event('change'));
+            });
         });
     });
 
     // Close on outside click
     document.addEventListener('click', function(event) {
-        if (!dropdown.contains(event.target)) {
-            dropdown.classList.remove('is-open');
-        }
+        dropdowns.forEach(dropdown => {
+            if (!dropdown.contains(event.target)) {
+                dropdown.classList.remove('is-open');
+            }
+        });
     });
 });

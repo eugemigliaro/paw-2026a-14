@@ -110,7 +110,7 @@
 				<c:if test="${not empty report.appealReason}">
 					<ui:card className="report-section">
 						<div class="section-head">
-							<h2 class="field__label"><spring:message code="reports.mine.appealReason" /></h2>
+							<h2 class="field__label"><spring:message code="reports.mine.appeal" /></h2>
 						</div>
 						<dl class="stack report-section__top">
 							<div class="report-section-field">
@@ -124,7 +124,7 @@
 							</div>
 							</c:if>
 							<c:if test="${not empty report.appealResolutionCode}">
-								<spring:message var="appealResolutionLabel" code="reports.mine.resolution.${report.appealResolutionCode}" />
+								<spring:message var="appealResolutionLabel" code="admin.reports.appealDecision.${report.appealResolutionCode}" />
 								<div class="report-section-field report-section-field__row">
 									<dt class="detail-label"><spring:message code="reports.mine.appealResolution" /></dt>
 									<dd><c:out value="${appealResolutionLabel}" /></dd>

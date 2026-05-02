@@ -131,6 +131,16 @@
 	transition: all 0.2s ease;
 }
 
+.field__control--ban-days {
+	max-width: 100px;
+}
+
+.report-resolution__actions {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
 .field__control:focus {
 	outline: none;
 	border-color: var(--accent);

@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -28,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +50,11 @@ public class ModerationAdminController {
             final ModerationService moderationService, final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
+    }
+
+    @ModelAttribute("resolutionForm")
+    public ModerationResolutionForm resolutionForm() {
+        return new ModerationResolutionForm();
     }
 
     @GetMapping
@@ -100,7 +107,9 @@ public class ModerationAdminController {
                         .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
+        final ModerationReportViewModel reportVm = toViewModel(report, locale);
         final ModelAndView mav = new ModelAndView("admin/reports/detail");
+
         mav.addObject(
                 "shell",
                 ShellViewModelFactory.playerShell(messageSource, locale, "/admin/reports"));
@@ -113,8 +122,26 @@ public class ModerationAdminController {
         mav.addObject(
                 "pageDescription",
                 messageSource.getMessage("admin.reports.detail.description", null, locale));
-        mav.addObject("report", toViewModel(report, locale));
-        mav.addObject("userBan", userBanViewModel(report, locale));
+
+        mav.addObject("report", reportVm);
+
+        final boolean showResolution =
+                report.getResolution() != null
+                        || report.getStatus() == ReportStatus.UNDER_REVIEW
+                        || report.getStatus() == ReportStatus.PENDING;
+        mav.addObject("showResolution", showResolution);
+
+        final boolean showAppeal =
+                report.getAppealCount() > 0 || report.getStatus() == ReportStatus.APPEALED;
+        mav.addObject("showAppeal", showAppeal);
+
+        final boolean showAppealResolution = showAppeal;
+        mav.addObject("showAppealResolution", showAppealResolution);
+
+        if (showResolution) {
+            mav.addObject("userBan", userBanViewModel(report, locale));
+        }
+
         return mav;
     }
 
@@ -131,14 +158,28 @@ public class ModerationAdminController {
 
     @PostMapping("/{reportId:\\d+}/dismiss")
     public ModelAndView dismissReport(
-            @PathVariable("reportId") final Long reportId, final Locale locale) {
-        return resolveReport(reportId, ReportResolution.DISMISSED, "dismissed", locale);
+            @PathVariable("reportId") final Long reportId,
+            @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
+            final Locale locale) {
+        return resolveReport(
+                reportId,
+                ReportResolution.DISMISSED,
+                "dismissed",
+                form.getResolutionDetails(),
+                locale);
     }
 
     @PostMapping("/{reportId:\\d+}/delete-content")
     public ModelAndView deleteContent(
-            @PathVariable("reportId") final Long reportId, final Locale locale) {
-        return resolveReport(reportId, ReportResolution.CONTENT_DELETED, "deleted", locale);
+            @PathVariable("reportId") final Long reportId,
+            @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
+            final Locale locale) {
+        return resolveReport(
+                reportId,
+                ReportResolution.CONTENT_DELETED,
+                "deleted",
+                form.getResolutionDetails(),
+                locale);
     }
 
     @PostMapping("/{reportId:\\d+}/ban-user")
@@ -146,10 +187,15 @@ public class ModerationAdminController {
             @PathVariable("reportId") final Long reportId,
             @RequestParam(value = "banDays", required = false, defaultValue = "7")
                     final int banDays,
-            @RequestParam(value = "banReason", required = false) final String banReason,
+            @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
             final Locale locale) {
         try {
-            return resolveReport(reportId, ReportResolution.USER_BANNED, "banned", locale);
+            return resolveReport(
+                    reportId,
+                    ReportResolution.USER_BANNED,
+                    "banned",
+                    form.getResolutionDetails(),
+                    locale);
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
         }
@@ -176,6 +222,7 @@ public class ModerationAdminController {
             final Long reportId,
             final ReportResolution resolution,
             final String actionCode,
+            final String resolutionDetails,
             final Locale locale) {
         try {
             final ModerationReport report =
@@ -183,7 +230,7 @@ public class ModerationAdminController {
                             reportId,
                             currentAdminUserId(),
                             resolution,
-                            null,
+                            resolutionDetails,
                             ReportStatus.RESOLVED);
             if (report == null) {
                 return redirectToReportsError("report_not_found");
