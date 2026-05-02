@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
 import ar.edu.itba.paw.models.ReportTargetType;
@@ -11,11 +12,13 @@ import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -36,11 +39,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 @RequestMapping("/admin/reports")
 @PreAuthorize("hasRole('ADMIN_MOD')")
 public class ModerationAdminController {
+    private static final int PAGE_SIZE = 4;
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
@@ -61,6 +66,7 @@ public class ModerationAdminController {
     public ModelAndView showReports(
             @RequestParam(value = "type", required = false) final List<String> typeFilters,
             @RequestParam(value = "status", required = false) final List<String> statusFilters,
+            @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
 
         final List<ReportTargetType> selectedTypes =
@@ -68,10 +74,10 @@ public class ModerationAdminController {
         final List<ReportStatus> selectedStatuses =
                 parseEnumFilters(statusFilters, ReportStatus::fromDbValue);
 
+        final PaginatedResult<ModerationReport> result =
+                moderationService.findReports(selectedTypes, selectedStatuses, page, PAGE_SIZE);
         final List<ModerationReportViewModel> reports =
-                moderationService.findReports(selectedTypes, selectedStatuses).stream()
-                        .map(report -> toViewModel(report, locale))
-                        .toList();
+                result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
         mav.addObject(
@@ -87,7 +93,7 @@ public class ModerationAdminController {
         mav.addObject(
                 "reportCountLabel",
                 messageSource.getMessage(
-                        "admin.reports.count", new Object[] {reports.size()}, locale));
+                        "admin.reports.count", new Object[] {result.getTotalCount()}, locale));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("admin.reports.empty", null, locale));
         mav.addObject("reports", reports);
@@ -96,7 +102,69 @@ public class ModerationAdminController {
         mav.addObject(
                 "selectedStatuses",
                 selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
+        mav.addObject("hasPreviousPage", result.hasPrevious());
+        mav.addObject("hasNextPage", result.hasNext());
+        mav.addObject("previousPageHref", buildPageUrl(selectedTypes, selectedStatuses, page - 1));
+        mav.addObject("nextPageHref", buildPageUrl(selectedTypes, selectedStatuses, page + 1));
+        mav.addObject(
+                "paginationItems", buildPaginationItems(selectedTypes, selectedStatuses, result));
         return mav;
+    }
+
+    private List<PaginationItemViewModel> buildPaginationItems(
+            final List<ReportTargetType> selectedTypes,
+            final List<ReportStatus> selectedStatuses,
+            final PaginatedResult<ModerationReport> result) {
+        if (result.getTotalPages() <= 1) {
+            return List.of();
+        }
+
+        final List<PaginationItemViewModel> items = new ArrayList<>();
+        final int startPage =
+                Math.max(2, Math.min(result.getPage() - 1, result.getTotalPages() - 3));
+        final int endPage = Math.min(result.getTotalPages() - 1, Math.max(result.getPage() + 1, 4));
+
+        items.add(pageItem(selectedTypes, selectedStatuses, 1, result.getPage()));
+        if (startPage > 2) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+        for (int currentPage = startPage; currentPage <= endPage; currentPage++) {
+            items.add(pageItem(selectedTypes, selectedStatuses, currentPage, result.getPage()));
+        }
+        if (endPage < result.getTotalPages() - 1) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+        items.add(
+                pageItem(
+                        selectedTypes, selectedStatuses, result.getTotalPages(), result.getPage()));
+        return items;
+    }
+
+    private PaginationItemViewModel pageItem(
+            final List<ReportTargetType> selectedTypes,
+            final List<ReportStatus> selectedStatuses,
+            final int page,
+            final int currentPage) {
+        return new PaginationItemViewModel(
+                Integer.toString(page),
+                buildPageUrl(selectedTypes, selectedStatuses, page),
+                page == currentPage,
+                false);
+    }
+
+    private String buildPageUrl(
+            final List<ReportTargetType> selectedTypes,
+            final List<ReportStatus> selectedStatuses,
+            final int page) {
+        final UriComponentsBuilder builder =
+                UriComponentsBuilder.fromPath("/admin/reports").queryParam("page", page);
+        selectedTypes.stream()
+                .map(ReportTargetType::getDbValue)
+                .forEach(type -> builder.queryParam("type", type));
+        selectedStatuses.stream()
+                .map(ReportStatus::getDbValue)
+                .forEach(status -> builder.queryParam("status", status));
+        return builder.build().encode().toUriString();
     }
 
     @GetMapping("/{reportId:\\d+}")

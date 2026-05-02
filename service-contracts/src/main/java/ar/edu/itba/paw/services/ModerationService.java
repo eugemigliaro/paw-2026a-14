@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
@@ -28,10 +29,23 @@ public interface ModerationService {
     List<ModerationReport> findReports(
             List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
+    PaginatedResult<ModerationReport> findReports(
+            List<ReportTargetType> targetTypes,
+            List<ReportStatus> statuses,
+            int page,
+            int pageSize);
+
     List<ModerationReport> findReportsByReporter(Long reporterUserId);
 
     List<ModerationReport> findReportsByReporter(
             Long reporterUserId, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
+
+    PaginatedResult<ModerationReport> findReportsByReporter(
+            Long reporterUserId,
+            List<ReportTargetType> targetTypes,
+            List<ReportStatus> statuses,
+            int page,
+            int pageSize);
 
     Optional<ModerationReport> findReportById(Long reportId);
 

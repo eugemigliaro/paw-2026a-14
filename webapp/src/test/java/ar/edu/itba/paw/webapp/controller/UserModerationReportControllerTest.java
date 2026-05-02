@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportStatus;
 import ar.edu.itba.paw.models.ReportTargetType;
@@ -61,8 +62,8 @@ class UserModerationReportControllerTest {
     @Test
     void getMyReportsRendersList() throws Exception {
         authenticateUser(7L);
-        Mockito.when(moderationService.findReportsByReporter(7L, List.of(), List.of()))
-                .thenReturn(List.of(sampleReport()));
+        Mockito.when(moderationService.findReportsByReporter(7L, List.of(), List.of(), 1, 4))
+                .thenReturn(new PaginatedResult<>(List.of(sampleReport()), 1, 1, 4));
 
         mockMvc.perform(get("/reports/mine"))
                 .andExpect(status().isOk())
@@ -76,8 +77,10 @@ class UserModerationReportControllerTest {
                         moderationService.findReportsByReporter(
                                 7L,
                                 List.of(ReportTargetType.MATCH, ReportTargetType.REVIEW),
-                                List.of(ReportStatus.PENDING, ReportStatus.RESOLVED)))
-                .thenReturn(List.of(sampleReport()));
+                                List.of(ReportStatus.PENDING, ReportStatus.RESOLVED),
+                                1,
+                                4))
+                .thenReturn(new PaginatedResult<>(List.of(sampleReport()), 1, 1, 4));
 
         mockMvc.perform(
                         get("/reports/mine")

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
@@ -60,7 +61,8 @@ class ModerationAdminControllerTest {
 
     @Test
     void getReportsRendersAdminQueue() throws Exception {
-        Mockito.when(moderationService.findReports()).thenReturn(List.of(sampleAppealedReport()));
+        Mockito.when(moderationService.findReports(List.of(), List.of(), 1, 4))
+                .thenReturn(new PaginatedResult<>(List.of(sampleAppealedReport()), 1, 1, 4));
 
         mockMvc.perform(get("/admin/reports").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())

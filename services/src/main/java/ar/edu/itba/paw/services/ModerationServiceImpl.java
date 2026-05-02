@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
@@ -205,6 +206,17 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional(readOnly = true)
+    public PaginatedResult<ModerationReport> findReports(
+            final List<ReportTargetType> targetTypes,
+            final List<ReportStatus> statuses,
+            final int page,
+            final int pageSize) {
+        return moderationReportDao.findReports(
+                targetTypes, statuses, normalizePage(page), normalizePageSize(pageSize));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ModerationReport> findReportsByReporter(final Long reporterUserId) {
         return findReportsByReporter(reporterUserId, List.of(), List.of());
     }
@@ -219,6 +231,25 @@ public class ModerationServiceImpl implements ModerationService {
             throw new ModerationException("invalid_report", "Reporter user is required.");
         }
         return moderationReportDao.findReportsByReporter(reporterUserId, targetTypes, statuses);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaginatedResult<ModerationReport> findReportsByReporter(
+            final Long reporterUserId,
+            final List<ReportTargetType> targetTypes,
+            final List<ReportStatus> statuses,
+            final int page,
+            final int pageSize) {
+        if (reporterUserId == null) {
+            throw new ModerationException("invalid_report", "Reporter user is required.");
+        }
+        return moderationReportDao.findReportsByReporter(
+                reporterUserId,
+                targetTypes,
+                statuses,
+                normalizePage(page),
+                normalizePageSize(pageSize));
     }
 
     @Override
@@ -432,6 +463,14 @@ public class ModerationServiceImpl implements ModerationService {
         return status == ReportStatus.PENDING
                 || status == ReportStatus.UNDER_REVIEW
                 || status == ReportStatus.APPEALED;
+    }
+
+    private static int normalizePage(final int page) {
+        return page > 0 ? page : 1;
+    }
+
+    private int normalizePageSize(final int pageSize) {
+        return pageSize > 0 ? pageSize : DEFAULT_REPORT_PAGE_SIZE;
     }
 
     @Override

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
@@ -31,6 +32,12 @@ public interface ModerationReportDao {
     List<ModerationReport> findReports(
             List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
+    PaginatedResult<ModerationReport> findReports(
+            List<ReportTargetType> targetTypes,
+            List<ReportStatus> statuses,
+            int page,
+            int pageSize);
+
     Optional<ModerationReport> findLatestUserBanReportByTargetUserId(Long targetUserId);
 
     int countActiveReportsByReporter(Long reporterUserId);
@@ -52,4 +59,11 @@ public interface ModerationReportDao {
             Long appealResolvedByUserId,
             AppealDecision appealDecision,
             Instant appealResolvedAt);
+
+    PaginatedResult<ModerationReport> findReportsByReporter(
+            Long reporterUserId,
+            List<ReportTargetType> targetTypes,
+            List<ReportStatus> statuses,
+            int page,
+            int pageSize);
 }

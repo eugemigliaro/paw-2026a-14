@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
@@ -143,16 +144,8 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
             final Long reporterUserId,
             final List<ReportTargetType> targetTypes,
             final List<ReportStatus> statuses) {
-        final StringBuilder sql =
-                new StringBuilder("SELECT * FROM moderation_reports WHERE reporter_user_id = ?");
-        final List<Object> args = new LinkedList<>();
-        args.add(reporterUserId);
-
-        appendEnumFilter(sql, args, "target_type", targetTypes);
-        appendEnumFilter(sql, args, "status", statuses);
-
-        sql.append(" ORDER BY created_at DESC, id DESC");
-        return jdbcTemplate.query(sql.toString(), MODERATION_REPORT_ROW_MAPPER, args.toArray());
+        return findReportsByReporter(reporterUserId, targetTypes, statuses, 1, Integer.MAX_VALUE)
+                .getItems();
     }
 
     @Override
@@ -165,6 +158,15 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
     @Override
     public List<ModerationReport> findReports(
             List<ReportTargetType> targetTypes, List<ReportStatus> statuses) {
+        return findReports(targetTypes, statuses, 1, Integer.MAX_VALUE).getItems();
+    }
+
+    @Override
+    public PaginatedResult<ModerationReport> findReports(
+            final List<ReportTargetType> targetTypes,
+            final List<ReportStatus> statuses,
+            final int page,
+            final int pageSize) {
         final StringBuilder sql = new StringBuilder("SELECT * FROM moderation_reports");
         final List<Object> args = new LinkedList<>();
 
@@ -173,8 +175,16 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
         appendEnumFilter(sql, args, "target_type", targetTypes);
         appendEnumFilter(sql, args, "status", statuses);
 
-        sql.append(" ORDER BY created_at DESC, id DESC");
-        return jdbcTemplate.query(sql.toString(), MODERATION_REPORT_ROW_MAPPER, args.toArray());
+        final int totalCount = queryCount(sql, args);
+        final int safeOffset = Math.max(0, (page - 1) * pageSize);
+
+        sql.append(" ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?");
+        args.add(pageSize);
+        args.add(safeOffset);
+
+        final List<ModerationReport> items =
+                jdbcTemplate.query(sql.toString(), MODERATION_REPORT_ROW_MAPPER, args.toArray());
+        return new PaginatedResult<>(items, totalCount, page, pageSize);
     }
 
     @Override
@@ -288,6 +298,40 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                         reportId,
                         new SqlParameterValue(Types.OTHER, ReportStatus.APPEALED.getDbValue()));
         return rows == 1;
+    }
+
+    @Override
+    public PaginatedResult<ModerationReport> findReportsByReporter(
+            final Long reporterUserId,
+            final List<ReportTargetType> targetTypes,
+            final List<ReportStatus> statuses,
+            final int page,
+            final int pageSize) {
+        final StringBuilder sql =
+                new StringBuilder("SELECT * FROM moderation_reports WHERE reporter_user_id = ?");
+        final List<Object> args = new LinkedList<>();
+        args.add(reporterUserId);
+
+        appendEnumFilter(sql, args, "target_type", targetTypes);
+        appendEnumFilter(sql, args, "status", statuses);
+
+        final int totalCount = queryCount(sql, args);
+        final int safeOffset = Math.max(0, (page - 1) * pageSize);
+        sql.append(" ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?");
+        args.add(pageSize);
+        args.add(safeOffset);
+
+        final List<ModerationReport> items =
+                jdbcTemplate.query(sql.toString(), MODERATION_REPORT_ROW_MAPPER, args.toArray());
+        return new PaginatedResult<>(items, totalCount, page, pageSize);
+    }
+
+    private int queryCount(final StringBuilder filteredSql, final List<Object> filteredArgs) {
+        final String countSql =
+                filteredSql.toString().replaceFirst("SELECT \\*", "SELECT COUNT(*)");
+        final Integer totalCount =
+                jdbcTemplate.queryForObject(countSql, Integer.class, filteredArgs.toArray());
+        return totalCount == null ? 0 : totalCount;
     }
 
     private static <T> void appendEnumFilter(
