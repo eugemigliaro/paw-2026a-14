@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
@@ -34,10 +35,10 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                             rs.getLong("reporter_user_id"),
                             ReportTargetType.fromDbValue(rs.getString("target_type")).orElse(null),
                             rs.getLong("target_id"),
-                            rs.getString("target_key"),
                             ReportReason.fromDbValue(rs.getString("reason")).orElse(null),
                             rs.getString("details"),
-                            ReportStatus.fromDbValue(rs.getString("status")).orElse(null),
+                            ReportStatus.fromDbValue(rs.getString("status"))
+                                    .orElse(ReportStatus.PENDING),
                             ReportResolution.fromDbValue(rs.getString("resolution")).orElse(null),
                             rs.getString("resolution_details"),
                             rs.getObject("reviewed_by_user_id") == null
@@ -47,7 +48,7 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                             rs.getString("appeal_reason"),
                             rs.getInt("appeal_count"),
                             toInstant(rs.getTimestamp("appealed_at")),
-                            ReportResolution.fromDbValue(rs.getString("appeal_resolution"))
+                            AppealDecision.fromDbValue(rs.getString("appeal_decision"))
                                     .orElse(null),
                             rs.getObject("appeal_resolved_by_user_id") == null
                                     ? null
@@ -65,17 +66,6 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
                         .withTableName("moderation_reports")
-                        .usingColumns(
-                                "reporter_user_id",
-                                "target_type",
-                                "target_id",
-                                "target_key",
-                                "reason",
-                                "details",
-                                "status",
-                                "created_at",
-                                "updated_at",
-                                "appeal_count")
                         .usingGeneratedKeyColumns("id");
     }
 
@@ -84,7 +74,6 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
             final Long reporterUserId,
             final ReportTargetType targetType,
             final Long targetId,
-            final String targetKey,
             final ReportReason reason,
             final String details) {
         final Instant now = Instant.now();
@@ -92,7 +81,6 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
         values.put("reporter_user_id", reporterUserId);
         values.put("target_type", new SqlParameterValue(Types.OTHER, targetType.getDbValue()));
         values.put("target_id", targetId);
-        values.put("target_key", targetKey);
         values.put("reason", new SqlParameterValue(Types.OTHER, reason.getDbValue()));
         values.put("details", details);
         values.put("status", new SqlParameterValue(Types.OTHER, ReportStatus.PENDING.getDbValue()));
@@ -100,15 +88,13 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
         values.put("updated_at", Timestamp.from(now));
         values.put("appeal_count", 0);
 
-        final Number key = jdbcInsert.executeAndReturnKey(values);
-        final Long id = key.longValue();
+        final Long id = jdbcInsert.executeAndReturnKey(values).longValue();
 
         return new ModerationReport(
                 id,
                 reporterUserId,
                 targetType,
                 targetId,
-                targetKey,
                 reason,
                 details,
                 ReportStatus.PENDING,
@@ -128,7 +114,12 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
 
     @Override
     public Optional<ModerationReport> findById(final Long reportId) {
-        return jdbcTemplate.query(selectByIdSql(), MODERATION_REPORT_ROW_MAPPER, reportId).stream()
+        return jdbcTemplate
+                .query(
+                        "SELECT * FROM moderation_reports WHERE id = ?",
+                        MODERATION_REPORT_ROW_MAPPER,
+                        reportId)
+                .stream()
                 .findFirst();
     }
 
@@ -238,7 +229,7 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                                 + " SET status = ?, resolution = ?, resolution_details = ?,"
                                 + " reviewed_by_user_id = ?, reviewed_at = ?,"
                                 + " updated_at = CURRENT_TIMESTAMP"
-                                + " WHERE id = ? AND status IN (?,?,?)",
+                                + " WHERE id = ? AND status IN (?,?)",
                         new SqlParameterValue(Types.OTHER, nextStatus.getDbValue()),
                         new SqlParameterValue(Types.OTHER, resolution.getDbValue()),
                         resolutionDetails,
@@ -246,8 +237,7 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                         Timestamp.from(reviewedAt),
                         reportId,
                         new SqlParameterValue(Types.OTHER, ReportStatus.PENDING.getDbValue()),
-                        new SqlParameterValue(Types.OTHER, ReportStatus.UNDER_REVIEW.getDbValue()),
-                        new SqlParameterValue(Types.OTHER, ReportStatus.PENDING.getDbValue()));
+                        new SqlParameterValue(Types.OTHER, ReportStatus.UNDER_REVIEW.getDbValue()));
         return rows == 1;
     }
 
@@ -272,26 +262,22 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
     public boolean finalizeAppeal(
             final Long reportId,
             final Long appealResolvedByUserId,
-            final ReportResolution appealResolution,
+            final AppealDecision appealDecision,
             final Instant appealResolvedAt) {
         final int rows =
                 jdbcTemplate.update(
                         "UPDATE moderation_reports"
-                                + " SET status = ?, appeal_resolution = ?,"
+                                + " SET status = ?, appeal_decision = ?,"
                                 + " appeal_resolved_by_user_id = ?, appeal_resolved_at = ?,"
                                 + " updated_at = CURRENT_TIMESTAMP"
                                 + " WHERE id = ? AND status = ?",
                         new SqlParameterValue(Types.OTHER, ReportStatus.FINALIZED.getDbValue()),
-                        new SqlParameterValue(Types.OTHER, appealResolution.getDbValue()),
+                        new SqlParameterValue(Types.OTHER, appealDecision.getDbValue()),
                         appealResolvedByUserId,
                         Timestamp.from(appealResolvedAt),
                         reportId,
                         new SqlParameterValue(Types.OTHER, ReportStatus.APPEALED.getDbValue()));
         return rows == 1;
-    }
-
-    private static String selectByIdSql() {
-        return "SELECT * FROM moderation_reports WHERE id = ?";
     }
 
     private static <T> void appendEnumFilter(

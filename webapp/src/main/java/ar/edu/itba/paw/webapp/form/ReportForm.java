@@ -13,7 +13,9 @@ public class ReportForm {
     private String reason;
 
     @Size(max = 4000, message = "{Size.reportForm.details}")
-    @Pattern(regexp = "^[\\p{L}\\p{N} .!?\\n]*$", message = "{Pattern.reportForm.details}")
+    @Pattern(
+            regexp = "^[\\p{L}\\p{N} ,.;:()\"'\\-\\/ .!?\\n]*$",
+            message = "{Pattern.reportForm.details}")
     private String details;
 
     public String getReason() {

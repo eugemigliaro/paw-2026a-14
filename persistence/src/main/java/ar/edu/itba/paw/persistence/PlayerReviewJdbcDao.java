@@ -3,7 +3,6 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.ReviewDeleteReason;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -46,8 +45,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                             rs.getObject("deleted_by_user_id") == null
                                     ? null
                                     : rs.getLong("deleted_by_user_id"),
-                            ReviewDeleteReason.fromDbValue(rs.getString("delete_reason"))
-                                    .orElse(null));
+                            rs.getString("delete_reason"));
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -101,8 +99,8 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
     public boolean softDeleteReview(
             final Long reviewerUserId,
             final Long reviewedUserId,
-            final ReviewDeleteReason reason,
-            final Long deletedByUserId) {
+            final Long deletedByUserId,
+            final String reason) {
         final int rows =
                 jdbcTemplate.update(
                         "UPDATE player_reviews"
@@ -112,9 +110,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                                 + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?"
                                 + " AND deleted_at IS NULL",
                         deletedByUserId,
-                        reason == null
-                                ? null
-                                : new SqlParameterValue(Types.OTHER, reason.getDbValue()),
+                        reason,
                         reviewerUserId,
                         reviewedUserId);
         return rows == 1;

@@ -6,6 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.ReportReason;
+import ar.edu.itba.paw.models.ReportStatus;
+import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserRole;
@@ -57,7 +61,10 @@ class UserBanAppealControllerTest {
     @Test
     void getBanPageRendersForActiveBan() throws Exception {
         authenticateUser(7L);
-        Mockito.when(moderationService.findActiveBan(7L)).thenReturn(Optional.of(sampleBan()));
+        final UserBan ban = sampleBan();
+        Mockito.when(moderationService.findActiveBan(7L)).thenReturn(Optional.of(ban));
+        Mockito.when(moderationService.findReportById(ban.getModerationReportId()))
+                .thenReturn(Optional.of(sampleReport()));
 
         mockMvc.perform(get("/account/ban"))
                 .andExpect(status().isOk())
@@ -75,19 +82,30 @@ class UserBanAppealControllerTest {
     }
 
     private static UserBan sampleBan() {
-        return new UserBan(
+        return new UserBan(10L, 12L, Instant.now().plusSeconds(3600));
+    }
+
+    private static ModerationReport sampleReport() {
+        return new ModerationReport(
                 12L,
                 7L,
-                1L,
-                "Spam",
-                Instant.now().plusSeconds(3600),
-                Instant.now(),
+                ReportTargetType.USER,
+                7L,
+                ReportReason.SPAM,
+                "Details",
+                ReportStatus.RESOLVED,
+                null,
+                null,
+                null,
+                null,
                 null,
                 0,
                 null,
                 null,
                 null,
-                null);
+                null,
+                Instant.now(),
+                Instant.now());
     }
 
     private static void authenticateUser(final Long userId) {

@@ -122,9 +122,7 @@ public class PlayerReviewJdbcDaoTest {
         final PlayerReview initial =
                 playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
 
-        final boolean deleted =
-                playerReviewDao.softDeleteReview(
-                        2L, 3L, ar.edu.itba.paw.models.ReviewDeleteReason.SPAM, 4L);
+        final boolean deleted = playerReviewDao.softDeleteReview(2L, 3L, 4L, "spam");
 
         Assertions.assertTrue(deleted);
         final Optional<PlayerReview> found =
@@ -132,8 +130,7 @@ public class PlayerReviewJdbcDaoTest {
         Assertions.assertTrue(found.isPresent());
         Assertions.assertTrue(found.get().isDeleted());
         Assertions.assertEquals(4L, found.get().getDeletedByUserId());
-        Assertions.assertEquals(
-                ar.edu.itba.paw.models.ReviewDeleteReason.SPAM, found.get().getDeleteReason());
+        Assertions.assertEquals("spam", found.get().getDeleteReason());
     }
 
     @Test
@@ -142,8 +139,7 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 3L, "joined");
 
         playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good teammate");
-        playerReviewDao.softDeleteReview(
-                2L, 3L, ar.edu.itba.paw.models.ReviewDeleteReason.SPAM, 4L);
+        playerReviewDao.softDeleteReview(2L, 3L, 4L, "spam");
 
         final boolean restored = playerReviewDao.restoreReview(2L, 3L);
         Assertions.assertTrue(restored);

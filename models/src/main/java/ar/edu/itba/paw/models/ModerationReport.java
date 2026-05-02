@@ -8,7 +8,6 @@ public class ModerationReport {
     private final Long reporterUserId;
     private final ReportTargetType targetType;
     private final Long targetId;
-    private final String targetKey;
     private final ReportReason reason;
     private final String details;
     private final ReportStatus status;
@@ -19,7 +18,7 @@ public class ModerationReport {
     private final String appealReason;
     private final int appealCount;
     private final Instant appealedAt;
-    private final ReportResolution appealResolution;
+    private final AppealDecision appealDecision;
     private final Long appealResolvedByUserId;
     private final Instant appealResolvedAt;
     private final Instant createdAt;
@@ -30,7 +29,6 @@ public class ModerationReport {
             final Long reporterUserId,
             final ReportTargetType targetType,
             final Long targetId,
-            final String targetKey,
             final ReportReason reason,
             final String details,
             final ReportStatus status,
@@ -41,7 +39,7 @@ public class ModerationReport {
             final String appealReason,
             final int appealCount,
             final Instant appealedAt,
-            final ReportResolution appealResolution,
+            final AppealDecision appealDecision,
             final Long appealResolvedByUserId,
             final Instant appealResolvedAt,
             final Instant createdAt,
@@ -50,7 +48,6 @@ public class ModerationReport {
         this.reporterUserId = reporterUserId;
         this.targetType = targetType;
         this.targetId = targetId;
-        this.targetKey = targetKey;
         this.reason = reason;
         this.details = details;
         this.status = status;
@@ -61,7 +58,7 @@ public class ModerationReport {
         this.appealReason = appealReason;
         this.appealCount = appealCount;
         this.appealedAt = appealedAt;
-        this.appealResolution = appealResolution;
+        this.appealDecision = appealDecision;
         this.appealResolvedByUserId = appealResolvedByUserId;
         this.appealResolvedAt = appealResolvedAt;
         this.createdAt = createdAt;
@@ -82,10 +79,6 @@ public class ModerationReport {
 
     public Long getTargetId() {
         return targetId;
-    }
-
-    public String getTargetKey() {
-        return targetKey;
     }
 
     public ReportReason getReason() {
@@ -128,8 +121,8 @@ public class ModerationReport {
         return appealedAt;
     }
 
-    public ReportResolution getAppealResolution() {
-        return appealResolution;
+    public AppealDecision getAppealDecision() {
+        return appealDecision;
     }
 
     public Long getAppealResolvedByUserId() {

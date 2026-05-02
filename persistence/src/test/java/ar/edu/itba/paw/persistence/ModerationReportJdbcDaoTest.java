@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
@@ -54,18 +55,12 @@ public class ModerationReportJdbcDaoTest {
     public void testCreateReport() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
 
         Assertions.assertNotNull(report.getId());
         Assertions.assertEquals(1L, report.getReporterUserId());
         Assertions.assertEquals(ReportTargetType.USER, report.getTargetType());
         Assertions.assertEquals(3L, report.getTargetId());
-        Assertions.assertEquals("target", report.getTargetKey());
         Assertions.assertEquals(ReportReason.SPAM, report.getReason());
         Assertions.assertEquals("Too many messages", report.getDetails());
         Assertions.assertEquals(ReportStatus.PENDING, report.getStatus());
@@ -75,12 +70,7 @@ public class ModerationReportJdbcDaoTest {
     public void testFindById() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
 
         final Optional<ModerationReport> found = moderationReportDao.findById(report.getId());
 
@@ -91,10 +81,9 @@ public class ModerationReportJdbcDaoTest {
 
     @Test
     public void testFindReportsByReporter() {
+        moderationReportDao.createReport(1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "First");
         moderationReportDao.createReport(
-                1L, ReportTargetType.USER, 3L, "target1", ReportReason.SPAM, "First");
-        moderationReportDao.createReport(
-                1L, ReportTargetType.USER, 2L, "target2", ReportReason.HARASSMENT, "Second");
+                1L, ReportTargetType.USER, 2L, ReportReason.HARASSMENT, "Second");
 
         final List<ModerationReport> reports = moderationReportDao.findReportsByReporter(1L);
 
@@ -107,12 +96,12 @@ public class ModerationReportJdbcDaoTest {
     public void testFindActiveReportsAndCount() {
         // Pending
         moderationReportDao.createReport(
-                1L, ReportTargetType.USER, 3L, "target1", ReportReason.SPAM, "Pending");
+                1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Pending");
 
         // Resolve one report so it is no longer active
         ModerationReport toResolve =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, "target2", ReportReason.SPAM, "Resolved");
+                        1L, ReportTargetType.USER, 2L, ReportReason.SPAM, "Resolved");
         moderationReportDao.markUnderReview(toResolve.getId(), 2L, NOW);
         moderationReportDao.resolveReport(
                 toResolve.getId(),
@@ -135,12 +124,7 @@ public class ModerationReportJdbcDaoTest {
     public void testMarkUnderReview() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
 
         final boolean success = moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
 
@@ -155,12 +139,7 @@ public class ModerationReportJdbcDaoTest {
     public void testResolveReport() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
         moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
 
         final boolean success =
@@ -183,12 +162,7 @@ public class ModerationReportJdbcDaoTest {
     public void testAppealReport() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
         moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
@@ -211,12 +185,7 @@ public class ModerationReportJdbcDaoTest {
     public void testFinalizeAppeal() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
         moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
@@ -228,13 +197,12 @@ public class ModerationReportJdbcDaoTest {
         moderationReportDao.appealReport(report.getId(), "I disagree", NOW);
 
         final boolean success =
-                moderationReportDao.finalizeAppeal(
-                        report.getId(), 2L, ReportResolution.WARNING, NOW);
+                moderationReportDao.finalizeAppeal(report.getId(), 2L, AppealDecision.LIFTED, NOW);
 
         Assertions.assertTrue(success);
         ModerationReport finalized = moderationReportDao.findById(report.getId()).get();
         Assertions.assertEquals(ReportStatus.FINALIZED, finalized.getStatus());
-        Assertions.assertEquals(ReportResolution.WARNING, finalized.getAppealResolution());
+        Assertions.assertEquals(AppealDecision.LIFTED, finalized.getAppealDecision());
         Assertions.assertEquals(2L, finalized.getAppealResolvedByUserId());
         Assertions.assertNotNull(finalized.getAppealResolvedAt());
     }
@@ -243,12 +211,7 @@ public class ModerationReportJdbcDaoTest {
     public void testMarkUnderReviewFailsWhenNotPending() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
         moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
@@ -266,12 +229,7 @@ public class ModerationReportJdbcDaoTest {
     public void testResolveReportFailsWhenNotPendingOrUnderReview() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
         moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
@@ -285,8 +243,8 @@ public class ModerationReportJdbcDaoTest {
                 moderationReportDao.resolveReport(
                         report.getId(),
                         2L,
-                        ReportResolution.WARNING,
-                        "Warning",
+                        ReportResolution.USER_BANNED,
+                        "Ban",
                         NOW,
                         ReportStatus.RESOLVED);
         Assertions.assertFalse(success);
@@ -296,12 +254,7 @@ public class ModerationReportJdbcDaoTest {
     public void testAppealReportFailsWhenNotResolvedOrAlreadyAppealed() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
 
         final boolean success1 = moderationReportDao.appealReport(report.getId(), "Appeal", NOW);
         Assertions.assertFalse(success1);
@@ -327,16 +280,10 @@ public class ModerationReportJdbcDaoTest {
     public void testFinalizeAppealFailsWhenNotAppealed() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L,
-                        ReportTargetType.USER,
-                        3L,
-                        "target",
-                        ReportReason.SPAM,
-                        "Too many messages");
+                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
 
         final boolean success =
-                moderationReportDao.finalizeAppeal(
-                        report.getId(), 2L, ReportResolution.WARNING, NOW);
+                moderationReportDao.finalizeAppeal(report.getId(), 2L, AppealDecision.UPHELD, NOW);
         Assertions.assertFalse(success);
     }
 }

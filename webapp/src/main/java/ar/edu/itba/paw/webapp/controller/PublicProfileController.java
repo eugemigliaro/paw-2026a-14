@@ -138,9 +138,6 @@ public class PublicProfileController {
                             DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                                     .withLocale(resolvedLocale)
                                     .format(ban.getBannedUntil().atZone(ZoneId.systemDefault())));
-                    if (isAdminViewer()) {
-                        mav.addObject("profileBannedReason", ban.getReason());
-                    }
                 });
         CurrentAuthenticatedUser.get()
                 .filter(principal -> principal.getUserId().equals(user.getId()))
@@ -299,13 +296,6 @@ public class PublicProfileController {
     private static AuthenticatedUserPrincipal requireAuthenticatedUser() {
         return CurrentAuthenticatedUser.get()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-    }
-
-    private static boolean isAdminViewer() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getRole)
-                .map(role -> role != null && role.isAdmin())
-                .orElse(false);
     }
 
     private static ModelAndView redirectToProfile(

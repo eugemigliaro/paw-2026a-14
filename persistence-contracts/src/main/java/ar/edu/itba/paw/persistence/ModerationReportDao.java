@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
@@ -15,7 +16,6 @@ public interface ModerationReportDao {
             Long reporterUserId,
             ReportTargetType targetType,
             Long targetId,
-            String targetKey,
             ReportReason reason,
             String details);
 
@@ -50,6 +50,6 @@ public interface ModerationReportDao {
     boolean finalizeAppeal(
             Long reportId,
             Long appealResolvedByUserId,
-            ReportResolution appealResolution,
+            AppealDecision appealDecision,
             Instant appealResolvedAt);
 }

@@ -117,9 +117,8 @@ public class UserModerationReportController {
             @PathVariable("reportId") final Long reportId,
             @RequestParam("appealReason") final String appealReason,
             final Locale locale) {
-        final long userId = currentUserId();
         try {
-            moderationService.appealReport(reportId, userId, appealReason);
+            moderationService.appealReport(reportId, appealReason);
             return new ModelAndView("redirect:/reports/mine/" + reportId + "?action=appealed");
         } catch (final ModerationException exception) {
             return new ModelAndView(
@@ -144,9 +143,7 @@ public class UserModerationReportController {
                 report.getDetails(),
                 report.getResolutionDetails(),
                 report.getAppealReason(),
-                report.getAppealResolution() == null
-                        ? ""
-                        : report.getAppealResolution().getDbValue(),
+                report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
                 report.getAppealCount(),
                 formatInstant(report.getCreatedAt(), locale),
                 formatInstant(report.getUpdatedAt(), locale),

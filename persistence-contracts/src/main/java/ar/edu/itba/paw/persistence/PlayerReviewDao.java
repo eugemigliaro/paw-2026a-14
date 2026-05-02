@@ -3,7 +3,6 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.ReviewDeleteReason;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,10 +17,7 @@ public interface PlayerReviewDao {
     boolean softDeleteReview(Long reviewerUserId, Long reviewedUserId);
 
     boolean softDeleteReview(
-            Long reviewerUserId,
-            Long reviewedUserId,
-            ReviewDeleteReason reason,
-            Long deletedByUserId);
+            Long reviewerUserId, Long reviewedUserId, Long deletedByUserId, String deleteReason);
 
     boolean restoreReview(Long reviewerUserId, Long reviewedUserId);
 

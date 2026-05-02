@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.BanAppealDecision;
+import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
@@ -135,12 +135,6 @@ public class ModerationAdminController {
         return resolveReport(reportId, ReportResolution.DISMISSED, "dismissed", locale);
     }
 
-    @PostMapping("/{reportId:\\d+}/warn")
-    public ModelAndView warnUser(
-            @PathVariable("reportId") final Long reportId, final Locale locale) {
-        return resolveReport(reportId, ReportResolution.WARNING, "warned", locale);
-    }
-
     @PostMapping("/{reportId:\\d+}/delete-content")
     public ModelAndView deleteContent(
             @PathVariable("reportId") final Long reportId, final Locale locale) {
@@ -155,9 +149,7 @@ public class ModerationAdminController {
             @RequestParam(value = "banReason", required = false) final String banReason,
             final Locale locale) {
         try {
-            moderationService.resolveUserBanReport(
-                    reportId, currentAdminUserId(), banReason, banDays, ReportStatus.RESOLVED);
-            return redirectToReports("banned");
+            return resolveReport(reportId, ReportResolution.USER_BANNED, "banned", locale);
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
         }
@@ -166,40 +158,15 @@ public class ModerationAdminController {
     @PostMapping("/{reportId:\\d+}/finalize-appeal")
     public ModelAndView finalizeAppeal(
             @PathVariable("reportId") final Long reportId,
-            @RequestParam("appealResolution") final String appealResolution,
+            @RequestParam("appealDecision") final String appealResolution,
             final Locale locale) {
-        final ReportResolution parsedResolution =
-                ReportResolution.fromDbValue(appealResolution)
+        final AppealDecision parsedAppealDecision =
+                AppealDecision.fromDbValue(appealResolution)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
         try {
             moderationService.finalizeReportAppeal(
-                    reportId, currentAdminUserId(), parsedResolution);
+                    reportId, currentAdminUserId(), parsedAppealDecision);
             return redirectToReports("appeal_finalized");
-        } catch (final ModerationException ex) {
-            return redirectToReportsError(ex.getCode());
-        }
-    }
-
-    @PostMapping("/{reportId:\\d+}/resolve-ban-appeal")
-    public ModelAndView resolveBanAppeal(
-            @PathVariable("reportId") final Long reportId,
-            @RequestParam("decision") final String decisionCode,
-            final Locale locale) {
-        final BanAppealDecision decision =
-                BanAppealDecision.fromDbValue(decisionCode)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
-        final ModerationReport report =
-                moderationService
-                        .findReportById(reportId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final UserBan ban =
-                Optional.ofNullable(moderationService.findLatestBanForUser(report.getTargetId()))
-                        .orElse(Optional.empty())
-                        .filter(candidate -> candidate.getAppealCount() > 0)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
-        try {
-            moderationService.resolveBanAppeal(ban.getId(), currentAdminUserId(), decision);
-            return redirectToReports("ban_appeal_resolved");
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
         }
@@ -291,20 +258,22 @@ public class ModerationAdminController {
         if (report.getTargetType() != ReportTargetType.USER) {
             return null;
         }
-        return Optional.ofNullable(moderationService.findLatestBanForUser(report.getTargetId()))
-                .orElse(Optional.empty())
-                .filter(ban -> ban.getAppealCount() > 0)
-                .map(
-                        ban ->
-                                new BanAppealViewModel(
-                                        ban.getId(),
-                                        ban.getAppealReason(),
-                                        ban.getAppealDecision() == null
-                                                ? ""
-                                                : ban.getAppealDecision().getDbValue(),
-                                        formatInstant(ban.getAppealedAt(), locale),
-                                        ban.getAppealResolvedAt() == null))
-                .orElse(null);
+
+        final Optional<UserBan> latestBanForUser =
+                moderationService.findLatestBanForUser(report.getTargetId());
+
+        if (latestBanForUser.isEmpty()
+                || report.getAppealCount() == 0
+                || !latestBanForUser.get().getModerationReportId().equals(report.getId())) {
+            return null;
+        }
+
+        return new BanAppealViewModel(
+                latestBanForUser.get().getId(),
+                report.getAppealReason(),
+                report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
+                formatInstant(report.getAppealedAt(), locale),
+                report.getAppealResolvedAt() == null);
     }
 
     public static final class BanAppealViewModel {

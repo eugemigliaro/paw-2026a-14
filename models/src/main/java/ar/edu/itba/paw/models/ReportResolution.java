@@ -5,7 +5,6 @@ import java.util.Optional;
 
 public enum ReportResolution {
     DISMISSED("dismissed"),
-    WARNING("warning"),
     CONTENT_DELETED("content_deleted"),
     USER_BANNED("user_banned");
 

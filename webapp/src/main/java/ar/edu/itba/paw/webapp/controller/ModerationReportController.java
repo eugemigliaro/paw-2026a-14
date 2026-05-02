@@ -202,7 +202,11 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.USER,
                     reportedUser.getId(),
-                    ReportReason.fromDbValue(form.getReason()).get(),
+                    ReportReason.fromDbValue(form.getReason())
+                            .orElseThrow(
+                                    () ->
+                                            new ModerationException(
+                                                    "invalid_report", "Invalid report reason.")),
                     form.getDetails());
             return redirectToReportUser(username, null, "sent");
         } catch (final ModerationException exception) {
@@ -232,7 +236,11 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.REVIEW,
                     review.getId(),
-                    ReportReason.fromDbValue(form.getReason()).get(),
+                    ReportReason.fromDbValue(form.getReason())
+                            .orElseThrow(
+                                    () ->
+                                            new ModerationException(
+                                                    "invalid_report", "Invalid report reason.")),
                     form.getDetails());
             return redirectToReportReview(review.getId(), null, "sent");
         } catch (final ModerationException exception) {
@@ -262,7 +270,11 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.MATCH,
                     match.getId(),
-                    ReportReason.fromDbValue(form.getReason()).get(),
+                    ReportReason.fromDbValue(form.getReason())
+                            .orElseThrow(
+                                    () ->
+                                            new ModerationException(
+                                                    "invalid_report", "Invalid report reason.")),
                     form.getDetails());
             return redirectToReportMatch(match.getId(), null, "sent");
         } catch (final ModerationException exception) {
@@ -383,23 +395,35 @@ public class ModerationReportController {
         switch (code) {
             case "duplicate_report":
                 errors.rejectValue("reason", "moderation.report.error.duplicate");
-                return errorViewSupplier.get();
+                return errorViewSupplier
+                        .get()
+                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
             case "report_limit":
                 errors.reject("moderation.report.error.limit");
-                return errorViewSupplier.get();
+                return errorViewSupplier
+                        .get()
+                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
             case "invalid_report":
                 errors.reject("moderation.report.error.invalid");
-                return errorViewSupplier.get();
+                return errorViewSupplier
+                        .get()
+                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
             case "self_report":
                 errors.reject("moderation.report.error.self");
-                return errorViewSupplier.get();
+                return errorViewSupplier
+                        .get()
+                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
             case "report_failed":
             case "report_error":
                 errors.reject("moderation.report.error.generic");
-                return errorViewSupplier.get();
+                return errorViewSupplier
+                        .get()
+                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
             case "value_too_long":
                 errors.rejectValue("details", "Size.reportForm.details");
-                return errorViewSupplier.get();
+                return errorViewSupplier
+                        .get()
+                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
             default:
                 return redirectSupplier.get();
         }
@@ -424,6 +448,13 @@ public class ModerationReportController {
                         "moderation.report.error.invalid",
                         null,
                         "This report request is invalid.",
+                        locale);
+            case "report_failed":
+            case "report_error":
+                return messageOrDefault(
+                        "moderation.report.error.generic",
+                        null,
+                        "We could not submit the report.",
                         locale);
             default:
                 return messageOrDefault(

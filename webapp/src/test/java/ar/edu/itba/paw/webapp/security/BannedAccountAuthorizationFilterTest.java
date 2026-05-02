@@ -63,19 +63,7 @@ class BannedAccountAuthorizationFilterTest {
     }
 
     private static UserBan sampleBan() {
-        return new UserBan(
-                11L,
-                7L,
-                1L,
-                "Reason",
-                Instant.now().plusSeconds(600),
-                Instant.now(),
-                null,
-                0,
-                null,
-                null,
-                null,
-                null);
+        return new UserBan(11L, 1L, Instant.now().plusSeconds(600));
     }
 
     private static void authenticateUser(final Long userId) {

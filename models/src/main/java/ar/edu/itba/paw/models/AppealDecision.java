@@ -3,13 +3,13 @@ package ar.edu.itba.paw.models;
 import java.util.Arrays;
 import java.util.Optional;
 
-public enum BanAppealDecision {
+public enum AppealDecision {
     UPHELD("upheld"),
     LIFTED("lifted");
 
     private final String dbValue;
 
-    BanAppealDecision(final String dbValue) {
+    AppealDecision(final String dbValue) {
         this.dbValue = dbValue;
     }
 
@@ -17,7 +17,7 @@ public enum BanAppealDecision {
         return dbValue;
     }
 
-    public static Optional<BanAppealDecision> fromDbValue(final String value) {
+    public static Optional<AppealDecision> fromDbValue(final String value) {
         return Arrays.stream(values())
                 .filter(decision -> decision.dbValue.equalsIgnoreCase(value))
                 .findFirst();

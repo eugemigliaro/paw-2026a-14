@@ -14,7 +14,7 @@ public class PlayerReview {
     private final boolean deleted;
     private final Instant deletedAt;
     private final Long deletedByUserId;
-    private final ReviewDeleteReason deleteReason;
+    private final String deleteReason;
 
     public PlayerReview(
             final Long id,
@@ -50,7 +50,7 @@ public class PlayerReview {
             final boolean deleted,
             final Instant deletedAt,
             final Long deletedByUserId,
-            final ReviewDeleteReason deleteReason) {
+            final String deleteReason) {
         this.id = id;
         this.reviewerUserId = reviewerUserId;
         this.reviewedUserId = reviewedUserId;
@@ -104,7 +104,7 @@ public class PlayerReview {
         return deletedByUserId;
     }
 
-    public ReviewDeleteReason getDeleteReason() {
+    public String getDeleteReason() {
         return deleteReason;
     }
 }

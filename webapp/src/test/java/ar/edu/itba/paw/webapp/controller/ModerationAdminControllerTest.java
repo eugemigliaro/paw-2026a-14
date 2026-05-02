@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.ReportReason;
 import ar.edu.itba.paw.models.ReportResolution;
@@ -74,7 +75,7 @@ class ModerationAdminControllerTest {
                         moderationService.finalizeReportAppeal(
                                 Mockito.eq(17L),
                                 Mockito.eq(99L),
-                                Mockito.eq(ReportResolution.DISMISSED)))
+                                Mockito.eq(AppealDecision.UPHELD)))
                 .thenReturn(sampleAppealedReport());
 
         SecurityContextHolder.getContext()
@@ -91,9 +92,7 @@ class ModerationAdminControllerTest {
                                 "ignored",
                                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
 
-        mockMvc.perform(
-                        post("/admin/reports/17/finalize-appeal")
-                                .param("appealResolution", "dismissed"))
+        mockMvc.perform(post("/admin/reports/17/finalize-appeal").param("appealDecision", "upheld"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/reports?action=appeal_finalized"));
     }
@@ -123,11 +122,10 @@ class ModerationAdminControllerTest {
                 7L,
                 ReportTargetType.USER,
                 44L,
-                "user:44",
                 ReportReason.HARASSMENT,
                 "Harassing messages",
                 ReportStatus.APPEALED,
-                ReportResolution.WARNING,
+                ReportResolution.DISMISSED,
                 "Original warning",
                 99L,
                 Instant.parse("2026-04-12T10:00:00Z"),

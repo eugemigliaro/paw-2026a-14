@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
@@ -40,6 +41,10 @@ public class UserBanAppealController {
                 moderationService
                         .findActiveBan(userId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+        final ModerationReport report =
+                moderationService
+                        .findReportById(activeBan.getModerationReportId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final ModelAndView mav = new ModelAndView("account/banned");
         mav.addObject(
                 "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/account/ban"));
@@ -55,9 +60,9 @@ public class UserBanAppealController {
                         .withLocale(locale)
                         .withZone(ZoneId.systemDefault())
                         .format(activeBan.getBannedUntil()));
-        mav.addObject("banReason", activeBan.getReason());
-        mav.addObject("appealReason", activeBan.getAppealReason());
-        mav.addObject("appealAllowed", activeBan.getAppealCount() < 1);
+        mav.addObject("banReason", report.getReason());
+        mav.addObject("appealReason", report.getAppealReason());
+        mav.addObject("appealAllowed", report.getAppealCount() < 1);
         return mav;
     }
 
@@ -70,7 +75,7 @@ public class UserBanAppealController {
                         .findActiveBan(userId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         try {
-            moderationService.appealBan(activeBan.getId(), userId, appealReason);
+            moderationService.appealReport(activeBan.getModerationReportId(), appealReason);
             return new ModelAndView("redirect:/account/ban?action=appealed");
         } catch (final ModerationException exception) {
             return new ModelAndView("redirect:/account/ban?error=" + exception.getCode());

@@ -102,6 +102,24 @@ public class ThymeleafMailTemplateRenderer {
                 textMailTemplateEngine.process("moderation-ban", context));
     }
 
+    public MailContent renderUnbanNotification(final UnbanMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = new Context(locale);
+        context.setVariable("mailEyebrow", message("mail.moderation.unban.eyebrow", locale));
+        context.setVariable("title", message("mail.moderation.unban.title", locale));
+        context.setVariable("summary", message("mail.moderation.unban.summary", locale));
+        context.setVariable("usernameLabel", message("mail.moderation.unban.username", locale));
+        context.setVariable("username", templateData.getUsername());
+        context.setVariable("loginLabel", message("mail.moderation.unban.login", locale));
+        context.setVariable("loginUrl", templateData.getLoginUrl());
+        context.setVariable("lang", locale.getLanguage());
+
+        return new MailContent(
+                message("mail.moderation.unban.subject", null, locale),
+                htmlMailTemplateEngine.process("moderation-unban", context),
+                textMailTemplateEngine.process("moderation-unban", context));
+    }
+
     public MailContent renderActionMail(final VerificationMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
         final Context context = new Context(locale);
