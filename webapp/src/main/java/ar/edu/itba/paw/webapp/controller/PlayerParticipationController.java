@@ -91,7 +91,7 @@ public class PlayerParticipationController {
 
         try {
             matchParticipationService.declineInvite(resolvedMatchId, userId);
-            return new ModelAndView("redirect:/matches/" + resolvedMatchId + "?invite=declined");
+            return new ModelAndView("redirect:/events");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/matches/" + resolvedMatchId + "?inviteError=" + e.getCode());

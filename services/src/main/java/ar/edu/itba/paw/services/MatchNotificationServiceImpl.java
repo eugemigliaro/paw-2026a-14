@@ -186,6 +186,31 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
                         });
     }
 
+    @Override
+    public void notifyHostPlayerLeft(final Match match, final User player) {
+        userService
+                .findById(match.getHostUserId())
+                .ifPresent(
+                        host -> {
+                            final MatchLifecycleMailTemplateData templateData =
+                                    buildTemplateData(
+                                            host,
+                                            match,
+                                            player.getName() + " " + player.getLastName());
+                            final MailContent content =
+                                    templateRenderer.renderPlayerLeftNotification(templateData);
+                            mailDispatchService.dispatch(host.getEmail(), content);
+                        });
+    }
+
+    @Override
+    public void notifyPlayerRemovedByHost(final Match match, final User player) {
+        final MatchLifecycleMailTemplateData templateData = buildTemplateData(player, match, null);
+        final MailContent content =
+                templateRenderer.renderParticipantRemovedNotification(templateData);
+        mailDispatchService.dispatch(player.getEmail(), content);
+    }
+
     private Map<String, AffectedRecurringParticipant> affectedParticipants(
             final List<Match> matches) {
         final Map<String, AffectedRecurringParticipant> participantsByIdentity =

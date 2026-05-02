@@ -25,4 +25,8 @@ public interface MatchNotificationService {
     void notifyHostInviteAccepted(Match match, User player);
 
     void notifyHostInviteDeclined(Match match, User player);
+
+    void notifyHostPlayerLeft(Match match, User player);
+
+    void notifyPlayerRemovedByHost(Match match, User player);
 }

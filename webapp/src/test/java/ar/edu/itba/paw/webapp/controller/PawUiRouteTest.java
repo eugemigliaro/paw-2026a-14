@@ -1812,6 +1812,15 @@ class PawUiRouteTest {
     }
 
     @Test
+    void postPrivateInviteDeclineRedirectsToUpcomingMatches() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/51/invites/decline"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/events"));
+    }
+
+    @Test
     void postReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
         authenticateUser(9L, "player@test.com", "player-account");
         reservationCancellationFailure.set(

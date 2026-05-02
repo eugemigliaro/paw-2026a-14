@@ -199,6 +199,52 @@ public class ThymeleafMailTemplateRenderer {
                 textMailTemplateEngine.process("match-updated", context));
     }
 
+    public MailContent renderPlayerLeftNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.playerLeft.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.playerLeft.title",
+                        new Object[] {templateData.getActorName(), templateData.getMatchTitle()},
+                        locale));
+        context.setVariable("summary", message("mail.participation.playerLeft.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.playerLeft.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderParticipantRemovedNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.playerRemoved.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.playerRemoved.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable("summary", message("mail.participation.playerRemoved.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.playerRemoved.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
     public MailContent renderMatchCancelledNotification(
             final MatchLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());

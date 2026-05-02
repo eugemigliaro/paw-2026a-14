@@ -211,6 +211,32 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
+    public void testRemoveParticipantNotifiesHostWhenPlayerLeaves() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        "private",
+                                        "invite_only",
+                                        "open",
+                                        FIXED_NOW.plusSeconds(3600))));
+        final User player =
+                new User(20L, "player@test.com", "player-account", "Jamie", "Rivera", null, null);
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.removeParticipant(10L, 20L)).thenReturn(true);
+        Mockito.when(userService.findById(20L)).thenReturn(Optional.of(player));
+
+        // Exercise
+        matchParticipationService.removeParticipant(10L, 20L, 20L);
+
+        // Assert
+        Mockito.verify(matchNotificationService)
+                .notifyHostPlayerLeft(Mockito.any(), Mockito.eq(player));
+    }
+
+    @Test
     public void testRemoveParticipantRejectsSelfLeaveForStartedMatch() {
         // Arrange
         Mockito.when(matchDao.findMatchById(10L))
@@ -297,6 +323,31 @@ public class MatchParticipationServiceImplTest {
         // Exercise and Assert
         Assertions.assertDoesNotThrow(
                 () -> matchParticipationService.removeParticipant(10L, 1L, 30L));
+    }
+
+    @Test
+    public void testRemoveParticipantNotifiesPlayerWhenHostKicksThem() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        "public",
+                                        "approval_required",
+                                        "open",
+                                        FIXED_NOW.plusSeconds(3600))));
+        final User player =
+                new User(30L, "player@test.com", "player-account", "Alex", "Morgan", null, null);
+        Mockito.when(matchParticipantDao.removeParticipant(10L, 30L)).thenReturn(true);
+        Mockito.when(userService.findById(30L)).thenReturn(Optional.of(player));
+
+        // Exercise
+        matchParticipationService.removeParticipant(10L, 1L, 30L);
+
+        // Assert
+        Mockito.verify(matchNotificationService)
+                .notifyPlayerRemovedByHost(Mockito.any(), Mockito.eq(player));
     }
 
     @Test

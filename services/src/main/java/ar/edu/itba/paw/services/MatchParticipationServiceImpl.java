@@ -314,6 +314,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     "not_participant",
                     "The specified user is not a confirmed participant of this event.");
         }
+
+        userService
+                .findById(targetUserId)
+                .ifPresent(user -> matchNotificationService.notifyPlayerRemovedByHost(match, user));
     }
 
     // -------------------------------------------------------------------------
@@ -661,6 +665,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "not_cancellable", "This reservation can no longer be cancelled.");
         }
+
+        if (isHost(match, userId)) {
+            return;
+        }
+
+        userService
+                .findById(userId)
+                .ifPresent(user -> matchNotificationService.notifyHostPlayerLeft(match, user));
     }
 
     private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
