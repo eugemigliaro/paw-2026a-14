@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +25,8 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
     private final String username;
     private final String name;
     private final String lastName;
-    private final String passwordHash;
+    private final String password;
+    private final PasswordEncoder passwordEncoder;
 
     public AdminBootstrapServiceImpl(
             final UserDao userDao,
@@ -33,14 +35,16 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
             @Value("${bootstrap.admin.username:}") final String username,
             @Value("${bootstrap.admin.name:}") final String name,
             @Value("${bootstrap.admin.lastName:}") final String lastName,
-            @Value("${bootstrap.admin.passwordHash:}") final String passwordHash) {
+            @Value("${bootstrap.admin.password:}") final String password,
+            final PasswordEncoder passwordEncoder) {
         this.userDao = Objects.requireNonNull(userDao);
         this.clock = Objects.requireNonNull(clock);
+        this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.email = email == null ? "" : email.trim().toLowerCase();
         this.username = username == null ? "" : username.trim().toLowerCase();
         this.name = name == null ? "" : name.trim();
         this.lastName = lastName == null ? "" : lastName.trim();
-        this.passwordHash = passwordHash == null ? "" : passwordHash.trim();
+        this.password = password == null ? "" : password.trim();
     }
 
     @Override
@@ -50,7 +54,7 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
                 || isInvalidBootstrapValue(username)
                 || isInvalidBootstrapValue(name)
                 || isInvalidBootstrapValue(lastName)
-                || isInvalidBootstrapValue(passwordHash)) {
+                || isInvalidBootstrapValue(password)) {
             LOGGER.info("Admin bootstrap skipped because configuration is incomplete");
             return;
         }
@@ -62,6 +66,8 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
             LOGGER.warn("Admin bootstrap skipped due to username collision username={}", username);
             return;
         }
+
+        String passwordHash = passwordEncoder.encode(password);
 
         userDao.createAccount(
                 email,

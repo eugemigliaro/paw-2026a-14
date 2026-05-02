@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 public class AdminBootstrapServiceImplTest {
@@ -21,14 +23,15 @@ public class AdminBootstrapServiceImplTest {
     @Mock private UserDao userDao;
     @Mock private Clock clock;
 
+    private PasswordEncoder passwordEncoder;
     private AdminBootstrapServiceImpl service;
-
     private static final Instant FIXED_NOW = Instant.parse("2026-04-27T15:00:00Z");
 
     @BeforeEach
     public void setUp() {
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
         Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
+        passwordEncoder = new BCryptPasswordEncoder();
     }
 
     @Test
@@ -43,7 +46,8 @@ public class AdminBootstrapServiceImplTest {
                         "admin",
                         "Admin",
                         "User",
-                        "hash");
+                        "hash",
+                        passwordEncoder);
 
         service.bootstrapFromConfiguration();
 
@@ -63,13 +67,20 @@ public class AdminBootstrapServiceImplTest {
                                         "User",
                                         null,
                                         null,
-                                        "hash",
+                                        passwordEncoder.encode("password"),
                                         UserRole.ADMIN_MOD,
                                         FIXED_NOW)));
 
         service =
                 new AdminBootstrapServiceImpl(
-                        userDao, clock, "admin@test.com", "adminUser", "Admin", "User", "hash");
+                        userDao,
+                        clock,
+                        "admin@test.com",
+                        "adminUser",
+                        "Admin",
+                        "User",
+                        "password",
+                        passwordEncoder);
 
         service.bootstrapFromConfiguration();
 
@@ -81,7 +92,7 @@ public class AdminBootstrapServiceImplTest {
         Assertions.assertEquals("Admin", created.get().getName());
         Assertions.assertEquals("User", created.get().getLastName());
         Assertions.assertNull(created.get().getPhone());
-        Assertions.assertEquals("hash", created.get().getPasswordHash());
+        Assertions.assertTrue(passwordEncoder.matches("password", created.get().getPasswordHash()));
         Assertions.assertEquals(UserRole.ADMIN_MOD, created.get().getRole());
         Assertions.assertEquals(FIXED_NOW, created.get().getEmailVerifiedAt());
     }
