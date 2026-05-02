@@ -27,7 +27,8 @@
 							<c:when test="${param.action eq 'deleted'}"><spring:message code="admin.reports.action.deleted" /></c:when>
 							<c:when test="${param.action eq 'banned'}"><spring:message code="admin.reports.action.banned" /></c:when>
 							<c:when test="${param.action eq 'ban_appeal_resolved'}"><spring:message code="admin.reports.action.ban_appeal_resolved" /></c:when>
-							<c:otherwise><spring:message code="admin.reports.action.reviewed" /></c:otherwise>
+							<c:when test="${param.action eq 'appeal_upheld'}"><spring:message code="admin.reports.action.appeal_upheld" /></c:when>
+							<c:when test="${param.action eq 'appeal_lifted'}"><spring:message code="admin.reports.action.appeal_lifted" /></c:when>
 						</c:choose>
 					</div>
 				</c:if>

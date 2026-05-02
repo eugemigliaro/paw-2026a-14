@@ -300,13 +300,22 @@ public class ModerationAdminController {
             @PathVariable("reportId") final Long reportId,
             @RequestParam("appealDecision") final String appealResolution,
             final Locale locale) {
+
         final AppealDecision parsedAppealDecision =
                 AppealDecision.fromDbValue(appealResolution)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+
         try {
             moderationService.finalizeReportAppeal(
                     reportId, currentAdminUserId(), parsedAppealDecision);
-            return redirectToReports("appeal_finalized");
+
+            final String action =
+                    parsedAppealDecision == AppealDecision.UPHELD
+                            ? "appeal_upheld"
+                            : "appeal_lifted";
+
+            return redirectToReports(action);
+
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
         }

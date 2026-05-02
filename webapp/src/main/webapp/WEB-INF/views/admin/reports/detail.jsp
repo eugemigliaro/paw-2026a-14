@@ -195,7 +195,7 @@
 													<spring:message code="admin.reports.appealDecision.lifted" />
 												</button>
 											</div>
-											<select id="appeal-decision-${report.id}" name="appealDecision" style="display: none;">
+											<select id="appeal-decision-${report.id}" name="appealDecision" class="field--hidden">
 												<option value="upheld"><spring:message code="admin.reports.appealDecision.upheld" /></option>
 												<option value="lifted"><spring:message code="admin.reports.appealDecision.lifted" /></option>
 											</select>
@@ -203,7 +203,7 @@
 									</div>
 									<div class="report-section-actions">
 										<spring:message var="finalizeAppealLabel" code="admin.reports.appeal.finalize" />
-										<ui:button label="${finalizeAppealLabel}" type="submit" />
+										<ui:button label="${finalizeAppealLabel}" type="submit" formAction="${finalizeAppealHref}"/>
 									</div>
 								</form>
 							</c:when>

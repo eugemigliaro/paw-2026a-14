@@ -100,7 +100,7 @@ class ModerationAdminControllerTest {
 
         mockMvc.perform(post("/admin/reports/17/finalize-appeal").param("appealDecision", "upheld"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/reports?action=appeal_finalized"));
+                .andExpect(redirectedUrl("/admin/reports?action=appeal_upheld"));
     }
 
     @Test
