@@ -50,12 +50,34 @@
 }
 
 .matches-empty-state {
+	align-items: center;
+	display: grid;
+	gap: 1rem;
+	justify-items: center;
 	padding: 2rem;
 	border-radius: 18px;
 	border: 1px dashed var(--border-strong);
 	background: var(--surface-soft);
 	color: var(--text-muted);
 	text-align: center;
+}
+
+.matches-empty-state__art {
+	max-width: 18rem;
+	width: min(100%, 18rem);
+}
+
+.matches-empty-state__art svg {
+	display: block;
+	height: auto;
+	width: 100%;
+}
+
+.matches-empty-state__copy {
+	font-size: 1.05rem;
+	line-height: 1.55;
+	margin: 0;
+	max-width: 34rem;
 }
 
 .feed-pagination {
