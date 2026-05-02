@@ -1021,6 +1021,7 @@ public final class PawUiViewModels {
         private final String username;
         private final String name;
         private final String lastName;
+        private final String email;
         private final String phone;
         private final String profileImageUrl;
 
@@ -1028,11 +1029,13 @@ public final class PawUiViewModels {
                 final String username,
                 final String name,
                 final String lastName,
+                final String email,
                 final String phone,
                 final String profileImageUrl) {
             this.username = username;
             this.name = name;
             this.lastName = lastName;
+            this.email = email;
             this.phone = phone;
             this.profileImageUrl = profileImageUrl;
         }
@@ -1047,6 +1050,10 @@ public final class PawUiViewModels {
 
         public String getLastName() {
             return lastName;
+        }
+
+        public String getEmail() {
+            return email;
         }
 
         public String getPhone() {

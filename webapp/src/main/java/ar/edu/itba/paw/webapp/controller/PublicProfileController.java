@@ -72,23 +72,10 @@ public class PublicProfileController {
                         user.getUsername(),
                         user.getName(),
                         user.getLastName(),
+                        user.getEmail(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
         addReviewModel(mav, user, reviewForm, locale);
-        mav.addObject(
-                "profileEyebrow",
-                messageSource.getMessage(
-                        "profile.public.eyebrow", null, "Profile picture", locale));
-        mav.addObject(
-                "profileTitle",
-                messageSource.getMessage("profile.public.title", null, "Public profile", locale));
-        mav.addObject(
-                "profileDescription",
-                messageSource.getMessage(
-                        "profile.public.description",
-                        null,
-                        "See this Match Point member's public identity and profile details.",
-                        locale));
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(
@@ -100,11 +87,11 @@ public class PublicProfileController {
                 "profileUsernameLabel",
                 messageSource.getMessage("profile.public.username", null, "Username", locale));
         mav.addObject(
-                "profileNameLabel",
-                messageSource.getMessage("profile.public.name", null, "First name", locale));
+                "profileFullNameLabel",
+                messageSource.getMessage("profile.public.fullName", null, "Name", locale));
         mav.addObject(
-                "profileLastNameLabel",
-                messageSource.getMessage("profile.public.lastName", null, "Last name", locale));
+                "profileEmailLabel",
+                messageSource.getMessage("profile.public.email", null, "Email", locale));
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", locale));

@@ -13,87 +13,76 @@
 
 			<main class="page-shell public-profile-shell">
 				<section class="panel public-profile-panel">
-					<ui:returnButton />
-					<header class="page-heading">
-						<h1 class="page-heading__title public-profile-panel__title"><c:out value="${profileTitle}" /></h1>
-						<p class="page-heading__description public-profile-panel__description">
-							<c:out value="${profileDescription}" />
-						</p>
-					</header>
 
-					<span class="field__label"><c:out value="${profileEyebrow}" /></span>
-					<article class="panel public-profile-avatar-panel">
-						<div class="public-profile-avatar-panel__content">
-							<c:url var="profileImageSrc" value="${profilePage.profileImageUrl}" />
-							<img
-								class="public-profile-avatar-panel__image"
-								src="${profileImageSrc}"
-								alt="${profileImageAlt}"
-								loading="eager"
-								decoding="async" />
-						</div>
-					</article>
+					<div class="public-profile-topbar">
+						<ui:returnButton />
 
-					<div class="public-profile-summary">
-						<label class="field" for="public-profile-username">
-							<span class="field__label"><c:out value="${profileUsernameLabel}" /></span>
-							<input
-								id="public-profile-username"
-								type="text"
-								class="field__control public-profile-summary__control"
-								value="<c:out value='${profilePage.username}' />"
-								readonly="readonly"
-								aria-readonly="true" />
-						</label>
-
-						<c:if test="${not empty profilePage.name}">
-							<label class="field" for="public-profile-name">
-								<span class="field__label"><c:out value="${profileNameLabel}" /></span>
-								<input
-									id="public-profile-name"
-									type="text"
-									class="field__control public-profile-summary__control"
-									value="<c:out value='${profilePage.name}' />"
-									readonly="readonly"
-									aria-readonly="true" />
-							</label>
-						</c:if>
-
-						<c:if test="${not empty profilePage.lastName}">
-							<label class="field" for="public-profile-last-name">
-								<span class="field__label"><c:out value="${profileLastNameLabel}" /></span>
-								<input
-									id="public-profile-last-name"
-									type="text"
-									class="field__control public-profile-summary__control"
-									value="<c:out value='${profilePage.lastName}' />"
-									readonly="readonly"
-									aria-readonly="true" />
-							</label>
-						</c:if>
-
-						<c:if test="${not empty profilePage.phone}">
-							<label class="field" for="public-profile-phone">
-								<span class="field__label"><c:out value="${profilePhoneLabel}" /></span>
-								<input
-									id="public-profile-phone"
-									type="tel"
-									class="field__control public-profile-summary__control"
-									value="<c:out value='${profilePage.phone}' />"
-									readonly="readonly"
-									aria-readonly="true" />
-							</label>
+						<c:if test="${not empty profileEditHref}">
+							<div class="public-profile-actions">
+								<c:url var="profileEditAction" value="${profileEditHref}" />
+								<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
+							</div>
 						</c:if>
 					</div>
+					<div class="public-profile-hero">
+						<article class="panel public-profile-avatar-panel">
+							<div class="public-profile-avatar-panel__content">
+								<c:url var="profileImageSrc" value="${profilePage.profileImageUrl}" />
+								<img
+									class="public-profile-avatar-panel__image"
+									src="${profileImageSrc}"
+									alt="${profileImageAlt}"
+									loading="eager"
+									decoding="async" />
+							</div>
+						</article>
 
-					<c:if test="${not empty profileEditHref}">
-						<div class="public-profile-actions">
-							<c:url var="profileEditAction" value="${profileEditHref}" />
-							<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
+						<div class="public-profile-summary">
+							<p class="public-profile-summary__line">
+								<span class="field__label">
+									<spring:message code="profile.public.username" />:
+								</span>
+								<span class="public-profile-summary__value">
+									<c:out value="${profilePage.username}" />
+								</span>
+							</p>
+
+							<p class="public-profile-summary__line">
+								<span class="field__label">
+									<c:out value="${profileFullNameLabel}" />:
+								</span>
+								<span class="public-profile-summary__value">
+									<c:out value="${profilePage.name}" />
+									<c:if test="${not empty profilePage.lastName}">
+										<c:out value=" " />
+										<c:out value="${profilePage.lastName}" />
+									</c:if>
+								</span>
+							</p>
+
+							<div class="public-profile-summary__line public-profile-summary__line--inline">
+								<span class="public-profile-summary__pair">
+									<span class="field__label">
+										<c:out value="${profileEmailLabel}" />:
+									</span>
+									<span class="public-profile-summary__value">
+										<c:out value="${profilePage.email}" />
+									</span>
+								</span>
+								<span class="public-profile-summary__pair">
+									<span class="field__label">
+										<c:out value="${profilePhoneLabel}" />:
+									</span>
+									<span class="public-profile-summary__value">
+										<c:out value="${profilePage.phone}" />
+									</span>
+								</span>
+							</div>
 						</div>
-					</c:if>
-				</section>
+					</div>
 
+
+				</section>
 				<section id="reviews" class="panel public-profile-panel public-profile-reviews">
 					<header class="page-heading public-profile-reviews__header">
 						<h2 class="public-profile-reviews__title"><spring:message code="profile.reviews.title" /></h2>

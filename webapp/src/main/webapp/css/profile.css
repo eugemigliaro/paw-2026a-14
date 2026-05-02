@@ -4,22 +4,36 @@
 
 .public-profile-panel {
 	display: grid;
-	gap: 2rem;
+	gap: 1rem;
 	padding: 2rem;
 }
 
-.public-profile-panel__title {
-	font-size: clamp(2.6rem, 5vw, 3.7rem);
+.public-profile-topbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 }
 
-.public-profile-panel__description {
-	max-width: 44rem;
+.public-profile-hero {
+	align-items: center;
+	display: flex;
+	gap: 2rem;
+	justify-content: space-between;
+}
+
+.public-profile-summary {
+	display: grid;
+	gap: 0.9rem;
+	flex: 1;
+	min-width: 0;
 }
 
 .public-profile-avatar-panel {
 	display: grid;
 	gap: 1.5rem;
+	flex: 0 0 auto;
 	padding: 1.5rem;
+	width: fit-content;
 }
 
 .public-profile-avatar-panel__content {
@@ -34,13 +48,8 @@
 	border-radius: 999px;
 	box-shadow: 0 20px 40px -34px rgba(24, 46, 42, 0.35);
 	height: auto;
-	max-width: 180px;
+	max-width: 140px;
 	width: 100%;
-}
-
-.public-profile-summary {
-	display: grid;
-	gap: 1rem;
 }
 
 .public-profile-actions {
@@ -48,9 +57,30 @@
 	justify-content: flex-end;
 }
 
-.public-profile-summary__control {
+.public-profile-summary__line {
+	align-items: baseline;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	line-height: 1.5;
+	margin: 0;
+}
+
+.public-profile-summary__line--inline {
+	gap: 1rem 1.5rem;
+	font-size: 1.1rem;
+}
+
+.public-profile-summary__pair {
+	align-items: baseline;
+	display: inline-flex;
+	gap: 0.35rem;
+}
+
+.public-profile-summary__value {
 	color: var(--text-primary);
-	cursor: default;
+	font-weight: 400;
+	font-size: 1.25rem;
 }
 
 .public-profile-reviews {
@@ -314,6 +344,15 @@
 @media (max-width: 760px) {
 	.public-profile-panel {
 		padding: 1.5rem;
+	}
+
+	.public-profile-hero {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.public-profile-avatar-panel {
+		flex-basis: auto;
 	}
 
 	.public-profile-review-stats {

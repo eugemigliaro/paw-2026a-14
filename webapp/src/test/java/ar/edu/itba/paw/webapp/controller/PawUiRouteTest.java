@@ -2796,7 +2796,9 @@ class PawUiRouteTest {
                                                 "phone", Matchers.is("+1 555 123 4567"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage", Matchers.not(Matchers.hasProperty("email"))))
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "email", Matchers.is("host@test.com"))))
                 .andExpect(
                         model().attribute(
                                         "profilePage",
@@ -2912,8 +2914,13 @@ class PawUiRouteTest {
         mockMvc.perform(get("/users/host-player").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
-                .andExpect(model().attribute("profileTitle", "Perfil p\u00fablico"))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "email", Matchers.is("host@test.com"))))
                 .andExpect(model().attribute("profileUsernameLabel", "Usuario"))
+                .andExpect(model().attribute("profileEmailLabel", "Email"))
                 .andExpect(model().attribute("profilePhoneLabel", "Tel\u00e9fono"));
     }
 
