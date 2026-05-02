@@ -22,6 +22,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventOccurrenceViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
@@ -145,7 +146,7 @@ public class EventController {
                     matchId, currentUser.getUserId(), currentUser.getUserId());
             if (shouldRedirectToPlayerMatchesAfterCancellation(
                     cancellationContext, currentUser.getUserId())) {
-                return new ModelAndView("redirect:/player/matches/upcoming");
+                return new ModelAndView("redirect:/events");
             }
             return new ModelAndView("redirect:/matches/" + matchId + "?reservation=cancelled");
         } catch (final MatchParticipationException exception) {
@@ -488,8 +489,8 @@ public class EventController {
     private EventCardViewModel toCard(
             final Match match, final Locale locale, final Long currentUserId) {
         final ZonedDateTime startsAt = match.getStartsAt().atZone(ZoneId.systemDefault());
-        final RelationshipBadge relationshipBadge =
-                relationshipBadgeFor(match, currentUserId, locale);
+        final List<EventRelationshipBadgeViewModel> relationshipBadges =
+                relationshipBadgesFor(match, currentUserId, locale);
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
                 "/matches/" + match.getId(),
@@ -503,40 +504,37 @@ public class EventController {
                         .format(startsAt),
                 toPriceLabel(match.getPricePerPlayer(), locale),
                 buildAvailabilityLabel(match, locale),
-                relationshipBadge == null ? null : relationshipBadge.type(),
-                relationshipBadge == null ? null : relationshipBadge.label(),
+                relationshipBadges,
                 recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }
 
-    private RelationshipBadge relationshipBadgeFor(
+    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
             final Match match, final Long currentUserId, final Locale locale) {
         if (currentUserId == null) {
-            return null;
+            return List.of();
         }
+        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
         if (currentUserId.equals(match.getHostUserId())) {
-            return relationshipBadge("my_event", locale);
+            badges.add(relationshipBadge("my_event", locale));
         }
         if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
-            return relationshipBadge("pending", locale);
+            badges.add(relationshipBadge("pending", locale));
+        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("invited", locale));
+        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("going", locale));
         }
-        if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
-            return relationshipBadge("invited", locale);
-        }
-        if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
-            return relationshipBadge("going", locale);
-        }
-        return null;
+        return List.copyOf(badges);
     }
 
-    private RelationshipBadge relationshipBadge(final String type, final Locale locale) {
-        return new RelationshipBadge(
+    private EventRelationshipBadgeViewModel relationshipBadge(
+            final String type, final Locale locale) {
+        return new EventRelationshipBadgeViewModel(
                 type, messageSource.getMessage("event.relationship." + type, null, locale));
     }
-
-    private record RelationshipBadge(String type, String label) {}
 
     private String recurringLabelFor(final Match match, final Locale locale) {
         return match.isRecurringOccurrence()

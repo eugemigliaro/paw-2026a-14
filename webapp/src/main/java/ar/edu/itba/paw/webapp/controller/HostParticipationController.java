@@ -109,7 +109,7 @@ public class HostParticipationController {
         mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
-        mav.addObject("matchesUrl", "/host/matches");
+        mav.addObject("matchesUrl", "/events");
         return mav;
     }
 

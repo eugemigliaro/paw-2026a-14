@@ -301,6 +301,7 @@ public final class PawUiViewModels {
         private final String badge;
         private final String relationshipBadgeType;
         private final String relationshipBadgeLabel;
+        private final List<EventRelationshipBadgeViewModel> relationshipBadges;
         private final String recurringLabel;
         private final String level;
         private final String mediaClass;
@@ -335,6 +336,50 @@ public final class PawUiViewModels {
             this.badge = badge;
             this.relationshipBadgeType = relationshipBadgeType;
             this.relationshipBadgeLabel = relationshipBadgeLabel;
+            this.relationshipBadges =
+                    relationshipBadgeType == null || relationshipBadgeLabel == null
+                            ? List.of()
+                            : List.of(
+                                    new EventRelationshipBadgeViewModel(
+                                            relationshipBadgeType, relationshipBadgeLabel));
+            this.recurringLabel = recurringLabel;
+            this.level = level;
+            this.mediaClass = mediaClass;
+            this.bannerImageUrl = bannerImageUrl;
+        }
+
+        public EventCardViewModel(
+                final String id,
+                final String href,
+                final String sport,
+                final String title,
+                final String venue,
+                final String schedule,
+                final String dateLabel,
+                final String timeLabel,
+                final String priceLabel,
+                final String badge,
+                final List<EventRelationshipBadgeViewModel> relationshipBadges,
+                final String recurringLabel,
+                final String level,
+                final String mediaClass,
+                final String bannerImageUrl) {
+            this.id = id;
+            this.href = href;
+            this.sport = sport;
+            this.title = title;
+            this.venue = venue;
+            this.schedule = schedule;
+            this.dateLabel = dateLabel;
+            this.timeLabel = timeLabel;
+            this.priceLabel = priceLabel;
+            this.badge = badge;
+            this.relationshipBadges =
+                    relationshipBadges == null ? List.of() : List.copyOf(relationshipBadges);
+            final EventRelationshipBadgeViewModel firstBadge =
+                    this.relationshipBadges.isEmpty() ? null : this.relationshipBadges.get(0);
+            this.relationshipBadgeType = firstBadge == null ? null : firstBadge.getType();
+            this.relationshipBadgeLabel = firstBadge == null ? null : firstBadge.getLabel();
             this.recurringLabel = recurringLabel;
             this.level = level;
             this.mediaClass = mediaClass;
@@ -454,14 +499,15 @@ public final class PawUiViewModels {
         }
 
         public boolean hasRelationshipBadge() {
-            return relationshipBadgeType != null
-                    && !relationshipBadgeType.isBlank()
-                    && relationshipBadgeLabel != null
-                    && !relationshipBadgeLabel.isBlank();
+            return !relationshipBadges.isEmpty();
         }
 
         public boolean isRelationshipBadge() {
             return hasRelationshipBadge();
+        }
+
+        public List<EventRelationshipBadgeViewModel> getRelationshipBadges() {
+            return relationshipBadges;
         }
 
         public String getRecurringLabel() {
@@ -486,6 +532,24 @@ public final class PawUiViewModels {
 
         public boolean hasBannerImage() {
             return bannerImageUrl != null && !bannerImageUrl.isBlank();
+        }
+    }
+
+    public static final class EventRelationshipBadgeViewModel {
+        private final String type;
+        private final String label;
+
+        public EventRelationshipBadgeViewModel(final String type, final String label) {
+            this.type = type;
+            this.label = label;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public String getLabel() {
+            return label;
         }
     }
 
@@ -810,24 +874,6 @@ public final class PawUiViewModels {
         }
     }
 
-    public static final class PendingJoinMatchViewModel {
-        private final EventCardViewModel card;
-        private final String cancelUrl;
-
-        public PendingJoinMatchViewModel(final EventCardViewModel card, final String cancelUrl) {
-            this.card = card;
-            this.cancelUrl = cancelUrl;
-        }
-
-        public EventCardViewModel getCard() {
-            return card;
-        }
-
-        public String getCancelUrl() {
-            return cancelUrl;
-        }
-    }
-
     public static final class InviteParticipantViewModel {
         private final String username;
         private final String avatarLabel;
@@ -850,45 +896,6 @@ public final class PawUiViewModels {
 
         public String getProfileHref() {
             return profileHref;
-        }
-    }
-
-    public static final class InvitedMatchViewModel {
-        private final EventCardViewModel card;
-        private final String acceptUrl;
-        private final String declineUrl;
-        private final boolean seriesInvite;
-
-        public InvitedMatchViewModel(
-                final EventCardViewModel card, final String acceptUrl, final String declineUrl) {
-            this(card, acceptUrl, declineUrl, false);
-        }
-
-        public InvitedMatchViewModel(
-                final EventCardViewModel card,
-                final String acceptUrl,
-                final String declineUrl,
-                final boolean seriesInvite) {
-            this.card = card;
-            this.acceptUrl = acceptUrl;
-            this.declineUrl = declineUrl;
-            this.seriesInvite = seriesInvite;
-        }
-
-        public EventCardViewModel getCard() {
-            return card;
-        }
-
-        public String getAcceptUrl() {
-            return acceptUrl;
-        }
-
-        public String getDeclineUrl() {
-            return declineUrl;
-        }
-
-        public boolean isSeriesInvite() {
-            return seriesInvite;
         }
     }
 

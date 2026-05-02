@@ -60,7 +60,7 @@
 							<c:when test="${aggregateRequests}">
 								<c:url var="matchesHref" value="${matchesUrl}" />
 								<a class="section-link" href="${matchesHref}">
-									<spring:message code="nav.host.upcomingEvents" />
+									<spring:message code="nav.player.events" />
 								</a>
 							</c:when>
 							<c:otherwise>

@@ -471,7 +471,7 @@ public class MatchJdbcDao implements MatchDao {
                 " INNER JOIN match_participants me"
                         + " ON me.match_id = m.id"
                         + " AND me.user_id = ?"
-                        + " AND me.status IN ('joined', 'checked_in', 'pending_approval', 'invited')");
+                        + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
         appendFilters(
@@ -521,7 +521,7 @@ public class MatchJdbcDao implements MatchDao {
                 " INNER JOIN match_participants me"
                         + " ON me.match_id = m.id"
                         + " AND me.user_id = ?"
-                        + " AND me.status IN ('joined', 'checked_in', 'pending_approval', 'invited')");
+                        + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
         appendFilters(

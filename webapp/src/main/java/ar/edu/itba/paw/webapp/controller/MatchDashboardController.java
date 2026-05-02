@@ -15,6 +15,7 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.MatchListControlsViewModel;
@@ -48,12 +49,8 @@ public class MatchDashboardController {
 
     private static final int PAGE_SIZE = 12;
 
-    private static final List<String> HOST_ALL_STATUS_OPTIONS = List.of("draft", "open");
-    private static final List<String> HOST_FINISHED_STATUS_OPTIONS =
-            List.of("completed", "cancelled");
     private static final List<String> PLAYER_STATUS_OPTIONS =
             List.of("draft", "open", "completed", "cancelled");
-    private static final List<String> HOST_VISIBILITY_OPTIONS = List.of("public", "private");
 
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
@@ -70,270 +67,6 @@ public class MatchDashboardController {
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
         this.messageSource = messageSource;
-    }
-
-    @GetMapping("/host/matches")
-    public ModelAndView showHostedMatches(
-            @RequestParam(value = "q", required = false) final String query,
-            @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "startDate", required = false) final String startDate,
-            @RequestParam(value = "endDate", required = false) final String endDate,
-            @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
-            @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "tz", required = false) final String timezone,
-            @RequestParam(value = "sport", required = false) final List<String> sports,
-            @RequestParam(value = "visibility", required = false) final List<String> visibility,
-            @RequestParam(value = "status", required = false) final List<String> statuses,
-            @RequestParam(value = "page", defaultValue = "1") final int page,
-            final Locale locale) {
-        final long userId = requireAuthenticatedUserId();
-        final List<String> selectedSports = normalizeSports(sports);
-        final List<String> selectedVisibility =
-                normalizeValues(visibility, List.of(), HOST_VISIBILITY_OPTIONS);
-        final List<String> selectedStatuses =
-                normalizeValues(statuses, List.of(), HOST_ALL_STATUS_OPTIONS);
-        final String selectedSort = normalizeSort(sort);
-        final String searchQuery = normalizeQuery(query);
-        final String selectedTimezone = normalizeTimezone(timezone);
-        final DateRange selectedDateRange =
-                normalizeDateRange(
-                        startDate, endDate, DateRangeContext.UPCOMING, ZoneId.of(selectedTimezone));
-
-        final PaginatedResult<Match> result =
-                matchService.findHostedMatches(
-                        userId,
-                        Boolean.TRUE,
-                        searchQuery,
-                        encodeCsv(selectedSports),
-                        encodeCsv(selectedVisibility),
-                        encodeCsv(selectedStatuses),
-                        selectedDateRange.startDate(),
-                        selectedDateRange.endDate(),
-                        minPrice,
-                        maxPrice,
-                        selectedSort,
-                        selectedTimezone,
-                        page,
-                        PAGE_SIZE);
-
-        return buildListPage(
-                "matches/list",
-                "/host/matches",
-                "page.title.hostUpcomingMatches",
-                locale,
-                searchQuery,
-                selectedSort,
-                selectedDateRange.startDate(),
-                selectedDateRange.endDate(),
-                minPrice,
-                maxPrice,
-                selectedTimezone,
-                selectedStatuses,
-                selectedSports,
-                selectedVisibility,
-                List.of(),
-                result,
-                messageSource.getMessage("host.dashboard.title", null, locale),
-                messageSource.getMessage("host.dashboard.description", null, locale),
-                messageSource.getMessage("host.dashboard.empty", null, locale),
-                ShellViewModelFactory.playerShell(messageSource, locale));
-    }
-
-    @GetMapping("/host/matches/finished")
-    public ModelAndView showFinishedHostedMatches(
-            @RequestParam(value = "q", required = false) final String query,
-            @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "startDate", required = false) final String startDate,
-            @RequestParam(value = "endDate", required = false) final String endDate,
-            @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
-            @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "tz", required = false) final String timezone,
-            @RequestParam(value = "sport", required = false) final List<String> sports,
-            @RequestParam(value = "visibility", required = false) final List<String> visibility,
-            @RequestParam(value = "status", required = false) final List<String> statuses,
-            @RequestParam(value = "page", defaultValue = "1") final int page,
-            final Locale locale) {
-        final long userId = requireAuthenticatedUserId();
-        final List<String> selectedSports = normalizeSports(sports);
-        final List<String> selectedVisibility =
-                normalizeValues(visibility, List.of(), HOST_VISIBILITY_OPTIONS);
-        final List<String> selectedStatuses =
-                normalizeValues(
-                        statuses, HOST_FINISHED_STATUS_OPTIONS, HOST_FINISHED_STATUS_OPTIONS);
-        final String selectedSort = normalizeSort(sort);
-        final String searchQuery = normalizeQuery(query);
-        final String selectedTimezone = normalizeTimezone(timezone);
-        final DateRange selectedDateRange =
-                normalizeDateRange(
-                        startDate, endDate, DateRangeContext.PAST, ZoneId.of(selectedTimezone));
-
-        final PaginatedResult<Match> result =
-                matchService.findHostedMatches(
-                        userId,
-                        Boolean.FALSE,
-                        searchQuery,
-                        encodeCsv(selectedSports),
-                        encodeCsv(selectedVisibility),
-                        encodeCsv(selectedStatuses),
-                        selectedDateRange.startDate(),
-                        selectedDateRange.endDate(),
-                        minPrice,
-                        maxPrice,
-                        selectedSort,
-                        selectedTimezone,
-                        page,
-                        PAGE_SIZE);
-
-        return buildListPage(
-                "matches/list",
-                "/host/matches/finished",
-                "page.title.hostFinishedMatches",
-                locale,
-                searchQuery,
-                selectedSort,
-                selectedDateRange.startDate(),
-                selectedDateRange.endDate(),
-                minPrice,
-                maxPrice,
-                selectedTimezone,
-                selectedStatuses,
-                selectedSports,
-                selectedVisibility,
-                List.of(),
-                result,
-                messageSource.getMessage("host.finished.title", null, locale),
-                messageSource.getMessage("host.finished.description", null, locale),
-                messageSource.getMessage("host.finished.empty", null, locale),
-                ShellViewModelFactory.playerShell(messageSource, locale));
-    }
-
-    @GetMapping("/player/matches/past")
-    public ModelAndView showPastJoinedMatches(
-            @RequestParam(value = "q", required = false) final String query,
-            @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "startDate", required = false) final String startDate,
-            @RequestParam(value = "endDate", required = false) final String endDate,
-            @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
-            @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "tz", required = false) final String timezone,
-            @RequestParam(value = "sport", required = false) final List<String> sports,
-            @RequestParam(value = "status", required = false) final List<String> statuses,
-            @RequestParam(value = "page", defaultValue = "1") final int page,
-            final Locale locale) {
-        final long userId = requireAuthenticatedUserId();
-        final List<String> selectedSports = normalizeSports(sports);
-        final List<String> selectedStatuses =
-                normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
-        final String selectedSort = normalizeSort(sort);
-        final String searchQuery = normalizeQuery(query);
-        final String selectedTimezone = normalizeTimezone(timezone);
-        final DateRange selectedDateRange =
-                normalizeDateRange(
-                        startDate, endDate, DateRangeContext.PAST, ZoneId.of(selectedTimezone));
-
-        final PaginatedResult<Match> result =
-                matchService.findJoinedMatches(
-                        userId,
-                        Boolean.FALSE,
-                        searchQuery,
-                        encodeCsv(selectedSports),
-                        null,
-                        encodeCsv(selectedStatuses),
-                        selectedDateRange.startDate(),
-                        selectedDateRange.endDate(),
-                        minPrice,
-                        maxPrice,
-                        selectedSort,
-                        selectedTimezone,
-                        page,
-                        PAGE_SIZE);
-
-        return buildListPage(
-                "matches/list",
-                "/player/matches/past",
-                "page.title.playerPastMatches",
-                locale,
-                searchQuery,
-                selectedSort,
-                selectedDateRange.startDate(),
-                selectedDateRange.endDate(),
-                minPrice,
-                maxPrice,
-                selectedTimezone,
-                selectedStatuses,
-                selectedSports,
-                List.of(),
-                List.of(),
-                result,
-                messageSource.getMessage("player.past.title", null, locale),
-                messageSource.getMessage("player.past.description", null, locale),
-                messageSource.getMessage("player.past.empty", null, locale),
-                ShellViewModelFactory.playerShell(messageSource, locale, "/player/matches/past"));
-    }
-
-    @GetMapping("/player/matches/upcoming")
-    public ModelAndView showUpcomingJoinedMatches(
-            @RequestParam(value = "q", required = false) final String query,
-            @RequestParam(value = "sort", required = false) final String sort,
-            @RequestParam(value = "startDate", required = false) final String startDate,
-            @RequestParam(value = "endDate", required = false) final String endDate,
-            @RequestParam(value = "minPrice", required = false) final BigDecimal minPrice,
-            @RequestParam(value = "maxPrice", required = false) final BigDecimal maxPrice,
-            @RequestParam(value = "tz", required = false) final String timezone,
-            @RequestParam(value = "sport", required = false) final List<String> sports,
-            @RequestParam(value = "status", required = false) final List<String> statuses,
-            @RequestParam(value = "page", defaultValue = "1") final int page,
-            final Locale locale) {
-        final long userId = requireAuthenticatedUserId();
-        final List<String> selectedSports = normalizeSports(sports);
-        final List<String> selectedStatuses =
-                normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
-        final String selectedSort = normalizeSort(sort);
-        final String searchQuery = normalizeQuery(query);
-        final String selectedTimezone = normalizeTimezone(timezone);
-        final DateRange selectedDateRange =
-                normalizeDateRange(
-                        startDate, endDate, DateRangeContext.UPCOMING, ZoneId.of(selectedTimezone));
-
-        final PaginatedResult<Match> result =
-                matchService.findJoinedMatches(
-                        userId,
-                        Boolean.TRUE,
-                        searchQuery,
-                        encodeCsv(selectedSports),
-                        null,
-                        encodeCsv(selectedStatuses),
-                        selectedDateRange.startDate(),
-                        selectedDateRange.endDate(),
-                        minPrice,
-                        maxPrice,
-                        selectedSort,
-                        selectedTimezone,
-                        page,
-                        PAGE_SIZE);
-
-        return buildListPage(
-                "matches/list",
-                "/player/matches/upcoming",
-                "page.title.playerUpcomingMatches",
-                locale,
-                searchQuery,
-                selectedSort,
-                selectedDateRange.startDate(),
-                selectedDateRange.endDate(),
-                minPrice,
-                maxPrice,
-                selectedTimezone,
-                selectedStatuses,
-                selectedSports,
-                List.of(),
-                List.of(),
-                result,
-                messageSource.getMessage("player.upcoming.title", null, locale),
-                messageSource.getMessage("player.upcoming.description", null, locale),
-                messageSource.getMessage("player.upcoming.empty", null, locale),
-                ShellViewModelFactory.playerShell(
-                        messageSource, locale, "/player/matches/upcoming"));
     }
 
     @GetMapping("/events")
@@ -565,7 +298,7 @@ public class MatchDashboardController {
                 normalizeCsvValues(categories == null ? List.of() : List.of(categories));
         final boolean allowJoined = categoryList.isEmpty() || categoryList.contains("joined");
         final boolean allowInvited = categoryList.isEmpty() || categoryList.contains("invited");
-        final boolean allowPending = categoryList.isEmpty() || categoryList.contains("pending");
+        final boolean allowPending = categoryList.contains("pending");
         final boolean allowHosted = categoryList.isEmpty() || categoryList.contains("hosted");
 
         // Fetch pending and invited matches (small, non-paginated lists).
@@ -796,8 +529,8 @@ public class MatchDashboardController {
         final String badge =
                 messageSource.getMessage(
                         "match.status." + match.getStatus(), null, match.getStatus(), locale);
-        final RelationshipBadge relationshipBadge =
-                relationshipBadgeFor(match, currentUserId, locale);
+        final List<EventRelationshipBadgeViewModel> relationshipBadges =
+                relationshipBadgesFor(match, currentUserId, locale);
 
         final String cardHref = "/matches/" + match.getId();
 
@@ -816,40 +549,37 @@ public class MatchDashboardController {
                 timeLabel,
                 priceLabel,
                 badge,
-                relationshipBadge == null ? null : relationshipBadge.type(),
-                relationshipBadge == null ? null : relationshipBadge.label(),
+                relationshipBadges,
                 recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }
 
-    private RelationshipBadge relationshipBadgeFor(
+    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
             final Match match, final Long currentUserId, final Locale locale) {
         if (currentUserId == null) {
-            return null;
+            return List.of();
         }
+        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
         if (currentUserId.equals(match.getHostUserId())) {
-            return relationshipBadge("my_event", locale);
+            badges.add(relationshipBadge("my_event", locale));
         }
         if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
-            return relationshipBadge("pending", locale);
+            badges.add(relationshipBadge("pending", locale));
+        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("invited", locale));
+        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("going", locale));
         }
-        if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
-            return relationshipBadge("invited", locale);
-        }
-        if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
-            return relationshipBadge("going", locale);
-        }
-        return null;
+        return List.copyOf(badges);
     }
 
-    private RelationshipBadge relationshipBadge(final String type, final Locale locale) {
-        return new RelationshipBadge(
+    private EventRelationshipBadgeViewModel relationshipBadge(
+            final String type, final Locale locale) {
+        return new EventRelationshipBadgeViewModel(
                 type, messageSource.getMessage("event.relationship." + type, null, locale));
     }
-
-    private record RelationshipBadge(String type, String label) {}
 
     private String recurringLabelFor(final Match match, final Locale locale) {
         return match.isRecurringOccurrence()
@@ -894,8 +624,6 @@ public class MatchDashboardController {
             final List<String> selectedSports,
             final List<String> selectedVisibility,
             final List<String> selectedCategories) {
-        final boolean hostView = path.startsWith("/host/");
-
         final List<FilterGroupViewModel> filterGroups = new ArrayList<>();
         filterGroups.add(
                 new FilterGroupViewModel(
@@ -935,64 +663,24 @@ public class MatchDashboardController {
                                     selectedCategories)));
         }
 
-        if (hostView) {
-            filterGroups.add(
-                    new FilterGroupViewModel(
-                            messageSource.getMessage("host.filters.status", null, locale),
-                            buildStatusFilterOptions(
-                                    path,
-                                    locale,
-                                    searchQuery,
-                                    sort,
-                                    selectedStartDate,
-                                    selectedEndDate,
-                                    minPrice,
-                                    maxPrice,
-                                    timezone,
-                                    selectedStatuses,
-                                    selectedSports,
-                                    selectedVisibility,
-                                    selectedCategories,
-                                    path.endsWith("/finished")
-                                            ? HOST_FINISHED_STATUS_OPTIONS
-                                            : HOST_ALL_STATUS_OPTIONS)));
-            filterGroups.add(
-                    new FilterGroupViewModel(
-                            messageSource.getMessage("host.filters.visibility", null, locale),
-                            buildVisibilityFilterOptions(
-                                    path,
-                                    locale,
-                                    searchQuery,
-                                    sort,
-                                    selectedStartDate,
-                                    selectedEndDate,
-                                    minPrice,
-                                    maxPrice,
-                                    timezone,
-                                    selectedStatuses,
-                                    selectedSports,
-                                    selectedVisibility,
-                                    selectedCategories)));
-        } else {
-            filterGroups.add(
-                    new FilterGroupViewModel(
-                            messageSource.getMessage("host.filters.status", null, locale),
-                            buildStatusFilterOptions(
-                                    path,
-                                    locale,
-                                    searchQuery,
-                                    sort,
-                                    selectedStartDate,
-                                    selectedEndDate,
-                                    minPrice,
-                                    maxPrice,
-                                    timezone,
-                                    selectedStatuses,
-                                    selectedSports,
-                                    selectedVisibility,
-                                    selectedCategories,
-                                    PLAYER_STATUS_OPTIONS)));
-        }
+        filterGroups.add(
+                new FilterGroupViewModel(
+                        messageSource.getMessage("host.filters.status", null, locale),
+                        buildStatusFilterOptions(
+                                path,
+                                locale,
+                                searchQuery,
+                                sort,
+                                selectedStartDate,
+                                selectedEndDate,
+                                minPrice,
+                                maxPrice,
+                                timezone,
+                                selectedStatuses,
+                                selectedSports,
+                                selectedVisibility,
+                                selectedCategories,
+                                PLAYER_STATUS_OPTIONS)));
         final List<SelectOptionViewModel> sortOptions =
                 List.of(
                         sortOption(
@@ -1723,8 +1411,10 @@ public class MatchDashboardController {
             } else if (startDate.isBefore(today)) {
                 startDate = today;
             }
-            if (endDate != null && endDate.isBefore(today)) {
-                endDate = today;
+            // Discard an endDate that is today-or-before — it was likely
+            // left over from a past filter and would create an empty window.
+            if (endDate != null && !endDate.isAfter(today)) {
+                endDate = null;
             }
         } else if (context == DateRangeContext.PAST) {
             if (endDate == null) {
@@ -1732,8 +1422,10 @@ public class MatchDashboardController {
             } else if (endDate.isAfter(today)) {
                 endDate = today;
             }
-            if (startDate != null && startDate.isAfter(today)) {
-                startDate = today;
+            // Discard a startDate that is today-or-after — it was likely
+            // left over from an upcoming filter and would create an empty window.
+            if (startDate != null && !startDate.isBefore(today)) {
+                startDate = null;
             }
         }
 

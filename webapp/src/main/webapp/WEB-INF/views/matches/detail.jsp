@@ -844,11 +844,11 @@
 										<span class="event-card__badge"
 											><c:out value="${event.badge}"
 										/></span>
-										<c:if test="${event.relationshipBadge}">
-											<span class="event-badge event-badge--${event.relationshipBadgeType}">
-												<c:out value="${event.relationshipBadgeLabel}" />
+										<c:forEach var="relationshipBadge" items="${event.relationshipBadges}">
+											<span class="event-badge event-badge--${relationshipBadge.type}">
+												<c:out value="${relationshipBadge.label}" />
 											</span>
-										</c:if>
+										</c:forEach>
 									</div>
 								</div>
 

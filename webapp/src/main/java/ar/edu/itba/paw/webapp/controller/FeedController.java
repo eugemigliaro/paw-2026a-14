@@ -15,6 +15,7 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
@@ -281,8 +282,8 @@ public class FeedController {
                         .withLocale(resolvedLocale)
                         .format(startsAt);
         final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
-        final RelationshipBadge relationshipBadge =
-                relationshipBadgeFor(match, currentUserId, locale);
+        final List<EventRelationshipBadgeViewModel> relationshipBadges =
+                relationshipBadgesFor(match, currentUserId, locale);
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
@@ -296,40 +297,37 @@ public class FeedController {
                 priceLabel,
                 messageSource.getMessage(
                         "event.spotsLeft", new Object[] {match.getAvailableSpots()}, locale),
-                relationshipBadge == null ? null : relationshipBadge.type(),
-                relationshipBadge == null ? null : relationshipBadge.label(),
+                relationshipBadges,
                 recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }
 
-    private RelationshipBadge relationshipBadgeFor(
+    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
             final Match match, final Long currentUserId, final Locale locale) {
         if (currentUserId == null) {
-            return null;
+            return List.of();
         }
+        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
         if (currentUserId.equals(match.getHostUserId())) {
-            return relationshipBadge("my_event", locale);
+            badges.add(relationshipBadge("my_event", locale));
         }
         if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
-            return relationshipBadge("pending", locale);
+            badges.add(relationshipBadge("pending", locale));
+        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("invited", locale));
+        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("going", locale));
         }
-        if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
-            return relationshipBadge("invited", locale);
-        }
-        if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
-            return relationshipBadge("going", locale);
-        }
-        return null;
+        return List.copyOf(badges);
     }
 
-    private RelationshipBadge relationshipBadge(final String type, final Locale locale) {
-        return new RelationshipBadge(
+    private EventRelationshipBadgeViewModel relationshipBadge(
+            final String type, final Locale locale) {
+        return new EventRelationshipBadgeViewModel(
                 type, messageSource.getMessage("event.relationship." + type, null, locale));
     }
-
-    private record RelationshipBadge(String type, String label) {}
 
     private String recurringLabelFor(final Match match, final Locale locale) {
         return match.isRecurringOccurrence()

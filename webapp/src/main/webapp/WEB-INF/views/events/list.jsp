@@ -50,6 +50,10 @@
 														<input type="hidden" name="status"
 															value="<c:out value='${selectedStatus}' />" />
 													</c:forEach>
+													<c:forEach var="selectedCategory" items="${selectedCategories}">
+														<input type="hidden" name="category"
+															value="<c:out value='${selectedCategory}' />" />
+													</c:forEach>
 													<c:forEach var="selectedVisibilityItem"
 														items="${selectedVisibility}">
 														<input type="hidden" name="visibility"
@@ -107,8 +111,15 @@
 																				stroke="currentColor" stroke-width="2"
 																				stroke-linecap="round"
 																				stroke-linejoin="round">
-																				<path d="M19 21l-7-7-7 7" />
-																				<polyline points="7 14 12 8 17 14" />
+																				<path d="M6 21V14" />
+																				<path d="M6 10V3" />
+																				<path d="M12 21V12" />
+																				<path d="M12 8V3" />
+																				<path d="M18 21V16" />
+																				<path d="M18 12V3" />
+																				<rect x="4" y="10" width="4" height="4" />
+																				<rect x="10" y="8" width="4" height="4" />
+																				<rect x="16" y="12" width="4" height="4" />
 																			</svg>
 																		</c:when>
 																		<c:when
@@ -194,6 +205,11 @@
 																	<input type="hidden" name="status"
 																		value="<c:out value='${selectedStatus}' />" />
 																</c:forEach>
+																<c:forEach var="selectedCategory"
+																	items="${selectedCategories}">
+																	<input type="hidden" name="category"
+																		value="<c:out value='${selectedCategory}' />" />
+																</c:forEach>
 																<c:forEach var="selectedVisibilityItem"
 																	items="${selectedVisibility}">
 																	<input type="hidden" name="visibility"
@@ -266,6 +282,11 @@
 																	items="${selectedStatuses}">
 																	<input type="hidden" name="status"
 																		value="<c:out value='${selectedStatus}' />" />
+																</c:forEach>
+																<c:forEach var="selectedCategory"
+																	items="${selectedCategories}">
+																	<input type="hidden" name="category"
+																		value="<c:out value='${selectedCategory}' />" />
 																</c:forEach>
 																<c:forEach var="selectedVisibilityItem"
 																	items="${selectedVisibility}">
@@ -399,11 +420,11 @@
 																			<span class="event-card__badge">
 																				<c:out value="${event.badge}" />
 																			</span>
-																			<c:if test="${event.relationshipBadge}">
-																				<span class="event-badge event-badge--${event.relationshipBadgeType}">
-																					<c:out value="${event.relationshipBadgeLabel}" />
+																			<c:forEach var="relationshipBadge" items="${event.relationshipBadges}">
+																				<span class="event-badge event-badge--${relationshipBadge.type}">
+																					<c:out value="${relationshipBadge.label}" />
 																				</span>
-																			</c:if>
+																			</c:forEach>
 																		</div>
 																	</div>
 
@@ -590,6 +611,12 @@
 											currentUrl.searchParams.delete("filter");
 										}
 										currentUrl.searchParams.set("page", "1");
+										/* Clear date and price filters – they don't carry across
+										the upcoming/past boundary and cause empty results. */
+										currentUrl.searchParams.delete("startDate");
+										currentUrl.searchParams.delete("endDate");
+										currentUrl.searchParams.delete("minPrice");
+										currentUrl.searchParams.delete("maxPrice");
 										window.location.href = currentUrl.toString();
 									});
 								});
