@@ -242,7 +242,9 @@
 													</h2>
 
 													<div class="event-card__meta">
-														<span><c:out value="${event.venue}" /></span>
+														<span class="event-card__meta-text">
+															<span><c:out value="${event.venue}" /></span>
+														</span>
 														<span><c:out value="${event.schedule}" /></span>
 													</div>
 

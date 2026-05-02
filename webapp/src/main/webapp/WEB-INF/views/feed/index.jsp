@@ -320,7 +320,10 @@
 																<circle cx="12" cy="11" r="3" />
 															</svg>
 														</span>
-														<c:out value="${event.venue}" />
+														<span class="event-card__meta-text">
+															<c:out value="${event.venue}" />
+														</span>
+
 													</span>
 													<span class="event-card__meta-item">
 														<span class="event-card__meta-icon" aria-hidden="true">
