@@ -62,7 +62,7 @@
 										<span class="search-panel__icon" aria-hidden="true"></span>
 										<form:input
 											path="q"
-											cssClass="field__control search-panel__control"
+											cssClass="search-panel__control"
 											placeholder="${feedPage.searchPlaceholder}" />
 									</div>
 									<ui:button label="${feedPage.searchButtonLabel}" type="submit" />
