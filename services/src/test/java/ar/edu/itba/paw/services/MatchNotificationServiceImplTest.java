@@ -35,6 +35,7 @@ public class MatchNotificationServiceImplTest {
     @Mock private MailDispatchService mailDispatchService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private MessageSource messageSource;
+    @Mock private UserService userService;
 
     @BeforeEach
     public void setUp() {
@@ -191,6 +192,36 @@ public class MatchNotificationServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(List.of("first@test.com", "second@test.com"), recipients);
         Assertions.assertEquals(List.of(2, 1), affectedCounts);
+    }
+
+    @Test
+    public void testNotifyHostPlayerLeftSendsMailToHost() {
+        final Match match = createMatch(60L, "Weekly Padel", "open");
+        final User player =
+                new User(2L, "player@test.com", "player", "Jamie", "Rivera", null, null);
+        final User host = new User(1L, "host@test.com", "host", "Host", "User", null, null);
+        final MailContent mail = new MailContent("player-left", "<p>left</p>", "left");
+        Mockito.when(userService.findById(1L)).thenReturn(java.util.Optional.of(host));
+        Mockito.when(templateRenderer.renderPlayerLeftNotification(ArgumentMatchers.any()))
+                .thenReturn(mail);
+
+        matchNotificationService.notifyHostPlayerLeft(match, player);
+
+        Mockito.verify(mailDispatchService).dispatch("host@test.com", mail);
+    }
+
+    @Test
+    public void testNotifyPlayerRemovedByHostSendsMailToPlayer() {
+        final Match match = createMatch(61L, "Weekly Padel", "open");
+        final User player =
+                new User(2L, "player@test.com", "player", "Jamie", "Rivera", null, null);
+        final MailContent mail = new MailContent("removed", "<p>removed</p>", "removed");
+        Mockito.when(templateRenderer.renderParticipantRemovedNotification(ArgumentMatchers.any()))
+                .thenReturn(mail);
+
+        matchNotificationService.notifyPlayerRemovedByHost(match, player);
+
+        Mockito.verify(mailDispatchService).dispatch("player@test.com", mail);
     }
 
     private static Match createMatch(final long id, final String title, final String status) {

@@ -13,6 +13,10 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.InviteParticipantViewMod
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PendingRequestViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.RosterParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -59,8 +63,9 @@ public class HostParticipationController {
         final boolean isApprovalRequired =
                 "approval_required".equalsIgnoreCase(match.getJoinPolicy());
         final ModelAndView mav = new ModelAndView("host/participation/roster");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
+        addParticipationHeader(mav, match, locale);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("participants", toRosterViewModels(participants, resolvedMatchId));
         mav.addObject("emptyMessage", messageSource.getMessage("host.roster.empty", null, locale));
@@ -86,9 +91,9 @@ public class HostParticipationController {
                 matchParticipationService.findPendingRequests(resolvedMatchId, hostUserId);
 
         final ModelAndView mav = new ModelAndView("host/participation/requests");
-        mav.addObject(
-                "shell", ShellViewModelFactory.hostShell(messageSource, locale, "/host/requests"));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
+        addParticipationHeader(mav, match, locale);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("pendingRequests", toPendingRequestViewModels(pending, resolvedMatchId));
         mav.addObject(
@@ -110,7 +115,7 @@ public class HostParticipationController {
         mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
-        mav.addObject("matchesUrl", "/host/matches");
+        mav.addObject("matchesUrl", "/events");
         return mav;
     }
 
@@ -230,8 +235,9 @@ public class HostParticipationController {
                 matchParticipationService.findDeclinedInvitees(matchId, hostUserId);
 
         final ModelAndView mav = new ModelAndView("host/participation/invites");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
+        addParticipationHeader(mav, match, locale);
         mav.addObject("matchId", matchId);
         mav.addObject("inviteForm", form);
         mav.addObject("inviteError", inviteError);
@@ -241,6 +247,24 @@ public class HostParticipationController {
         mav.addObject("declinedInvites", toInviteParticipantViewModels(declined));
         mav.addObject("rosterUrl", "/host/matches/" + matchId + "/participants");
         return mav;
+    }
+
+    private static void addParticipationHeader(
+            final ModelAndView mav, final Match match, final Locale locale) {
+        final ZoneId zoneId = ZoneId.systemDefault();
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
+        mav.addObject(
+                "participationEventDate",
+                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt));
+        mav.addObject(
+                "participationEventTime",
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt));
+        mav.addObject("participationEventVenue", match.getAddress());
     }
 
     private String inviteErrorMessage(final String code, final String email, final Locale locale) {

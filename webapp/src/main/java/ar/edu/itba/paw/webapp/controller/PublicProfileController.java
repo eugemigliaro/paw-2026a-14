@@ -90,25 +90,11 @@ public class PublicProfileController {
                         user.getUsername(),
                         user.getName(),
                         user.getLastName(),
+                        user.getEmail(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
         addReviewModel(
                 mav, user, reviewForm, reviewFilter, parseReviewPage(reviewPage), resolvedLocale);
-        mav.addObject(
-                "profileEyebrow",
-                messageSource.getMessage(
-                        "profile.public.eyebrow", null, "Profile picture", resolvedLocale));
-        mav.addObject(
-                "profileTitle",
-                messageSource.getMessage(
-                        "profile.public.title", null, "Public profile", resolvedLocale));
-        mav.addObject(
-                "profileDescription",
-                messageSource.getMessage(
-                        "profile.public.description",
-                        null,
-                        "See this Match Point member's public identity and profile details.",
-                        resolvedLocale));
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(
@@ -121,13 +107,11 @@ public class PublicProfileController {
                 messageSource.getMessage(
                         "profile.public.username", null, "Username", resolvedLocale));
         mav.addObject(
-                "profileNameLabel",
-                messageSource.getMessage(
-                        "profile.public.name", null, "First name", resolvedLocale));
+                "profileFullNameLabel",
+                messageSource.getMessage("profile.public.fullName", null, "Name", locale));
         mav.addObject(
-                "profileLastNameLabel",
-                messageSource.getMessage(
-                        "profile.public.lastName", null, "Last name", resolvedLocale));
+                "profileEmailLabel",
+                messageSource.getMessage("profile.public.email", null, "Email", locale));
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
@@ -156,7 +140,7 @@ public class PublicProfileController {
                 .filter(principal -> principal.getUserId().equals(user.getId()))
                 .ifPresent(
                         principal -> {
-                            mav.addObject("profileEditHref", "/account/edit");
+                            mav.addObject("profileEditHref", "/account");
                             mav.addObject(
                                     "profileEditLabel",
                                     messageSource.getMessage(

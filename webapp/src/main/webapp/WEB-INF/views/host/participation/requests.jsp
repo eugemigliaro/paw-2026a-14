@@ -18,17 +18,54 @@
 					<h1 class="page-heading__title">
 						<spring:message code="host.requests.title" />
 					</h1>
-					<p class="page-heading__description">
-						<c:choose>
-							<c:when test="${aggregateRequests}">
+					<c:choose>
+						<c:when test="${aggregateRequests}">
+							<p class="page-heading__description">
 								<spring:message code="host.requests.all.description" />
-							</c:when>
-							<c:otherwise>
-								<c:out value="${match.title}" /> &mdash;
-								<spring:message code="host.requests.description" />
-							</c:otherwise>
-						</c:choose>
-					</p>
+							</p>
+						</c:when>
+						<c:otherwise>
+							<div class="participation-event-heading">
+								<h2 class="participation-event-heading__title">
+									<c:out value="${match.title}" />
+								</h2>
+								<div class="participation-event-heading__meta">
+									<span class="participation-event-heading__meta-item">
+										<span class="participation-event-heading__meta-icon" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+												<line x1="16" y1="2" x2="16" y2="6" />
+												<line x1="8" y1="2" x2="8" y2="6" />
+												<line x1="3" y1="10" x2="21" y2="10" />
+											</svg>
+										</span>
+										<c:out value="${participationEventDate}" />
+									</span>
+									<span class="participation-event-heading__meta-item">
+										<span class="participation-event-heading__meta-icon" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<circle cx="12" cy="12" r="10" />
+												<polyline points="12 6 12 12 16 14" />
+											</svg>
+										</span>
+										<c:out value="${participationEventTime}" />
+									</span>
+									<span class="participation-event-heading__meta-item">
+										<span class="participation-event-heading__meta-icon" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M12 22s8-4.35 8-11a8 8 0 1 0-16 0c0 6.65 8 11 8 11z" />
+												<circle cx="12" cy="11" r="3" />
+											</svg>
+										</span>
+										<c:out value="${participationEventVenue}" />
+									</span>
+								</div>
+								<p class="page-heading__description participation-event-heading__description">
+									<spring:message code="host.requests.description" />
+								</p>
+							</div>
+						</c:otherwise>
+					</c:choose>
 				</header>
 
 				<c:if test="${param.action eq 'approved'}">
@@ -59,19 +96,16 @@
 						<c:choose>
 							<c:when test="${aggregateRequests}">
 								<c:url var="matchesHref" value="${matchesUrl}" />
-								<a class="section-link" href="${matchesHref}">
-									<spring:message code="nav.host.upcomingEvents" />
-								</a>
+								<spring:message var="matchesLabel" code="nav.player.events" />
+								<ui:button label="${matchesLabel}" href="${matchesHref}" variant="primary" className="participation-nav__button" />
 							</c:when>
 							<c:otherwise>
 								<c:url var="backToEventHref" value="/matches/${matchId}" />
-								<a class="section-link" href="${backToEventHref}">
-									<spring:message code="participation.backToEvent" />
-								</a>
+								<spring:message var="backToEventLabel" code="participation.backToEvent" />
+								<ui:button label="${backToEventLabel}" href="${backToEventHref}" variant="secondary" className="participation-nav__button" />
 								<c:url var="rosterHref" value="${rosterUrl}" />
-								<a class="section-link" href="${rosterHref}">
-									<spring:message code="host.requests.viewRoster" />
-								</a>
+								<spring:message var="viewRosterLabel" code="host.requests.viewRoster" />
+								<ui:button label="${viewRosterLabel}" href="${rosterHref}" variant="primary" className="participation-nav__button" />
 							</c:otherwise>
 						</c:choose>
 					</div>

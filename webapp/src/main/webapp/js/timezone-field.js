@@ -1,6 +1,7 @@
 (function() {
 	var timezoneFields = document.querySelectorAll('[data-browser-timezone-field="true"]');
-	if (!timezoneFields.length || !window.Intl || !Intl.DateTimeFormat) {
+	var timezoneOptionSelects = document.querySelectorAll('[data-browser-timezone-url-options="true"]');
+	if ((!timezoneFields.length && !timezoneOptionSelects.length) || !window.Intl || !Intl.DateTimeFormat) {
 		return;
 	}
 
@@ -11,5 +12,17 @@
 
 	timezoneFields.forEach(function(field) {
 		field.value = timezone;
+	});
+
+	timezoneOptionSelects.forEach(function(select) {
+		Array.prototype.forEach.call(select.options, function(option) {
+			try {
+				var url = new URL(option.value, window.location.href);
+				url.searchParams.set('tz', timezone);
+				option.value = url.pathname + url.search + url.hash;
+			} catch (error) {
+				// Ignore non-URL option values.
+			}
+		});
 	});
 })();

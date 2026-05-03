@@ -44,18 +44,14 @@ public class AccountController {
 
     @GetMapping(value = "/account", params = "!updated")
     public ModelAndView showAccount(final Locale locale) {
-        return accountView(requiredAuthenticatedUser(), locale, false);
+        final User user = requiredAuthenticatedUser();
+        return accountView(user, locale, false, accountProfileFormFrom(user), null);
     }
 
     @GetMapping(value = "/account", params = "updated=1")
     public ModelAndView showUpdatedAccount(final Locale locale) {
-        return accountView(requiredAuthenticatedUser(), locale, true);
-    }
-
-    @GetMapping("/account/edit")
-    public ModelAndView showEditAccount(final Locale locale) {
         final User user = requiredAuthenticatedUser();
-        return accountEditView(accountProfileFormFrom(user), user.getEmail(), null, locale);
+        return accountView(user, locale, true, accountProfileFormFrom(user), null);
     }
 
     @PostMapping("/account/edit")
@@ -70,7 +66,7 @@ public class AccountController {
         final User currentUser = requiredAuthenticatedUser();
 
         if (bindingResult.hasErrors()) {
-            return accountEditView(accountProfileForm, currentUser.getEmail(), null, locale);
+            return accountView(currentUser, locale, false, accountProfileForm, null);
         }
 
         try (InputStream profileImageStream =
@@ -102,29 +98,36 @@ public class AccountController {
             return new ModelAndView("redirect:/account?updated=1");
         } catch (final AccountRegistrationException exception) {
             applyProfileUpdateError(bindingResult, exception);
-            return accountEditView(accountProfileForm, currentUser.getEmail(), null, locale);
+            return accountView(currentUser, locale, false, accountProfileForm, null);
         } catch (final ImageUploadException exception) {
-            return accountEditView(
+            return accountView(
+                    currentUser,
+                    locale,
+                    false,
                     accountProfileForm,
-                    currentUser.getEmail(),
-                    profileImageError(exception, locale),
-                    locale);
+                    profileImageError(exception, locale));
         } catch (final IllegalArgumentException exception) {
-            return accountEditView(
-                    accountProfileForm, currentUser.getEmail(), profileImageError(locale), locale);
+            return accountView(
+                    currentUser, locale, false, accountProfileForm, profileImageError(locale));
         } catch (final IOException exception) {
-            return accountEditView(
+            return accountView(
+                    currentUser,
+                    locale,
+                    false,
                     accountProfileForm,
-                    currentUser.getEmail(),
                     profileImageError(
                             "account.profileImage.error.unavailable",
                             "We could not process the uploaded image. Please try again.",
-                            locale),
-                    locale);
+                            locale));
         }
     }
 
-    private ModelAndView accountView(final User user, final Locale locale, final boolean updated) {
+    private ModelAndView accountView(
+            final User user,
+            final Locale locale,
+            final boolean updated,
+            final AccountProfileForm accountProfileForm,
+            final String profileImageError) {
         final ModelAndView mav = new ModelAndView("account/index");
         mav.addObject(
                 "pageTitle",
@@ -140,45 +143,6 @@ public class AccountController {
                         "account.description",
                         null,
                         "Review your Match Point profile details and current session.",
-                        locale));
-        mav.addObject(
-                "accountEditLabel",
-                messageSource.getMessage("account.edit", null, "Edit profile", locale));
-        mav.addObject(
-                "logoutLabel", messageSource.getMessage("nav.logout", null, "Logout", locale));
-        mav.addObject(
-                "accountUpdated",
-                updated
-                        ? messageSource.getMessage(
-                                "account.updated", null, "Your profile was updated.", locale)
-                        : null);
-        addProfileImageObjects(mav, user, locale);
-        mav.addObject("accountProfile", user);
-        return mav;
-    }
-
-    private ModelAndView accountEditView(
-            final AccountProfileForm accountProfileForm,
-            final String accountEmail,
-            final String profileImageError,
-            final Locale locale) {
-        final ModelAndView mav = new ModelAndView("account/edit");
-        final User user = requiredAuthenticatedUser();
-        mav.addObject(
-                "pageTitle",
-                messageSource.getMessage(
-                        "page.title.accountEdit", null, "Match Point | Edit Profile", locale));
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/account"));
-        mav.addObject(
-                "accountTitle",
-                messageSource.getMessage("account.editTitle", null, "Edit profile", locale));
-        mav.addObject(
-                "accountDescription",
-                messageSource.getMessage(
-                        "account.editDescription",
-                        null,
-                        "Update the profile details shown across your Match Point account.",
                         locale));
         mav.addObject(
                 "accountSaveLabel",
@@ -204,11 +168,24 @@ public class AccountController {
                         null,
                         "Accepted formats: JPG, PNG, WEBP, GIF. Max size 5 MB.",
                         locale));
+        mav.addObject("accountProfileImageError", profileImageError);
         mav.addObject(
-                "accountProfileImageError", profileImageError != null ? profileImageError : null);
-        mav.addObject("accountEmail", accountEmail);
-        mav.addObject("accountProfileForm", accountProfileForm);
+                "logoutLabel", messageSource.getMessage("nav.logout", null, "Logout", locale));
+        mav.addObject(
+                "accountUpdated",
+                updated
+                        ? messageSource.getMessage(
+                                "account.updated", null, "Your profile was updated.", locale)
+                        : null);
         addProfileImageObjects(mav, user, locale);
+        mav.addObject("accountProfile", user);
+        mav.addObject("accountProfileForm", accountProfileForm);
+        mav.addObject("accountEmail", user.getEmail());
+        mav.addObject("accountPublicProfileHref", "/users/" + user.getUsername());
+        mav.addObject(
+                "accountPublicProfileLabel",
+                messageSource.getMessage(
+                        "account.viewPublicProfile", null, "View public profile", locale));
         return mav;
     }
 

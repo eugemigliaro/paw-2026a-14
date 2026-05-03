@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MatchServiceImpl implements MatchService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MAX_PLAYERS_PER_MATCH = 1000;
     private static final int MIN_RECURRING_OCCURRENCES = 2;
     private static final int MAX_RECURRING_OCCURRENCES = 52;
 
@@ -68,6 +69,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getEndsAt(),
                 new IllegalArgumentException(message("match.schedule.error.startsAtPast")),
                 new IllegalArgumentException(message("match.schedule.error.endBeforeStart")));
+        validateCreateCapacityOrThrow(request.getMaxPlayers());
 
         if (request.isRecurring()) {
             return createRecurringMatch(request);
@@ -166,6 +168,7 @@ public class MatchServiceImpl implements MatchService {
                 new MatchUpdateException(
                         MatchUpdateFailureReason.INVALID_SCHEDULE,
                         message("match.schedule.error.endBeforeStart")));
+        validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final int confirmedParticipants =
                 matchParticipantDao.findConfirmedParticipants(matchId).size();
@@ -230,6 +233,7 @@ public class MatchServiceImpl implements MatchService {
                 new MatchUpdateException(
                         MatchUpdateFailureReason.INVALID_SCHEDULE,
                         message("match.schedule.error.endBeforeStart")));
+        validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final List<Match> targets = editableFutureSeriesTargets(pivot);
         if (targets.isEmpty()) {
@@ -858,6 +862,20 @@ public class MatchServiceImpl implements MatchService {
 
         if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
             throw endsAtException;
+        }
+    }
+
+    private void validateCreateCapacityOrThrow(final int maxPlayers) {
+        if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
+            throw new IllegalArgumentException(message("match.create.error.capacityAboveMax"));
+        }
+    }
+
+    private void validateUpdateCapacityOrThrow(final int maxPlayers) {
+        if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.CAPACITY_ABOVE_MAX,
+                    message("match.update.error.capacityAboveMax"));
         }
     }
 

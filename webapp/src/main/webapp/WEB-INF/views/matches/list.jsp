@@ -88,6 +88,8 @@
 					</section>
 				</section>
 
+				<div class="events-filters-section">
+
 				<c:if test="${not empty listControls}">
 					<section class="matches-list-layout">
 						<aside class="matches-list-sidebar" aria-label="${filtersAriaLabel}">
@@ -182,7 +184,7 @@
 								</section>
 							</div>
 						</aside>
-
+					</div>
 						<section class="matches-list-content">
 							<c:choose>
 								<c:when test="${empty events}">
@@ -211,22 +213,38 @@
 															loading="lazy"
 															decoding="async"/>
 													</c:if>
-													<span class="event-card__badge">
-														<c:out value="${event.badge}" />
-													</span>
+													<div class="event-card__media-badges">
+														<span class="event-card__badge">
+															<c:out value="${event.badge}" />
+														</span>
+														<c:forEach var="relationshipBadge" items="${event.relationshipBadges}">
+															<span class="event-badge event-badge--${relationshipBadge.type}">
+																<c:out value="${relationshipBadge.label}" />
+															</span>
+														</c:forEach>
+													</div>
 												</div>
 
 												<div class="event-card__body">
-													<span class="event-card__sport">
-														<c:out value="${event.sport}" />
-													</span>
+													<div class="event-card__sport-row">
+														<span class="event-card__sport">
+															<c:out value="${event.sport}" />
+														</span>
+														<c:if test="${event.recurring}">
+															<span class="event-card__recurring">
+																<c:out value="${event.recurringLabel}" />
+															</span>
+														</c:if>
+													</div>
 
 													<h2 class="event-card__title">
 														<c:out value="${event.title}" />
 													</h2>
 
 													<div class="event-card__meta">
-														<span><c:out value="${event.venue}" /></span>
+														<span class="event-card__meta-text">
+															<span><c:out value="${event.venue}" /></span>
+														</span>
 														<span><c:out value="${event.schedule}" /></span>
 													</div>
 

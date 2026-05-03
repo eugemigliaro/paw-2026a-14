@@ -12,6 +12,7 @@ public class MatchLifecycleMailTemplateData {
     private final Instant endsAt;
     private final String sportLabel;
     private final String statusLabel;
+    private final String actorName;
     private final Locale locale;
 
     public MatchLifecycleMailTemplateData(
@@ -23,6 +24,28 @@ public class MatchLifecycleMailTemplateData {
             final String sportLabel,
             final String statusLabel,
             final Locale locale) {
+        this(
+                recipientEmail,
+                matchTitle,
+                address,
+                startsAt,
+                endsAt,
+                sportLabel,
+                statusLabel,
+                null,
+                locale);
+    }
+
+    public MatchLifecycleMailTemplateData(
+            final String recipientEmail,
+            final String matchTitle,
+            final String address,
+            final Instant startsAt,
+            final Instant endsAt,
+            final String sportLabel,
+            final String statusLabel,
+            final String actorName,
+            final Locale locale) {
         this.recipientEmail = recipientEmail;
         this.matchTitle = matchTitle;
         this.address = address;
@@ -30,6 +53,7 @@ public class MatchLifecycleMailTemplateData {
         this.endsAt = endsAt;
         this.sportLabel = sportLabel;
         this.statusLabel = statusLabel;
+        this.actorName = actorName;
         this.locale = locale;
     }
 
@@ -59,6 +83,10 @@ public class MatchLifecycleMailTemplateData {
 
     public String getStatusLabel() {
         return statusLabel;
+    }
+
+    public String getActorName() {
+        return actorName;
     }
 
     public Locale getLocale() {

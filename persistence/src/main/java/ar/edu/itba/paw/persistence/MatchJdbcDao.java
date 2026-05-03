@@ -50,6 +50,7 @@ public class MatchJdbcDao implements MatchDao {
 
     private static final String BASE_FROM =
             " FROM matches m"
+                    + " JOIN users hu ON hu.id = m.host_user_id"
                     + " LEFT JOIN match_participants mp"
                     + " ON mp.match_id = m.id"
                     + " AND mp.status IN ('joined', 'checked_in', 'invited') ";
@@ -622,10 +623,20 @@ public class MatchJdbcDao implements MatchDao {
             return;
         }
 
-        sql.append(" AND (LOWER(m.title) LIKE ? OR LOWER(COALESCE(m.description, '')) LIKE ?)");
+        sql.append(
+                " AND (LOWER(m.title) LIKE ?"
+                        + " OR LOWER(COALESCE(m.description, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(m.address, '')) LIKE ?"
+                        + " OR LOWER(CAST(m.sport AS VARCHAR(30))) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.last_name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.username, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.name, '') || ' ' || COALESCE(hu.last_name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.last_name, '') || ' ' || COALESCE(hu.name, '')) LIKE ?)");
         final String queryPattern = "%" + query.trim().toLowerCase() + "%";
-        params.add(queryPattern);
-        params.add(queryPattern);
+        for (int i = 0; i < 9; i++) {
+            params.add(queryPattern);
+        }
     }
 
     private static void appendSportFilter(
@@ -650,15 +661,17 @@ public class MatchJdbcDao implements MatchDao {
 
         switch (safeSort) {
             case PRICE_LOW:
-                sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC");
+                sql.append(
+                        " ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC, m.id ASC");
                 break;
             case SPOTS_DESC:
                 sql.append(
-                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, " + "m.starts_at ASC");
+                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, "
+                                + "m.starts_at ASC, m.id ASC");
                 break;
             case SOONEST:
             default:
-                sql.append(" ORDER BY m.starts_at ASC");
+                sql.append(" ORDER BY m.starts_at ASC, m.id ASC");
                 break;
         }
     }
@@ -673,16 +686,17 @@ public class MatchJdbcDao implements MatchDao {
         final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
         switch (safeSort) {
             case PRICE_LOW:
-                sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at DESC");
+                sql.append(
+                        " ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at DESC, m.id DESC");
                 break;
             case SPOTS_DESC:
                 sql.append(
                         " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, "
-                                + "m.starts_at DESC");
+                                + "m.starts_at DESC, m.id DESC");
                 break;
             case SOONEST:
             default:
-                sql.append(" ORDER BY m.starts_at DESC");
+                sql.append(" ORDER BY m.starts_at DESC, m.id DESC");
                 break;
         }
     }

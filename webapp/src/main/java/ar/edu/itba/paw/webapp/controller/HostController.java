@@ -231,6 +231,11 @@ public class HostController {
                         "maxPlayers",
                         "match.update.error.capacityBelowConfirmed",
                         exception.getMessage());
+            } else if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_ABOVE_MAX) {
+                bindingResult.rejectValue(
+                        "maxPlayers",
+                        "match.update.error.capacityAboveMax",
+                        exception.getMessage());
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
             } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
@@ -314,6 +319,11 @@ public class HostController {
                         "maxPlayers",
                         "match.update.error.capacityBelowConfirmed",
                         exception.getMessage());
+            } else if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_ABOVE_MAX) {
+                bindingResult.rejectValue(
+                        "maxPlayers",
+                        "match.update.error.capacityAboveMax",
+                        exception.getMessage());
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
             } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
@@ -376,7 +386,7 @@ public class HostController {
         mav.addObject("pageTitle", formConfig.pageTitle());
         mav.addObject(
                 "shell",
-                ShellViewModelFactory.hostShell(messageSource, locale, "/host/matches/new"));
+                ShellViewModelFactory.playerShell(messageSource, locale, "/host/matches/new"));
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         mav.addObject("formEyebrow", formConfig.eyebrow());

@@ -47,6 +47,7 @@ import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.MatchListControlsViewModel;
 import java.io.IOException;
@@ -403,6 +404,23 @@ class PawUiRouteTest {
                         null,
                         700L,
                         0);
+        final Match pendingFutureMatch =
+                new Match(
+                        56L,
+                        Sport.PADEL,
+                        7L,
+                        "Downtown Club",
+                        "Approval Future Padel",
+                        "Future session with host approval",
+                        Instant.parse("2030-04-09T20:00:00Z"),
+                        Instant.parse("2030-04-09T21:30:00Z"),
+                        8,
+                        BigDecimal.TEN,
+                        "public",
+                        "approval_required",
+                        "open",
+                        1,
+                        null);
 
         final MatchService matchService =
                 new MatchService() {
@@ -473,6 +491,9 @@ class PawUiRouteTest {
                         if (matchId == 54L) {
                             return Optional.of(approvalRecurringPastOccurrence);
                         }
+                        if (matchId == 56L) {
+                            return Optional.of(pendingFutureMatch);
+                        }
                         return Optional.empty();
                     }
 
@@ -485,12 +506,9 @@ class PawUiRouteTest {
                     public List<Match> findSeriesOccurrences(final Long seriesId) {
                         if (Long.valueOf(600L).equals(seriesId)) {
                             return List.of(
-                                    recurringPastOccurrence,
-                                    recurringInProgressOccurrence,
-                                    recurringMatch,
-                                    recurringSecondOccurrence,
-                                    recurringFullOccurrence,
-                                    recurringCancelledOccurrence);
+                                    recurringPastOccurrence, recurringInProgressOccurrence,
+                                    recurringMatch, recurringSecondOccurrence,
+                                    recurringFullOccurrence, recurringCancelledOccurrence);
                         }
                         if (Long.valueOf(700L).equals(seriesId)) {
                             return List.of(
@@ -733,7 +751,7 @@ class PawUiRouteTest {
                     @Override
                     public boolean hasActiveReservation(final Long matchId, final Long userId) {
                         if (Boolean.TRUE.equals(currentUserHasReservation.get())
-                                && userId == 9L
+                                && (userId == 9L || userId == 7L)
                                 && (matchId == 42L || matchId == 51L)) {
                             return true;
                         }
@@ -886,7 +904,10 @@ class PawUiRouteTest {
 
                     @Override
                     public List<Match> findPendingRequestMatches(final Long userId) {
-                        return List.of();
+                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
+                                        && userId == 9L
+                                ? List.of(pendingFutureMatch)
+                                : List.of();
                     }
 
                     @Override
@@ -1297,7 +1318,12 @@ class PawUiRouteTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new FeedController(matchService, messageSource),
+                                new FeedController(
+                                        matchService,
+                                        matchParticipationService,
+                                        matchReservationService,
+                                        userService,
+                                        messageSource),
                                 new EventController(
                                         matchService,
                                         matchReservationService,
@@ -1307,18 +1333,20 @@ class PawUiRouteTest {
                                         messageSource,
                                         fixedClock),
                                 new PublicProfileController(
-                                        userService,
-                                        playerReviewService,
-                                        moderationService,
-                                        messageSource),
-                                new PlayerParticipationController(
-                                        matchParticipationService, messageSource),
+                                        userService, playerReviewService,
+                                        moderationService, messageSource),
+                                new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
                                 new HostParticipationController(
                                         matchService, matchParticipationService, messageSource),
-                                new MatchDashboardController(matchService, messageSource),
+                                new MatchDashboardController(
+                                        matchService,
+                                        matchParticipationService,
+                                        matchReservationService,
+                                        userService,
+                                        messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(accountAuthService, messageSource))
                         .setViewResolvers(viewResolver)
@@ -1464,7 +1492,8 @@ class PawUiRouteTest {
                                                         Matchers.hasProperty(
                                                                 "reviewHref",
                                                                 Matchers.is(
-                                                                        "/users/second-player?reviewForm=open#reviews"))))));
+                                                                        "/users/"
+                                                                                + "second-player?reviewForm=open#reviews"))))));
     }
 
     @Test
@@ -1753,7 +1782,8 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "hostActionNotice",
-                                        "Las pr\u00f3ximas fechas recurrentes fueron actualizadas correctamente."));
+                                        "Las pr\u00f3ximas fechas recurrentes "
+                                                + "fueron actualizadas correctamente."));
     }
 
     @Test
@@ -1827,10 +1857,19 @@ class PawUiRouteTest {
 
         mockMvc.perform(post("/matches/51/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/player/matches/upcoming"));
+                .andExpect(redirectedUrl("/events"));
 
         Assertions.assertEquals(51L, lastCancelledReservationMatchId.get());
         Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
+    }
+
+    @Test
+    void postPrivateInviteDeclineRedirectsToUpcomingMatches() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/51/invites/decline"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/events"));
     }
 
     @Test
@@ -1881,7 +1920,8 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "seriesReservationError",
-                                        "Tu cuenta ya tiene reservas confirmadas para las fechas futuras recurrentes."));
+                                        "Tu cuenta ya tiene reservas confirmadas "
+                                                + "para las fechas futuras recurrentes."));
     }
 
     @Test
@@ -2593,17 +2633,6 @@ class PawUiRouteTest {
     }
 
     @Test
-    void getHostAllMatchesRouteRendersDashboardPage() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("matches/list"))
-                .andExpect(model().attributeExists("events"))
-                .andExpect(model().attributeExists("listTitle"));
-    }
-
-    @Test
     void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -2612,79 +2641,92 @@ class PawUiRouteTest {
                 .andExpect(view().name("host/participation/requests"))
                 .andExpect(model().attribute("aggregateRequests", true))
                 .andExpect(model().attributeExists("pendingRequests"))
-                .andExpect(model().attribute("matchesUrl", "/host/matches"));
+                .andExpect(model().attribute("matchesUrl", "/events"));
     }
 
     @Test
-    void getHostFinishedMatchesRouteRendersFinishedPage() throws Exception {
+    void removedDashboardRoutesAreNotMapped() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/host/matches/finished").locale(Locale.ENGLISH))
+        mockMvc.perform(get("/host/matches")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/host/matches/finished")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/player/matches/past")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/player/matches/upcoming")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/player/matches/requests")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/player/matches/invites")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getEventsRouteRendersEventsPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/events"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("matches/list"))
+                .andExpect(view().name("events/list"))
                 .andExpect(model().attributeExists("events"))
-                .andExpect(model().attributeExists("listTitle"));
+                .andExpect(model().attribute("pageTitleCode", "page.title.events"));
     }
 
     @Test
-    void getHostFinishedMatchesDefaultsDateRangeAndNoLegacyTimeOption() throws Exception {
+    void getEventsRouteDoesNotIncludePendingCategoryByDefault() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
-        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+        currentUserHasSeriesJoinRequest.set(true);
 
         final MvcResult result =
-                mockMvc.perform(get("/host/matches/finished").locale(Locale.ENGLISH))
+                mockMvc.perform(get("/events"))
                         .andExpect(status().isOk())
-                        .andExpect(view().name("matches/list"))
-                        .andExpect(
-                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
-                        .andExpect(model().attribute("selectedEndDateValue", today))
+                        .andExpect(view().name("events/list"))
                         .andReturn();
 
-        assertNoTomorrowTimeOption(
-                (MatchListControlsViewModel)
-                        result.getModelAndView().getModel().get("listControls"));
+        final List<EventCardViewModel> events =
+                (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+        Assertions.assertTrue(
+                events.stream()
+                        .noneMatch(event -> "Approval Future Padel".equals(event.getTitle())));
     }
 
     @Test
-    void getPlayerPastMatchesRouteRendersPastPage() throws Exception {
+    void getEventsRouteIncludesPendingOnlyWhenPendingCategorySelected() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/player/matches/past"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("matches/list"))
-                .andExpect(model().attributeExists("events"));
-    }
-
-    @Test
-    void getPlayerPastMatchesDefaultsDateRangeAndNoLegacyTimeOption() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
-        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+        currentUserHasSeriesJoinRequest.set(true);
 
         final MvcResult result =
-                mockMvc.perform(get("/player/matches/past").locale(Locale.ENGLISH))
+                mockMvc.perform(get("/events").param("category", "pending"))
                         .andExpect(status().isOk())
-                        .andExpect(view().name("matches/list"))
-                        .andExpect(
-                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
-                        .andExpect(model().attribute("selectedEndDateValue", today))
+                        .andExpect(view().name("events/list"))
                         .andReturn();
 
-        assertNoTomorrowTimeOption(
-                (MatchListControlsViewModel)
-                        result.getModelAndView().getModel().get("listControls"));
+        final List<EventCardViewModel> events =
+                (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+        Assertions.assertTrue(
+                events.stream()
+                        .anyMatch(event -> "Approval Future Padel".equals(event.getTitle())));
     }
 
     @Test
-    void getPlayerUpcomingMatchesRouteRendersUpcomingPage() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
-        final String today = LocalDate.now(ZoneId.systemDefault()).toString();
+    void getEventsRouteShowsHostedAndGoingBadgesTogether() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+        currentUserHasReservation.set(true);
 
-        mockMvc.perform(get("/player/matches/upcoming"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("matches/list"))
-                .andExpect(model().attributeExists("events"))
-                .andExpect(model().attribute("selectedStartDateValue", today))
-                .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()));
+        final MvcResult result =
+                mockMvc.perform(get("/events").param("category", "hosted"))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("events/list"))
+                        .andReturn();
+
+        final List<EventCardViewModel> events =
+                (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+        final EventCardViewModel hostedEvent =
+                events.stream()
+                        .filter(event -> "Sunrise Padel".equals(event.getTitle()))
+                        .findFirst()
+                        .orElseThrow(AssertionError::new);
+        Assertions.assertTrue(
+                hostedEvent.getRelationshipBadges().stream()
+                        .anyMatch(badge -> "my_event".equals(badge.getType())));
+        Assertions.assertTrue(
+                hostedEvent.getRelationshipBadges().stream()
+                        .anyMatch(badge -> "going".equals(badge.getType())));
     }
 
     @Test
@@ -2695,22 +2737,13 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
                 .andExpect(model().attributeExists("accountProfile"))
+                .andExpect(model().attributeExists("accountProfileForm"))
                 .andExpect(model().attributeExists("shell"));
     }
 
     @Test
     void getAccountRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(get("/account")).andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void getAccountEditRouteRendersEditablePageForAuthenticatedUsers() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/account/edit"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("account/edit"))
-                .andExpect(model().attributeExists("accountProfileForm"));
     }
 
     @Test
@@ -2780,7 +2813,7 @@ class PawUiRouteTest {
                                 .param("lastName", "Rivera")
                                 .param("phone", "+1 555 123 4567"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("account/edit"))
+                .andExpect(view().name("account/index"))
                 .andExpect(model().attribute("accountProfileImageError", expectedMessage));
     }
 
@@ -2815,7 +2848,9 @@ class PawUiRouteTest {
                                                 "phone", Matchers.is("+1 555 123 4567"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage", Matchers.not(Matchers.hasProperty("email"))))
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "email", Matchers.is("host@test.com"))))
                 .andExpect(
                         model().attribute(
                                         "profilePage",
@@ -2990,7 +3025,7 @@ class PawUiRouteTest {
 
         mockMvc.perform(get("/users/host-player"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("profileEditHref", "/account/edit"))
+                .andExpect(model().attribute("profileEditHref", "/account"))
                 .andExpect(model().attribute("reviewFormVisible", false));
     }
 
@@ -3009,24 +3044,19 @@ class PawUiRouteTest {
         mockMvc.perform(get("/users/host-player").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
-                .andExpect(model().attribute("profileTitle", "Perfil p\u00fablico"))
+                .andExpect(
+                        model().attribute(
+                                        "profilePage",
+                                        Matchers.hasProperty(
+                                                "email", Matchers.is("host@test.com"))))
                 .andExpect(model().attribute("profileUsernameLabel", "Usuario"))
+                .andExpect(model().attribute("profileEmailLabel", "Email"))
                 .andExpect(model().attribute("profilePhoneLabel", "Tel\u00e9fono"));
     }
 
     @Test
     void getUnknownPublicProfileRouteReturnsNotFound() throws Exception {
         mockMvc.perform(get("/users/missing-player")).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getHostAllMatchesRouteWithSpanishLocaleLocalizesHeader() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches").param("lang", "es"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("matches/list"))
-                .andExpect(model().attribute("listTitle", "Panel de eventos organizados"));
     }
 
     private void authenticateUser(final Long userId, final String email, final String username) {

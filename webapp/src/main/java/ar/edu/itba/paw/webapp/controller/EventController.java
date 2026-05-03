@@ -22,12 +22,14 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventOccurrenceViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
@@ -144,7 +146,7 @@ public class EventController {
                     matchId, currentUser.getUserId(), currentUser.getUserId());
             if (shouldRedirectToPlayerMatchesAfterCancellation(
                     cancellationContext, currentUser.getUserId())) {
-                return new ModelAndView("redirect:/player/matches/upcoming");
+                return new ModelAndView("redirect:/events");
             }
             return new ModelAndView("redirect:/matches/" + matchId + "?reservation=cancelled");
         } catch (final MatchParticipationException exception) {
@@ -380,7 +382,7 @@ public class EventController {
                                         playerReviewService.findReviewableUserIds(currentUserId))
                                 .orElseGet(Set::of);
         return new EventDetailPageViewModel(
-                toCard(match, locale),
+                toCard(match, locale, currentUserId),
                 null,
                 null,
                 host.map(User::getUsername)
@@ -399,7 +401,7 @@ public class EventController {
                 buildBookingDetails(match, locale),
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
-                loadNearbyMatches(match.getId(), locale),
+                loadNearbyMatches(match.getId(), currentUserId, locale),
                 toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale));
     }
 
@@ -483,31 +485,82 @@ public class EventController {
     }
 
     private List<EventCardViewModel> loadNearbyMatches(
-            final Long currentMatchId, final Locale locale) {
+            final Long currentMatchId, final Long currentUserId, final Locale locale) {
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
                         "", null, null, null, "soonest", 1, 4, null, null, null);
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)
-                .map(match -> toCard(match, locale))
+                .map(match -> toCard(match, locale, currentUserId))
                 .toList();
     }
 
-    private EventCardViewModel toCard(final Match match, final Locale locale) {
+    private EventCardViewModel toCard(
+            final Match match, final Locale locale, final Long currentUserId) {
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(ZoneId.systemDefault());
+        final List<EventRelationshipBadgeViewModel> relationshipBadges =
+                relationshipBadgesFor(match, currentUserId, locale);
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
                 "/matches/" + match.getId(),
                 toSportLabel(match.getSport(), locale),
                 match.getTitle(),
                 match.getAddress(),
-                scheduleFormatter(locale)
-                        .format(match.getStartsAt().atZone(ZoneId.systemDefault())),
+                hostLabelFor(match),
+                scheduleFormatter(locale).format(startsAt),
+                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale(locale)).format(startsAt),
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale(locale))
+                        .format(startsAt),
                 toPriceLabel(match.getPricePerPlayer(), locale),
                 buildAvailabilityLabel(match, locale),
+                relationshipBadges,
+                recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private String hostLabelFor(final Match match) {
+        if (match == null || match.getHostUserId() == null) {
+            return null;
+        }
+        return Optional.ofNullable(userService.findById(match.getHostUserId()))
+                .orElse(Optional.empty())
+                .map(User::getUsername)
+                .orElse(null);
+    }
+
+    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
+            final Match match, final Long currentUserId, final Locale locale) {
+        if (currentUserId == null) {
+            return List.of();
+        }
+        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
+        if (currentUserId.equals(match.getHostUserId())) {
+            badges.add(relationshipBadge("my_event", locale));
+        }
+        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("pending", locale));
+        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("invited", locale));
+        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("going", locale));
+        }
+        return List.copyOf(badges);
+    }
+
+    private EventRelationshipBadgeViewModel relationshipBadge(
+            final String type, final Locale locale) {
+        return new EventRelationshipBadgeViewModel(
+                type, messageSource.getMessage("event.relationship." + type, null, locale));
+    }
+
+    private String recurringLabelFor(final Match match, final Locale locale) {
+        return match.isRecurringOccurrence()
+                ? messageSource.getMessage("event.recurringBadge", null, locale)
+                : null;
     }
 
     private List<EventOccurrenceViewModel> toOccurrenceViewModels(
@@ -873,8 +926,10 @@ public class EventController {
             case BASKETBALL:
                 return "media-tile--basketball";
             case PADEL:
-            default:
                 return "media-tile--padel";
+            case OTHER:
+            default:
+                return "media-tile--other";
         }
     }
 

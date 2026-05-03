@@ -643,6 +643,33 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testCreateMatchRejectsCapacityAboveMaximum() {
+        // 1. Arrange
+        final CreateMatchRequest request =
+                new CreateMatchRequest(
+                        1L,
+                        "Test Address",
+                        "Test Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        1001,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        // 2. Exercise
+        final IllegalArgumentException exception =
+                Assertions.assertThrows(
+                        IllegalArgumentException.class, () -> matchService.createMatch(request));
+
+        // 3. Assert
+        Assertions.assertEquals("match.create.error.capacityAboveMax", exception.getMessage());
+    }
+
+    @Test
     public void testUpdateMatchRejectsMissingMatch() {
         Mockito.when(matchDao.findById(13L)).thenReturn(Optional.empty());
 
@@ -835,6 +862,38 @@ public class MatchServiceImplTest {
                 MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED, exception.getReason());
         Assertions.assertEquals(
                 "match.update.error.capacityBelowConfirmed", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateMatchRejectsCapacityAboveMaximum() {
+        // 1. Arrange
+        final Match existingMatch = createTestMatch(11L, "Test Match", "football");
+        Mockito.when(matchDao.findById(11L)).thenReturn(Optional.of(existingMatch));
+
+        // 2. Exercise
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        11L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Test Match",
+                                                "Test Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                1001,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                "public",
+                                                "open",
+                                                null)));
+
+        // 3. Assert
+        Assertions.assertEquals(MatchUpdateFailureReason.CAPACITY_ABOVE_MAX, exception.getReason());
+        Assertions.assertEquals("match.update.error.capacityAboveMax", exception.getMessage());
     }
 
     @Test

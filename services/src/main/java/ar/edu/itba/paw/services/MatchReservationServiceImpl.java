@@ -20,15 +20,21 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(MatchReservationServiceImpl.class);
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final MatchNotificationService matchNotificationService;
+    private final UserService userService;
     private final Clock clock;
 
     @Autowired
     public MatchReservationServiceImpl(
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
+            final MatchNotificationService matchNotificationService,
+            final UserService userService,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
+        this.matchNotificationService = matchNotificationService;
+        this.userService = userService;
         this.clock = clock;
     }
 
@@ -76,6 +82,13 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         }
 
         LOGGER.info("Reservation created matchId={} userId={}", matchId, userId);
+
+        if (!isHost(match, userId)) {
+            userService
+                    .findById(userId)
+                    .ifPresent(
+                            user -> matchNotificationService.notifyHostPlayerJoined(match, user));
+        }
     }
 
     @Transactional
@@ -142,6 +155,13 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 match.getSeriesId(),
                 userId,
                 reservedOccurrences);
+
+        if (!isHost(match, userId)) {
+            userService
+                    .findById(userId)
+                    .ifPresent(
+                            user -> matchNotificationService.notifyHostPlayerJoined(match, user));
+        }
     }
 
     @Override
