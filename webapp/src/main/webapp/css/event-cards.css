@@ -54,63 +54,65 @@
 
 .media-tile--football {
 	background:
-		radial-gradient(
-			circle at 80% 24%,
-			rgba(255, 255, 255, 0.16),
-			transparent 18%
+		linear-gradient(180deg, rgba(92, 48, 25, 0.12), rgba(92, 48, 25, 0.34)),
+		linear-gradient(
+			90deg,
+			transparent 47%,
+			rgba(92, 48, 25, 0.42) 47%,
+			rgba(92, 48, 25, 0.42) 53%,
+			transparent 53%
 		),
-		linear-gradient(180deg, rgba(20, 54, 47, 0.08), rgba(20, 54, 47, 0.28)),
-		linear-gradient(135deg, #9fd36e 0%, #5b9157 100%);
+		linear-gradient(135deg, #c78a54 0%, #8f5532 100%);
 }
 
 .media-tile--tennis {
 	background:
 		linear-gradient(
 			180deg,
-			rgba(244, 223, 205, 0.1),
-			rgba(244, 223, 205, 0.38)
-		),
-		repeating-linear-gradient(
-			90deg,
-			transparent 0 46%,
-			rgba(255, 255, 255, 0.65) 46% 48%,
-			transparent 48% 100%
-		),
-		linear-gradient(135deg, #4cb6bb 0%, #2b807d 100%);
-}
-
-.media-tile--yoga {
-	background:
-		radial-gradient(
-			circle at 74% 18%,
-			rgba(255, 229, 190, 0.8),
-			transparent 16%
+			rgba(25, 92, 110, 0.1),
+			rgba(25, 92, 110, 0.34)
 		),
 		linear-gradient(
-			180deg,
-			rgba(220, 149, 100, 0.12),
-			rgba(220, 149, 100, 0.4)
+			90deg,
+			transparent 47%,
+			rgba(255, 255, 255, 0.5) 47%,
+			rgba(255, 255, 255, 0.5) 53%,
+			transparent 53%
 		),
-		linear-gradient(135deg, #f7d5b0 0%, #edb46b 100%);
+		linear-gradient(135deg, #6bc6d0 0%, #358ba2 100%);
 }
 
+.media-tile--other,
+.media-tile--yoga,
 .media-tile--running {
 	background:
-		linear-gradient(180deg, rgba(21, 47, 42, 0.12), rgba(21, 47, 42, 0.34)),
-		linear-gradient(135deg, #87c48a 0%, #5d8e76 100%);
+		linear-gradient(
+			180deg,
+			rgba(39, 55, 74, 0.12),
+			rgba(39, 55, 74, 0.34)
+		),
+		linear-gradient(
+			90deg,
+			transparent 47%,
+			rgba(58, 52, 96, 0.36) 47%,
+			rgba(58, 52, 96, 0.36) 53%,
+			transparent 53%
+		),
+		linear-gradient(135deg, #78b7d4 0%, #9cc57c 46%, #d89b73 100%);
 }
 
 .media-tile--basketball {
 	background:
-		radial-gradient(
-			circle at 50% 50%,
-			transparent 0 42%,
-			rgba(76, 32, 12, 0.25) 42% 44%,
-			transparent 44% 100%
+		linear-gradient(180deg, rgba(117, 53, 18, 0.12), rgba(117, 53, 18, 0.3)),
+		linear-gradient(
+			90deg,
+			transparent 47%,
+			rgba(117, 53, 18, 0.38) 47%,
+			rgba(117, 53, 18, 0.38) 53%,
+			transparent 53%
 		),
 		linear-gradient(135deg, #f9c165 0%, #e48734 100%);
 }
-
 .event-card__badge {
 	align-items: center;
 	background: rgba(24, 55, 51, 0.7);

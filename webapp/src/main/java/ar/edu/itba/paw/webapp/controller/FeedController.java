@@ -358,8 +358,10 @@ public class FeedController {
             case BASKETBALL:
                 return "media-tile--basketball";
             case PADEL:
-            default:
                 return "media-tile--padel";
+            case OTHER:
+            default:
+                return "media-tile--other";
         }
     }
 
