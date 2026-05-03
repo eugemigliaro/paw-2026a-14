@@ -84,6 +84,15 @@
 	width: 100%;
 }
 
+.detail-top__sidebar > .player-actions-panel,
+.detail-top__sidebar > .booking-panel {
+	order: -1;
+}
+
+.detail-top__sidebar--host-view > .host-panel {
+	order: -2;
+}
+
 .event-hero {
 	align-items: end;
 	border-radius: 32px;
