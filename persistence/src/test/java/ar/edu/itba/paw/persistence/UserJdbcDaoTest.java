@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.UserRole;
 import java.io.ByteArrayInputStream;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -161,6 +162,20 @@ public class UserJdbcDaoTest {
         Assertions.assertEquals("Taylor", persisted.getName());
         Assertions.assertEquals("Morgan", persisted.getLastName());
         Assertions.assertNull(persisted.getPhone());
+    }
+
+    @Test
+    public void testFindByIdsReturnsMatchingUsers() {
+        final User first = userDao.createUser("first@test.com", "first_user");
+        final User second = userDao.createUser("second@test.com", "second_user");
+        userDao.createUser("third@test.com", "third_user");
+
+        final List<User> result = userDao.findByIds(List.of(first.getId(), second.getId()));
+
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertTrue(result.stream().anyMatch(user -> user.getId().equals(first.getId())));
+        Assertions.assertTrue(
+                result.stream().anyMatch(user -> user.getId().equals(second.getId())));
     }
 
     @Test

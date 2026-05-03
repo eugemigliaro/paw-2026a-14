@@ -4,6 +4,8 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface UserDao {
@@ -25,6 +27,8 @@ public interface UserDao {
     Optional<UserAccount> findAccountByEmail(String email);
 
     Optional<User> findById(final Long id);
+
+    List<User> findByIds(Collection<Long> ids);
 
     Optional<UserAccount> findAccountById(Long id);
 

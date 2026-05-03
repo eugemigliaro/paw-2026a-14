@@ -6,13 +6,16 @@ import ar.edu.itba.paw.models.UserRole;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
@@ -54,11 +57,13 @@ public class UserJdbcDao implements UserDao {
             };
 
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
     public UserJdbcDao(@NonNull final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
                         .withTableName("users")
@@ -141,6 +146,15 @@ public class UserJdbcDao implements UserDao {
     public Optional<User> findById(final Long id) {
         return jdbcTemplate.query("SELECT * FROM users WHERE id = ?", USER_ROW_MAPPER, id).stream()
                 .findAny();
+    }
+
+    @Override
+    public List<User> findByIds(final Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return namedParameterJdbcTemplate.query(
+                "SELECT * FROM users WHERE id IN (:ids)", Map.of("ids", ids), USER_ROW_MAPPER);
     }
 
     @Override

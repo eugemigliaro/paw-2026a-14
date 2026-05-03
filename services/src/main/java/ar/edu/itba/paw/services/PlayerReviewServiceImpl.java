@@ -1,12 +1,16 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,8 +18,6 @@ import org.springframework.stereotype.Service;
 public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     private static final int DEFAULT_RECENT_LIMIT = 10;
-    private static final int MAX_RECENT_LIMIT = 50;
-
     private final PlayerReviewDao playerReviewDao;
 
     @Autowired
@@ -60,11 +62,23 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
-    public List<PlayerReview> findRecentReviewsForUser(
-            final Long reviewedUserId, final int limit, final int offset) {
-        final int safeLimit = limit <= 0 ? DEFAULT_RECENT_LIMIT : Math.min(limit, MAX_RECENT_LIMIT);
-        final int safeOffset = Math.max(offset, 0);
-        return playerReviewDao.findRecentReviewsForUser(reviewedUserId, safeLimit, safeOffset);
+    public PaginatedResult<PlayerReview> findReviewsForUser(
+            final Long reviewedUserId,
+            final PlayerReviewFilter filter,
+            final int page,
+            final int pageSize) {
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_RECENT_LIMIT;
+        final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
+        final int totalCount = playerReviewDao.countReviewsForUser(reviewedUserId, safeFilter);
+        final int totalPages =
+                totalCount == 0 ? 1 : (int) Math.ceil((double) totalCount / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int offset = (clampedPage - 1) * safePageSize;
+        final List<PlayerReview> items =
+                playerReviewDao.findReviewsForUser(
+                        reviewedUserId, safeFilter, safePageSize, offset);
+        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
     }
 
     @Override
@@ -73,6 +87,14 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
                 && reviewedUserId != null
                 && !reviewerUserId.equals(reviewedUserId)
                 && playerReviewDao.canReview(reviewerUserId, reviewedUserId);
+    }
+
+    @Override
+    public Set<Long> findReviewableUserIds(final Long reviewerUserId) {
+        if (reviewerUserId == null) {
+            return Set.of();
+        }
+        return new HashSet<>(playerReviewDao.findReviewableUserIds(reviewerUserId));
     }
 
     private void validateReviewRequest(

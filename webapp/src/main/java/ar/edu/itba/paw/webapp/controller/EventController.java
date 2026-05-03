@@ -373,6 +373,12 @@ public class EventController {
             final Long currentUserId,
             final Locale locale) {
         final Optional<User> host = userService.findById(match.getHostUserId());
+        final Set<Long> reviewableUserIds =
+                currentUserId == null
+                        ? Set.of()
+                        : Optional.ofNullable(
+                                        playerReviewService.findReviewableUserIds(currentUserId))
+                                .orElseGet(Set::of);
         return new EventDetailPageViewModel(
                 toCard(match, locale),
                 null,
@@ -385,7 +391,7 @@ public class EventController {
                                         locale)),
                 host.map(this::profileHrefFor).orElse(null),
                 host.map(user -> profileUrlFor(user)).orElse(DEFAULT_PROFILE_IMAGE_URL),
-                toParticipantViewModels(confirmedParticipants, currentUserId),
+                toParticipantViewModels(confirmedParticipants, currentUserId, reviewableUserIds),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
                 buildAboutParagraphs(match, locale),
@@ -441,7 +447,9 @@ public class EventController {
     }
 
     private List<ParticipantViewModel> toParticipantViewModels(
-            final List<User> confirmedParticipants, final Long currentUserId) {
+            final List<User> confirmedParticipants,
+            final Long currentUserId,
+            final Set<Long> reviewableUserIds) {
         return confirmedParticipants.stream()
                 .map(
                         participant ->
@@ -450,15 +458,17 @@ public class EventController {
                                         avatarLabelForUsername(participant.getUsername()),
                                         profileHrefFor(participant),
                                         profileImageUrlForParticipant(participant),
-                                        reviewHrefForParticipant(participant, currentUserId)))
+                                        reviewHrefForParticipant(
+                                                participant, currentUserId, reviewableUserIds)))
                 .toList();
     }
 
-    private String reviewHrefForParticipant(final User participant, final Long currentUserId) {
+    private String reviewHrefForParticipant(
+            final User participant, final Long currentUserId, final Set<Long> reviewableUserIds) {
         if (currentUserId == null
                 || participant.getId() == null
                 || currentUserId.equals(participant.getId())
-                || !playerReviewService.canReview(currentUserId, participant.getId())) {
+                || !reviewableUserIds.contains(participant.getId())) {
             return null;
         }
         return profileHrefFor(participant) + "?reviewForm=open#reviews";

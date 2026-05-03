@@ -13,6 +13,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.Sport;
@@ -984,6 +985,14 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public List<User> findByIds(final java.util.Collection<Long> ids) {
+                        return ids.stream()
+                                .map(id -> findById(id).orElse(null))
+                                .filter(java.util.Objects::nonNull)
+                                .toList();
+                    }
+
+                    @Override
                     public Optional<User> findByUsername(final String username) {
                         if (currentUser.getUsername().equals(username)) {
                             return Optional.of(currentUser);
@@ -1132,12 +1141,35 @@ class PawUiRouteTest {
                     }
 
                     @Override
-                    public List<PlayerReview> findRecentReviewsForUser(
-                            final Long reviewedUserId, final int limit, final int offset) {
+                    public PaginatedResult<PlayerReview> findReviewsForUser(
+                            final Long reviewedUserId,
+                            final PlayerReviewFilter filter,
+                            final int page,
+                            final int pageSize) {
+                        final List<PlayerReview> reviews;
                         if (reviewedUserId.equals(3L) && viewerReview != null) {
-                            return List.of(viewerReview);
+                            if (filter != null
+                                    && filter.getReaction().isPresent()
+                                    && filter.getReaction().get() != viewerReview.getReaction()) {
+                                reviews = List.of();
+                            } else {
+                                reviews = List.of(viewerReview);
+                            }
+                        } else {
+                            reviews = List.of();
                         }
-                        return List.of();
+                        final int totalCount =
+                                reviewedUserId.equals(3L)
+                                                && filter == PlayerReviewFilter.BOTH
+                                                && viewerReview != null
+                                        ? 21
+                                        : reviews.size();
+                        final int totalPages =
+                                totalCount == 0
+                                        ? 1
+                                        : (int) Math.ceil((double) totalCount / pageSize);
+                        final int safePage = Math.min(Math.max(page, 1), totalPages);
+                        return new PaginatedResult<>(reviews, totalCount, safePage, pageSize);
                     }
 
                     @Override
@@ -1146,6 +1178,13 @@ class PawUiRouteTest {
                                 && reviewedUserId != null
                                 && reviewerUserId.equals(9L)
                                 && reviewedUserId.equals(3L);
+                    }
+
+                    @Override
+                    public Set<Long> findReviewableUserIds(final Long reviewerUserId) {
+                        return reviewerUserId != null && reviewerUserId.equals(9L)
+                                ? Set.of(3L)
+                                : Set.of();
                     }
                 };
 
@@ -2800,7 +2839,7 @@ class PawUiRouteTest {
                 .andExpect(
                         model().attribute(
                                         "reviewFormPath",
-                                        "/users/second-player?reviewForm=open#reviews"))
+                                        "/users/second-player?reviewFilter=both&reviewPage=1&reviewForm=open#reviews"))
                 .andExpect(model().attributeExists("viewerReview"))
                 .andExpect(
                         model().attribute(
@@ -2809,14 +2848,92 @@ class PawUiRouteTest {
     }
 
     @Test
+    void getPublicProfileRouteFiltersPositiveReviews() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewFilter", "positive"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("selectedReviewFilter", "positive"))
+                .andExpect(model().attribute("profileReviews", Matchers.hasSize(1)))
+                .andExpect(
+                        model().attribute(
+                                        "profileReviews",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "reaction", Matchers.is("like")))))
+                .andExpect(
+                        model().attribute(
+                                        "reviewFilterOptions",
+                                        Matchers.hasItem(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "label", Matchers.is("Positive")),
+                                                        Matchers.hasProperty(
+                                                                "href",
+                                                                Matchers.is(
+                                                                        "/users/second-player?reviewFilter=positive&reviewPage=1#reviews")),
+                                                        Matchers.hasProperty(
+                                                                "active", Matchers.is(true))))));
+    }
+
+    @Test
+    void getPublicProfileRoutePaginatesReviews() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewPage", "2"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("reviewTotalPages", 3))
+                .andExpect(
+                        model().attribute(
+                                        "reviewPreviousPageHref",
+                                        "/users/second-player?reviewFilter=both&reviewPage=1#reviews"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewNextPageHref",
+                                        "/users/second-player?reviewFilter=both&reviewPage=3#reviews"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewPaginationItems",
+                                        Matchers.hasItem(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "label", Matchers.is("2")),
+                                                        Matchers.hasProperty(
+                                                                "current", Matchers.is(true))))));
+    }
+
+    @Test
+    void getPublicProfileRouteFallsBackForInvalidReviewPage() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewPage", "bad"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewNextPageHref",
+                                        "/users/second-player?reviewFilter=both&reviewPage=2#reviews"));
+    }
+
+    @Test
     void getPublicProfileRouteOpensReviewFormWhenRequested() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/users/second-player").param("reviewForm", "open"))
+        mockMvc.perform(
+                        get("/users/second-player")
+                                .param("reviewFilter", "positive")
+                                .param("reviewPage", "2")
+                                .param("reviewForm", "open"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attribute("reviewCanSubmit", true))
-                .andExpect(model().attribute("reviewFormVisible", true));
+                .andExpect(model().attribute("reviewFormVisible", true))
+                .andExpect(
+                        model().attribute(
+                                        "reviewSectionPath",
+                                        "/users/second-player?reviewFilter=positive&reviewPage=1#reviews"));
     }
 
     @Test
