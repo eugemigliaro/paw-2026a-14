@@ -13,6 +13,9 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.mail.MailContent;
+import ar.edu.itba.paw.services.mail.MailDispatchService;
+import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -39,15 +42,24 @@ public class MatchServiceImplTest {
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
+    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
+    @Mock private UserService userService;
 
-    private RecordingMatchNotificationService matchNotificationService;
+    private RecordingMailDispatchService mailDispatchService;
     private MatchServiceImpl matchService;
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @BeforeEach
     public void setUp() {
-        matchNotificationService = new RecordingMatchNotificationService();
+        mailDispatchService = new RecordingMailDispatchService();
+        final MatchNotificationService matchNotificationService =
+                new MatchNotificationServiceImpl(
+                        matchParticipantDao,
+                        mailDispatchService,
+                        templateRenderer,
+                        messageSource,
+                        userService);
         matchService =
                 new MatchServiceImpl(
                         matchDao,
@@ -968,7 +980,6 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(Sport.TENNIS, result.getSport());
         Assertions.assertEquals("Updated Address", result.getAddress());
         Assertions.assertEquals("approval_required", result.getJoinPolicy());
-        Assertions.assertEquals(List.of(updatedMatch), matchNotificationService.updatedMatches);
     }
 
     @Test
@@ -1100,7 +1111,6 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals("cancelled", result.getStatus());
         Assertions.assertEquals(23L, result.getId());
-        Assertions.assertEquals(List.of(cancelledMatch), matchNotificationService.cancelledMatches);
     }
 
     @Test
@@ -1281,7 +1291,6 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(47L, result.get(1).getId());
         Assertions.assertEquals("Updated Weekly Padel", result.get(0).getTitle());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(610200), result.get(1).getStartsAt());
-        Assertions.assertEquals(List.of(result), matchNotificationService.updatedSeries);
     }
 
     @Test
@@ -1440,7 +1449,6 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(47L, result.get(1).getId());
         Assertions.assertEquals("cancelled", result.get(0).getStatus());
         Assertions.assertEquals("cancelled", result.get(1).getStatus());
-        Assertions.assertEquals(List.of(result), matchNotificationService.cancelledSeries);
     }
 
     @Test
@@ -1564,11 +1572,11 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals("cancelled", result.getStatus());
         Assertions.assertEquals(24L, result.getId());
-        Assertions.assertTrue(matchNotificationService.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
-    public void testUpdateMatchWithoutConfirmedParticipantsStillDelegatesNotificationService() {
+    public void testUpdateMatchWithoutConfirmedParticipantsSendsNoMail() {
         final Match existingMatch = createTestMatch(25L, "Old Title", "football");
         final Match updatedMatch =
                 new Match(
@@ -1625,11 +1633,11 @@ public class MatchServiceImplTest {
                                 null));
 
         Assertions.assertEquals(25L, result.getId());
-        Assertions.assertEquals(List.of(updatedMatch), matchNotificationService.updatedMatches);
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
-    public void testCancelMatchWithoutConfirmedParticipantsStillDelegatesNotificationService() {
+    public void testCancelMatchWithoutConfirmedParticipantsSendsNoMail() {
         final Match existingMatch = createTestMatch(26L, "Test Match", "football");
         final Match cancelledMatch =
                 new Match(
@@ -1655,7 +1663,7 @@ public class MatchServiceImplTest {
         final Match result = matchService.cancelMatch(26L, 1L);
 
         Assertions.assertEquals("cancelled", result.getStatus());
-        Assertions.assertEquals(List.of(cancelledMatch), matchNotificationService.cancelledMatches);
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -1681,7 +1689,7 @@ public class MatchServiceImplTest {
                                         "open",
                                         null)));
 
-        Assertions.assertTrue(matchNotificationService.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -1691,65 +1699,18 @@ public class MatchServiceImplTest {
         Assertions.assertThrows(
                 MatchCancellationException.class, () -> matchService.cancelMatch(28L, 1L));
 
-        Assertions.assertTrue(matchNotificationService.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
-    private static class RecordingMatchNotificationService implements MatchNotificationService {
+    private static class RecordingMailDispatchService implements MailDispatchService {
 
-        private final List<Match> updatedMatches = new ArrayList<>();
-        private final List<Match> cancelledMatches = new ArrayList<>();
-        private final List<List<Match>> updatedSeries = new ArrayList<>();
-        private final List<List<Match>> cancelledSeries = new ArrayList<>();
+        private final List<String> recipients = new ArrayList<>();
+        private final List<MailContent> contents = new ArrayList<>();
 
         @Override
-        public void notifyMatchUpdated(final Match match) {
-            updatedMatches.add(match);
-        }
-
-        @Override
-        public void notifyMatchCancelled(final Match match) {
-            cancelledMatches.add(match);
-        }
-
-        @Override
-        public void notifyRecurringMatchesUpdated(final List<Match> matches) {
-            updatedSeries.add(matches);
-        }
-
-        @Override
-        public void notifyRecurringMatchesCancelled(final List<Match> matches) {
-            cancelledSeries.add(matches);
-        }
-
-        @Override
-        public void notifyHostPlayerJoined(final Match match, final User player) {}
-
-        @Override
-        public void notifyHostJoinRequestReceived(final Match match, final User player) {}
-
-        @Override
-        public void notifyPlayerRequestApproved(final Match match, final User player) {}
-
-        @Override
-        public void notifyPlayerRequestRejected(final Match match, final User player) {}
-
-        @Override
-        public void notifyHostInviteAccepted(final Match match, final User player) {}
-
-        @Override
-        public void notifyHostInviteDeclined(final Match match, final User player) {}
-
-        @Override
-        public void notifyHostPlayerLeft(final Match match, final User player) {}
-
-        @Override
-        public void notifyPlayerRemovedByHost(final Match match, final User player) {}
-
-        private boolean isEmpty() {
-            return updatedMatches.isEmpty()
-                    && cancelledMatches.isEmpty()
-                    && updatedSeries.isEmpty()
-                    && cancelledSeries.isEmpty();
+        public void dispatch(final String recipientEmail, final MailContent content) {
+            recipients.add(recipientEmail);
+            contents.add(content);
         }
     }
 
