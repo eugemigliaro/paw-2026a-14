@@ -240,6 +240,36 @@
 												</c:otherwise>
 											</c:choose>
 										</form>
+										<c:if test="${not empty eventPage.occurrences}">
+											<c:url var="hostSeriesCancelAction" value="${hostSeriesCancelPath}" />
+											<form
+												method="post"
+												action="${hostSeriesCancelAction}"
+												data-submit-guard="true"
+												data-submit-loading-label="${hostManageCancellingLabel}">
+												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+												<c:choose>
+													<c:when test="${hostCanCancelSeries}">
+														<button
+															class="overflow-menu__item overflow-menu__item--danger"
+															type="submit"
+															role="menuitem">
+															<c:out value="${hostManageCancelSeriesLabel}" />
+														</button>
+													</c:when>
+													<c:otherwise>
+														<button
+															class="overflow-menu__item overflow-menu__item--danger"
+															type="submit"
+															role="menuitem"
+															disabled="disabled"
+															aria-disabled="true">
+															<c:out value="${hostManageCancelSeriesLabel}" />
+														</button>
+													</c:otherwise>
+												</c:choose>
+											</form>
+										</c:if>
 									</c:if>
 									<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
 									<a class="overflow-menu__item overflow-menu__item--danger" href="${reportMatchHref}" role="menuitem">
