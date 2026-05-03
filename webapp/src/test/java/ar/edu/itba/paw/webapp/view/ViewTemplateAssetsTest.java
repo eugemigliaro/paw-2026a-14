@@ -28,7 +28,10 @@ class ViewTemplateAssetsTest {
 
         assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
-        assertTrue(hostCreateMatch.contains("${pageContext.request.contextPath}${formAction}"));
+        assertTrue(
+                hostCreateMatch.contains(
+                        "<spring:url value=\"${formAction}\" var=\"resolvedFormAction\" />"));
+        assertFalse(hostCreateMatch.contains("${pageContext.request.contextPath}${formAction}"));
     }
 
     @Test
