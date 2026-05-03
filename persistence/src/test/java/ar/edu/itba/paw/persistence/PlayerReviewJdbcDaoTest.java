@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlayerReviewJdbcDaoTest {
 
     private static final Instant PAST_START = Instant.parse("2026-04-01T18:00:00Z");
-    private static final Instant FUTURE_START = Instant.now().plusSeconds(86400);
+    private static final Instant FUTURE_START = Instant.parse("2099-04-01T18:00:00Z");
 
     @Autowired private PlayerReviewDao playerReviewDao;
 
