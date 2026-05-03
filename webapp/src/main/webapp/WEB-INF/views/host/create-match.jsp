@@ -360,7 +360,7 @@
 											</article>
 
 											<c:if test="${not isEditMode}">
-												<article class="panel form-card recurrence-card">
+												<article class="panel form-card">
 													<span class="detail-label">
 														<spring:message code="host.section.recurrence" />
 													</span>

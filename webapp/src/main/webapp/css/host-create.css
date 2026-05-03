@@ -59,10 +59,6 @@
 	position: absolute;
 }
 
-.recurrence-card {
-	border-color: rgba(0, 100, 90, 0.18);
-}
-
 .recurrence-toggle {
 	align-items: flex-start;
 	background: rgba(204, 255, 208, 0.28);
