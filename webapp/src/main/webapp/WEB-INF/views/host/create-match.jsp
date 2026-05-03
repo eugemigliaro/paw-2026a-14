@@ -81,6 +81,18 @@
 										<spring:message var="durationCustom" code="host.form.duration.custom" />
 										<spring:message var="durationLabel" code="host.form.duration" />
 											<c:url var="resolvedFormAction" value="${formAction}" />
+										<spring:message var="recurrenceFrequencyPlaceholder"
+											code="host.form.recurrence.frequency.placeholder" />
+										<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
+										<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
+										<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
+										<spring:message var="recurrenceEndModePlaceholder"
+											code="host.form.recurrence.endMode.placeholder" />
+										<spring:message var="recurrenceEndUntilDate"
+											code="host.form.recurrence.endMode.untilDate" />
+										<spring:message var="recurrenceEndOccurrenceCount"
+											code="host.form.recurrence.endMode.occurrenceCount" />
+										<spring:url value="${formAction}" var="resolvedFormAction" />
 
 										<form:form method="post" action="${resolvedFormAction}"
 											modelAttribute="createEventForm" enctype="multipart/form-data"
