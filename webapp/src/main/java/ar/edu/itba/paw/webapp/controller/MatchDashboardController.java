@@ -29,6 +29,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -409,8 +410,8 @@ public class MatchDashboardController {
             }
         }
 
-        // The combined list already has some sorting from the individual queries
-        // For simplicity, we'll return it as-is
+        sortCombinedMatches(combined, sort, context);
+
         // Re-paginate the combined results
         final int totalCount = combined.size();
         final int startIndex = (requestedPage - 1) * pageSize;
@@ -424,6 +425,39 @@ public class MatchDashboardController {
         }
 
         return new PaginatedResult<>(paginatedItems, totalCount, requestedPage, pageSize);
+    }
+
+    private static void sortCombinedMatches(
+            final List<Match> matches, final String sort, final DateRangeContext context) {
+        final Comparator<Match> chronological =
+                Comparator.comparing(Match::getStartsAt).thenComparing(Match::getId);
+        final Comparator<Match> contextualChronological =
+                context == DateRangeContext.PAST ? chronological.reversed() : chronological;
+
+        final String normalizedSort = normalizeSort(sort);
+        final Comparator<Match> comparator;
+        switch (normalizedSort) {
+            case "price":
+                comparator =
+                        Comparator.comparing(
+                                        (Match match) ->
+                                                match.getPricePerPlayer() == null
+                                                        ? BigDecimal.ZERO
+                                                        : match.getPricePerPlayer())
+                                .thenComparing(contextualChronological);
+                break;
+            case "spots":
+                comparator =
+                        Comparator.comparingInt(Match::getAvailableSpots)
+                                .reversed()
+                                .thenComparing(contextualChronological);
+                break;
+            case "soonest":
+            default:
+                comparator = contextualChronological;
+                break;
+        }
+        matches.sort(comparator);
     }
 
     private static boolean belongsToContext(
@@ -1156,7 +1190,23 @@ public class MatchDashboardController {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.contains("padel"),
-                        messageSource.getMessage("sport.padel", null, locale)));
+                        messageSource.getMessage("sport.padel", null, locale)),
+                filterOption(
+                        path,
+                        locale,
+                        searchQuery,
+                        sort,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        timezone,
+                        selectedStatuses,
+                        toggleValue(selectedSports, "other"),
+                        selectedVisibility,
+                        selectedCategories,
+                        selectedSports.contains("other"),
+                        messageSource.getMessage("sport.other", null, locale)));
     }
 
     private List<FilterOptionViewModel> buildStatusFilterOptions(

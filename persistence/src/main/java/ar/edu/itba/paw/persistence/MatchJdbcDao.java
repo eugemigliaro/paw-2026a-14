@@ -612,15 +612,17 @@ public class MatchJdbcDao implements MatchDao {
 
         switch (safeSort) {
             case PRICE_LOW:
-                sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC");
+                sql.append(
+                        " ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC, m.id ASC");
                 break;
             case SPOTS_DESC:
                 sql.append(
-                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, " + "m.starts_at ASC");
+                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, "
+                                + "m.starts_at ASC, m.id ASC");
                 break;
             case SOONEST:
             default:
-                sql.append(" ORDER BY m.starts_at ASC");
+                sql.append(" ORDER BY m.starts_at ASC, m.id ASC");
                 break;
         }
     }
@@ -635,16 +637,17 @@ public class MatchJdbcDao implements MatchDao {
         final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
         switch (safeSort) {
             case PRICE_LOW:
-                sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at DESC");
+                sql.append(
+                        " ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at DESC, m.id DESC");
                 break;
             case SPOTS_DESC:
                 sql.append(
                         " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, "
-                                + "m.starts_at DESC");
+                                + "m.starts_at DESC, m.id DESC");
                 break;
             case SOONEST:
             default:
-                sql.append(" ORDER BY m.starts_at DESC");
+                sql.append(" ORDER BY m.starts_at DESC, m.id DESC");
                 break;
         }
     }

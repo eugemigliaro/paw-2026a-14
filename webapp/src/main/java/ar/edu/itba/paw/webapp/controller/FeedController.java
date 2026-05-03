@@ -20,6 +20,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.SelectOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -97,6 +98,8 @@ public class FeedController {
                 "selectedDateMinValue", LocalDate.now(parseZone(filters.timezone())).toString());
         mav.addObject("selectedStartDateValue", filters.startDate());
         mav.addObject("selectedEndDateValue", filters.endDate());
+        mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
+        mav.addObject("sortOptions", buildSortOptions(query, filters, locale, email));
         mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
         return mav;
     }
@@ -187,6 +190,30 @@ public class FeedController {
         return items;
     }
 
+    private List<SelectOptionViewModel> buildSortOptions(
+            final String query,
+            final FeedFilters filters,
+            final Locale locale,
+            final String email) {
+        return List.of(
+                sortOption(query, filters, locale, email, "soonest", "feed.sort.soonest"),
+                sortOption(query, filters, locale, email, "price", "feed.sort.price"),
+                sortOption(query, filters, locale, email, "spots", "feed.sort.spots"));
+    }
+
+    private SelectOptionViewModel sortOption(
+            final String query,
+            final FeedFilters filters,
+            final Locale locale,
+            final String email,
+            final String sort,
+            final String labelCode) {
+        return new SelectOptionViewModel(
+                messageSource.getMessage(labelCode, null, locale),
+                buildUrl(query, filters.withSort(sort), 1, email, locale),
+                sort.equals(filters.selectedSort()));
+    }
+
     private static PaginationItemViewModel pageItem(
             final int page,
             final String query,
@@ -267,7 +294,18 @@ public class FeedController {
                                                 email,
                                                 locale),
                                         null,
-                                        isSportSelected(selectedSports, Sport.PADEL)))));
+                                        isSportSelected(selectedSports, Sport.PADEL)),
+                                new FilterOptionViewModel(
+                                        messageSource.getMessage("sport.other", null, locale),
+                                        buildUrl(
+                                                query,
+                                                filters.withSports(
+                                                        toggleSport(selectedSports, Sport.OTHER)),
+                                                1,
+                                                email,
+                                                locale),
+                                        null,
+                                        isSportSelected(selectedSports, Sport.OTHER)))));
     }
 
     private EventCardViewModel toCard(
@@ -561,6 +599,17 @@ public class FeedController {
                     startDate,
                     endDate,
                     selectedSort,
+                    timezone,
+                    minPrice,
+                    maxPrice);
+        }
+
+        private FeedFilters withSort(final String sort) {
+            return new FeedFilters(
+                    selectedSports,
+                    startDate,
+                    endDate,
+                    normalizeSort(sort),
                     timezone,
                     minPrice,
                     maxPrice);

@@ -189,6 +189,23 @@
 																			className="filter-dropdown__action filter-dropdown__close" />
 																	</div>
 																</div>
+																<c:set var="hasSelectedFilterOptions" value="${false}" />
+																<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
+																	<c:if test="${not optionStatus.first and option.active}">
+																		<c:set var="hasSelectedFilterOptions" value="${true}" />
+																	</c:if>
+																</c:forEach>
+																<c:if test="${hasSelectedFilterOptions}">
+																	<div class="filter-dropdown__selected-list">
+																		<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
+																			<c:if test="${not optionStatus.first and option.active}">
+																				<span class="filter-dropdown__selected-item">
+																					<c:out value="${option.label}" />
+																				</span>
+																			</c:if>
+																		</c:forEach>
+																	</div>
+																</c:if>
 															</div>
 														</c:forEach>
 
@@ -297,6 +314,26 @@
 																	</div>
 																</form>
 															</div>
+															<c:if test="${not empty selectedStartDateValue or not empty selectedEndDateValue}">
+																<div class="filter-dropdown__selected-list">
+																		<c:if test="${not empty selectedStartDateValue}">
+																			<c:set var="formattedStartDate"
+																				value="${fn:substring(selectedStartDateValue, 8, 10)}/${fn:substring(selectedStartDateValue, 5, 7)}/${fn:substring(selectedStartDateValue, 2, 4)}" />
+																			<span class="filter-dropdown__selected-item">
+																				<spring:message code="filter.date.from" />:
+																				<c:out value="${formattedStartDate}" />
+																			</span>
+																		</c:if>
+																		<c:if test="${not empty selectedEndDateValue}">
+																			<c:set var="formattedEndDate"
+																				value="${fn:substring(selectedEndDateValue, 8, 10)}/${fn:substring(selectedEndDateValue, 5, 7)}/${fn:substring(selectedEndDateValue, 2, 4)}" />
+																			<span class="filter-dropdown__selected-item">
+																				<spring:message code="filter.date.to" />:
+																				<c:out value="${formattedEndDate}" />
+																			</span>
+																		</c:if>
+																</div>
+															</c:if>
 														</div>
 
 													<div class="filter-dropdown" data-filter-name="Price">
@@ -419,6 +456,22 @@
 																	</div>
 																</form>
 															</div>
+															<c:if test="${not empty selectedMinPriceValue or not empty selectedMaxPriceValue}">
+																<div class="filter-dropdown__selected-list">
+																	<c:if test="${not empty selectedMinPriceValue}">
+																		<span class="filter-dropdown__selected-item filter-dropdown__selected-item--truncate">
+																			<spring:message code="filter.price.from" />:
+																			<c:out value="${selectedMinPriceValue}" />
+																		</span>
+																	</c:if>
+																	<c:if test="${not empty selectedMaxPriceValue}">
+																		<span class="filter-dropdown__selected-item filter-dropdown__selected-item--truncate">
+																			<spring:message code="filter.price.to" />:
+																			<c:out value="${selectedMaxPriceValue}" />
+																		</span>
+																	</c:if>
+																</div>
+															</c:if>
 														</div>
 
 													<c:url var="clearSearchHref"
@@ -430,41 +483,19 @@
 															<c:param name="filter" value="past" />
 														</c:if>
 													</c:url>
-													<spring:message var="clearAllLabel" code="filter.clearAll" />
-													<ui:button label="${clearAllLabel}" href="${clearSearchHref}"
-														variant="primary" size="sm" className="filter-rail__clear" />
-												</div>
-												<!-- termina horizintal filters bar -->
+														<spring:message var="clearAllLabel" code="filter.clearAll" />
+														<ui:button label="${clearAllLabel}" href="${clearSearchHref}"
+															variant="primary" size="sm" className="filter-rail__clear" />
 
+														<ui:sortSelect
+															id="events-sort-select"
+															label="${listControls.sortLabel}"
+															ariaLabel="${sortAriaLabel}"
+															options="${listControls.sortOptions}" />
+													</div>
+													<!-- termina horizintal filters bar -->
 
-												<!-- Sort -->
-												<section class="matches-search-sort-panel">
-													<c:if test="${not empty listControls.sortOptions}">
-														<form method="get" action="${listControls.searchAction}"
-															class="sort-panel" aria-label="${sortAriaLabel}">
-															<label class="field sort-panel__field" for="sort-select">
-																<span class="field__label">
-																	<c:out value="${listControls.sortLabel}" />
-																</span>
-																<select id="sort-select" name="sort"
-																	class="field__control field__control--select sort-panel__select"
-																	onchange="if(this.value){window.location.href=this.value;}">
-																	<c:forEach var="option"
-																		items="${listControls.sortOptions}">
-																		<c:url var="optionHref"
-																			value="${option.href}" />
-																		<option value="${optionHref}" ${option.selected
-																			? 'selected="selected"' : '' }>
-																			<c:out value="${option.label}" />
-																		</option>
-																	</c:forEach>
-																</select>
-															</label>
-														</form>
-													</c:if>
-												</section>
-
-										</div>
+											</div>
 
 										<!-- Matches -->
 

@@ -121,6 +121,23 @@
 													className="filter-dropdown__action filter-dropdown__close" />
 											</div>
 										</div>
+										<c:set var="hasSelectedFilterOptions" value="${false}" />
+										<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
+											<c:if test="${not optionStatus.first and option.active}">
+												<c:set var="hasSelectedFilterOptions" value="${true}" />
+											</c:if>
+										</c:forEach>
+										<c:if test="${hasSelectedFilterOptions}">
+											<div class="filter-dropdown__selected-list">
+												<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
+													<c:if test="${not optionStatus.first and option.active}">
+														<span class="filter-dropdown__selected-item">
+															<c:out value="${option.label}" />
+														</span>
+													</c:if>
+												</c:forEach>
+											</div>
+										</c:if>
 									</div>
 								</c:forEach>
 
@@ -168,11 +185,31 @@
 											<ui:button label="${applyDateLabel}" type="submit"
 												size="sm" className="filter-dropdown__action" />
 										</div>
-									</form>
+										</form>
+									</div>
+									<c:if test="${not empty selectedStartDateValue or not empty selectedEndDateValue}">
+										<div class="filter-dropdown__selected-list">
+											<c:if test="${not empty selectedStartDateValue}">
+												<c:set var="formattedStartDate"
+													value="${fn:substring(selectedStartDateValue, 8, 10)}/${fn:substring(selectedStartDateValue, 5, 7)}/${fn:substring(selectedStartDateValue, 2, 4)}" />
+												<span class="filter-dropdown__selected-item">
+													<spring:message code="filter.date.from" />:
+													<c:out value="${formattedStartDate}" />
+												</span>
+											</c:if>
+											<c:if test="${not empty selectedEndDateValue}">
+												<c:set var="formattedEndDate"
+													value="${fn:substring(selectedEndDateValue, 8, 10)}/${fn:substring(selectedEndDateValue, 5, 7)}/${fn:substring(selectedEndDateValue, 2, 4)}" />
+												<span class="filter-dropdown__selected-item">
+													<spring:message code="filter.date.to" />:
+													<c:out value="${formattedEndDate}" />
+												</span>
+											</c:if>
+										</div>
+									</c:if>
 								</div>
-							</div>
 
-							<div class="filter-dropdown" data-filter-name="Price">
+								<div class="filter-dropdown" data-filter-name="Price">
 								<button type="button" class="filter-dropdown__toggle">
 									<span class="filter-dropdown__icon">
 										<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
@@ -224,11 +261,27 @@
 											<ui:button label="${applyPriceLabel}" type="submit"
 												size="sm" className="filter-dropdown__action" />
 										</div>
-									</form>
+										</form>
+									</div>
+									<c:if test="${not empty selectedMinPriceValue or not empty selectedMaxPriceValue}">
+										<div class="filter-dropdown__selected-list">
+											<c:if test="${not empty selectedMinPriceValue}">
+												<span class="filter-dropdown__selected-item filter-dropdown__selected-item--truncate">
+													<spring:message code="filter.price.from" />:
+													<c:out value="${selectedMinPriceValue}" />
+												</span>
+											</c:if>
+											<c:if test="${not empty selectedMaxPriceValue}">
+												<span class="filter-dropdown__selected-item filter-dropdown__selected-item--truncate">
+													<spring:message code="filter.price.to" />:
+													<c:out value="${selectedMaxPriceValue}" />
+												</span>
+											</c:if>
+										</div>
+									</c:if>
 								</div>
-							</div>
 
-							<c:url var="clearFiltersHref" value="${feedFormAction}">
+								<c:url var="clearFiltersHref" value="${feedFormAction}">
 								<c:param name="q" value="${feedSearchForm.q}" />
 								<c:param name="sort" value="${selectedSort}" />
 								<c:param name="tz" value="${selectedTimezone}" />
@@ -245,35 +298,12 @@
 								size="sm"
 								className="filter-rail__clear" />
 
-							<form method="get" action="${feedFormAction}" class="sort-panel" aria-label="${sortAriaLabel}">
-								<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
-								<c:forEach var="selectedSport" items="${selectedSports}">
-									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
-								</c:forEach>
-								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
-								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
-								<input
-									type="hidden"
-									name="tz"
-									value="<c:out value='${selectedTimezone}' />"
-									data-browser-timezone-field="true" />
-								<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
-								<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
-								<input type="hidden" name="page" value="1" />
-								<label class="field sort-panel__field" for="sort-select">
-									<span class="field__label"><spring:message code="feed.sortBy" /></span>
-									<select
-										id="sort-select"
-										name="sort"
-										class="field__control field__control--select sort-panel__select"
-										onchange="this.form.submit()">
-										<option value="soonest" ${selectedSort == 'soonest' ? 'selected="selected"' : ''}><spring:message code="feed.sort.soonest" /></option>
-										<option value="price" ${selectedSort == 'price' ? 'selected="selected"' : ''}><spring:message code="feed.sort.price" /></option>
-										<option value="spots" ${selectedSort == 'spots' ? 'selected="selected"' : ''}><spring:message code="feed.sort.spots" /></option>
-									</select>
-								</label>
-							</form>
-						</div>
+								<ui:sortSelect
+									id="feed-sort-select"
+									label="${sortLabel}"
+									ariaLabel="${sortAriaLabel}"
+									options="${sortOptions}" />
+							</div>
 
 					<section>
 						<div class="section-head section-head--feed-list">

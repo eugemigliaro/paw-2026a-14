@@ -52,7 +52,17 @@ class ViewTemplateAssetsTest {
     void feedTimezoneInputsUseBrowserTimezoneFieldHook() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
 
-        assertEquals(4, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
+        assertEquals(3, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
+    }
+
+    @Test
+    void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
+        final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
+        final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
+
+        assertTrue(sortSelectTag.contains("data-browser-timezone-url-options=\"true\""));
+        assertTrue(timezoneScript.contains("data-browser-timezone-url-options"));
+        assertTrue(timezoneScript.contains("searchParams.set('tz', timezone)"));
     }
 
     @Test

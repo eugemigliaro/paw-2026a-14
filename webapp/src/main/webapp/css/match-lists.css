@@ -29,6 +29,44 @@
 	margin-left: auto;
 }
 
+.matches-search-sort-panel .sort-panel {
+	align-items: center;
+	display: flex;
+	justify-content: flex-start;
+	margin: 0;
+	position: relative;
+}
+
+.matches-search-sort-panel .sort-panel__field {
+	margin: 0;
+	max-width: none;
+	position: relative;
+	width: 150px;
+}
+
+.matches-search-sort-panel .sort-panel__field .field__label {
+	bottom: calc(100% + 0.35rem);
+	color: #305650;
+	font-size: 0.75rem;
+	font-weight: 700;
+	left: 0.15rem;
+	letter-spacing: 0.08em;
+	line-height: 1.1;
+	position: absolute;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.matches-search-sort-panel .sort-panel__select {
+	border: 1px solid #d1d5db;
+	border-radius: 12px;
+	font-size: 0.86rem;
+	height: 38px;
+	line-height: 1.1;
+	min-height: 38px;
+	padding: 0.55rem 2.2rem 0.55rem 0.85rem;
+}
+
 .matches-search-panel {
 	width: 100%;
 	border: 0;
