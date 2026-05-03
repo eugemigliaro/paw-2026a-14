@@ -339,7 +339,7 @@
 															<spring:message code="host.form.capacity" />
 														</span>
 														<form:input path="maxPlayers" id="match-capacity" type="number"
-															min="1" cssClass="field__control" required="required" />
+															min="1" max="1000" cssClass="field__control" required="required" />
 														<form:errors path="maxPlayers" cssClass="field__error"
 															element="span" />
 													</label>

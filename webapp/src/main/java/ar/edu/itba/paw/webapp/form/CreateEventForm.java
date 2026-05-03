@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.FutureOrPresent;
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -65,6 +66,7 @@ public class CreateEventForm {
 
     @NotNull(message = "{CreateEventForm.maxPlayers.NotNull}")
     @Min(value = 1, message = "{CreateEventForm.maxPlayers.Min}")
+    @Max(value = 1000, message = "{CreateEventForm.maxPlayers.Max}")
     private Integer maxPlayers = 8;
 
     @NotNull(message = "{CreateEventForm.pricePerPlayer.NotNull}")
