@@ -34,4 +34,6 @@ public interface PlayerReviewDao {
             Long reviewedUserId, PlayerReviewFilter filter, int limit, int offset);
 
     boolean canReview(Long reviewerUserId, Long reviewedUserId);
+
+    List<Long> findReviewableUserIds(Long reviewerUserId);
 }

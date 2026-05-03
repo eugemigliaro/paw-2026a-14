@@ -10,6 +10,7 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -205,6 +206,22 @@ public class PlayerReviewServiceImplTest {
         Assertions.assertEquals(3, result.getPage());
         Assertions.assertEquals(3, result.getTotalPages());
         Assertions.assertEquals(List.of(review), result.getItems());
+    }
+
+    @Test
+    public void testFindReviewableUserIdsReturnsDaoIdsAsSet() {
+        Mockito.when(playerReviewDao.findReviewableUserIds(2L)).thenReturn(List.of(3L, 4L, 3L));
+
+        final Set<Long> reviewableUserIds = playerReviewService.findReviewableUserIds(2L);
+
+        Assertions.assertEquals(Set.of(3L, 4L), reviewableUserIds);
+    }
+
+    @Test
+    public void testFindReviewableUserIdsRejectsMissingReviewer() {
+        final Set<Long> reviewableUserIds = playerReviewService.findReviewableUserIds(null);
+
+        Assertions.assertTrue(reviewableUserIds.isEmpty());
     }
 
     private static PlayerReview review(

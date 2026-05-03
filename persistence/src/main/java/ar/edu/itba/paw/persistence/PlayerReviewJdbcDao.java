@@ -275,6 +275,30 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
         return count != null && count > 0;
     }
 
+    @Override
+    public List<Long> findReviewableUserIds(final Long reviewerUserId) {
+        if (reviewerUserId == null) {
+            return List.of();
+        }
+
+        return jdbcTemplate.queryForList(
+                "SELECT DISTINCT reviewed.user_id"
+                        + " FROM matches m"
+                        + " JOIN match_participants reviewer"
+                        + " ON reviewer.match_id = m.id"
+                        + " AND reviewer.user_id = ?"
+                        + " AND reviewer.status IN ('joined', 'checked_in')"
+                        + " JOIN match_participants reviewed"
+                        + " ON reviewed.match_id = m.id"
+                        + " AND reviewed.user_id <> ?"
+                        + " AND reviewed.status IN ('joined', 'checked_in')"
+                        + " WHERE "
+                        + COMPLETED_MATCH_SQL,
+                Long.class,
+                reviewerUserId,
+                reviewerUserId);
+    }
+
     private Optional<PlayerReview> findByPairIncludingDeleted(
             final Long reviewerUserId, final Long reviewedUserId) {
         return jdbcTemplate

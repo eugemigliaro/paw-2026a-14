@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import java.util.Optional;
+import java.util.Set;
 
 public interface PlayerReviewService {
 
@@ -29,4 +30,6 @@ public interface PlayerReviewService {
             Long reviewedUserId, PlayerReviewFilter filter, int page, int pageSize);
 
     boolean canReview(Long reviewerUserId, Long reviewedUserId);
+
+    Set<Long> findReviewableUserIds(Long reviewerUserId);
 }

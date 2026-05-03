@@ -1179,6 +1179,13 @@ class PawUiRouteTest {
                                 && reviewerUserId.equals(9L)
                                 && reviewedUserId.equals(3L);
                     }
+
+                    @Override
+                    public Set<Long> findReviewableUserIds(final Long reviewerUserId) {
+                        return reviewerUserId != null && reviewerUserId.equals(9L)
+                                ? Set.of(3L)
+                                : Set.of();
+                    }
                 };
 
         final AccountAuthService accountAuthService =

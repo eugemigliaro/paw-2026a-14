@@ -8,6 +8,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -299,6 +300,21 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 3L, "cancelled");
 
         Assertions.assertFalse(playerReviewDao.canReview(2L, 3L));
+    }
+
+    @Test
+    public void testFindReviewableUserIdsReturnsSharedCompletedParticipants() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "checked_in");
+        joinMatch(10L, 4L, "joined");
+        joinMatch(12L, 2L, "joined");
+        joinMatch(12L, 1L, "joined");
+        joinMatch(13L, 2L, "joined");
+        joinMatch(13L, 1L, "joined");
+
+        final Set<Long> reviewableUserIds = Set.copyOf(playerReviewDao.findReviewableUserIds(2L));
+
+        Assertions.assertEquals(Set.of(3L, 4L), reviewableUserIds);
     }
 
     private void insertMatch(final Long id, final String status, final Instant startsAt) {

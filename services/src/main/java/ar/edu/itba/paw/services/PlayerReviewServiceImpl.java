@@ -7,8 +7,10 @@ import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -85,6 +87,14 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
                 && reviewedUserId != null
                 && !reviewerUserId.equals(reviewedUserId)
                 && playerReviewDao.canReview(reviewerUserId, reviewedUserId);
+    }
+
+    @Override
+    public Set<Long> findReviewableUserIds(final Long reviewerUserId) {
+        if (reviewerUserId == null) {
+            return Set.of();
+        }
+        return new HashSet<>(playerReviewDao.findReviewableUserIds(reviewerUserId));
     }
 
     private void validateReviewRequest(
