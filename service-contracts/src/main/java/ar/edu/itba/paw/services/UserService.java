@@ -3,6 +3,8 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.User;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface UserService {
@@ -12,6 +14,8 @@ public interface UserService {
     Optional<User> findByEmail(final String email);
 
     Optional<User> findById(final Long id);
+
+    List<User> findByIds(Collection<Long> ids);
 
     Optional<User> findByUsername(final String username);
 

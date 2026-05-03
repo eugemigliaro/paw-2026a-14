@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.context.MessageSource;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,6 +23,7 @@ class AccountAuthenticationProviderTest {
     void authenticateReturnsPrincipalAndAuthoritiesForVerifiedAccount() {
         final AccountAuthService accountAuthService = Mockito.mock(AccountAuthService.class);
         final PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
+        final MessageSource messageSource = Mockito.mock(MessageSource.class);
         final UserAccount account =
                 new UserAccount(
                         3L,
@@ -36,7 +38,8 @@ class AccountAuthenticationProviderTest {
         Mockito.when(passwordEncoder.matches("Password123!", "{bcrypt}hash")).thenReturn(true);
 
         final AccountAuthenticationProvider provider =
-                new AccountAuthenticationProvider(accountAuthService, passwordEncoder);
+                new AccountAuthenticationProvider(
+                        accountAuthService, passwordEncoder, messageSource);
 
         final Authentication authentication =
                 provider.authenticate(
@@ -56,6 +59,7 @@ class AccountAuthenticationProviderTest {
     void authenticateRejectsUnverifiedAccounts() {
         final AccountAuthService accountAuthService = Mockito.mock(AccountAuthService.class);
         final PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
+        final MessageSource messageSource = Mockito.mock(MessageSource.class);
 
         Mockito.when(accountAuthService.findAccountByEmail("pending@test.com"))
                 .thenReturn(
@@ -69,7 +73,8 @@ class AccountAuthenticationProviderTest {
                                         null)));
 
         final AccountAuthenticationProvider provider =
-                new AccountAuthenticationProvider(accountAuthService, passwordEncoder);
+                new AccountAuthenticationProvider(
+                        accountAuthService, passwordEncoder, messageSource);
 
         assertThrows(
                 EmailNotVerifiedAuthenticationException.class,
@@ -83,6 +88,7 @@ class AccountAuthenticationProviderTest {
     void authenticateRejectsAccountsWithoutPasswordHash() {
         final AccountAuthService accountAuthService = Mockito.mock(AccountAuthService.class);
         final PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
+        final MessageSource messageSource = Mockito.mock(MessageSource.class);
 
         Mockito.when(accountAuthService.findAccountByEmail("legacy@test.com"))
                 .thenReturn(
@@ -96,7 +102,8 @@ class AccountAuthenticationProviderTest {
                                         Instant.parse("2026-04-10T18:00:00Z"))));
 
         final AccountAuthenticationProvider provider =
-                new AccountAuthenticationProvider(accountAuthService, passwordEncoder);
+                new AccountAuthenticationProvider(
+                        accountAuthService, passwordEncoder, messageSource);
 
         assertThrows(
                 PasswordSetupRequiredAuthenticationException.class,
@@ -110,6 +117,7 @@ class AccountAuthenticationProviderTest {
     void authenticateRejectsInvalidCredentials() {
         final AccountAuthService accountAuthService = Mockito.mock(AccountAuthService.class);
         final PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
+        final MessageSource messageSource = Mockito.mock(MessageSource.class);
         final UserAccount account =
                 new UserAccount(
                         6L,
@@ -124,7 +132,8 @@ class AccountAuthenticationProviderTest {
         Mockito.when(passwordEncoder.matches("WrongPassword!", "{bcrypt}hash")).thenReturn(false);
 
         final AccountAuthenticationProvider provider =
-                new AccountAuthenticationProvider(accountAuthService, passwordEncoder);
+                new AccountAuthenticationProvider(
+                        accountAuthService, passwordEncoder, messageSource);
 
         assertThrows(
                 BadCredentialsException.class,

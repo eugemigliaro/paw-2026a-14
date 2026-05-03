@@ -132,7 +132,7 @@ a {
 	align-items: center;
 	background: #ffffff;
 	border: 1px solid #d6ddd9;
-	border-radius: 999px;
+	border-radius: 12px;
 	box-shadow: 0 1px 0 rgba(17, 37, 34, 0.04);
 	color: #20443f;
 	display: inline-flex;
@@ -175,6 +175,7 @@ a {
 	margin: 0 auto;
 	max-width: 1360px;
 	padding: 2rem 1.5rem 4rem;
+
 }
 
 .page-back-nav {
@@ -241,11 +242,19 @@ a {
 }
 
 .page-heading__description,
-.body-copy,
 .muted-copy {
 	color: var(--text-secondary);
 	font-size: 1rem;
 	line-height: 1.65;
+}
+
+.body-copy {
+	color: var(--text-secondary);
+	font-size: 1rem;
+	line-height: 1.65;
+	overflow-x: auto;
+	overflow-wrap: break-word;
+	white-space: pre-wrap;
 }
 
 .muted-copy {

@@ -119,6 +119,108 @@ public class ThymeleafMailTemplateRendererTest {
         Assertions.assertEquals("Evento cancelado: Noche de Padel", content.getSubject());
     }
 
+    @Test
+    public void testRenderRecurringMatchesUpdatedNotificationSummarizesAffectedDates() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderRecurringMatchesUpdatedNotification(
+                        new MatchLifecycleMailTemplateData(
+                                "player@test.com",
+                                "Weekly Padel",
+                                "Downtown Club",
+                                Instant.parse("2026-04-06T18:00:00Z"),
+                                Instant.parse("2026-04-06T19:30:00Z"),
+                                "Padel",
+                                "Open",
+                                Locale.ENGLISH),
+                        3);
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Recurring event updated"));
+        Assertions.assertTrue(content.getTextBody().contains("Affected dates"));
+        Assertions.assertTrue(content.getTextBody().contains("3 recurring dates"));
+        Assertions.assertEquals("Recurring event updated: Weekly Padel", content.getSubject());
+    }
+
+    @Test
+    public void testRenderRecurringMatchesCancelledNotificationLocalizesNotice() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderRecurringMatchesCancelledNotification(
+                        new MatchLifecycleMailTemplateData(
+                                "jugadora@test.com",
+                                "Noche semanal de Padel",
+                                "Club Centro",
+                                Instant.parse("2026-04-06T18:00:00Z"),
+                                null,
+                                "Padel",
+                                "Cancelado",
+                                Locale.of("es")),
+                        2);
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Evento recurrente cancelado"));
+        Assertions.assertTrue(content.getTextBody().contains("Fechas afectadas"));
+        Assertions.assertTrue(content.getTextBody().contains("2 fechas recurrentes"));
+        Assertions.assertTrue(content.getHtmlBody().contains("Tus reservas ya no siguen activas"));
+        Assertions.assertEquals(
+                "Evento recurrente cancelado: Noche semanal de Padel", content.getSubject());
+    }
+
+    @Test
+    public void testRenderSeriesInvitationNotificationUsesSeriesCopy() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderSeriesInvitationNotification(
+                        new MatchLifecycleMailTemplateData(
+                                "player@test.com",
+                                "Weekly Padel",
+                                "Downtown Club",
+                                Instant.parse("2026-04-06T18:00:00Z"),
+                                Instant.parse("2026-04-06T19:30:00Z"),
+                                "Padel",
+                                "Open",
+                                Locale.ENGLISH),
+                        3);
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Series invitation"));
+        Assertions.assertTrue(content.getHtmlBody().contains("all available dates in this series"));
+        Assertions.assertTrue(content.getTextBody().contains("Series dates"));
+        Assertions.assertTrue(content.getTextBody().contains("3 dates in this series"));
+        Assertions.assertEquals("You are invited to a series: Weekly Padel", content.getSubject());
+    }
+
+    @Test
+    public void testRenderBanNotificationIncludesBanDetails() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderBanNotification(
+                        new BanMailTemplateData(
+                                "player@test.com",
+                                "player",
+                                Instant.parse("2026-04-20T12:00:00Z"),
+                                "Repeated abuse",
+                                "http://localhost:8080/login",
+                                Locale.ENGLISH));
+
+        Assertions.assertTrue(content.getHtmlBody().contains("Moderation notice"));
+        Assertions.assertTrue(content.getHtmlBody().contains("Repeated abuse"));
+        Assertions.assertTrue(content.getHtmlBody().contains("http://localhost:8080/login"));
+        Assertions.assertTrue(content.getTextBody().contains("Banned until"));
+        Assertions.assertEquals(
+                "Your Match Point account has been temporarily banned", content.getSubject());
+    }
+
     private static TemplateEngine htmlTemplateEngine() {
         final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("mail/");
@@ -191,6 +293,14 @@ public class ThymeleafMailTemplateRendererTest {
         messageSource.addMessage("mail.matchLifecycle.field.status", Locale.ENGLISH, "Status");
         messageSource.addMessage("mail.matchLifecycle.field.status", Locale.of("es"), "Estado");
         messageSource.addMessage(
+                "mail.matchLifecycle.field.affectedDates", Locale.ENGLISH, "Affected dates");
+        messageSource.addMessage(
+                "mail.matchLifecycle.field.affectedDates", Locale.of("es"), "Fechas afectadas");
+        messageSource.addMessage(
+                "mail.matchLifecycle.affectedDates", Locale.ENGLISH, "{0} recurring dates");
+        messageSource.addMessage(
+                "mail.matchLifecycle.affectedDates", Locale.of("es"), "{0} fechas recurrentes");
+        messageSource.addMessage(
                 "mail.matchLifecycle.updated.eyebrow", Locale.ENGLISH, "Event updated");
         messageSource.addMessage(
                 "mail.matchLifecycle.updated.eyebrow", Locale.of("es"), "Evento actualizado");
@@ -238,6 +348,190 @@ public class ThymeleafMailTemplateRendererTest {
                 "mail.matchLifecycle.cancelled.notice",
                 Locale.of("es"),
                 "Tu reserva ya no sigue activa para este evento.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.eyebrow",
+                Locale.ENGLISH,
+                "Recurring event updated");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.eyebrow",
+                Locale.of("es"),
+                "Evento recurrente actualizado");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.subject",
+                Locale.ENGLISH,
+                "Recurring event updated: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.subject",
+                Locale.of("es"),
+                "Evento recurrente actualizado: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.title",
+                Locale.ENGLISH,
+                "Recurring dates for {0} were updated");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.title",
+                Locale.of("es"),
+                "Fechas recurrentes de {0} actualizadas");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.summary",
+                Locale.ENGLISH,
+                "The host updated {0} upcoming recurring dates you joined. Review the latest details below.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringUpdated.summary",
+                Locale.of("es"),
+                "El organizador actualizo {0} proximas fechas recurrentes a las que te sumaste.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.eyebrow",
+                Locale.ENGLISH,
+                "Recurring event cancelled");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.eyebrow",
+                Locale.of("es"),
+                "Evento recurrente cancelado");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.subject",
+                Locale.ENGLISH,
+                "Recurring event cancelled: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.subject",
+                Locale.of("es"),
+                "Evento recurrente cancelado: {0}");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.title",
+                Locale.ENGLISH,
+                "Recurring dates for {0} were cancelled");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.title",
+                Locale.of("es"),
+                "Fechas recurrentes de {0} canceladas");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.summary",
+                Locale.ENGLISH,
+                "The host cancelled {0} upcoming recurring dates you joined.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.summary",
+                Locale.of("es"),
+                "El organizador cancelo {0} proximas fechas recurrentes a las que te habias sumado.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.notice",
+                Locale.ENGLISH,
+                "Your reservations are no longer active for these recurring dates.");
+        messageSource.addMessage(
+                "mail.matchLifecycle.recurringCancelled.notice",
+                Locale.of("es"),
+                "Tus reservas ya no siguen activas para estas fechas recurrentes.");
+        messageSource.addMessage(
+                "mail.matchInvitation.requestedFor", Locale.ENGLISH, "Invitation for");
+        messageSource.addMessage(
+                "mail.matchInvitation.requestedFor", Locale.of("es"), "Invitacion para");
+        messageSource.addMessage(
+                "mail.matchInvitation.details", Locale.ENGLISH, "Invitation details");
+        messageSource.addMessage(
+                "mail.matchInvitation.details", Locale.of("es"), "Detalles de la invitacion");
+        messageSource.addMessage("mail.matchInvitation.field.matchTitle", Locale.ENGLISH, "Event");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.matchTitle", Locale.of("es"), "Evento");
+        messageSource.addMessage("mail.matchInvitation.field.sport", Locale.ENGLISH, "Sport");
+        messageSource.addMessage("mail.matchInvitation.field.sport", Locale.of("es"), "Deporte");
+        messageSource.addMessage("mail.matchInvitation.field.address", Locale.ENGLISH, "Venue");
+        messageSource.addMessage("mail.matchInvitation.field.address", Locale.of("es"), "Lugar");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.startsAt", Locale.ENGLISH, "Starts at");
+        messageSource.addMessage("mail.matchInvitation.field.startsAt", Locale.of("es"), "Empieza");
+        messageSource.addMessage("mail.matchInvitation.field.endsAt", Locale.ENGLISH, "Ends at");
+        messageSource.addMessage("mail.matchInvitation.field.endsAt", Locale.of("es"), "Termina");
+        messageSource.addMessage("mail.matchInvitation.field.status", Locale.ENGLISH, "Status");
+        messageSource.addMessage("mail.matchInvitation.field.status", Locale.of("es"), "Estado");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.seriesDates", Locale.ENGLISH, "Series dates");
+        messageSource.addMessage(
+                "mail.matchInvitation.field.seriesDates", Locale.of("es"), "Fechas de la serie");
+        messageSource.addMessage(
+                "mail.matchInvitation.seriesDates", Locale.ENGLISH, "{0} dates in this series");
+        messageSource.addMessage(
+                "mail.matchInvitation.seriesDates", Locale.of("es"), "{0} fechas de esta serie");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.eyebrow", Locale.ENGLISH, "Event invitation");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.eyebrow", Locale.of("es"), "Invitacion a evento");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.subject", Locale.ENGLISH, "You are invited: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.subject", Locale.of("es"), "Estas invitado: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.title", Locale.ENGLISH, "You are invited to {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.title", Locale.of("es"), "Estas invitado a {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.summary",
+                Locale.ENGLISH,
+                "The host invited you to this private event. Review the details before responding.");
+        messageSource.addMessage(
+                "mail.matchInvitation.single.summary",
+                Locale.of("es"),
+                "El organizador te invito a este evento privado.");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.eyebrow", Locale.ENGLISH, "Series invitation");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.eyebrow", Locale.of("es"), "Invitacion a serie");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.subject",
+                Locale.ENGLISH,
+                "You are invited to a series: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.subject",
+                Locale.of("es"),
+                "Estas invitado a una serie: {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.title",
+                Locale.ENGLISH,
+                "You are invited to all dates in {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.title",
+                Locale.of("es"),
+                "Estas invitado a todas las fechas de {0}");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.summary",
+                Locale.ENGLISH,
+                "The host invited you to all available dates in this series. This invitation covers {0} dates where you were not already invited or participating.");
+        messageSource.addMessage(
+                "mail.matchInvitation.series.summary",
+                Locale.of("es"),
+                "El organizador te invito a todas las fechas disponibles de esta serie.");
+        messageSource.addMessage(
+                "mail.moderation.ban.eyebrow", Locale.ENGLISH, "Moderation notice");
+        messageSource.addMessage(
+                "mail.moderation.ban.eyebrow", Locale.of("es"), "Aviso de moderacion");
+        messageSource.addMessage(
+                "mail.moderation.ban.subject",
+                Locale.ENGLISH,
+                "Your Match Point account has been temporarily banned");
+        messageSource.addMessage(
+                "mail.moderation.ban.subject",
+                Locale.of("es"),
+                "Tu cuenta de Match Point fue baneada temporalmente");
+        messageSource.addMessage(
+                "mail.moderation.ban.title", Locale.ENGLISH, "Your account is temporarily banned");
+        messageSource.addMessage(
+                "mail.moderation.ban.title",
+                Locale.of("es"),
+                "Tu cuenta esta baneada temporalmente");
+        messageSource.addMessage(
+                "mail.moderation.ban.summary",
+                Locale.ENGLISH,
+                "Review the details below and sign in to appeal if needed.");
+        messageSource.addMessage(
+                "mail.moderation.ban.summary",
+                Locale.of("es"),
+                "Revisa los detalles abajo e inicia sesion para apelar si hace falta.");
+        messageSource.addMessage("mail.moderation.ban.username", Locale.ENGLISH, "User");
+        messageSource.addMessage("mail.moderation.ban.username", Locale.of("es"), "Usuario");
+        messageSource.addMessage("mail.moderation.ban.until", Locale.ENGLISH, "Banned until");
+        messageSource.addMessage("mail.moderation.ban.until", Locale.of("es"), "Baneado hasta");
+        messageSource.addMessage("mail.moderation.ban.reason", Locale.ENGLISH, "Reason");
+        messageSource.addMessage("mail.moderation.ban.reason", Locale.of("es"), "Motivo");
+        messageSource.addMessage("mail.moderation.ban.login", Locale.ENGLISH, "Sign in");
+        messageSource.addMessage("mail.moderation.ban.login", Locale.of("es"), "Iniciar sesion");
         return messageSource;
     }
 }

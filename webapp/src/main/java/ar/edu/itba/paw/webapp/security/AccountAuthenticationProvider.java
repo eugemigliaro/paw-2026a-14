@@ -5,6 +5,8 @@ import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,11 +20,15 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
 
     private final AccountAuthService accountAuthService;
     private final PasswordEncoder passwordEncoder;
+    private final MessageSource messageSource;
 
     public AccountAuthenticationProvider(
-            final AccountAuthService accountAuthService, final PasswordEncoder passwordEncoder) {
+            final AccountAuthService accountAuthService,
+            final PasswordEncoder passwordEncoder,
+            final MessageSource messageSource) {
         this.accountAuthService = accountAuthService;
         this.passwordEncoder = passwordEncoder;
+        this.messageSource = messageSource;
     }
 
     @Override
@@ -37,19 +43,30 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
         final UserAccount account =
                 accountAuthService
                         .findAccountByEmail(email)
-                        .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+                        .orElseThrow(
+                                () ->
+                                        new BadCredentialsException(
+                                                messageSource.getMessage(
+                                                        "auth.invalid_credentials",
+                                                        null,
+                                                        LocaleContextHolder.getLocale())));
 
         if (!account.isEmailVerified()) {
-            throw new EmailNotVerifiedAuthenticationException("Email verification required");
+            throw new EmailNotVerifiedAuthenticationException(
+                    messageSource.getMessage(
+                            "auth.email_not_verified", null, LocaleContextHolder.getLocale()));
         }
 
         if (!account.hasPassword()) {
             throw new PasswordSetupRequiredAuthenticationException(
-                    "Password setup required before login");
+                    messageSource.getMessage(
+                            "auth.password_setup_required", null, LocaleContextHolder.getLocale()));
         }
 
         if (!passwordEncoder.matches(password, account.getPasswordHash())) {
-            throw new BadCredentialsException("Invalid credentials");
+            throw new BadCredentialsException(
+                    messageSource.getMessage(
+                            "auth.invalid_credentials", null, LocaleContextHolder.getLocale()));
         }
 
         return new UsernamePasswordAuthenticationToken(
@@ -61,15 +78,17 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
         return UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication);
     }
 
-    private static String normalizeEmail(final String email) {
+    private String normalizeEmail(final String email) {
         if (email == null || email.isBlank()) {
-            throw new BadCredentialsException("Invalid credentials");
+            throw new BadCredentialsException(
+                    messageSource.getMessage(
+                            "auth.invalid_credentials", null, LocaleContextHolder.getLocale()));
         }
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private static List<GrantedAuthority> authoritiesFor(final UserRole role) {
-        if (role == UserRole.ADMIN_MOD) {
+        if (role != null && role.isAdmin()) {
             return List.of(
                     new SimpleGrantedAuthority("ROLE_ADMIN_MOD"),
                     new SimpleGrantedAuthority("ROLE_USER"));

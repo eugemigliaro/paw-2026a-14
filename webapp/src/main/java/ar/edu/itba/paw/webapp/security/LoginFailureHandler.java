@@ -35,6 +35,9 @@ public class LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
     }
 
     private static String resolveErrorCode(final AuthenticationException exception) {
+        if (exception instanceof AccountBannedAuthenticationException) {
+            return "banned";
+        }
         if (exception instanceof EmailNotVerifiedAuthenticationException) {
             return "verify";
         }

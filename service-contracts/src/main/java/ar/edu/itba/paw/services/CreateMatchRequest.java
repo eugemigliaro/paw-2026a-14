@@ -19,6 +19,7 @@ public class CreateMatchRequest {
     private final String joinPolicy;
     private final String status;
     private final Long bannerImageId;
+    private final CreateRecurrenceRequest recurrence;
 
     public CreateMatchRequest(
             final Long hostUserId,
@@ -46,7 +47,8 @@ public class CreateMatchRequest {
                 visibility,
                 "public".equalsIgnoreCase(visibility) ? "direct" : "invite_only",
                 status,
-                bannerImageId);
+                bannerImageId,
+                null);
     }
 
     public CreateMatchRequest(
@@ -63,6 +65,38 @@ public class CreateMatchRequest {
             final String joinPolicy,
             final String status,
             final Long bannerImageId) {
+        this(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                null);
+    }
+
+    public CreateMatchRequest(
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final Long bannerImageId,
+            final CreateRecurrenceRequest recurrence) {
         this.hostUserId = hostUserId;
         this.address = address;
         this.title = title;
@@ -76,6 +110,7 @@ public class CreateMatchRequest {
         this.joinPolicy = joinPolicy;
         this.status = status;
         this.bannerImageId = bannerImageId;
+        this.recurrence = recurrence;
     }
 
     public Long getHostUserId() {
@@ -128,5 +163,13 @@ public class CreateMatchRequest {
 
     public Long getBannerImageId() {
         return bannerImageId;
+    }
+
+    public CreateRecurrenceRequest getRecurrence() {
+        return recurrence;
+    }
+
+    public boolean isRecurring() {
+        return recurrence != null;
     }
 }

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -12,6 +13,10 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.InviteParticipantViewMod
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PendingRequestViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.RosterParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -58,8 +63,9 @@ public class HostParticipationController {
         final boolean isApprovalRequired =
                 "approval_required".equalsIgnoreCase(match.getJoinPolicy());
         final ModelAndView mav = new ModelAndView("host/participation/roster");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
+        addParticipationHeader(mav, match, locale);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("participants", toRosterViewModels(participants, resolvedMatchId));
         mav.addObject("emptyMessage", messageSource.getMessage("host.roster.empty", null, locale));
@@ -85,13 +91,31 @@ public class HostParticipationController {
                 matchParticipationService.findPendingRequests(resolvedMatchId, hostUserId);
 
         final ModelAndView mav = new ModelAndView("host/participation/requests");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
+        addParticipationHeader(mav, match, locale);
         mav.addObject("matchId", resolvedMatchId);
         mav.addObject("pendingRequests", toPendingRequestViewModels(pending, resolvedMatchId));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("host.requests.empty", null, locale));
         mav.addObject("rosterUrl", "/host/matches/" + resolvedMatchId + "/participants");
+        return mav;
+    }
+
+    @GetMapping("/host/requests")
+    public ModelAndView showAllPendingRequests(final Locale locale) {
+        final long hostUserId = requireAuthenticatedUserId();
+        final List<PendingJoinRequest> pending =
+                matchParticipationService.findPendingRequestsForHost(hostUserId);
+
+        final ModelAndView mav = new ModelAndView("host/participation/requests");
+        mav.addObject(
+                "shell", ShellViewModelFactory.hostShell(messageSource, locale, "/host/requests"));
+        mav.addObject("aggregateRequests", true);
+        mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
+        mav.addObject(
+                "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
+        mav.addObject("matchesUrl", "/events");
         return mav;
     }
 
@@ -181,10 +205,15 @@ public class HostParticipationController {
         }
 
         try {
+            final boolean includeSeries =
+                    inviteForm.isInviteSeries() && match.getSeriesId() != null;
             matchParticipationService.inviteUser(
-                    resolvedMatchId, hostUserId, inviteForm.getEmail());
+                    resolvedMatchId, hostUserId, inviteForm.getEmail(), includeSeries);
             return new ModelAndView(
-                    "redirect:/host/matches/" + resolvedMatchId + "/invites?action=invited");
+                    "redirect:/host/matches/"
+                            + resolvedMatchId
+                            + "/invites?action="
+                            + (includeSeries ? "seriesInvited" : "invited"));
         } catch (final MatchParticipationException e) {
             final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
             return buildInviteView(
@@ -206,16 +235,36 @@ public class HostParticipationController {
                 matchParticipationService.findDeclinedInvitees(matchId, hostUserId);
 
         final ModelAndView mav = new ModelAndView("host/participation/invites");
-        mav.addObject("shell", ShellViewModelFactory.hostShell(messageSource, locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
+        addParticipationHeader(mav, match, locale);
         mav.addObject("matchId", matchId);
         mav.addObject("inviteForm", form);
         mav.addObject("inviteError", inviteError);
+        mav.addObject("seriesInviteAvailable", match.getSeriesId() != null);
         mav.addObject("pendingInvites", toInviteParticipantViewModels(pending));
         mav.addObject("acceptedParticipants", toRosterViewModels(accepted, matchId));
         mav.addObject("declinedInvites", toInviteParticipantViewModels(declined));
         mav.addObject("rosterUrl", "/host/matches/" + matchId + "/participants");
         return mav;
+    }
+
+    private static void addParticipationHeader(
+            final ModelAndView mav, final Match match, final Locale locale) {
+        final ZoneId zoneId = ZoneId.systemDefault();
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
+        mav.addObject(
+                "participationEventDate",
+                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt));
+        mav.addObject(
+                "participationEventTime",
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt));
+        mav.addObject("participationEventVenue", match.getAddress());
     }
 
     private String inviteErrorMessage(final String code, final String email, final Locale locale) {
@@ -233,6 +282,21 @@ public class HostParticipationController {
                 return messageSource.getMessage("host.invites.error.isHost", null, locale);
             case "closed":
                 return messageSource.getMessage("host.invites.error.closed", null, locale);
+            case "series_started":
+                return messageSource.getMessage("host.invites.error.seriesStarted", null, locale);
+            case "series_closed":
+                return messageSource.getMessage("host.invites.error.seriesClosed", null, locale);
+            case "series_already_joined":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyJoined", null, locale);
+            case "series_already_invited":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyInvited", null, locale);
+            case "series_already_covered":
+                return messageSource.getMessage(
+                        "host.invites.error.seriesAlreadyCovered", null, locale);
+            case "series_full":
+                return messageSource.getMessage("host.invites.error.seriesFull", null, locale);
             default:
                 return messageSource.getMessage("host.invites.error.generic", null, locale);
         }
@@ -272,7 +336,8 @@ public class HostParticipationController {
                                                 + matchId
                                                 + "/participants/"
                                                 + u.getId()
-                                                + "/remove"))
+                                                + "/remove",
+                                        profileHrefFor(u)))
                 .toList();
     }
 
@@ -281,7 +346,9 @@ public class HostParticipationController {
                 .map(
                         u ->
                                 new InviteParticipantViewModel(
-                                        u.getUsername(), avatarLabel(u.getUsername())))
+                                        u.getUsername(),
+                                        avatarLabel(u.getUsername()),
+                                        profileHrefFor(u)))
                 .toList();
     }
 
@@ -302,8 +369,41 @@ public class HostParticipationController {
                                                 + matchId
                                                 + "/requests/"
                                                 + u.getId()
-                                                + "/reject"))
+                                                + "/reject",
+                                        profileHrefFor(u)))
                 .toList();
+    }
+
+    private List<PendingRequestViewModel> toHostPendingRequestViewModels(
+            final List<PendingJoinRequest> requests) {
+        return requests.stream()
+                .map(
+                        request -> {
+                            final User user = request.getUser();
+                            final Match match = request.getMatch();
+                            final Long matchId = match.getId();
+                            return new PendingRequestViewModel(
+                                    user.getUsername(),
+                                    avatarLabel(user.getUsername()),
+                                    "/host/matches/"
+                                            + matchId
+                                            + "/requests/"
+                                            + user.getId()
+                                            + "/approve",
+                                    "/host/matches/"
+                                            + matchId
+                                            + "/requests/"
+                                            + user.getId()
+                                            + "/reject",
+                                    match.getTitle(),
+                                    "/matches/" + matchId,
+                                    request.isSeriesRequest());
+                        })
+                .toList();
+    }
+
+    private static String profileHrefFor(final User user) {
+        return user.getUsername() == null ? null : "/users/" + user.getUsername();
     }
 
     private Match requireHostMatch(final long matchId, final long hostUserId) {

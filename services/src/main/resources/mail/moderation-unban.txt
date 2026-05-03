@@ -1,0 +1,10 @@
+Match Point
+[[${mailEyebrow}]]
+
+[[${title}]]
+
+[[${summary}]]
+
+[[${usernameLabel}]]: [[${username}]]
+
+[[${loginLabel}]]: [[${loginUrl}]]
