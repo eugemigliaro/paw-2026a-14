@@ -51,7 +51,7 @@ public class MatchDashboardController {
     private static final int PAGE_SIZE = 12;
 
     private static final List<String> PLAYER_STATUS_OPTIONS =
-            List.of("draft", "open", "completed", "cancelled");
+            List.of("open", "completed", "cancelled");
 
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
