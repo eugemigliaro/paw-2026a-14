@@ -13,38 +13,6 @@
 					<body>
 						<div class="app-shell">
 							<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
-								<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
-								<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
-								<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
-								<spring:message var="sportPadel" code="sport.padel" />
-								<spring:message var="sportFootball" code="sport.football" />
-								<spring:message var="sportTennis" code="sport.tennis" />
-								<spring:message var="sportBasketball" code="sport.basketball" />
-								<spring:message var="visibilityPlaceholder" code="host.form.visibility.placeholder" />
-								<spring:message var="visibilityPublic" code="host.form.visibility.public" />
-								<spring:message var="visibilityPrivate" code="host.form.visibility.private" />
-								<spring:message var="joinPolicyPlaceholder" code="host.form.joinPolicy.placeholder" />
-								<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
-								<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
-								<spring:message var="sportOther" code="sport.other" />
-								<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
-								<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
-								<spring:message var="durationCustom" code="host.form.duration.custom" />
-								<spring:message var="durationLabel" code="host.form.duration" />
-								<spring:message var="recurrenceFrequencyPlaceholder"
-									code="host.form.recurrence.frequency.placeholder" />
-								<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
-								<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
-								<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
-								<spring:message var="recurrenceEndModePlaceholder"
-									code="host.form.recurrence.endMode.placeholder" />
-								<spring:message var="recurrenceEndUntilDate"
-									code="host.form.recurrence.endMode.untilDate" />
-								<spring:message var="recurrenceEndOccurrenceCount"
-									code="host.form.recurrence.endMode.occurrenceCount" />
-								<c:set var="resolvedFormAction"
-									value="${pageContext.request.contextPath}${formAction}" />
-
 								<main class="page-shell">
 									<ui:returnButton />
 									<section class="create-layout__main">
@@ -81,8 +49,18 @@
 											code="host.form.duration.ninetyMinutes" />
 										<spring:message var="durationCustom" code="host.form.duration.custom" />
 										<spring:message var="durationLabel" code="host.form.duration" />
-										<c:set var="resolvedFormAction"
-											value="${pageContext.request.contextPath}${formAction}" />
+										<spring:message var="recurrenceFrequencyPlaceholder"
+											code="host.form.recurrence.frequency.placeholder" />
+										<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
+										<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
+										<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
+										<spring:message var="recurrenceEndModePlaceholder"
+											code="host.form.recurrence.endMode.placeholder" />
+										<spring:message var="recurrenceEndUntilDate"
+											code="host.form.recurrence.endMode.untilDate" />
+										<spring:message var="recurrenceEndOccurrenceCount"
+											code="host.form.recurrence.endMode.occurrenceCount" />
+										<spring:url value="${formAction}" var="resolvedFormAction" />
 
 										<form:form method="post" action="${resolvedFormAction}"
 											modelAttribute="createEventForm" enctype="multipart/form-data"
