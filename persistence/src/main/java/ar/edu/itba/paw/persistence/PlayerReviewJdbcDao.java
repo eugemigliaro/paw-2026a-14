@@ -4,7 +4,9 @@ import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -49,14 +51,59 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                             rs.getString("delete_reason"));
 
     private final JdbcTemplate jdbcTemplate;
+    private final boolean supportsOnConflictReturning;
 
     @Autowired
     public PlayerReviewJdbcDao(final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.supportsOnConflictReturning = supportsOnConflictReturning(dataSource);
     }
 
     @Override
     public PlayerReview upsertReview(
+            final Long reviewerUserId,
+            final Long reviewedUserId,
+            final PlayerReviewReaction reaction,
+            final String comment) {
+        if (supportsOnConflictReturning) {
+            return upsertReviewAtomically(reviewerUserId, reviewedUserId, reaction, comment);
+        }
+        return upsertReviewWithHsqlFallback(reviewerUserId, reviewedUserId, reaction, comment);
+    }
+
+    private PlayerReview upsertReviewAtomically(
+            final Long reviewerUserId,
+            final Long reviewedUserId,
+            final PlayerReviewReaction reaction,
+            final String comment) {
+        return jdbcTemplate
+                .query(
+                        "INSERT INTO player_reviews"
+                                + " (reviewer_user_id, reviewed_user_id, reaction, comment,"
+                                + " deleted, created_at, updated_at)"
+                                + " VALUES (?, ?, ?, ?, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                + " ON CONFLICT (reviewer_user_id, reviewed_user_id)"
+                                + " DO UPDATE SET reaction = EXCLUDED.reaction,"
+                                + " comment = EXCLUDED.comment,"
+                                + " updated_at = CURRENT_TIMESTAMP,"
+                                + " deleted = FALSE,"
+                                + " deleted_at = NULL,"
+                                + " deleted_by_user_id = NULL,"
+                                + " delete_reason = NULL"
+                                + " RETURNING id, reviewer_user_id, reviewed_user_id,"
+                                + " reaction, comment, created_at, updated_at, deleted,"
+                                + " deleted_at, deleted_by_user_id, delete_reason",
+                        PLAYER_REVIEW_ROW_MAPPER,
+                        reviewerUserId,
+                        reviewedUserId,
+                        reactionParameter(reaction),
+                        comment)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Player review was not persisted"));
+    }
+
+    private PlayerReview upsertReviewWithHsqlFallback(
             final Long reviewerUserId,
             final Long reviewedUserId,
             final PlayerReviewReaction reaction,
@@ -89,6 +136,14 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
 
         return findByPair(reviewerUserId, reviewedUserId)
                 .orElseThrow(() -> new IllegalStateException("Player review was not persisted"));
+    }
+
+    private static boolean supportsOnConflictReturning(final DataSource dataSource) {
+        try (final Connection connection = dataSource.getConnection()) {
+            return "PostgreSQL".equalsIgnoreCase(connection.getMetaData().getDatabaseProductName());
+        } catch (final SQLException e) {
+            throw new IllegalStateException("Could not inspect database dialect", e);
+        }
     }
 
     @Override
