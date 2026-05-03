@@ -29,6 +29,8 @@
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
 <c:url var="overflowMenuHref" value="/js/overflow-menu.js" />
 <c:url var="filterDropdownsHref" value="/js/filter-dropdowns.js" />
+<c:url var="eventsToggleFilterHref" value="/js/events-toggle-filter.js" />
+<c:url var="hostCreateMatchHref" value="/js/host-create-match.js" />
 <c:url var="recurrenceScheduleHref" value="/js/recurrence-schedule.js?v=20260428" />
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
 <c:url var="reportFiltersHref" value="/js/report-filters.js" />
@@ -54,6 +56,8 @@
 <script defer src="${hostJoinPolicyGuardHref}"></script>
 <script defer src="${overflowMenuHref}"></script>
 <script defer src="${filterDropdownsHref}"></script>
+<script defer src="${eventsToggleFilterHref}"></script>
+<script defer src="${hostCreateMatchHref}"></script>
 <script defer src="${recurrenceScheduleHref}"></script>
 <script defer src="${reportDropdownsHref}"></script>
 <script defer src="${reportFiltersHref}"></script>

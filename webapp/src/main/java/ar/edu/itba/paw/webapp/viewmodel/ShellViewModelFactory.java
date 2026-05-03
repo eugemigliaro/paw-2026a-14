@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
 import ar.edu.itba.paw.webapp.utils.UrlUtils;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.NavItemViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.NavItemViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ShellViewModel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
