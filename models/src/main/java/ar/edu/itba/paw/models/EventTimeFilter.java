@@ -5,5 +5,10 @@ public enum EventTimeFilter {
     FUTURE,
     TODAY,
     TOMORROW,
-    WEEK
+    WEEK;
+
+    @Override
+    public String toString() {
+        return name().toLowerCase(java.util.Locale.ROOT);
+    }
 }

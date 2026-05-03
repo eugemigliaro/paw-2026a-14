@@ -25,4 +25,9 @@ public enum PlayerReviewReaction {
                 .filter(reaction -> reaction.dbValue.equalsIgnoreCase(dbValue.trim()))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }

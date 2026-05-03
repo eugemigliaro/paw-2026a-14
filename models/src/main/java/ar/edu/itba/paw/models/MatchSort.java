@@ -23,4 +23,9 @@ public enum MatchSort {
                 .filter(sort -> sort.queryValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return queryValue;
+    }
 }

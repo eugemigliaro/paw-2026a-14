@@ -294,4 +294,49 @@ public class Match {
     public int getAvailableSpots() {
         return Math.max(maxPlayers - joinedPlayers, 0);
     }
+
+    @Override
+    public String toString() {
+        return "Match{"
+                + "id="
+                + id
+                + ", sport="
+                + sport
+                + ", hostUserId="
+                + hostUserId
+                + ", startsAt="
+                + startsAt
+                + ", endsAt="
+                + endsAt
+                + ", maxPlayers="
+                + maxPlayers
+                + ", joinedPlayers="
+                + joinedPlayers
+                + ", availableSpots="
+                + getAvailableSpots()
+                + ", pricePerPlayer="
+                + pricePerPlayer
+                + ", visibility='"
+                + visibility
+                + '\''
+                + ", joinPolicy='"
+                + joinPolicy
+                + '\''
+                + ", status='"
+                + status
+                + '\''
+                + ", bannerImageId="
+                + bannerImageId
+                + ", seriesId="
+                + seriesId
+                + ", seriesOccurrenceIndex="
+                + seriesOccurrenceIndex
+                + ", deleted="
+                + deleted
+                + ", deletedAt="
+                + deletedAt
+                + ", deletedByUserId="
+                + deletedByUserId
+                + '}';
+    }
 }

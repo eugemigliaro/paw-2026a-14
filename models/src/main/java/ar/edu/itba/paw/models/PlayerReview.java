@@ -107,4 +107,32 @@ public class PlayerReview {
     public String getDeleteReason() {
         return deleteReason;
     }
+
+    @Override
+    public String toString() {
+        return "PlayerReview{"
+                + "id="
+                + id
+                + ", reviewerUserId="
+                + reviewerUserId
+                + ", reviewedUserId="
+                + reviewedUserId
+                + ", reaction="
+                + reaction
+                + ", createdAt="
+                + createdAt
+                + ", updatedAt="
+                + updatedAt
+                + ", deleted="
+                + deleted
+                + ", deletedAt="
+                + deletedAt
+                + ", deletedByUserId="
+                + deletedByUserId
+                + ", hasComment="
+                + (comment != null && !comment.isBlank())
+                + ", hasDeleteReason="
+                + (deleteReason != null && !deleteReason.isBlank())
+                + '}';
+    }
 }
