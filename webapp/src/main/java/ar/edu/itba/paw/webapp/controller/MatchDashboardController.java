@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
-import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
@@ -1294,87 +1293,6 @@ public class MatchDashboardController {
         }
 
         return List.copyOf(options);
-    }
-
-    private List<FilterOptionViewModel> buildVisibilityFilterOptions(
-            final String path,
-            final Locale locale,
-            final String searchQuery,
-            final String sort,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String timezone,
-            final List<String> selectedStatuses,
-            final List<String> selectedSports,
-            final List<String> selectedVisibility,
-            final List<String> selectedCategories) {
-        return List.of(
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        List.of(),
-                        selectedCategories,
-                        selectedVisibility.isEmpty(),
-                        messageSource.getMessage("filter.anyVisibility", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        toggleValue(selectedVisibility, "public"),
-                        selectedCategories,
-                        selectedVisibility.contains("public"),
-                        messageSource.getMessage("visibility.public", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        toggleValue(selectedVisibility, "private"),
-                        selectedCategories,
-                        selectedVisibility.contains("private"),
-                        messageSource.getMessage("visibility.private", null, locale)),
-                filterOption(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        toggleValue(selectedVisibility, "invite_only"),
-                        selectedCategories,
-                        selectedVisibility.contains("invite_only"),
-                        messageSource.getMessage("visibility.inviteOnly", null, locale)));
     }
 
     private List<FilterOptionViewModel> buildCategoryFilterOptions(
