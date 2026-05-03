@@ -48,8 +48,6 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.MatchListControlsViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -2678,8 +2676,7 @@ class PawUiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events =
-                (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+        final List<EventCardViewModel> events = getEventsModel(result);
         Assertions.assertTrue(
                 events.stream()
                         .noneMatch(event -> "Approval Future Padel".equals(event.getTitle())));
@@ -2696,8 +2693,7 @@ class PawUiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events =
-                (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+        final List<EventCardViewModel> events = getEventsModel(result);
         Assertions.assertTrue(
                 events.stream()
                         .anyMatch(event -> "Approval Future Padel".equals(event.getTitle())));
@@ -2714,8 +2710,7 @@ class PawUiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events =
-                (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+        final List<EventCardViewModel> events = getEventsModel(result);
         final EventCardViewModel hostedEvent =
                 events.stream()
                         .filter(event -> "Sunrise Padel".equals(event.getTitle()))
@@ -3059,6 +3054,11 @@ class PawUiRouteTest {
         mockMvc.perform(get("/users/missing-player")).andExpect(status().isNotFound());
     }
 
+    @SuppressWarnings("unchecked")
+    private List<EventCardViewModel> getEventsModel(final MvcResult result) {
+        return (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+    }
+
     private void authenticateUser(final Long userId, final String email, final String username) {
         final AuthenticatedUserPrincipal principal =
                 new AuthenticatedUserPrincipal(
@@ -3068,19 +3068,6 @@ class PawUiRouteTest {
                 new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-    }
-
-    private static void assertNoTomorrowTimeOption(final MatchListControlsViewModel listControls) {
-        final boolean hasTomorrowOption =
-                listControls.getFilterGroups().stream()
-                        .map(FilterGroupViewModel::getOptions)
-                        .flatMap(List::stream)
-                        .anyMatch(
-                                option ->
-                                        option.getHref() != null
-                                                && option.getHref().contains("time=tomorrow"));
-
-        Assertions.assertFalse(hasTomorrowOption);
     }
 
     private static MessageSource messageSource() {
