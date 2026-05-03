@@ -64,6 +64,36 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void hostCreateMatchUsesHiddenCoordinateFieldsWithoutVisibleCoordinateCopy()
+            throws IOException {
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(hostCreateMatch.contains("path=\"latitude\""));
+        assertTrue(hostCreateMatch.contains("path=\"longitude\""));
+        assertTrue(hostCreateMatch.contains("data-location-picker=\"true\""));
+        assertFalse(hostCreateMatch.contains("latitude.placeholder"));
+        assertFalse(hostCreateMatch.contains("longitude.placeholder"));
+        assertEquals("Near me", english.getProperty("feed.nearMe"));
+        assertEquals("Cerca de m\u00ed", spanish.getProperty("feed.nearMe"));
+        assertEquals("Map location", english.getProperty("host.form.location.map"));
+        assertEquals("Ubicaci\u00f3n en mapa", spanish.getProperty("host.form.location.map"));
+    }
+
+    @Test
+    void feedIncludesNearMeGeolocationPostWithoutUrlCoordinates() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final Path scriptPath = Path.of("src/main/webapp/js/explore-location.js");
+
+        assertTrue(feedIndex.contains("/explore/location"));
+        assertTrue(feedIndex.contains("data-explore-location-form=\"true\""));
+        assertTrue(feedIndex.contains("value=\"distance\""));
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(Files.readString(scriptPath).contains("navigator.geolocation"));
+    }
+
+    @Test
     void overflowMenuScriptExistsAndTargetsOverflowMenuHook() throws IOException {
         final Path scriptPath = Path.of("src/main/webapp/js/overflow-menu.js");
 

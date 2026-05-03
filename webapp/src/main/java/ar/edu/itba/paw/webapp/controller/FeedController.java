@@ -25,6 +25,7 @@ import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -40,6 +42,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class FeedController {
 
     private static final int PAGE_SIZE = 12;
+    private static final String SESSION_EXPLORE_LATITUDE = "exploreLocationLatitude";
+    private static final String SESSION_EXPLORE_LONGITUDE = "exploreLocationLongitude";
 
     private final MatchService matchService;
     private final MessageSource messageSource;
@@ -63,6 +67,7 @@ public class FeedController {
             @RequestParam(value = "minPrice", required = false) final String minPrice,
             @RequestParam(value = "maxPrice", required = false) final String maxPrice,
             @RequestParam(value = "tz", required = false) final String timezone,
+            final HttpSession session,
             final Locale locale) {
         final String query =
                 bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
@@ -70,7 +75,9 @@ public class FeedController {
                         : feedSearchForm.getQ();
         final FeedFilters filters =
                 normalizeFilters(sports, startDate, endDate, sort, timezone, minPrice, maxPrice);
-        final PaginatedResult<Match> result = searchPublicMatches(query, filters, page);
+        final ExploreLocation exploreLocation = exploreLocation(session);
+        final PaginatedResult<Match> result =
+                searchPublicMatches(query, filters, page, exploreLocation);
         final ModelAndView mav = new ModelAndView("feed/index");
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/"));
         mav.addObject("selectedSort", filters.selectedSort());
@@ -85,7 +92,27 @@ public class FeedController {
         mav.addObject("selectedStartDateValue", filters.startDate());
         mav.addObject("selectedEndDateValue", filters.endDate());
         mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
+        mav.addObject("nearMeAvailable", exploreLocation != null);
         return mav;
+    }
+
+    @PostMapping("/explore/location")
+    public ModelAndView storeExploreLocation(
+            @RequestParam(value = "latitude", required = false) final String latitude,
+            @RequestParam(value = "longitude", required = false) final String longitude,
+            final HttpSession session) {
+        final Double parsedLatitude = parseCoordinate(latitude);
+        final Double parsedLongitude = parseCoordinate(longitude);
+        if (parsedLatitude != null
+                && parsedLatitude >= -90
+                && parsedLatitude <= 90
+                && parsedLongitude != null
+                && parsedLongitude >= -180
+                && parsedLongitude <= 180) {
+            session.setAttribute(SESSION_EXPLORE_LATITUDE, parsedLatitude);
+            session.setAttribute(SESSION_EXPLORE_LONGITUDE, parsedLongitude);
+        }
+        return new ModelAndView("redirect:/?sort=distance");
     }
 
     private FeedPageViewModel buildFeedPageViewModel(
@@ -119,7 +146,10 @@ public class FeedController {
     }
 
     private PaginatedResult<Match> searchPublicMatches(
-            final String query, final FeedFilters filters, final int page) {
+            final String query,
+            final FeedFilters filters,
+            final int page,
+            final ExploreLocation exploreLocation) {
         final int safePage = page > 0 ? page : 1;
         final String encodedSports = encodeCsv(filters.selectedSports());
 
@@ -133,7 +163,9 @@ public class FeedController {
                 PAGE_SIZE,
                 filters.timezone(),
                 filters.minPrice(),
-                filters.maxPrice());
+                filters.maxPrice(),
+                exploreLocation == null ? null : exploreLocation.latitude(),
+                exploreLocation == null ? null : exploreLocation.longitude());
     }
 
     private static List<PaginationItemViewModel> buildPaginationItems(
@@ -446,6 +478,29 @@ public class FeedController {
         return new PriceRange(minPrice, maxPrice);
     }
 
+    private static Double parseCoordinate(final String rawCoordinate) {
+        if (rawCoordinate == null || rawCoordinate.isBlank()) {
+            return null;
+        }
+        try {
+            return Double.valueOf(rawCoordinate.trim());
+        } catch (final NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private static ExploreLocation exploreLocation(final HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        final Object latitude = session.getAttribute(SESSION_EXPLORE_LATITUDE);
+        final Object longitude = session.getAttribute(SESSION_EXPLORE_LONGITUDE);
+        if (latitude instanceof Double && longitude instanceof Double) {
+            return new ExploreLocation((Double) latitude, (Double) longitude);
+        }
+        return null;
+    }
+
     private static BigDecimal parseNonNegativePrice(final String rawPrice) {
         if (rawPrice == null || rawPrice.isBlank()) {
             return null;
@@ -482,6 +537,8 @@ public class FeedController {
     private record PriceRange(BigDecimal minPrice, BigDecimal maxPrice) {}
 
     private record DateRange(String startDate, String endDate) {}
+
+    private record ExploreLocation(Double latitude, Double longitude) {}
 
     private record FeedFilters(
             List<String> selectedSports,

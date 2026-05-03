@@ -48,6 +48,7 @@
 					<spring:message var="recurrenceEndModePlaceholder" code="host.form.recurrence.endMode.placeholder" />
 					<spring:message var="recurrenceEndUntilDate" code="host.form.recurrence.endMode.untilDate" />
 					<spring:message var="recurrenceEndOccurrenceCount" code="host.form.recurrence.endMode.occurrenceCount" />
+					<spring:message var="locationMapAria" code="host.form.location.map.aria" />
 					<c:url var="resolvedFormAction" value="${formAction}" />
 
 					<form:form
@@ -160,6 +161,44 @@
 										element="span"
 									/>
 								</label>
+
+								<form:hidden path="latitude" id="match-location-latitude" />
+								<form:hidden path="longitude" id="match-location-longitude" />
+								<form:errors path="latitude" cssClass="field__error" element="span" />
+								<form:errors path="longitude" cssClass="field__error" element="span" />
+								<c:if test="${mapPickerEnabled}">
+									<section
+										class="location-picker"
+										data-location-picker="true"
+										data-tile-url-template="${mapTileUrlTemplate}"
+										data-attribution="${mapAttribution}"
+										data-default-latitude="${mapDefaultLatitude}"
+										data-default-longitude="${mapDefaultLongitude}"
+										data-default-zoom="${mapDefaultZoom}">
+										<div class="location-picker__header">
+											<div>
+												<span class="field__label"><spring:message code="host.form.location.map" /></span>
+												<p class="field__hint"><spring:message code="host.form.location.map.hint" /></p>
+											</div>
+											<div class="location-picker__actions">
+												<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
+													<spring:message code="host.form.location.current" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
+													<spring:message code="host.form.location.clear" />
+												</button>
+											</div>
+										</div>
+										<div class="location-picker__map" data-location-map="true" role="button" tabindex="0" aria-label="${locationMapAria}">
+											<div class="location-picker__tiles" data-location-tiles="true"></div>
+											<div class="location-picker__pin" data-location-pin="true" hidden="hidden"></div>
+										</div>
+										<p class="location-picker__status" data-location-status="true" role="status"></p>
+										<c:if test="${not empty mapAttribution}">
+											<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
+										</c:if>
+									</section>
+								</c:if>
 
 								<label class="field" for="match-date">
 									<span class="field__label"><spring:message code="host.form.date" /></span>

@@ -211,8 +211,29 @@
 									<option value="soonest" ${selectedSort == 'soonest' ? 'selected="selected"' : ''}><spring:message code="feed.sort.soonest" /></option>
 									<option value="price" ${selectedSort == 'price' ? 'selected="selected"' : ''}><spring:message code="feed.sort.price" /></option>
 									<option value="spots" ${selectedSort == 'spots' ? 'selected="selected"' : ''}><spring:message code="feed.sort.spots" /></option>
+									<option value="distance" ${selectedSort == 'distance' ? 'selected="selected"' : ''}><spring:message code="feed.sort.distance" /></option>
 								</select>
 							</label>
+						</form>
+
+						<form
+							method="post"
+							action="<c:url value='/explore/location' />"
+							class="near-me-panel"
+							data-explore-location-form="true">
+							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+							<input type="hidden" name="latitude" data-explore-location-latitude="true" />
+							<input type="hidden" name="longitude" data-explore-location-longitude="true" />
+							<spring:message var="nearMeLabel" code="feed.nearMe" />
+							<spring:message var="nearMeLoadingLabel" code="feed.nearMe.loading" />
+							<button
+								type="submit"
+								class="btn btn--secondary near-me-panel__button"
+								data-explore-location-submit="true"
+								data-loading-label="${nearMeLoadingLabel}">
+								${nearMeLabel}
+							</button>
+							<p class="near-me-panel__status" data-explore-location-status="true" role="status"></p>
 						</form>
 					</section>
 

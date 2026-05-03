@@ -6,7 +6,8 @@ import java.util.Optional;
 public enum MatchSort {
     SOONEST("soonest"),
     PRICE_LOW("price"),
-    SPOTS_DESC("spots");
+    SPOTS_DESC("spots"),
+    DISTANCE("distance");
 
     private final String queryValue;
 

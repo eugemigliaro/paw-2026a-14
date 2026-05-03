@@ -71,4 +71,22 @@ public interface MatchService {
             String timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice);
+
+    default PaginatedResult<Match> searchPublicMatches(
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final Double latitude,
+            final Double longitude) {
+        return searchPublicMatches(
+                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
+                maxPrice);
+    }
 }

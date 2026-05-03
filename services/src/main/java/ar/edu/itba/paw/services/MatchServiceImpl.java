@@ -73,20 +73,7 @@ public class MatchServiceImpl implements MatchService {
             return createRecurringMatch(request);
         }
 
-        return matchDao.createMatch(
-                request.getHostUserId(),
-                request.getAddress(),
-                request.getTitle(),
-                request.getDescription(),
-                request.getStartsAt(),
-                request.getEndsAt(),
-                request.getMaxPlayers(),
-                request.getPricePerPlayer(),
-                request.getSport(),
-                request.getVisibility(),
-                request.getJoinPolicy(),
-                request.getStatus(),
-                request.getBannerImageId());
+        return createSingleMatch(request);
     }
 
     private Match createRecurringMatch(final CreateMatchRequest request) {
@@ -109,29 +96,139 @@ public class MatchServiceImpl implements MatchService {
         Match firstOccurrence = null;
         for (int i = 0; i < occurrences.size(); i++) {
             final OccurrenceWindow occurrence = occurrences.get(i);
-            final Match created =
-                    matchDao.createMatch(
-                            request.getHostUserId(),
-                            request.getAddress(),
-                            request.getTitle(),
-                            request.getDescription(),
-                            occurrence.startsAt(),
-                            occurrence.endsAt(),
-                            request.getMaxPlayers(),
-                            request.getPricePerPlayer(),
-                            request.getSport(),
-                            request.getVisibility(),
-                            request.getJoinPolicy(),
-                            request.getStatus(),
-                            request.getBannerImageId(),
-                            seriesId,
-                            i + 1);
+            final Match created = createSeriesOccurrence(request, occurrence, seriesId, i + 1);
             if (firstOccurrence == null) {
                 firstOccurrence = created;
             }
         }
 
         return firstOccurrence;
+    }
+
+    private Match createSingleMatch(final CreateMatchRequest request) {
+        if (hasCoordinates(request.getLatitude(), request.getLongitude())) {
+            return matchDao.createMatch(
+                    request.getHostUserId(),
+                    request.getAddress(),
+                    request.getTitle(),
+                    request.getDescription(),
+                    request.getStartsAt(),
+                    request.getEndsAt(),
+                    request.getMaxPlayers(),
+                    request.getPricePerPlayer(),
+                    request.getSport(),
+                    request.getVisibility(),
+                    request.getJoinPolicy(),
+                    request.getStatus(),
+                    request.getBannerImageId(),
+                    request.getLatitude(),
+                    request.getLongitude());
+        }
+
+        return matchDao.createMatch(
+                request.getHostUserId(),
+                request.getAddress(),
+                request.getTitle(),
+                request.getDescription(),
+                request.getStartsAt(),
+                request.getEndsAt(),
+                request.getMaxPlayers(),
+                request.getPricePerPlayer(),
+                request.getSport(),
+                request.getVisibility(),
+                request.getJoinPolicy(),
+                request.getStatus(),
+                request.getBannerImageId());
+    }
+
+    private Match createSeriesOccurrence(
+            final CreateMatchRequest request,
+            final OccurrenceWindow occurrence,
+            final Long seriesId,
+            final int seriesOccurrenceIndex) {
+        if (hasCoordinates(request.getLatitude(), request.getLongitude())) {
+            return matchDao.createMatch(
+                    request.getHostUserId(),
+                    request.getAddress(),
+                    request.getTitle(),
+                    request.getDescription(),
+                    occurrence.startsAt(),
+                    occurrence.endsAt(),
+                    request.getMaxPlayers(),
+                    request.getPricePerPlayer(),
+                    request.getSport(),
+                    request.getVisibility(),
+                    request.getJoinPolicy(),
+                    request.getStatus(),
+                    request.getBannerImageId(),
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    seriesId,
+                    seriesOccurrenceIndex);
+        }
+
+        return matchDao.createMatch(
+                request.getHostUserId(),
+                request.getAddress(),
+                request.getTitle(),
+                request.getDescription(),
+                occurrence.startsAt(),
+                occurrence.endsAt(),
+                request.getMaxPlayers(),
+                request.getPricePerPlayer(),
+                request.getSport(),
+                request.getVisibility(),
+                request.getJoinPolicy(),
+                request.getStatus(),
+                request.getBannerImageId(),
+                seriesId,
+                seriesOccurrenceIndex);
+    }
+
+    private boolean updateStoredMatch(
+            final Long matchId,
+            final Long actingUserId,
+            final UpdateMatchRequest request,
+            final String status) {
+        if (hasCoordinates(request.getLatitude(), request.getLongitude())) {
+            return matchDao.updateMatch(
+                    matchId,
+                    actingUserId,
+                    request.getAddress(),
+                    request.getTitle(),
+                    request.getDescription(),
+                    request.getStartsAt(),
+                    request.getEndsAt(),
+                    request.getMaxPlayers(),
+                    request.getPricePerPlayer(),
+                    request.getSport(),
+                    request.getVisibility(),
+                    request.getJoinPolicy(),
+                    status,
+                    request.getBannerImageId(),
+                    request.getLatitude(),
+                    request.getLongitude());
+        }
+
+        return matchDao.updateMatch(
+                matchId,
+                actingUserId,
+                request.getAddress(),
+                request.getTitle(),
+                request.getDescription(),
+                request.getStartsAt(),
+                request.getEndsAt(),
+                request.getMaxPlayers(),
+                request.getPricePerPlayer(),
+                request.getSport(),
+                request.getVisibility(),
+                request.getJoinPolicy(),
+                status,
+                request.getBannerImageId());
+    }
+
+    private static boolean hasCoordinates(final Double latitude, final Double longitude) {
+        return latitude != null && longitude != null;
     }
 
     @Override
@@ -176,21 +273,7 @@ public class MatchServiceImpl implements MatchService {
         }
 
         final boolean updated =
-                matchDao.updateMatch(
-                        matchId,
-                        actingUserId,
-                        request.getAddress(),
-                        request.getTitle(),
-                        request.getDescription(),
-                        request.getStartsAt(),
-                        request.getEndsAt(),
-                        request.getMaxPlayers(),
-                        request.getPricePerPlayer(),
-                        request.getSport(),
-                        request.getVisibility(),
-                        request.getJoinPolicy(),
-                        request.getStatus(),
-                        request.getBannerImageId());
+                updateStoredMatch(matchId, actingUserId, request, request.getStatus());
 
         if (!updated) {
             throw new MatchUpdateException(
@@ -268,10 +351,8 @@ public class MatchServiceImpl implements MatchService {
                     new MatchUpdateException(
                             MatchUpdateFailureReason.INVALID_SCHEDULE,
                             message("match.schedule.error.endBeforeStart")));
-            final boolean updated =
-                    matchDao.updateMatch(
-                            target.getId(),
-                            actingUserId,
+            final UpdateMatchRequest targetRequest =
+                    new UpdateMatchRequest(
                             request.getAddress(),
                             request.getTitle(),
                             request.getDescription(),
@@ -283,7 +364,12 @@ public class MatchServiceImpl implements MatchService {
                             request.getVisibility(),
                             request.getJoinPolicy(),
                             target.getStatus(),
-                            request.getBannerImageId());
+                            request.getBannerImageId(),
+                            request.getLatitude(),
+                            request.getLongitude());
+            final boolean updated =
+                    updateStoredMatch(
+                            target.getId(), actingUserId, targetRequest, target.getStatus());
             if (!updated) {
                 throw new MatchUpdateException(
                         MatchUpdateFailureReason.FORBIDDEN,
@@ -610,8 +696,30 @@ public class MatchServiceImpl implements MatchService {
             final String timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
+        return searchPublicMatches(
+                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
+                maxPrice, null, null);
+    }
+
+    @Override
+    public PaginatedResult<Match> searchPublicMatches(
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final Double latitude,
+            final Double longitude) {
         final List<Sport> sportFilters = parseSports(sport);
-        final MatchSort sortFilter = parseSort(sort);
+        final MatchSort sortFilter =
+                hasCoordinates(latitude, longitude)
+                        ? parseSort(sort)
+                        : withoutDistance(parseSort(sort));
         final ZoneId zoneId = parseZone(timezone);
         final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
 
@@ -629,8 +737,9 @@ public class MatchServiceImpl implements MatchService {
                                 minPrice,
                                 maxPrice,
                                 zoneId),
-                (offset, safePageSize) ->
-                        matchDao.findPublicMatches(
+                (offset, safePageSize) -> {
+                    if (hasCoordinates(latitude, longitude)) {
+                        return matchDao.findPublicMatches(
                                 query,
                                 sportFilters,
                                 EventTimeFilter.ALL,
@@ -640,8 +749,28 @@ public class MatchServiceImpl implements MatchService {
                                 maxPrice,
                                 sortFilter,
                                 zoneId,
+                                latitude,
+                                longitude,
                                 offset,
-                                safePageSize));
+                                safePageSize);
+                    }
+                    return matchDao.findPublicMatches(
+                            query,
+                            sportFilters,
+                            EventTimeFilter.ALL,
+                            dateRange.start(),
+                            dateRange.endExclusive(),
+                            minPrice,
+                            maxPrice,
+                            sortFilter,
+                            zoneId,
+                            offset,
+                            safePageSize);
+                });
+    }
+
+    private static MatchSort withoutDistance(final MatchSort sort) {
+        return sort == MatchSort.DISTANCE ? MatchSort.SOONEST : sort;
     }
 
     private static List<Sport> parseSports(final String rawSports) {

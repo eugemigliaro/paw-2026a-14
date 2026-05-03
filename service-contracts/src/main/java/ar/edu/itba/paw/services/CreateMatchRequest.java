@@ -8,6 +8,8 @@ public class CreateMatchRequest {
 
     private final Long hostUserId;
     private final String address;
+    private final Double latitude;
+    private final Double longitude;
     private final String title;
     private final String description;
     private final Instant startsAt;
@@ -97,8 +99,46 @@ public class CreateMatchRequest {
             final String status,
             final Long bannerImageId,
             final CreateRecurrenceRequest recurrence) {
+        this(
+                hostUserId,
+                address,
+                null,
+                null,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                recurrence);
+    }
+
+    public CreateMatchRequest(
+            final Long hostUserId,
+            final String address,
+            final Double latitude,
+            final Double longitude,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final Long bannerImageId,
+            final CreateRecurrenceRequest recurrence) {
         this.hostUserId = hostUserId;
         this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.title = title;
         this.description = description;
         this.startsAt = startsAt;
@@ -119,6 +159,14 @@ public class CreateMatchRequest {
 
     public String getAddress() {
         return address;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
     }
 
     public String getTitle() {

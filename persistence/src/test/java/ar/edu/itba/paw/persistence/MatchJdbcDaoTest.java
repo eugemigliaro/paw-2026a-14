@@ -1069,6 +1069,199 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Upcoming Premium", result.get(0).getTitle());
     }
 
+    @Test
+    public void testCreateFindAndUpdateMatchRoundTripsCoordinates() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Court Address",
+                        "Pinned Match",
+                        "Open match",
+                        startsAt.toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        -34.61,
+                        -58.38);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertEquals(-34.61, found.getLatitude());
+        Assertions.assertEquals(-58.38, found.getLongitude());
+
+        final boolean updated =
+                matchDao.updateMatch(
+                        created.getId(),
+                        hostUserId,
+                        "New Court Address",
+                        "Moved Match",
+                        "Open match",
+                        startsAt.plusDays(1).toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        -34.5,
+                        -58.5);
+
+        final Match moved = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertTrue(updated);
+        Assertions.assertEquals(-34.5, moved.getLatitude());
+        Assertions.assertEquals(-58.5, moved.getLongitude());
+    }
+
+    @Test
+    public void testCreateMatchAllowsAddressOnlyCoordinates() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Address Only",
+                        "Address Only Match",
+                        "Open match",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "open",
+                        null);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+
+        Assertions.assertNull(found.getLatitude());
+        Assertions.assertNull(found.getLongitude());
+    }
+
+    @Test
+    public void testMatchCoordinateConstraintsRejectInvalidRows() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+
+        Assertions.assertThrows(
+                DataIntegrityViolationException.class,
+                () ->
+                        matchDao.createMatch(
+                                hostUserId,
+                                "Invalid Address",
+                                "Missing Pair",
+                                "Open match",
+                                startsAt.toInstant(),
+                                null,
+                                4,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                -34.61,
+                                null));
+        Assertions.assertThrows(
+                DataIntegrityViolationException.class,
+                () ->
+                        matchDao.createMatch(
+                                hostUserId,
+                                "Invalid Address",
+                                "Out of Range",
+                                "Open match",
+                                startsAt.toInstant(),
+                                null,
+                                4,
+                                BigDecimal.ZERO,
+                                Sport.PADEL,
+                                "public",
+                                "direct",
+                                "open",
+                                null,
+                                -91.0,
+                                -58.38));
+    }
+
+    @Test
+    public void testFindPublicMatchesSortsByDistanceAndPlacesNullCoordinatesLast() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final Match far =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Far Address",
+                        "Far Match",
+                        "Open match",
+                        startsAt.plusHours(1).toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        -34.8,
+                        -58.8);
+        final Match nearby =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Near Address",
+                        "Near Match",
+                        "Open match",
+                        startsAt.plusHours(2).toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "direct",
+                        "open",
+                        null,
+                        -34.61,
+                        -58.39);
+        final Match addressOnly =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Address Only",
+                        "Address Only Match",
+                        "Open match",
+                        startsAt.toInstant(),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.PADEL,
+                        "public",
+                        "open",
+                        null);
+
+        final List<Match> result =
+                matchDao.findPublicMatches(
+                        null,
+                        List.of(Sport.PADEL),
+                        EventTimeFilter.WEEK,
+                        null,
+                        null,
+                        null,
+                        null,
+                        MatchSort.DISTANCE,
+                        ZoneId.systemDefault(),
+                        -34.6,
+                        -58.4,
+                        0,
+                        20);
+
+        Assertions.assertTrue(result.size() >= 3);
+        Assertions.assertEquals(nearby.getId(), result.get(0).getId());
+        Assertions.assertEquals(far.getId(), result.get(1).getId());
+        Assertions.assertEquals(addressOnly.getId(), result.get(2).getId());
+    }
+
     private void insertMatch(
             final String title,
             final String description,
