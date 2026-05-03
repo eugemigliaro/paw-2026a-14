@@ -20,6 +20,8 @@ public interface PlayerReviewService {
 
     Optional<PlayerReview> findReviewByPair(Long reviewerUserId, Long reviewedUserId);
 
+    Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId);
+
     PlayerReviewSummary findSummaryForUser(Long reviewedUserId);
 
     List<PlayerReview> findRecentReviewsForUser(Long reviewedUserId, int limit, int offset);

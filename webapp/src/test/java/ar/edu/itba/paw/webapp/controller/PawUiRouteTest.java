@@ -27,6 +27,7 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
@@ -67,6 +68,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
@@ -1093,6 +1095,11 @@ class PawUiRouteTest {
                                     null);
 
                     @Override
+                    public Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
                     public PlayerReview submitReview(
                             final Long reviewerUserId,
                             final Long reviewedUserId,
@@ -1266,6 +1273,9 @@ class PawUiRouteTest {
                 };
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
+        final ModerationService moderationService = Mockito.mock(ModerationService.class);
+        Mockito.when(moderationService.findActiveBan(Mockito.anyLong()))
+                .thenReturn(Optional.empty());
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -1284,7 +1294,8 @@ class PawUiRouteTest {
                                         messageSource,
                                         fixedClock),
                                 new PublicProfileController(
-                                        userService, playerReviewService, messageSource),
+                                        userService, playerReviewService,
+                                        moderationService, messageSource),
                                 new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(

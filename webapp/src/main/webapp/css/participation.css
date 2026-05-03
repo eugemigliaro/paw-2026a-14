@@ -153,10 +153,6 @@ player pending join requests
 	white-space: nowrap;
 }
 
-a.participant-manage-list__name:hover {
-	text-decoration: underline;
-}
-
 .participant-manage-list__details {
 	display: grid;
 	gap: 0.3rem;
@@ -172,6 +168,10 @@ a.participant-manage-list__name:hover {
 
 .participant-manage-list__meta-link:hover {
 	color: #0f766e;
+}
+
+a.participant-manage-list__name:hover {
+	text-decoration: underline;
 }
 
 .participant-manage-list__actions {
@@ -192,6 +192,7 @@ a.participant-manage-list__name:hover {
 	font-size: 0.95rem;
 	line-height: 1.55;
 	padding: 0.875rem 1.1rem;
+	margin-bottom: 1.5rem;
 }
 
 .notice--success {

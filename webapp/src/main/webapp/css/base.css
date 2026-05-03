@@ -242,11 +242,19 @@ a {
 }
 
 .page-heading__description,
-.body-copy,
 .muted-copy {
 	color: var(--text-secondary);
 	font-size: 1rem;
 	line-height: 1.65;
+}
+
+.body-copy {
+	color: var(--text-secondary);
+	font-size: 1rem;
+	line-height: 1.65;
+	overflow-x: auto;
+	overflow-wrap: break-word;
+	white-space: pre-wrap;
 }
 
 .muted-copy {

@@ -4,6 +4,8 @@ import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
@@ -36,14 +38,17 @@ public class PublicProfileController {
 
     private final UserService userService;
     private final PlayerReviewService playerReviewService;
+    private final ModerationService moderationService;
     private final MessageSource messageSource;
 
     public PublicProfileController(
             final UserService userService,
             final PlayerReviewService playerReviewService,
+            final ModerationService moderationService,
             final MessageSource messageSource) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
+        this.moderationService = moderationService;
         this.messageSource = messageSource;
     }
 
@@ -52,6 +57,7 @@ public class PublicProfileController {
             @PathVariable("username") final String username,
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
             final Locale locale) {
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final User user =
                 userService
                         .findByUsername(username)
@@ -64,8 +70,8 @@ public class PublicProfileController {
                         "page.title.publicProfile",
                         new Object[] {user.getUsername()},
                         "Match Point | " + user.getUsername(),
-                        locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
+                        resolvedLocale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, resolvedLocale));
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(
@@ -75,17 +81,18 @@ public class PublicProfileController {
                         user.getEmail(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, reviewForm, locale);
+        addReviewModel(mav, user, reviewForm, resolvedLocale);
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(
                         "profile.public.avatarAlt",
                         new Object[] {user.getUsername()},
                         user.getUsername() + " profile picture",
-                        locale));
+                        resolvedLocale));
         mav.addObject(
                 "profileUsernameLabel",
-                messageSource.getMessage("profile.public.username", null, "Username", locale));
+                messageSource.getMessage(
+                        "profile.public.username", null, "Username", resolvedLocale));
         mav.addObject(
                 "profileFullNameLabel",
                 messageSource.getMessage("profile.public.fullName", null, "Name", locale));
@@ -94,7 +101,28 @@ public class PublicProfileController {
                 messageSource.getMessage("profile.public.email", null, "Email", locale));
         mav.addObject(
                 "profilePhoneLabel",
-                messageSource.getMessage("profile.public.phone", null, "Phone", locale));
+                messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
+        final Long currentUserId =
+                CurrentAuthenticatedUser.get()
+                        .map(AuthenticatedUserPrincipal::getUserId)
+                        .orElse(null);
+        final boolean reportUserCanSubmit =
+                currentUserId != null && !currentUserId.equals(user.getId());
+        mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
+        final Optional<UserBan> activeBan = moderationService.findActiveBan(user.getId());
+        mav.addObject("profileBanned", activeBan.isPresent());
+        mav.addObject(
+                "profileBannedLabel",
+                messageSource.getMessage(
+                        "profile.public.banned", null, "Temporarily banned", resolvedLocale));
+        activeBan.ifPresent(
+                ban -> {
+                    mav.addObject(
+                            "profileBannedUntil",
+                            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+                                    .withLocale(resolvedLocale)
+                                    .format(ban.getBannedUntil().atZone(ZoneId.systemDefault())));
+                });
         CurrentAuthenticatedUser.get()
                 .filter(principal -> principal.getUserId().equals(user.getId()))
                 .ifPresent(
@@ -103,7 +131,10 @@ public class PublicProfileController {
                             mav.addObject(
                                     "profileEditLabel",
                                     messageSource.getMessage(
-                                            "profile.public.edit", null, "Edit profile", locale));
+                                            "profile.public.edit",
+                                            null,
+                                            "Edit profile",
+                                            resolvedLocale));
                         });
         return mav;
     }
@@ -206,6 +237,7 @@ public class PublicProfileController {
                                                 "Unknown player",
                                                 locale)));
         return new PlayerReviewViewModel(
+                review.getId(),
                 reviewer.getUsername(),
                 reviewer.getUsername() == null ? null : "/users/" + reviewer.getUsername(),
                 review.getReaction().getDbValue(),

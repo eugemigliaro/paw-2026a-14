@@ -17,10 +17,17 @@
 					<div class="public-profile-topbar">
 						<ui:returnButton />
 
-						<c:if test="${not empty profileEditHref}">
+						<c:if test="${not empty profileEditHref or reportUserCanSubmit}">
 							<div class="public-profile-actions">
-								<c:url var="profileEditAction" value="${profileEditHref}" />
-								<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
+								<c:if test="${not empty profileEditHref}">
+									<c:url var="profileEditAction" value="${profileEditHref}" />
+									<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
+								</c:if>
+								<c:if test="${reportUserCanSubmit}">
+									<c:url var="reportUserHref" value="/reports/users/${profilePage.username}" />
+									<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
+									<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
+								</c:if>
 							</div>
 						</c:if>
 					</div>
@@ -38,6 +45,18 @@
 						</article>
 
 						<div class="public-profile-summary">
+							<c:if test="${profileBanned}">
+								<div class="notice notice--error">
+									<strong><c:out value="${profileBannedLabel}" /></strong>
+									<c:if test="${not empty profileBannedUntil}">
+										<span> · <c:out value="${profileBannedUntil}" /></span>
+									</c:if>
+									<c:if test="${not empty profileBannedReason}">
+										<div><c:out value="${profileBannedReason}" /></div>
+									</c:if>
+								</div>
+							</c:if>
+
 							<p class="public-profile-summary__line">
 								<span class="field__label">
 									<spring:message code="profile.public.username" />:
@@ -81,7 +100,6 @@
 						</div>
 					</div>
 
-
 				</section>
 				<section id="reviews" class="panel public-profile-panel public-profile-reviews">
 					<header class="page-heading public-profile-reviews__header">
@@ -101,8 +119,8 @@
 							<spring:message code="profile.reviews.deleted" />
 						</div>
 					</c:if>
-					<c:if test="${not empty param.reviewError}">
-						<div class="notice notice--error">
+						<c:if test="${not empty param.reviewError}">
+							<div class="notice notice--error">
 							<c:choose>
 								<c:when test="${param.reviewError eq 'not_eligible'}">
 									<spring:message code="profile.reviews.error.notEligible" />
@@ -120,8 +138,14 @@
 									<spring:message code="profile.reviews.error.invalid" />
 								</c:otherwise>
 							</c:choose>
-						</div>
-					</c:if>
+							</div>
+						</c:if>
+						<c:if test="${param.report eq 'sent'}">
+							<div class="notice notice--success">
+								<spring:message code="moderation.report.sent" />
+							</div>
+						</c:if>
+
 
 					<spring:message var="reviewSummaryAria" code="profile.reviews.summaryAria" />
 					<c:if test="${reviewCanSubmit}">
@@ -316,8 +340,8 @@
 						</c:when>
 						<c:otherwise>
 							<ul class="public-profile-review-list">
-								<c:forEach var="review" items="${profileReviews}">
-									<li class="public-profile-review-list__item">
+									<c:forEach var="review" items="${profileReviews}">
+										<li class="public-profile-review-list__item">
 										<div class="public-profile-review-list__meta">
 											<c:choose>
 												<c:when test="${not empty review.reviewerProfileHref}">
@@ -351,12 +375,19 @@
 												<span class="public-profile-review-list__date"><c:out value="${review.updatedAtLabel}" /></span>
 											</c:if>
 										</div>
-										<c:if test="${not empty review.comment}">
-											<p class="public-profile-review-list__comment"><c:out value="${review.comment}" /></p>
-										</c:if>
-									</li>
-								</c:forEach>
-							</ul>
+											<c:if test="${not empty review.comment}">
+												<p class="public-profile-review-list__comment"><c:out value="${review.comment}" /></p>
+											</c:if>
+											<c:if test="${not empty pageContext.request.userPrincipal}">
+												<div class="public-profile-actions">
+													<c:url var="reportReviewHref" value="/reports/reviews/${review.reviewId}" />
+													<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
+													<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="danger" />
+												</div>
+											</c:if>
+										</li>
+									</c:forEach>
+								</ul>
 						</c:otherwise>
 					</c:choose>
 				</section>

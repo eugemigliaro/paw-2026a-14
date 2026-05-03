@@ -19,13 +19,13 @@
 					<div class="detail-top__main">
 						<section
 							class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
-						>
-							<c:if test="${not empty eventPage.event.bannerImageUrl}">
-								<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
-								<img
-									class="event-hero__image"
-									src="${eventHeroBannerSrc}"
-									alt=""
+							>
+								<c:if test="${not empty eventPage.event.bannerImageUrl}">
+									<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
+									<img
+										class="event-hero__image"
+										src="${eventHeroBannerSrc}"
+										alt=""
 									loading="eager"
 									decoding="async"
 								/>
@@ -136,6 +136,7 @@
 									<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
 									<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
 									<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
+									<spring:message var="reportMenuLabel" code="moderation.report.match.menu" />
 									<ui:overflowMenu
 										ariaLabel="${hostManageMenuTriggerLabel}"
 										menuAriaLabel="${hostManageMenuLabel}"
@@ -232,6 +233,10 @@
 												</c:choose>
 											</form>
 										</c:if>
+										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+										<a class="overflow-menu__item overflow-menu__item--danger" href="${reportMatchHref}" role="menuitem">
+											<c:out value="${reportMenuLabel}" />
+										</a>
 									</ui:overflowMenu>
 
 									<div class="host-panel__note">
@@ -998,6 +1003,11 @@
 											<spring:message var="leaveRecurringLabel" code="event.recurringReservation.leave" />
 											<ui:button label="${leaveRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
 										</form>
+									</c:if>
+									<c:if test="${not empty pageContext.request.userPrincipal}">
+										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+										<spring:message var="reportMatchLabel" code="moderation.report.match.menu" />
+										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" />
 									</c:if>
 								</article>
 							</c:otherwise>

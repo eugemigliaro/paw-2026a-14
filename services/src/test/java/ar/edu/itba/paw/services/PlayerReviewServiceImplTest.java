@@ -125,6 +125,15 @@ public class PlayerReviewServiceImplTest {
     }
 
     @Test
+    public void testDeleteReviewDelegatesToDao() {
+        Mockito.when(playerReviewDao.softDeleteReview(2L, 3L)).thenReturn(true);
+
+        playerReviewService.deleteReview(2L, 3L);
+
+        Mockito.verify(playerReviewDao).softDeleteReview(2L, 3L);
+    }
+
+    @Test
     public void testDeleteReviewRejectsMissingReview() {
         Mockito.when(playerReviewDao.softDeleteReview(2L, 3L)).thenReturn(false);
 
@@ -148,6 +157,12 @@ public class PlayerReviewServiceImplTest {
         Assertions.assertTrue(playerReviewService.findReviewByPair(2L, 3L).isPresent());
         Assertions.assertEquals(summary, playerReviewService.findSummaryForUser(3L));
         Assertions.assertEquals(1, playerReviewService.findRecentReviewsForUser(3L, 0, -10).size());
+    }
+
+    @Test
+    public void testFindRecentReviewsClampsLargeLimit() {
+        playerReviewService.findRecentReviewsForUser(3L, 1000, 0);
+        Mockito.verify(playerReviewDao).findRecentReviewsForUser(3L, 50, 0);
     }
 
     private static PlayerReview review(

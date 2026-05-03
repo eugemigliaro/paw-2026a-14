@@ -123,4 +123,63 @@ public class UserServiceImplTest {
         Assertions.assertEquals(99L, result.getProfileImageId());
         Assertions.assertEquals("old_user", result.getUsername());
     }
+
+    @Test
+    public void testUpdateProfileRejectsInvalidUsername() {
+        final User existingUser = new User(1L, "test@test.com", "valid");
+        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
+
+        Assertions.assertThrows(
+                AccountRegistrationException.class,
+                () -> userService.updateProfile(1L, "a", "Name", "Last", null, null, 0, null));
+    }
+
+    @Test
+    public void testUpdateProfileRejectsEmptyName() {
+        final User existingUser = new User(1L, "test@test.com", "valid");
+        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
+
+        Assertions.assertThrows(
+                AccountRegistrationException.class,
+                () -> userService.updateProfile(1L, "valid", " ", "Last", null, null, 0, null));
+    }
+
+    @Test
+    public void testUpdateProfileRejectsInvalidPhone() {
+        final User existingUser = new User(1L, "test@test.com", "valid");
+        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
+
+        Assertions.assertThrows(
+                AccountRegistrationException.class,
+                () -> userService.updateProfile(1L, "valid", "Name", "Last", "abc", null, 0, null));
+    }
+
+    @Test
+    public void testUpdateProfileWithNewImage() throws IOException {
+        final User existingUser = new User(1L, "test@test.com", "valid");
+        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
+        Mockito.when(imageService.store(Mockito.any(), Mockito.anyLong(), Mockito.any()))
+                .thenReturn(100L);
+
+        final User result =
+                userService.updateProfile(
+                        1L,
+                        "valid",
+                        "Name",
+                        "Last",
+                        null,
+                        "image/png",
+                        10,
+                        new ByteArrayInputStream(new byte[10]));
+
+        Assertions.assertEquals(100L, result.getProfileImageId());
+        Mockito.verify(userDao)
+                .updateProfile(
+                        Mockito.eq(1L),
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.eq(100L));
+    }
 }
