@@ -371,6 +371,9 @@
 														<label class="recurrence-toggle" for="match-recurring">
 															<form:checkbox path="recurring" id="match-recurring"
 																cssClass="recurrence-toggle__input" />
+															<span class="recurrence-toggle__switch" aria-hidden="true">
+																<span class="recurrence-toggle__knob"></span>
+															</span>
 															<span class="recurrence-toggle__copy">
 																<span class="recurrence-toggle__title">
 																	<spring:message
