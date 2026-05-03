@@ -28,6 +28,16 @@ class ViewTemplateAssetsTest {
 
         assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
+        assertTrue(hostCreateMatch.contains("${pageContext.request.contextPath}${formAction}"));
+    }
+
+    @Test
+    void hostCreateMatchDoesNotWrapCustomVisibilityTogglesInBrokenLabels() throws IOException {
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+
+        assertFalse(hostCreateMatch.contains("label class=\"field\" for=\"match-visibility\""));
+        assertFalse(hostCreateMatch.contains("label class=\"field\" for=\"match-join-policy\""));
+        assertTrue(hostCreateMatch.contains("id=\"join-policy-field\""));
     }
 
     @Test
