@@ -1,13 +1,16 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_URL;
-import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -23,15 +26,10 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventOccurrenceViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ParticipantViewModel;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -382,7 +380,16 @@ public class EventController {
                                         playerReviewService.findReviewableUserIds(currentUserId))
                                 .orElseGet(Set::of);
         return new EventDetailPageViewModel(
-                toCard(match, locale, currentUserId),
+                toCard(
+                        match,
+                        ZoneId.systemDefault(),
+                        locale,
+                        currentUserId,
+                        buildAvailabilityLabel(match, locale),
+                        messageSource,
+                        userService,
+                        matchParticipationService,
+                        matchReservationService),
                 null,
                 null,
                 host.map(User::getUsername)
@@ -397,7 +404,7 @@ public class EventController {
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
                 buildAboutParagraphs(match, locale),
-                toPriceLabel(match.getPricePerPlayer(), locale),
+                priceLabel(match.getPricePerPlayer(), locale, messageSource),
                 buildBookingDetails(match, locale),
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
@@ -492,75 +499,19 @@ public class EventController {
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)
-                .map(match -> toCard(match, locale, currentUserId))
+                .map(
+                        match ->
+                                toCard(
+                                        match,
+                                        ZoneId.systemDefault(),
+                                        locale,
+                                        currentUserId,
+                                        buildAvailabilityLabel(match, locale),
+                                        messageSource,
+                                        userService,
+                                        matchParticipationService,
+                                        matchReservationService))
                 .toList();
-    }
-
-    private EventCardViewModel toCard(
-            final Match match, final Locale locale, final Long currentUserId) {
-        final ZonedDateTime startsAt = match.getStartsAt().atZone(ZoneId.systemDefault());
-        final List<EventRelationshipBadgeViewModel> relationshipBadges =
-                relationshipBadgesFor(match, currentUserId, locale);
-        return new EventCardViewModel(
-                String.valueOf(match.getId()),
-                "/matches/" + match.getId(),
-                toSportLabel(match.getSport(), locale),
-                match.getTitle(),
-                match.getAddress(),
-                hostLabelFor(match),
-                scheduleFormatter(locale).format(startsAt),
-                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale(locale)).format(startsAt),
-                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                        .withLocale(resolvedLocale(locale))
-                        .format(startsAt),
-                toPriceLabel(match.getPricePerPlayer(), locale),
-                buildAvailabilityLabel(match, locale),
-                relationshipBadges,
-                recurringLabelFor(match, locale),
-                null,
-                mediaClassFor(match.getSport()),
-                bannerUrlFor(match));
-    }
-
-    private String hostLabelFor(final Match match) {
-        if (match == null || match.getHostUserId() == null) {
-            return null;
-        }
-        return Optional.ofNullable(userService.findById(match.getHostUserId()))
-                .orElse(Optional.empty())
-                .map(User::getUsername)
-                .orElse(null);
-    }
-
-    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
-            final Match match, final Long currentUserId, final Locale locale) {
-        if (currentUserId == null) {
-            return List.of();
-        }
-        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
-        if (currentUserId.equals(match.getHostUserId())) {
-            badges.add(relationshipBadge("my_event", locale));
-        }
-        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("pending", locale));
-        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("invited", locale));
-        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("going", locale));
-        }
-        return List.copyOf(badges);
-    }
-
-    private EventRelationshipBadgeViewModel relationshipBadge(
-            final String type, final Locale locale) {
-        return new EventRelationshipBadgeViewModel(
-                type, messageSource.getMessage("event.relationship." + type, null, locale));
-    }
-
-    private String recurringLabelFor(final Match match, final Locale locale) {
-        return match.isRecurringOccurrence()
-                ? messageSource.getMessage("event.recurringBadge", null, locale)
-                : null;
     }
 
     private List<EventOccurrenceViewModel> toOccurrenceViewModels(
@@ -816,28 +767,6 @@ public class EventController {
                         "event.participants.many", new Object[] {participantCount}, locale);
     }
 
-    private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
-        if (pricePerPlayer == null) {
-            return messageSource.getMessage("price.tbd", null, locale);
-        }
-        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
-                ? messageSource.getMessage("price.free", null, locale)
-                : messageSource.getMessage("price.amount", new Object[] {pricePerPlayer}, locale);
-    }
-
-    private String toSportLabel(final Sport sport, final Locale locale) {
-        return messageSource.getMessage(
-                "sport." + sport.getDbValue(),
-                null,
-                sport.getDisplayName(),
-                resolvedLocale(locale));
-    }
-
-    private static DateTimeFormatter scheduleFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                .withLocale(resolvedLocale(locale));
-    }
-
     private String reservationErrorMessage(final String code, final Locale locale) {
         switch (code) {
             case "closed":
@@ -874,20 +803,6 @@ public class EventController {
         }
     }
 
-    private static DateTimeFormatter dateFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-                .withLocale(resolvedLocale(locale));
-    }
-
-    private static DateTimeFormatter timeFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                .withLocale(resolvedLocale(locale));
-    }
-
-    private static Locale resolvedLocale(final Locale locale) {
-        return locale == null ? Locale.ENGLISH : locale;
-    }
-
     private static String avatarLabelForUsername(final String username) {
         if (username == null || username.isBlank()) {
             return "?";
@@ -914,22 +829,6 @@ public class EventController {
             return Long.valueOf(eventId);
         } catch (final NumberFormatException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    private static String mediaClassFor(final Sport sport) {
-        switch (sport) {
-            case FOOTBALL:
-                return "media-tile--football";
-            case TENNIS:
-                return "media-tile--tennis";
-            case BASKETBALL:
-                return "media-tile--basketball";
-            case PADEL:
-                return "media-tile--padel";
-            case OTHER:
-            default:
-                return "media-tile--other";
         }
     }
 

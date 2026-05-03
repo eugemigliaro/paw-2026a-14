@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
+
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.RecurrenceEndMode;
@@ -14,8 +16,6 @@ import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
@@ -571,12 +571,6 @@ public class HostController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return match;
-    }
-
-    private Long requireAuthenticatedUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static Long parseMatchIdOrThrowNotFound(final String matchId) {

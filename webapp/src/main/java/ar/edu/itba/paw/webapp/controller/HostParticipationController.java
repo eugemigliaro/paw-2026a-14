@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
+
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
@@ -7,8 +9,6 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.webapp.form.InviteForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.InviteParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
@@ -415,12 +415,6 @@ public class HostParticipationController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         return match;
-    }
-
-    private static long requireAuthenticatedUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static long parseMatchIdOrThrow(final String raw) {

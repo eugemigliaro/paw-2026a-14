@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
+
 import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -14,20 +17,11 @@ import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -113,49 +107,13 @@ public class ModerationAdminController {
         mav.addObject("previousPageHref", buildPageUrl(selectedTypes, selectedStatuses, page - 1));
         mav.addObject("nextPageHref", buildPageUrl(selectedTypes, selectedStatuses, page + 1));
         mav.addObject(
-                "paginationItems", buildPaginationItems(selectedTypes, selectedStatuses, result));
+                "paginationItems",
+                PaginationUtils.buildPaginationItems(
+                        result.getPage(),
+                        result.getTotalPages(),
+                        paginationPage ->
+                                buildPageUrl(selectedTypes, selectedStatuses, paginationPage)));
         return mav;
-    }
-
-    private List<PaginationItemViewModel> buildPaginationItems(
-            final List<ReportTargetType> selectedTypes,
-            final List<ReportStatus> selectedStatuses,
-            final PaginatedResult<ModerationReport> result) {
-        if (result.getTotalPages() <= 1) {
-            return List.of();
-        }
-
-        final List<PaginationItemViewModel> items = new ArrayList<>();
-        final int startPage =
-                Math.max(2, Math.min(result.getPage() - 1, result.getTotalPages() - 3));
-        final int endPage = Math.min(result.getTotalPages() - 1, Math.max(result.getPage() + 1, 4));
-
-        items.add(pageItem(selectedTypes, selectedStatuses, 1, result.getPage()));
-        if (startPage > 2) {
-            items.add(new PaginationItemViewModel("...", null, false, true));
-        }
-        for (int currentPage = startPage; currentPage <= endPage; currentPage++) {
-            items.add(pageItem(selectedTypes, selectedStatuses, currentPage, result.getPage()));
-        }
-        if (endPage < result.getTotalPages() - 1) {
-            items.add(new PaginationItemViewModel("...", null, false, true));
-        }
-        items.add(
-                pageItem(
-                        selectedTypes, selectedStatuses, result.getTotalPages(), result.getPage()));
-        return items;
-    }
-
-    private PaginationItemViewModel pageItem(
-            final List<ReportTargetType> selectedTypes,
-            final List<ReportStatus> selectedStatuses,
-            final int page,
-            final int currentPage) {
-        return new PaginationItemViewModel(
-                Integer.toString(page),
-                buildPageUrl(selectedTypes, selectedStatuses, page),
-                page == currentPage,
-                false);
     }
 
     private String buildPageUrl(
@@ -385,29 +343,6 @@ public class ModerationAdminController {
 
     private boolean isAppealed(final ModerationReport report) {
         return report.getStatus() == ReportStatus.APPEALED;
-    }
-
-    private String formatInstant(final Instant instant, final Locale locale) {
-        return instant == null
-                ? ""
-                : DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
-                        .withLocale(locale)
-                        .withZone(ZoneId.systemDefault())
-                        .format(instant);
-    }
-
-    private static <T> List<T> parseEnumFilters(
-            final List<String> rawValues, final Function<String, Optional<T>> parser) {
-        if (rawValues == null || rawValues.isEmpty()) {
-            return List.of();
-        }
-        final Set<T> parsed =
-                rawValues.stream()
-                        .filter(value -> value != null && !value.isBlank())
-                        .map(parser)
-                        .flatMap(Optional::stream)
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-        return List.copyOf(parsed);
     }
 
     private UserBanViewModel userBanViewModel(final ModerationReport report, final Locale locale) {

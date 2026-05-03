@@ -1,23 +1,22 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
+import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.currentUserIdOrNull;
+import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
-import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
@@ -26,24 +25,18 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -170,8 +163,7 @@ public class MatchDashboardController {
         final ModelAndView mav = new ModelAndView(view);
         final ZoneId zoneId = ZoneId.of(timezone);
         final DateRangeBounds dateBounds = dateRangeBounds(path, ZoneId.of(timezone));
-        final Long currentUserId =
-                CurrentAuthenticatedUser.get().map(user -> user.getUserId()).orElse(null);
+        final Long currentUserId = currentUserIdOrNull();
 
         mav.addObject("shell", shell);
         mav.addObject("pageTitleCode", pageTitleCode);
@@ -216,8 +208,16 @@ public class MatchDashboardController {
                                                 match,
                                                 zoneId,
                                                 locale,
-                                                path.startsWith("/host/"),
-                                                currentUserId))
+                                                currentUserId,
+                                                messageSource.getMessage(
+                                                        "match.status." + match.getStatus(),
+                                                        null,
+                                                        match.getStatus(),
+                                                        locale),
+                                                messageSource,
+                                                userService,
+                                                matchParticipationService,
+                                                matchReservationService))
                         .toList());
         mav.addObject(
                 "paginationItems",
@@ -275,12 +275,6 @@ public class MatchDashboardController {
                                 result.getPage() + 1)
                         : null);
         return mav;
-    }
-
-    private static long requireAuthenticatedUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(principal -> principal.getUserId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private PaginatedResult<Match> getAllUserEventsForFilter(
@@ -558,123 +552,6 @@ public class MatchDashboardController {
         return List.copyOf(normalized);
     }
 
-    private EventCardViewModel toCard(
-            final Match match,
-            final ZoneId zoneId,
-            final Locale locale,
-            final boolean hostDashboardView,
-            final Long currentUserId) {
-        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
-        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
-        final String schedule =
-                DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                        .withLocale(resolvedLocale)
-                        .format(startsAt);
-        final String dateLabel =
-                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale).format(startsAt);
-        final String timeLabel =
-                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                        .withLocale(resolvedLocale)
-                        .format(startsAt);
-
-        final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
-        final String badge =
-                messageSource.getMessage(
-                        "match.status." + match.getStatus(), null, match.getStatus(), locale);
-        final List<EventRelationshipBadgeViewModel> relationshipBadges =
-                relationshipBadgesFor(match, currentUserId, locale);
-
-        final String cardHref = "/matches/" + match.getId();
-
-        return new EventCardViewModel(
-                String.valueOf(match.getId()),
-                cardHref,
-                messageSource.getMessage(
-                        "sport." + match.getSport().getDbValue(),
-                        null,
-                        match.getSport().getDisplayName(),
-                        locale),
-                match.getTitle(),
-                match.getAddress(),
-                hostLabelFor(match),
-                schedule,
-                dateLabel,
-                timeLabel,
-                priceLabel,
-                badge,
-                relationshipBadges,
-                recurringLabelFor(match, locale),
-                null,
-                mediaClassFor(match.getSport()),
-                bannerUrlFor(match));
-    }
-
-    private String hostLabelFor(final Match match) {
-        if (match == null || match.getHostUserId() == null) {
-            return null;
-        }
-        final Optional<User> host =
-                Optional.ofNullable(userService.findById(match.getHostUserId()))
-                        .orElse(Optional.empty());
-        return host.map(User::getUsername).orElse(null);
-    }
-
-    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
-            final Match match, final Long currentUserId, final Locale locale) {
-        if (currentUserId == null) {
-            return List.of();
-        }
-        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
-        if (currentUserId.equals(match.getHostUserId())) {
-            badges.add(relationshipBadge("my_event", locale));
-        }
-        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("pending", locale));
-        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("invited", locale));
-        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("going", locale));
-        }
-        return List.copyOf(badges);
-    }
-
-    private EventRelationshipBadgeViewModel relationshipBadge(
-            final String type, final Locale locale) {
-        return new EventRelationshipBadgeViewModel(
-                type, messageSource.getMessage("event.relationship." + type, null, locale));
-    }
-
-    private String recurringLabelFor(final Match match, final Locale locale) {
-        return match.isRecurringOccurrence()
-                ? messageSource.getMessage("event.recurringBadge", null, locale)
-                : null;
-    }
-
-    private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
-        if (pricePerPlayer == null) {
-            return messageSource.getMessage("price.tbd", null, locale);
-        }
-        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
-                ? messageSource.getMessage("price.free", null, locale)
-                : messageSource.getMessage("price.amount", new Object[] {pricePerPlayer}, locale);
-    }
-
-    private static String mediaClassFor(final Sport sport) {
-        switch (sport) {
-            case FOOTBALL:
-                return "media-tile--football";
-            case TENNIS:
-                return "media-tile--tennis";
-            case BASKETBALL:
-                return "media-tile--basketball";
-            case PADEL:
-                return "media-tile--padel";
-            case OTHER:
-            default:
-                return "media-tile--other";
-        }
-    }
-
     private MatchListControlsViewModel buildListControls(
             final String path,
             final Locale locale,
@@ -839,117 +716,25 @@ public class MatchDashboardController {
             final List<String> selectedVisibility,
             final List<String> selectedCategories,
             final PaginatedResult<Match> result) {
-        if (result.getTotalPages() <= 1) {
-            return List.of();
-        }
-
-        final List<PaginationItemViewModel> items = new ArrayList<>();
-        final int startPage =
-                Math.max(2, Math.min(result.getPage() - 1, result.getTotalPages() - 3));
-        final int endPage = Math.min(result.getTotalPages() - 1, Math.max(result.getPage() + 1, 4));
-
-        items.add(
-                pageItem(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        selectedCategories,
-                        1,
-                        result.getPage()));
-
-        if (startPage > 2) {
-            items.add(new PaginationItemViewModel("...", null, false, true));
-        }
-
-        for (int page = startPage; page <= endPage; page++) {
-            items.add(
-                    pageItem(
-                            path,
-                            locale,
-                            searchQuery,
-                            sort,
-                            startDate,
-                            endDate,
-                            minPrice,
-                            maxPrice,
-                            timezone,
-                            selectedStatuses,
-                            selectedSports,
-                            selectedVisibility,
-                            selectedCategories,
-                            page,
-                            result.getPage()));
-        }
-
-        if (endPage < result.getTotalPages() - 1) {
-            items.add(new PaginationItemViewModel("...", null, false, true));
-        }
-
-        items.add(
-                pageItem(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        selectedCategories,
-                        result.getTotalPages(),
-                        result.getPage()));
-
-        return items;
-    }
-
-    private static PaginationItemViewModel pageItem(
-            final String path,
-            final Locale locale,
-            final String searchQuery,
-            final String sort,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String timezone,
-            final List<String> selectedStatuses,
-            final List<String> selectedSports,
-            final List<String> selectedVisibility,
-            final List<String> selectedCategories,
-            final int page,
-            final int currentPage) {
-        return new PaginationItemViewModel(
-                Integer.toString(page),
-                buildPageUrl(
-                        path,
-                        locale,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        selectedCategories,
-                        page),
-                page == currentPage,
-                false);
+        return PaginationUtils.buildPaginationItems(
+                result.getPage(),
+                result.getTotalPages(),
+                page ->
+                        buildPageUrl(
+                                path,
+                                locale,
+                                searchQuery,
+                                sort,
+                                startDate,
+                                endDate,
+                                minPrice,
+                                maxPrice,
+                                timezone,
+                                selectedStatuses,
+                                selectedSports,
+                                selectedVisibility,
+                                selectedCategories,
+                                page));
     }
 
     private static String buildPageUrl(
