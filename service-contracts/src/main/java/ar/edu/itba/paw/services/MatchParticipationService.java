@@ -1,8 +1,10 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.util.List;
+import java.util.Set;
 
 public interface MatchParticipationService {
 
@@ -10,9 +12,15 @@ public interface MatchParticipationService {
 
     void requestToJoin(Long matchId, Long userId);
 
+    void requestToJoinSeries(Long matchId, Long userId);
+
     void cancelJoinRequest(Long matchId, Long userId);
 
     boolean hasPendingRequest(Long matchId, Long userId);
+
+    boolean hasPendingSeriesRequest(Long matchId, Long userId);
+
+    Set<Long> findPendingFutureRequestMatchIdsForSeries(Long seriesId, Long userId);
 
     // Host actions (public approval-required events)
 
@@ -26,6 +34,8 @@ public interface MatchParticipationService {
 
     List<User> findPendingRequests(Long matchId, Long hostUserId);
 
+    List<PendingJoinRequest> findPendingRequestsForHost(Long hostUserId);
+
     List<User> findConfirmedParticipants(Long matchId, Long hostUserId);
 
     List<Match> findPendingRequestMatches(Long userId);
@@ -34,11 +44,23 @@ public interface MatchParticipationService {
 
     void inviteUser(Long matchId, Long hostUserId, String email);
 
+    default void inviteUser(
+            final Long matchId,
+            final Long hostUserId,
+            final String email,
+            final boolean includeSeries) {
+        inviteUser(matchId, hostUserId, email);
+    }
+
     void acceptInvite(Long matchId, Long userId);
 
     void declineInvite(Long matchId, Long userId);
 
     boolean hasInvitation(Long matchId, Long userId);
+
+    default boolean isSeriesInvitation(final Long matchId, final Long userId) {
+        return false;
+    }
 
     List<User> findInvitedUsers(Long matchId, Long hostUserId);
 

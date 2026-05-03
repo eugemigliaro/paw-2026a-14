@@ -8,6 +8,7 @@ import java.util.Locale;
 import org.springframework.context.MessageSource;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class ShellViewModelFactory {
@@ -30,28 +31,43 @@ public final class ShellViewModelFactory {
                                 UrlUtils.withLang("/", locale),
                                 "/".equals(activePath)));
         if (isAuthenticated()) {
-            navItems =
-                    List.of(
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.explore", null, locale),
-                                    UrlUtils.withLang("/", locale),
-                                    "/".equals(activePath)),
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.player.upcomingEvents", null, locale),
-                                    UrlUtils.withLang("/player/matches/upcoming", locale),
-                                    "/player/matches/upcoming".equals(activePath)),
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.player.pendingRequests", null, locale),
-                                    UrlUtils.withLang("/player/matches/requests", locale),
-                                    "/player/matches/requests".equals(activePath)),
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.player.invites", null, locale),
-                                    UrlUtils.withLang("/player/matches/invites", locale),
-                                    "/player/matches/invites".equals(activePath)),
-                            new NavItemViewModel(
-                                    ms.getMessage("nav.player.pastEvents", null, locale),
-                                    UrlUtils.withLang("/player/matches/past", locale),
-                                    "/player/matches/past".equals(activePath)));
+            final java.util.ArrayList<NavItemViewModel> authenticatedNavItems =
+                    new java.util.ArrayList<>(
+                            List.of(
+                                    new NavItemViewModel(
+                                            ms.getMessage("nav.explore", null, locale),
+                                            UrlUtils.withLang("/", locale),
+                                            "/".equals(activePath)),
+                                    new NavItemViewModel(
+                                            ms.getMessage(
+                                                    "nav.player.upcomingEvents", null, locale),
+                                            UrlUtils.withLang("/player/matches/upcoming", locale),
+                                            "/player/matches/upcoming".equals(activePath)),
+                                    new NavItemViewModel(
+                                            ms.getMessage(
+                                                    "nav.player.pendingRequests", null, locale),
+                                            UrlUtils.withLang("/player/matches/requests", locale),
+                                            "/player/matches/requests".equals(activePath)),
+                                    new NavItemViewModel(
+                                            ms.getMessage("nav.player.invites", null, locale),
+                                            UrlUtils.withLang("/player/matches/invites", locale),
+                                            "/player/matches/invites".equals(activePath)),
+                                    new NavItemViewModel(
+                                            ms.getMessage("nav.player.pastEvents", null, locale),
+                                            UrlUtils.withLang("/player/matches/past", locale),
+                                            "/player/matches/past".equals(activePath)),
+                                    new NavItemViewModel(
+                                            ms.getMessage("nav.player.reports", null, locale),
+                                            UrlUtils.withLang("/reports/mine", locale),
+                                            "/reports/mine".equals(activePath))));
+            if (hasRole("ROLE_ADMIN_MOD")) {
+                authenticatedNavItems.add(
+                        new NavItemViewModel(
+                                ms.getMessage("nav.admin.reports", null, locale),
+                                UrlUtils.withLang("/admin/reports", locale),
+                                "/admin/reports".equals(activePath)));
+            }
+            navItems = authenticatedNavItems;
         }
 
         return new ShellViewModel(
@@ -90,6 +106,10 @@ public final class ShellViewModelFactory {
                                     UrlUtils.withLang("/host/matches", locale),
                                     "/host/matches".equals(activePath)),
                             new NavItemViewModel(
+                                    ms.getMessage("nav.host.joinRequests", null, locale),
+                                    UrlUtils.withLang("/host/requests", locale),
+                                    "/host/requests".equals(activePath)),
+                            new NavItemViewModel(
                                     ms.getMessage("nav.host.finishedEvents", null, locale),
                                     UrlUtils.withLang("/host/matches/finished", locale),
                                     "/host/matches/finished".equals(activePath)));
@@ -110,5 +130,16 @@ public final class ShellViewModelFactory {
         return authentication != null
                 && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken);
+    }
+
+    private static boolean hasRole(final String role) {
+        final Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role::equals);
     }
 }

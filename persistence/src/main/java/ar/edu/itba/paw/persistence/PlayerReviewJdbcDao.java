@@ -41,7 +41,12 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                             rs.getString("comment"),
                             toInstant(rs.getTimestamp("created_at")),
                             toInstant(rs.getTimestamp("updated_at")),
-                            toInstant(rs.getTimestamp("deleted_at")));
+                            rs.getBoolean("deleted"),
+                            toInstant(rs.getTimestamp("deleted_at")),
+                            rs.getObject("deleted_by_user_id") == null
+                                    ? null
+                                    : rs.getLong("deleted_by_user_id"),
+                            rs.getString("delete_reason"));
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -63,7 +68,8 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
             jdbcTemplate.update(
                     "UPDATE player_reviews"
                             + " SET reaction = ?, comment = ?,"
-                            + " updated_at = CURRENT_TIMESTAMP, deleted_at = NULL"
+                            + " updated_at = CURRENT_TIMESTAMP, deleted = FALSE,"
+                            + " deleted_at = NULL, deleted_by_user_id = NULL, delete_reason = NULL"
                             + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?",
                     reactionParameter(reaction),
                     comment,
@@ -73,8 +79,8 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
             jdbcTemplate.update(
                     "INSERT INTO player_reviews"
                             + " (reviewer_user_id, reviewed_user_id, reaction, comment,"
-                            + " created_at, updated_at)"
-                            + " VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            + " deleted, created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                     reviewerUserId,
                     reviewedUserId,
                     reactionParameter(reaction),
@@ -87,13 +93,40 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
 
     @Override
     public boolean softDeleteReview(final Long reviewerUserId, final Long reviewedUserId) {
+        return softDeleteReview(reviewerUserId, reviewedUserId, null, null);
+    }
+
+    @Override
+    public boolean softDeleteReview(
+            final Long reviewerUserId,
+            final Long reviewedUserId,
+            final Long deletedByUserId,
+            final String reason) {
         final int rows =
                 jdbcTemplate.update(
                         "UPDATE player_reviews"
-                                + " SET deleted_at = CURRENT_TIMESTAMP,"
+                                + " SET deleted = TRUE, deleted_at = CURRENT_TIMESTAMP,"
+                                + " deleted_by_user_id = ?, delete_reason = ?,"
                                 + " updated_at = CURRENT_TIMESTAMP"
                                 + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?"
                                 + " AND deleted_at IS NULL",
+                        deletedByUserId,
+                        reason,
+                        reviewerUserId,
+                        reviewedUserId);
+        return rows == 1;
+    }
+
+    @Override
+    public boolean restoreReview(final Long reviewerUserId, final Long reviewedUserId) {
+        final int rows =
+                jdbcTemplate.update(
+                        "UPDATE player_reviews"
+                                + " SET deleted = FALSE, deleted_at = NULL,"
+                                + " deleted_by_user_id = NULL, delete_reason = NULL,"
+                                + " updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?"
+                                + " AND deleted = TRUE",
                         reviewerUserId,
                         reviewedUserId);
         return rows == 1;
@@ -104,13 +137,29 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
         return jdbcTemplate
                 .query(
                         "SELECT id, reviewer_user_id, reviewed_user_id,"
-                                + " reaction, comment, created_at, updated_at, deleted_at"
+                                + " reaction, comment, created_at, updated_at, deleted,"
+                                + " deleted_at, deleted_by_user_id, delete_reason"
                                 + " FROM player_reviews"
                                 + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?"
-                                + " AND deleted_at IS NULL",
+                                + " AND deleted = FALSE",
                         PLAYER_REVIEW_ROW_MAPPER,
                         reviewerUserId,
                         reviewedUserId)
+                .stream()
+                .findFirst();
+    }
+
+    @Override
+    public Optional<PlayerReview> findByIdIncludingDeleted(final Long reviewId) {
+        return jdbcTemplate
+                .query(
+                        "SELECT id, reviewer_user_id, reviewed_user_id,"
+                                + " reaction, comment, created_at, updated_at, deleted,"
+                                + " deleted_at, deleted_by_user_id, delete_reason"
+                                + " FROM player_reviews"
+                                + " WHERE id = ?",
+                        PLAYER_REVIEW_ROW_MAPPER,
+                        reviewId)
                 .stream()
                 .findFirst();
     }
@@ -125,7 +174,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                         + " AS dislike_count,"
                         + " COUNT(id) AS review_count"
                         + " FROM player_reviews"
-                        + " WHERE reviewed_user_id = ? AND deleted_at IS NULL",
+                        + " WHERE reviewed_user_id = ? AND deleted = FALSE",
                 (rs, rowNum) ->
                         new PlayerReviewSummary(
                                 rs.getLong("reviewed_user_id"),
@@ -142,7 +191,7 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                 new StringBuilder(
                         "SELECT COUNT(id)"
                                 + " FROM player_reviews"
-                                + " WHERE reviewed_user_id = ? AND deleted_at IS NULL");
+                                + " WHERE reviewed_user_id = ? AND deleted = FALSE");
 
         final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
         final Optional<PlayerReviewReaction> reaction = safeFilter.getReaction();
@@ -172,9 +221,10 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
         final StringBuilder sql =
                 new StringBuilder(
                         "SELECT id, reviewer_user_id, reviewed_user_id,"
-                                + " reaction, comment, created_at, updated_at, deleted_at"
+                                + " reaction, comment, created_at, updated_at, deleted,"
+                                + " deleted_at, deleted_by_user_id, delete_reason"
                                 + " FROM player_reviews"
-                                + " WHERE reviewed_user_id = ? AND deleted_at IS NULL");
+                                + " WHERE reviewed_user_id = ? AND deleted = FALSE");
 
         final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
         final Optional<PlayerReviewReaction> reaction = safeFilter.getReaction();
@@ -230,7 +280,8 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
         return jdbcTemplate
                 .query(
                         "SELECT id, reviewer_user_id, reviewed_user_id,"
-                                + " reaction, comment, created_at, updated_at, deleted_at"
+                                + " reaction, comment, created_at, updated_at, deleted,"
+                                + " deleted_at, deleted_by_user_id, delete_reason"
                                 + " FROM player_reviews"
                                 + " WHERE reviewer_user_id = ? AND reviewed_user_id = ?",
                         PLAYER_REVIEW_ROW_MAPPER,

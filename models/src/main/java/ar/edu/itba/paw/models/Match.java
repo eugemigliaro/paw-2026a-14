@@ -20,6 +20,12 @@ public class Match {
     private final String status;
     private final int joinedPlayers;
     private final Long bannerImageId;
+    private final Long seriesId;
+    private final Integer seriesOccurrenceIndex;
+    private final boolean deleted;
+    private final Instant deletedAt;
+    private final Long deletedByUserId;
+    private final String deleteReason;
 
     public Match(
             final Long id,
@@ -51,7 +57,13 @@ public class Match {
                 defaultJoinPolicyForVisibility(visibility),
                 status,
                 joinedPlayers,
-                bannerImageId);
+                bannerImageId,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null);
     }
 
     public Match(
@@ -70,6 +82,90 @@ public class Match {
             final String status,
             final int joinedPlayers,
             final Long bannerImageId) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                visibility,
+                joinPolicy,
+                status,
+                joinedPlayers,
+                bannerImageId,
+                null,
+                null);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final int joinedPlayers,
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                visibility,
+                joinPolicy,
+                status,
+                joinedPlayers,
+                bannerImageId,
+                seriesId,
+                seriesOccurrenceIndex,
+                false,
+                null,
+                null,
+                null);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final String visibility,
+            final String joinPolicy,
+            final String status,
+            final int joinedPlayers,
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex,
+            final boolean deleted,
+            final Instant deletedAt,
+            final Long deletedByUserId,
+            final String deleteReason) {
         this.id = id;
         this.sport = sport;
         this.hostUserId = hostUserId;
@@ -85,6 +181,12 @@ public class Match {
         this.status = status;
         this.joinedPlayers = joinedPlayers;
         this.bannerImageId = bannerImageId;
+        this.seriesId = seriesId;
+        this.seriesOccurrenceIndex = seriesOccurrenceIndex;
+        this.deleted = deleted;
+        this.deletedAt = deletedAt;
+        this.deletedByUserId = deletedByUserId;
+        this.deleteReason = deleteReason;
     }
 
     private static String defaultJoinPolicyForVisibility(final String visibility) {
@@ -157,8 +259,36 @@ public class Match {
         return bannerImageId;
     }
 
+    public Long getSeriesId() {
+        return seriesId;
+    }
+
+    public Integer getSeriesOccurrenceIndex() {
+        return seriesOccurrenceIndex;
+    }
+
+    public boolean isRecurringOccurrence() {
+        return seriesId != null;
+    }
+
     public boolean hasBannerImage() {
         return bannerImageId != null;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public Long getDeletedByUserId() {
+        return deletedByUserId;
+    }
+
+    public String getDeleteReason() {
+        return deleteReason;
     }
 
     public int getAvailableSpots() {

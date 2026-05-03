@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.form;
 
+import ar.edu.itba.paw.webapp.validation.ValidRecurrenceSelection;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -12,6 +13,7 @@ import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
+@ValidRecurrenceSelection
 public class CreateEventForm {
 
     @NotBlank(message = "{CreateEventForm.title.NotBlank}")
@@ -49,6 +51,17 @@ public class CreateEventForm {
     @NotNull(message = "{CreateEventForm.endTime.NotNull}")
     @DateTimeFormat(pattern = "HH:mm")
     private LocalTime endTime = LocalTime.of(19, 30);
+
+    private boolean recurring = false;
+
+    private String recurrenceFrequency = "";
+
+    private String recurrenceEndMode = "";
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate recurrenceUntilDate;
+
+    private Integer recurrenceOccurrenceCount;
 
     @NotNull(message = "{CreateEventForm.maxPlayers.NotNull}")
     @Min(value = 1, message = "{CreateEventForm.maxPlayers.Min}")
@@ -143,6 +156,46 @@ public class CreateEventForm {
 
     public void setEndTime(final LocalTime endTime) {
         this.endTime = endTime;
+    }
+
+    public boolean isRecurring() {
+        return recurring;
+    }
+
+    public void setRecurring(final boolean recurring) {
+        this.recurring = recurring;
+    }
+
+    public String getRecurrenceFrequency() {
+        return recurrenceFrequency;
+    }
+
+    public void setRecurrenceFrequency(final String recurrenceFrequency) {
+        this.recurrenceFrequency = recurrenceFrequency;
+    }
+
+    public String getRecurrenceEndMode() {
+        return recurrenceEndMode;
+    }
+
+    public void setRecurrenceEndMode(final String recurrenceEndMode) {
+        this.recurrenceEndMode = recurrenceEndMode;
+    }
+
+    public LocalDate getRecurrenceUntilDate() {
+        return recurrenceUntilDate;
+    }
+
+    public void setRecurrenceUntilDate(final LocalDate recurrenceUntilDate) {
+        this.recurrenceUntilDate = recurrenceUntilDate;
+    }
+
+    public Integer getRecurrenceOccurrenceCount() {
+        return recurrenceOccurrenceCount;
+    }
+
+    public void setRecurrenceOccurrenceCount(final Integer recurrenceOccurrenceCount) {
+        this.recurrenceOccurrenceCount = recurrenceOccurrenceCount;
     }
 
     public Integer getMaxPlayers() {

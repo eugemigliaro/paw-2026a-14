@@ -19,8 +19,15 @@
 						<spring:message code="host.requests.title" />
 					</h1>
 					<p class="page-heading__description">
-						<c:out value="${match.title}" /> &mdash;
-						<spring:message code="host.requests.description" />
+						<c:choose>
+							<c:when test="${aggregateRequests}">
+								<spring:message code="host.requests.all.description" />
+							</c:when>
+							<c:otherwise>
+								<c:out value="${match.title}" /> &mdash;
+								<spring:message code="host.requests.description" />
+							</c:otherwise>
+						</c:choose>
 					</p>
 				</header>
 
@@ -49,14 +56,24 @@
 
 				<div class="participation-layout">
 					<div class="participation-nav">
-						<c:url var="backToEventHref" value="/matches/${matchId}" />
-						<a class="section-link" href="${backToEventHref}">
-							<spring:message code="participation.backToEvent" />
-						</a>
-						<c:url var="rosterHref" value="${rosterUrl}" />
-						<a class="section-link" href="${rosterHref}">
-							<spring:message code="host.requests.viewRoster" />
-						</a>
+						<c:choose>
+							<c:when test="${aggregateRequests}">
+								<c:url var="matchesHref" value="${matchesUrl}" />
+								<a class="section-link" href="${matchesHref}">
+									<spring:message code="nav.host.upcomingEvents" />
+								</a>
+							</c:when>
+							<c:otherwise>
+								<c:url var="backToEventHref" value="/matches/${matchId}" />
+								<a class="section-link" href="${backToEventHref}">
+									<spring:message code="participation.backToEvent" />
+								</a>
+								<c:url var="rosterHref" value="${rosterUrl}" />
+								<a class="section-link" href="${rosterHref}">
+									<spring:message code="host.requests.viewRoster" />
+								</a>
+							</c:otherwise>
+						</c:choose>
 					</div>
 
 					<section class="panel participation-panel">
@@ -74,19 +91,32 @@
 												<span class="participant-list__avatar" aria-hidden="true">
 													<c:out value="${req.avatarLabel}" />
 												</span>
-												<c:choose>
-													<c:when test="${not empty req.profileHref}">
-														<c:url var="requestProfileHref" value="${req.profileHref}" />
-														<a class="participant-manage-list__name" href="${requestProfileHref}">
-															<c:out value="${req.username}" />
+												<div class="participant-manage-list__details">
+													<c:choose>
+														<c:when test="${not empty req.profileHref}">
+															<c:url var="requestProfileHref" value="${req.profileHref}" />
+															<a class="participant-manage-list__name" href="${requestProfileHref}">
+																<c:out value="${req.username}" />
+															</a>
+														</c:when>
+														<c:otherwise>
+															<strong class="participant-manage-list__name">
+																<c:out value="${req.username}" />
+															</strong>
+														</c:otherwise>
+													</c:choose>
+													<c:if test="${not empty req.matchHref}">
+														<c:url var="requestMatchHref" value="${req.matchHref}" />
+														<a class="participant-manage-list__meta-link" href="${requestMatchHref}">
+															<c:out value="${req.matchTitle}" />
 														</a>
-													</c:when>
-													<c:otherwise>
-														<strong class="participant-manage-list__name">
-															<c:out value="${req.username}" />
-														</strong>
-													</c:otherwise>
-												</c:choose>
+													</c:if>
+													<c:if test="${req.seriesRequest}">
+														<span class="participant-manage-list__status participant-manage-list__status--pending">
+															<spring:message code="host.requests.seriesBadge" />
+														</span>
+													</c:if>
+												</div>
 											</div>
 											<div class="participant-manage-list__actions">
 												<c:url var="approveAction" value="${req.approveUrl}" />

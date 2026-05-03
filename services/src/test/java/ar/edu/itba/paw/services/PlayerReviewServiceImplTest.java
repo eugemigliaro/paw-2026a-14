@@ -127,6 +127,15 @@ public class PlayerReviewServiceImplTest {
     }
 
     @Test
+    public void testDeleteReviewDelegatesToDao() {
+        Mockito.when(playerReviewDao.softDeleteReview(2L, 3L)).thenReturn(true);
+
+        playerReviewService.deleteReview(2L, 3L);
+
+        Mockito.verify(playerReviewDao).softDeleteReview(2L, 3L);
+    }
+
+    @Test
     public void testDeleteReviewRejectsMissingReview() {
         Mockito.when(playerReviewDao.softDeleteReview(2L, 3L)).thenReturn(false);
 

@@ -17,7 +17,14 @@ public interface PlayerReviewDao {
 
     boolean softDeleteReview(Long reviewerUserId, Long reviewedUserId);
 
+    boolean softDeleteReview(
+            Long reviewerUserId, Long reviewedUserId, Long deletedByUserId, String deleteReason);
+
+    boolean restoreReview(Long reviewerUserId, Long reviewedUserId);
+
     Optional<PlayerReview> findByPair(Long reviewerUserId, Long reviewedUserId);
+
+    Optional<PlayerReview> findByIdIncludingDeleted(Long reviewId);
 
     PlayerReviewSummary getSummaryForUser(Long reviewedUserId);
 

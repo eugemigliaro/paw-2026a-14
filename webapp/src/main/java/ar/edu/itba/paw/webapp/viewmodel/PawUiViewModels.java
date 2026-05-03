@@ -469,6 +469,47 @@ public final class PawUiViewModels {
         }
     }
 
+    public static final class EventOccurrenceViewModel {
+        private final String href;
+        private final String schedule;
+        private final String statusLabel;
+        private final String statusTone;
+        private final boolean current;
+
+        public EventOccurrenceViewModel(
+                final String href,
+                final String schedule,
+                final String statusLabel,
+                final String statusTone,
+                final boolean current) {
+            this.href = href;
+            this.schedule = schedule;
+            this.statusLabel = statusLabel;
+            this.statusTone = statusTone;
+            this.current = current;
+        }
+
+        public String getHref() {
+            return href;
+        }
+
+        public String getSchedule() {
+            return schedule;
+        }
+
+        public String getStatusLabel() {
+            return statusLabel;
+        }
+
+        public String getStatusTone() {
+            return statusTone;
+        }
+
+        public boolean isCurrent() {
+            return current;
+        }
+    }
+
     public static final class ParticipantViewModel {
         private final String username;
         private final String avatarLabel;
@@ -549,6 +590,9 @@ public final class PawUiViewModels {
         private final String avatarLabel;
         private final String approveUrl;
         private final String rejectUrl;
+        private final String matchTitle;
+        private final String matchHref;
+        private final boolean seriesRequest;
         private final String profileHref;
 
         public PendingRequestViewModel(
@@ -557,10 +601,44 @@ public final class PawUiViewModels {
                 final String approveUrl,
                 final String rejectUrl,
                 final String profileHref) {
+            this(username, avatarLabel, approveUrl, rejectUrl, null, null, false, profileHref);
+        }
+
+        public PendingRequestViewModel(
+                final String username,
+                final String avatarLabel,
+                final String approveUrl,
+                final String rejectUrl,
+                final String matchTitle,
+                final String matchHref,
+                final boolean seriesRequest) {
+            this(
+                    username,
+                    avatarLabel,
+                    approveUrl,
+                    rejectUrl,
+                    matchTitle,
+                    matchHref,
+                    seriesRequest,
+                    null);
+        }
+
+        public PendingRequestViewModel(
+                final String username,
+                final String avatarLabel,
+                final String approveUrl,
+                final String rejectUrl,
+                final String matchTitle,
+                final String matchHref,
+                final boolean seriesRequest,
+                final String profileHref) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.approveUrl = approveUrl;
             this.rejectUrl = rejectUrl;
+            this.matchTitle = matchTitle;
+            this.matchHref = matchHref;
+            this.seriesRequest = seriesRequest;
             this.profileHref = profileHref;
         }
 
@@ -578,6 +656,18 @@ public final class PawUiViewModels {
 
         public String getRejectUrl() {
             return rejectUrl;
+        }
+
+        public String getMatchTitle() {
+            return matchTitle;
+        }
+
+        public String getMatchHref() {
+            return matchHref;
+        }
+
+        public boolean isSeriesRequest() {
+            return seriesRequest;
         }
 
         public String getProfileHref() {
@@ -632,12 +722,22 @@ public final class PawUiViewModels {
         private final EventCardViewModel card;
         private final String acceptUrl;
         private final String declineUrl;
+        private final boolean seriesInvite;
 
         public InvitedMatchViewModel(
                 final EventCardViewModel card, final String acceptUrl, final String declineUrl) {
+            this(card, acceptUrl, declineUrl, false);
+        }
+
+        public InvitedMatchViewModel(
+                final EventCardViewModel card,
+                final String acceptUrl,
+                final String declineUrl,
+                final boolean seriesInvite) {
             this.card = card;
             this.acceptUrl = acceptUrl;
             this.declineUrl = declineUrl;
+            this.seriesInvite = seriesInvite;
         }
 
         public EventCardViewModel getCard() {
@@ -650,6 +750,10 @@ public final class PawUiViewModels {
 
         public String getDeclineUrl() {
             return declineUrl;
+        }
+
+        public boolean isSeriesInvite() {
+            return seriesInvite;
         }
     }
 
@@ -669,6 +773,7 @@ public final class PawUiViewModels {
         private final String availabilityLabel;
         private final String ctaLabel;
         private final List<EventCardViewModel> nearbyEvents;
+        private final List<EventOccurrenceViewModel> occurrences;
 
         public EventDetailPageViewModel(
                 final EventCardViewModel event,
@@ -685,7 +790,8 @@ public final class PawUiViewModels {
                 final List<BookingDetailViewModel> bookingDetails,
                 final String availabilityLabel,
                 final String ctaLabel,
-                final List<EventCardViewModel> nearbyEvents) {
+                final List<EventCardViewModel> nearbyEvents,
+                final List<EventOccurrenceViewModel> occurrences) {
             this.event = event;
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
@@ -701,6 +807,7 @@ public final class PawUiViewModels {
             this.availabilityLabel = availabilityLabel;
             this.ctaLabel = ctaLabel;
             this.nearbyEvents = nearbyEvents;
+            this.occurrences = occurrences;
         }
 
         public EventCardViewModel getEvent() {
@@ -762,6 +869,10 @@ public final class PawUiViewModels {
         public List<EventCardViewModel> getNearbyEvents() {
             return nearbyEvents;
         }
+
+        public List<EventOccurrenceViewModel> getOccurrences() {
+            return occurrences;
+        }
     }
 
     public static final class PublicProfilePageViewModel {
@@ -806,6 +917,7 @@ public final class PawUiViewModels {
     }
 
     public static final class PlayerReviewViewModel {
+        private final Long reviewId;
         private final String reviewerUsername;
         private final String reviewerProfileHref;
         private final String reaction;
@@ -814,18 +926,24 @@ public final class PawUiViewModels {
         private final String updatedAtLabel;
 
         public PlayerReviewViewModel(
+                final Long reviewId,
                 final String reviewerUsername,
                 final String reviewerProfileHref,
                 final String reaction,
                 final String reactionLabel,
                 final String comment,
                 final String updatedAtLabel) {
+            this.reviewId = reviewId;
             this.reviewerUsername = reviewerUsername;
             this.reviewerProfileHref = reviewerProfileHref;
             this.reaction = reaction;
             this.reactionLabel = reactionLabel;
             this.comment = comment;
             this.updatedAtLabel = updatedAtLabel;
+        }
+
+        public Long getReviewId() {
+            return reviewId;
         }
 
         public String getReviewerUsername() {
@@ -850,6 +968,168 @@ public final class PawUiViewModels {
 
         public String getUpdatedAtLabel() {
             return updatedAtLabel;
+        }
+    }
+
+    public static final class ReportPageViewModel {
+        private final String targetTypeCode;
+        private final ReportUserViewModel user;
+        private final ReportReviewViewModel review;
+        private final ReportMatchViewModel match;
+
+        public ReportPageViewModel(
+                final String targetTypeCode,
+                final ReportUserViewModel user,
+                final ReportReviewViewModel review,
+                final ReportMatchViewModel match) {
+            this.targetTypeCode = targetTypeCode;
+            this.user = user;
+            this.review = review;
+            this.match = match;
+        }
+
+        public String getTargetTypeCode() {
+            return targetTypeCode;
+        }
+
+        public ReportUserViewModel getUser() {
+            return user;
+        }
+
+        public ReportReviewViewModel getReview() {
+            return review;
+        }
+
+        public ReportMatchViewModel getMatch() {
+            return match;
+        }
+    }
+
+    public static final class ReportUserViewModel {
+        private final String username;
+        private final String profileImageUrl;
+        private final String profileImageAlt;
+
+        public ReportUserViewModel(
+                final String username, final String profileImageUrl, final String profileImageAlt) {
+            this.username = username;
+            this.profileImageUrl = profileImageUrl;
+            this.profileImageAlt = profileImageAlt;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
+        }
+
+        public String getProfileImageAlt() {
+            return profileImageAlt;
+        }
+    }
+
+    public static final class ReportReviewViewModel {
+        private final String authorUsername;
+        private final String authorProfileHref;
+        private final String reviewedUsername;
+        private final String reviewedProfileHref;
+        private final String content;
+        private final String dateLabel;
+
+        public ReportReviewViewModel(
+                final String authorUsername,
+                final String authorProfileHref,
+                final String reviewedUsername,
+                final String reviewedProfileHref,
+                final String content,
+                final String dateLabel) {
+            this.authorUsername = authorUsername;
+            this.authorProfileHref = authorProfileHref;
+            this.reviewedUsername = reviewedUsername;
+            this.reviewedProfileHref = reviewedProfileHref;
+            this.content = content;
+            this.dateLabel = dateLabel;
+        }
+
+        public String getAuthorUsername() {
+            return authorUsername;
+        }
+
+        public String getAuthorProfileHref() {
+            return authorProfileHref;
+        }
+
+        public String getReviewedUsername() {
+            return reviewedUsername;
+        }
+
+        public String getReviewedProfileHref() {
+            return reviewedProfileHref;
+        }
+
+        public String getContent() {
+            return content;
+        }
+
+        public String getDateLabel() {
+            return dateLabel;
+        }
+    }
+
+    public static final class ReportMatchViewModel {
+        private final String title;
+        private final String description;
+        private final String hostUsername;
+        private final String hostProfileHref;
+        private final String dateLabel;
+        private final String address;
+        private final String priceLabel;
+
+        public ReportMatchViewModel(
+                final String title,
+                final String description,
+                final String hostUsername,
+                final String hostProfileHref,
+                final String dateLabel,
+                final String address,
+                final String priceLabel) {
+            this.title = title;
+            this.description = description;
+            this.hostUsername = hostUsername;
+            this.hostProfileHref = hostProfileHref;
+            this.dateLabel = dateLabel;
+            this.address = address;
+            this.priceLabel = priceLabel;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public String getHostUsername() {
+            return hostUsername;
+        }
+
+        public String getHostProfileHref() {
+            return hostProfileHref;
+        }
+
+        public String getDateLabel() {
+            return dateLabel;
+        }
+
+        public String getAddress() {
+            return address;
+        }
+
+        public String getPriceLabel() {
+            return priceLabel;
         }
     }
 }

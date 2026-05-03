@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.config;
 
+import ar.edu.itba.paw.services.AdminBootstrapService;
 import java.util.Locale;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -85,6 +86,12 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();
+    }
+
+    @Bean
+    public AdminBootstrapRunner adminBootstrapRunner(
+            final AdminBootstrapService adminBootstrapService) {
+        return new AdminBootstrapRunner(adminBootstrapService);
     }
 
     @Bean

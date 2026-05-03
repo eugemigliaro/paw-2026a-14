@@ -50,6 +50,11 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
+    public Optional<PlayerReview> findReviewByIdIncludingDeleted(final Long reviewId) {
+        return playerReviewDao.findByIdIncludingDeleted(reviewId);
+    }
+
+    @Override
     public PlayerReviewSummary findSummaryForUser(final Long reviewedUserId) {
         return playerReviewDao.getSummaryForUser(reviewedUserId);
     }

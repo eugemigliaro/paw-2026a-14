@@ -43,9 +43,10 @@ public class MatchJdbcDao implements MatchDao {
     private static final String MATCH_SELECT_WITH_JOINED_PLAYERS =
             "SELECT m.id, m.sport, m.host_user_id, m.address, m.title, m.description,"
                     + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
-                    + " m.visibility, m.join_policy, "
+                    + " m.visibility, m.join_policy, m.series_id, m.series_occurrence_index, "
                     + DERIVED_STATUS_SQL
-                    + " AS status, m.banner_image_id, COUNT(mp.id) AS joined_players";
+                    + " AS status, m.banner_image_id, m.deleted, m.deleted_at,"
+                    + " m.deleted_by_user_id, m.delete_reason, COUNT(mp.id) AS joined_players";
 
     private static final String BASE_FROM =
             " FROM matches m"
@@ -79,11 +80,22 @@ public class MatchJdbcDao implements MatchDao {
                         rs.getInt("joined_players"),
                         rs.getObject("banner_image_id") == null
                                 ? null
-                                : rs.getLong("banner_image_id"));
+                                : rs.getLong("banner_image_id"),
+                        rs.getObject("series_id") == null ? null : rs.getLong("series_id"),
+                        rs.getObject("series_occurrence_index") == null
+                                ? null
+                                : rs.getInt("series_occurrence_index"),
+                        rs.getBoolean("deleted"),
+                        toInstant(rs.getTimestamp("deleted_at")),
+                        rs.getObject("deleted_by_user_id") == null
+                                ? null
+                                : rs.getLong("deleted_by_user_id"),
+                        rs.getString("delete_reason"));
             };
 
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
+    private final SimpleJdbcInsert seriesJdbcInsert;
 
     @Autowired
     public MatchJdbcDao(@NonNull final DataSource dataSource) {
@@ -91,6 +103,10 @@ public class MatchJdbcDao implements MatchDao {
         this.jdbcInsert =
                 new SimpleJdbcInsert(dataSource)
                         .withTableName("matches")
+                        .usingGeneratedKeyColumns("id");
+        this.seriesJdbcInsert =
+                new SimpleJdbcInsert(dataSource)
+                        .withTableName("match_series")
                         .usingGeneratedKeyColumns("id");
     }
 
@@ -108,7 +124,9 @@ public class MatchJdbcDao implements MatchDao {
             final String visibility,
             final String joinPolicy,
             final String status,
-            final Long bannerImageId) {
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex) {
         final Map<String, Object> values = new HashMap<>();
         values.put("host_user_id", hostUserId);
         values.put("address", address);
@@ -123,6 +141,9 @@ public class MatchJdbcDao implements MatchDao {
         values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy));
         values.put("status", new SqlParameterValue(Types.OTHER, status));
         values.put("banner_image_id", bannerImageId);
+        values.put("series_id", seriesId);
+        values.put("series_occurrence_index", seriesOccurrenceIndex);
+        values.put("deleted", Boolean.FALSE);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
         values.put("updated_at", new Timestamp(System.currentTimeMillis()));
 
@@ -143,7 +164,32 @@ public class MatchJdbcDao implements MatchDao {
                 joinPolicy,
                 status,
                 0,
-                bannerImageId);
+                bannerImageId,
+                seriesId,
+                seriesOccurrenceIndex);
+    }
+
+    @Override
+    public Long createMatchSeries(
+            final Long hostUserId,
+            final String frequency,
+            final Instant startsAt,
+            final Instant endsAt,
+            final String timezone,
+            final LocalDate untilDate,
+            final Integer occurrenceCount) {
+        final Map<String, Object> values = new HashMap<>();
+        values.put("host_user_id", hostUserId);
+        values.put("frequency", new SqlParameterValue(Types.OTHER, frequency));
+        values.put("starts_at", Timestamp.from(startsAt));
+        values.put("ends_at", endsAt == null ? null : Timestamp.from(endsAt));
+        values.put("timezone", timezone);
+        values.put("until_date", untilDate);
+        values.put("occurrence_count", occurrenceCount);
+        values.put("created_at", new Timestamp(System.currentTimeMillis()));
+        values.put("updated_at", new Timestamp(System.currentTimeMillis()));
+
+        return seriesJdbcInsert.executeAndReturnKey(values).longValue();
     }
 
     @Override
@@ -159,6 +205,7 @@ public class MatchJdbcDao implements MatchDao {
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final String visibility,
+            final String joinPolicy,
             final String status,
             final Long bannerImageId) {
         final int updatedRows =
@@ -166,7 +213,7 @@ public class MatchJdbcDao implements MatchDao {
                         "UPDATE matches"
                                 + " SET address = ?, title = ?, description = ?, starts_at = ?,"
                                 + " ends_at = ?, max_players = ?, price_per_player = ?, sport = ?,"
-                                + " visibility = ?, status = ?, banner_image_id = ?,"
+                                + " visibility = ?, join_policy = ?, status = ?, banner_image_id = ?,"
                                 + " updated_at = CURRENT_TIMESTAMP"
                                 + " WHERE id = ? AND host_user_id = ?",
                         address,
@@ -178,6 +225,7 @@ public class MatchJdbcDao implements MatchDao {
                         pricePerPlayer,
                         new SqlParameterValue(Types.OTHER, sport.getDbValue()),
                         new SqlParameterValue(Types.OTHER, visibility),
+                        new SqlParameterValue(Types.OTHER, joinPolicy),
                         new SqlParameterValue(Types.OTHER, status),
                         bannerImageId,
                         matchId,
@@ -195,6 +243,37 @@ public class MatchJdbcDao implements MatchDao {
                                 + " WHERE id = ? AND host_user_id = ?",
                         matchId,
                         hostUserId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
+    public boolean softDeleteMatch(
+            final Long matchId, final Long deletedByUserId, final String deleteReason) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', deleted = TRUE,"
+                                + " deleted_at = CURRENT_TIMESTAMP, deleted_by_user_id = ?,"
+                                + " delete_reason = ?, updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ?",
+                        deletedByUserId,
+                        deleteReason,
+                        matchId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
+    public boolean restoreMatch(final Long matchId) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', deleted = FALSE,"
+                                + " deleted_at = NULL, deleted_by_user_id = NULL,"
+                                + " delete_reason = NULL, updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ?",
+                        matchId);
 
         return updatedRows > 0;
     }
@@ -220,6 +299,18 @@ public class MatchJdbcDao implements MatchDao {
                         + " GROUP BY m.id";
 
         return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, matchId).stream().findFirst();
+    }
+
+    @Override
+    public List<Match> findSeriesOccurrences(final Long seriesId) {
+        final String sql =
+                MATCH_SELECT_WITH_JOINED_PLAYERS
+                        + BASE_FROM
+                        + " WHERE m.series_id = ?"
+                        + " GROUP BY m.id"
+                        + " ORDER BY m.starts_at ASC, m.series_occurrence_index ASC";
+
+        return jdbcTemplate.query(sql, MATCH_ROW_MAPPER, seriesId);
     }
 
     @Override
@@ -255,6 +346,7 @@ public class MatchJdbcDao implements MatchDao {
                 List.of(EventVisibility.PUBLIC),
                 List.of(EventStatus.OPEN),
                 Boolean.TRUE);
+        sql.append(" AND m.deleted = FALSE");
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
         appendSort(sql, sort);
@@ -296,6 +388,7 @@ public class MatchJdbcDao implements MatchDao {
                 List.of(EventVisibility.PUBLIC),
                 List.of(EventStatus.OPEN),
                 Boolean.TRUE);
+        sql.append(" AND m.deleted = FALSE");
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
         sql.append(") filtered_matches");
@@ -327,6 +420,7 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(BASE_FROM);
         sql.append(" WHERE m.host_user_id = ?");
         params.add(hostUserId);
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -372,6 +466,7 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(BASE_FROM);
         sql.append(" WHERE m.host_user_id = ?");
         params.add(hostUserId);
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -421,6 +516,7 @@ public class MatchJdbcDao implements MatchDao {
                         + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -471,6 +567,7 @@ public class MatchJdbcDao implements MatchDao {
                         + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -726,6 +823,10 @@ public class MatchJdbcDao implements MatchDao {
 
         final ZonedDateTime start = now.minusDays(7);
         return new TimeRange(start.toInstant(), now.toInstant());
+    }
+
+    private static Instant toInstant(final Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
     }
 
     private record TimeRange(Instant start, Instant end) {}
