@@ -7,7 +7,38 @@
 		});
 	}
 
+	function normalizePrice(value) {
+		var parsed = parseFloat(value);
+		return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+	}
+
+	function validatePriceRange(form) {
+		var minInput = form.querySelector('[data-price-from="true"]');
+		var maxInput = form.querySelector('[data-price-to="true"]');
+		if (!minInput || !maxInput) return true;
+
+		var minValue = normalizePrice(minInput.value);
+		var maxValue = normalizePrice(maxInput.value);
+		var isValid = maxInput.value === '' || maxValue > minValue;
+		maxInput.setCustomValidity(
+			isValid
+				? ''
+				: maxInput.getAttribute('data-price-range-error') || 'To must be greater than from.'
+		);
+		if (!isValid) {
+			maxInput.reportValidity();
+		}
+		return isValid;
+	}
+
 	document.addEventListener('click', function (e) {
+		var closeButton = e.target.closest('.filter-dropdown__close');
+		if (closeButton) {
+			e.preventDefault();
+			closeAll();
+			return;
+		}
+
 		var toggle = e.target.closest('.filter-dropdown__toggle');
 		if (toggle) {
 			e.preventDefault();
@@ -19,6 +50,16 @@
 		}
 		if (!e.target.closest('.filter-dropdown__panel')) {
 			closeAll();
+		}
+	});
+
+	document.addEventListener('input', function (e) {
+		if (e.target.matches('[data-price-from="true"], [data-price-to="true"]')) {
+			var form = e.target.closest('form');
+			if (form) {
+				var maxInput = form.querySelector('[data-price-to="true"]');
+				if (maxInput) maxInput.setCustomValidity('');
+			}
 		}
 	});
 
@@ -34,8 +75,12 @@
 	document.addEventListener('submit', function (e) {
 		var panel = e.target.closest('.filter-dropdown__panel');
 		if (panel) {
-			var dd = panel.closest('.filter-dropdown');
-			if (dd) sessionStorage.setItem('pawOpenFilter', dd.getAttribute('data-filter-name') || '');
+			if (!validatePriceRange(e.target)) {
+				e.preventDefault();
+				return;
+			}
+			sessionStorage.removeItem('pawOpenFilter');
+			closeAll();
 		}
 	});
 

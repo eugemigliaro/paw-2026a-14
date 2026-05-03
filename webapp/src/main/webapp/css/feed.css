@@ -708,17 +708,16 @@
 .filter-dropdown__panel {
 	display: none;
 	position: absolute;
-	top: 100%;
+	top: calc(100% + 0.45rem);
 	left: 0;
-	right: 0;
 	background: white;
-	border: 1px solid var(--accent);
-	border-top: none;
-	border-bottom-left-radius: 14px;
-	border-bottom-right-radius: 14px;
+	border: 1px solid rgba(19, 52, 48, 0.12);
+	border-radius: 14px;
 	box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
 	padding: 0.5rem;
 	z-index: 100;
+	width: max-content;
+	min-width: 100%;
 }
 
 .filter-dropdown.is-open .filter-dropdown__panel {
@@ -751,6 +750,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
+	min-width: 18rem;
 }
 
 .filter-dropdown__form .field {
@@ -782,10 +782,32 @@
 }
 
 .filter-dropdown__form .ui-button {
-	margin-top: 0.75rem;
 	padding: 0.35rem 0.5rem;
 	font-size: 0.75rem;
 	min-height: 28px;
+}
+
+.filter-dropdown__actions {
+	align-items: center;
+	border-top: 1px solid rgba(19, 52, 48, 0.08);
+	display: flex;
+	gap: 0.5rem;
+	justify-content: flex-end;
+	margin-top: 0.5rem;
+	padding: 0.65rem 0.5rem 0.35rem;
+	white-space: nowrap;
+	justify-content: space-between;
+}
+
+.filter-dropdown__form .filter-dropdown__actions {
+	margin-top: 0.75rem;
+	padding-left: 0;
+	padding-right: 0;
+	padding-bottom: 0;
+}
+
+.filter-dropdown__action {
+	flex: 0 0 auto;
 }
 
 .events-filters-section {
@@ -844,21 +866,16 @@
 
 .filter-dropdown.is-open .filter-dropdown__toggle {
 	border-color: #9ca3af;
-	border-bottom-left-radius: 0;
-	border-bottom-right-radius: 0;
 	box-shadow: none;
 }
 
 .horizontal-filters-bar .filter-dropdown__panel {
-	width: 100%;
-	min-width: 0;
-	right: 0;
-	top: 100%;
+	min-width: max(100%, 14rem);
+	top: calc(100% + 0.45rem);
 	border: 1px solid #9ca3af;
-	border-top: none;
-	border-radius: 0 0 12px 12px;
+	border-radius: 12px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-	margin-top: -1px;
+	margin-top: 0;
 }
 
 .horizontal-filters-bar .filter-dropdown__toggle::after {

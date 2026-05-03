@@ -21,9 +21,12 @@
 								<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
 									<spring:message var="filtersAriaLabel" code="feed.aria.filters" />
-									<spring:message var="searchAriaLabel" code="feed.aria.search" />
-									<spring:message var="sortAriaLabel" code="feed.aria.sort" />
-									<spring:message var="searchPlaceholder" code="events.search.placeholder" />
+										<spring:message var="searchAriaLabel" code="feed.aria.search" />
+										<spring:message var="sortAriaLabel" code="feed.aria.sort" />
+										<spring:message var="searchPlaceholder" code="events.search.placeholder" />
+										<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
+										<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
+										<spring:message var="priceRangeError" code="filter.price.rangeError" />
 
 									<main class="page-shell page-shell--matches-list">
 
@@ -160,17 +163,34 @@
 																</span>
 																<c:out value="${group.title}" />
 															</button>
-															<div class="filter-dropdown__panel">
-																<c:forEach var="option" items="${group.options}">
-																	<c:url var="optionHref" value="${option.href}" />
-																	<a href="${optionHref}"
-																		class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
-																		<c:out value="${option.label}" />
-																	</a>
-																</c:forEach>
+																<div class="filter-dropdown__panel">
+																	<c:set var="clearFilterHref" value="" />
+																	<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
+																		<c:choose>
+																			<c:when test="${optionStatus.first}">
+																				<c:set var="clearFilterHref" value="${option.href}" />
+																			</c:when>
+																			<c:otherwise>
+																				<c:url var="optionHref" value="${option.href}" />
+																				<a href="${optionHref}"
+																					class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
+																					<c:out value="${option.label}" />
+																				</a>
+																			</c:otherwise>
+																		</c:choose>
+																	</c:forEach>
+																	<div class="filter-dropdown__actions">
+																		<c:url var="clearFilterUrl" value="${clearFilterHref}" />
+																		<ui:button label="${clearFilterLabel}" href="${clearFilterUrl}"
+																			variant="secondary" size="sm"
+																			className="filter-dropdown__action" />
+																		<ui:button label="${seeResultsLabel}" type="button"
+																			variant="primary" size="sm"
+																			className="filter-dropdown__action filter-dropdown__close" />
+																	</div>
+																</div>
 															</div>
-														</div>
-													</c:forEach>
+														</c:forEach>
 
 													<div class="filter-dropdown" data-filter-name="Date">
 														<button type="button" class="filter-dropdown__toggle">
@@ -244,13 +264,40 @@
 																		value="<c:out value='${selectedEndDateValue}' />" />
 																</div>
 
-																<spring:message var="applyDateLabel"
-																	code="filter.date.apply" text="Apply" />
-																<ui:button label="${applyDateLabel}" type="submit"
-																	fullWidth="${true}" />
-															</form>
+																	<c:url var="clearDateHref" value="${listControls.searchAction}">
+																		<c:param name="q" value="${listControls.searchQuery}" />
+																		<c:param name="sort" value="${selectedSort}" />
+																		<c:param name="tz" value="${selectedTimezone}" />
+																		<c:forEach var="selectedSport" items="${selectedSports}">
+																			<c:param name="sport" value="${selectedSport}" />
+																		</c:forEach>
+																		<c:forEach var="selectedStatus" items="${selectedStatuses}">
+																			<c:param name="status" value="${selectedStatus}" />
+																		</c:forEach>
+																		<c:forEach var="selectedCategory" items="${selectedCategories}">
+																			<c:param name="category" value="${selectedCategory}" />
+																		</c:forEach>
+																		<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
+																			<c:param name="visibility" value="${selectedVisibilityItem}" />
+																		</c:forEach>
+																		<c:param name="minPrice" value="${selectedMinPriceValue}" />
+																		<c:param name="maxPrice" value="${selectedMaxPriceValue}" />
+																		<c:if test="${param.filter eq 'past'}">
+																			<c:param name="filter" value="past" />
+																		</c:if>
+																	</c:url>
+																	<spring:message var="applyDateLabel"
+																		code="filter.date.apply" text="Apply" />
+																	<div class="filter-dropdown__actions">
+																		<ui:button label="${clearFilterLabel}" href="${clearDateHref}"
+																			variant="secondary" size="sm"
+																			className="filter-dropdown__action" />
+																		<ui:button label="${applyDateLabel}" type="submit"
+																			size="sm" className="filter-dropdown__action" />
+																	</div>
+																</form>
+															</div>
 														</div>
-													</div>
 
 													<div class="filter-dropdown" data-filter-name="Price">
 														<button type="button" class="filter-dropdown__toggle">
@@ -309,12 +356,13 @@
 																	<div class="filter-rail__price-input-wrap">
 																		<span class="filter-rail__price-prefix"
 																			aria-hidden="true">$</span>
-																		<input id="list-min-price" name="minPrice"
-																			type="number" min="0" step="0.01"
-																			inputmode="decimal"
-																			class="field__control filter-rail__price-input"
-																			value="<c:out value='${selectedMinPriceValue}' />"
-																			placeholder="0" />
+																			<input id="list-min-price" name="minPrice"
+																				type="number" min="0" step="0.01"
+																				inputmode="decimal"
+																				class="field__control filter-rail__price-input"
+																				data-price-from="true"
+																				value="<c:out value='${selectedMinPriceValue}' />"
+																				placeholder="0" />
 																	</div>
 																</div>
 																<div
@@ -325,22 +373,53 @@
 																	<div class="filter-rail__price-input-wrap">
 																		<span class="filter-rail__price-prefix"
 																			aria-hidden="true">$</span>
-																		<input id="list-max-price" name="maxPrice"
-																			type="number" min="0" step="0.01"
-																			inputmode="decimal"
-																			class="field__control filter-rail__price-input"
-																			value="<c:out value='${selectedMaxPriceValue}' />"
-																			placeholder="12" />
+																			<input id="list-max-price" name="maxPrice"
+																				type="number" min="0" step="0.01"
+																				inputmode="decimal"
+																				class="field__control filter-rail__price-input"
+																				data-price-to="true"
+																				data-price-range-error="${priceRangeError}"
+																				value="<c:out value='${selectedMaxPriceValue}' />"
+																				placeholder="12" />
+																		</div>
 																	</div>
-																</div>
 
-																<spring:message var="applyPriceLabel"
-																	code="filter.price.apply" />
-																<ui:button label="${applyPriceLabel}" type="submit"
-																	fullWidth="${true}" />
-															</form>
+																	<c:url var="clearPriceHref" value="${listControls.searchAction}">
+																		<c:param name="q" value="${listControls.searchQuery}" />
+																		<c:param name="sort" value="${selectedSort}" />
+																		<c:param name="tz" value="${selectedTimezone}" />
+																		<c:forEach var="selectedSport" items="${selectedSports}">
+																			<c:param name="sport" value="${selectedSport}" />
+																		</c:forEach>
+																		<c:forEach var="selectedStatus" items="${selectedStatuses}">
+																			<c:param name="status" value="${selectedStatus}" />
+																		</c:forEach>
+																		<c:forEach var="selectedCategory" items="${selectedCategories}">
+																			<c:param name="category" value="${selectedCategory}" />
+																		</c:forEach>
+																		<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
+																			<c:param name="visibility" value="${selectedVisibilityItem}" />
+																		</c:forEach>
+																		<c:param name="startDate" value="${selectedStartDateValue}" />
+																		<c:param name="endDate" value="${selectedEndDateValue}" />
+																		<c:param name="minPrice" value="" />
+																		<c:param name="maxPrice" value="" />
+																		<c:if test="${param.filter eq 'past'}">
+																			<c:param name="filter" value="past" />
+																		</c:if>
+																	</c:url>
+																	<spring:message var="applyPriceLabel"
+																		code="filter.price.apply" />
+																	<div class="filter-dropdown__actions">
+																		<ui:button label="${clearFilterLabel}" href="${clearPriceHref}"
+																			variant="secondary" size="sm"
+																			className="filter-dropdown__action" />
+																		<ui:button label="${applyPriceLabel}" type="submit"
+																			size="sm" className="filter-dropdown__action" />
+																	</div>
+																</form>
+															</div>
 														</div>
-													</div>
 
 													<c:url var="clearSearchHref"
 														value="${listControls.cleanSearchAction}">
