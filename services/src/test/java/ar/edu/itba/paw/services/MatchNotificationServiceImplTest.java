@@ -17,9 +17,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,17 +27,25 @@ import org.springframework.context.i18n.LocaleContextHolder;
 @ExtendWith(MockitoExtension.class)
 public class MatchNotificationServiceImplTest {
 
-    @InjectMocks private MatchNotificationServiceImpl matchNotificationService;
-
     @Mock private MatchParticipantDao matchParticipantDao;
-    @Mock private MailDispatchService mailDispatchService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private MessageSource messageSource;
     @Mock private UserService userService;
 
+    private RecordingMailDispatchService mailDispatchService;
+    private MatchNotificationServiceImpl matchNotificationService;
+
     @BeforeEach
     public void setUp() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
+        mailDispatchService = new RecordingMailDispatchService();
+        matchNotificationService =
+                new MatchNotificationServiceImpl(
+                        matchParticipantDao,
+                        mailDispatchService,
+                        templateRenderer,
+                        messageSource,
+                        userService);
         Mockito.lenient()
                 .when(
                         messageSource.getMessage(
@@ -70,16 +76,10 @@ public class MatchNotificationServiceImplTest {
 
         matchNotificationService.notifyMatchUpdated(match);
 
-        final ArgumentCaptor<String> recipientCaptor = ArgumentCaptor.forClass(String.class);
-        final ArgumentCaptor<MailContent> contentCaptor =
-                ArgumentCaptor.forClass(MailContent.class);
-        Mockito.verify(mailDispatchService, Mockito.times(2))
-                .dispatch(recipientCaptor.capture(), contentCaptor.capture());
-
         Assertions.assertEquals(
-                List.of("first@test.com", "second@test.com"), recipientCaptor.getAllValues());
-        Assertions.assertSame(firstMail, contentCaptor.getAllValues().get(0));
-        Assertions.assertSame(secondMail, contentCaptor.getAllValues().get(1));
+                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
+        Assertions.assertSame(firstMail, mailDispatchService.contents.get(0));
+        Assertions.assertSame(secondMail, mailDispatchService.contents.get(1));
     }
 
     @Test
@@ -97,16 +97,10 @@ public class MatchNotificationServiceImplTest {
 
         matchNotificationService.notifyMatchCancelled(match);
 
-        final ArgumentCaptor<String> recipientCaptor = ArgumentCaptor.forClass(String.class);
-        final ArgumentCaptor<MailContent> contentCaptor =
-                ArgumentCaptor.forClass(MailContent.class);
-        Mockito.verify(mailDispatchService, Mockito.times(2))
-                .dispatch(recipientCaptor.capture(), contentCaptor.capture());
-
         Assertions.assertEquals(
-                List.of("first@test.com", "second@test.com"), recipientCaptor.getAllValues());
-        Assertions.assertSame(firstMail, contentCaptor.getAllValues().get(0));
-        Assertions.assertSame(secondMail, contentCaptor.getAllValues().get(1));
+                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
+        Assertions.assertSame(firstMail, mailDispatchService.contents.get(0));
+        Assertions.assertSame(secondMail, mailDispatchService.contents.get(1));
     }
 
     @Test
@@ -116,7 +110,8 @@ public class MatchNotificationServiceImplTest {
 
         matchNotificationService.notifyMatchUpdated(match);
 
-        Mockito.verifyNoInteractions(mailDispatchService, templateRenderer);
+        Assertions.assertTrue(mailDispatchService.recipients.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -127,7 +122,6 @@ public class MatchNotificationServiceImplTest {
         final User firstParticipant = new User(2L, "first@test.com", "first");
         final User secondParticipant = new User(3L, "second@test.com", "second");
         final MailContent mail = new MailContent("series-updated", "<p>updated</p>", "updated");
-        final List<String> recipients = new ArrayList<>();
         Mockito.when(matchParticipantDao.findConfirmedParticipants(50L))
                 .thenReturn(List.of(firstParticipant));
         Mockito.when(matchParticipantDao.findConfirmedParticipants(51L))
@@ -136,20 +130,14 @@ public class MatchNotificationServiceImplTest {
                         templateRenderer.renderRecurringMatchesUpdatedNotification(
                                 ArgumentMatchers.any(), ArgumentMatchers.anyInt()))
                 .thenReturn(mail);
-        Mockito.doAnswer(
-                        invocation -> {
-                            recipients.add(invocation.getArgument(0));
-                            return null;
-                        })
-                .when(mailDispatchService)
-                .dispatch(ArgumentMatchers.anyString(), ArgumentMatchers.any());
 
         // 2. Exercise
         matchNotificationService.notifyRecurringMatchesUpdated(
                 List.of(firstOccurrence, secondOccurrence));
 
         // 3. Assert
-        Assertions.assertEquals(List.of("first@test.com", "second@test.com"), recipients);
+        Assertions.assertEquals(
+                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
     }
 
     @Test
@@ -164,7 +152,6 @@ public class MatchNotificationServiceImplTest {
         final MailContent mail =
                 new MailContent("series-cancelled", "<p>cancelled</p>", "cancelled");
         final List<Integer> affectedCounts = new ArrayList<>();
-        final List<String> recipients = new ArrayList<>();
         Mockito.when(matchParticipantDao.findConfirmedParticipants(52L))
                 .thenReturn(List.of(firstParticipant));
         Mockito.when(matchParticipantDao.findConfirmedParticipants(53L))
@@ -177,20 +164,14 @@ public class MatchNotificationServiceImplTest {
                             affectedCounts.add(invocation.getArgument(1));
                             return mail;
                         });
-        Mockito.doAnswer(
-                        invocation -> {
-                            recipients.add(invocation.getArgument(0));
-                            return null;
-                        })
-                .when(mailDispatchService)
-                .dispatch(ArgumentMatchers.anyString(), ArgumentMatchers.any());
 
         // 2. Exercise
         matchNotificationService.notifyRecurringMatchesCancelled(
                 List.of(firstOccurrence, secondOccurrence));
 
         // 3. Assert
-        Assertions.assertEquals(List.of("first@test.com", "second@test.com"), recipients);
+        Assertions.assertEquals(
+                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
         Assertions.assertEquals(List.of(2, 1), affectedCounts);
     }
 
@@ -207,7 +188,8 @@ public class MatchNotificationServiceImplTest {
 
         matchNotificationService.notifyHostPlayerLeft(match, player);
 
-        Mockito.verify(mailDispatchService).dispatch("host@test.com", mail);
+        Assertions.assertEquals(List.of("host@test.com"), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
     }
 
     @Test
@@ -221,7 +203,20 @@ public class MatchNotificationServiceImplTest {
 
         matchNotificationService.notifyPlayerRemovedByHost(match, player);
 
-        Mockito.verify(mailDispatchService).dispatch("player@test.com", mail);
+        Assertions.assertEquals(List.of("player@test.com"), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
+    }
+
+    private static class RecordingMailDispatchService implements MailDispatchService {
+
+        private final List<String> recipients = new ArrayList<>();
+        private final List<MailContent> contents = new ArrayList<>();
+
+        @Override
+        public void dispatch(final String recipientEmail, final MailContent content) {
+            recipients.add(recipientEmail);
+            contents.add(content);
+        }
     }
 
     private static Match createMatch(final long id, final String title, final String status) {

@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -26,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,18 +35,26 @@ import org.springframework.context.MessageSource;
 @ExtendWith(MockitoExtension.class)
 public class MatchServiceImplTest {
 
-    @InjectMocks private MatchServiceImpl matchService;
-
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
-    @Mock private MatchNotificationService matchNotificationService;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
+
+    private RecordingMatchNotificationService matchNotificationService;
+    private MatchServiceImpl matchService;
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @BeforeEach
     public void setUp() {
+        matchNotificationService = new RecordingMatchNotificationService();
+        matchService =
+                new MatchServiceImpl(
+                        matchDao,
+                        matchParticipantDao,
+                        matchNotificationService,
+                        messageSource,
+                        clock);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
         Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Mockito.lenient()
@@ -960,7 +968,7 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(Sport.TENNIS, result.getSport());
         Assertions.assertEquals("Updated Address", result.getAddress());
         Assertions.assertEquals("approval_required", result.getJoinPolicy());
-        Mockito.verify(matchNotificationService).notifyMatchUpdated(updatedMatch);
+        Assertions.assertEquals(List.of(updatedMatch), matchNotificationService.updatedMatches);
     }
 
     @Test
@@ -1092,7 +1100,7 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals("cancelled", result.getStatus());
         Assertions.assertEquals(23L, result.getId());
-        Mockito.verify(matchNotificationService).notifyMatchCancelled(cancelledMatch);
+        Assertions.assertEquals(List.of(cancelledMatch), matchNotificationService.cancelledMatches);
     }
 
     @Test
@@ -1273,7 +1281,7 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(47L, result.get(1).getId());
         Assertions.assertEquals("Updated Weekly Padel", result.get(0).getTitle());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(610200), result.get(1).getStartsAt());
-        Mockito.verify(matchNotificationService).notifyRecurringMatchesUpdated(result);
+        Assertions.assertEquals(List.of(result), matchNotificationService.updatedSeries);
     }
 
     @Test
@@ -1432,7 +1440,7 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(47L, result.get(1).getId());
         Assertions.assertEquals("cancelled", result.get(0).getStatus());
         Assertions.assertEquals("cancelled", result.get(1).getStatus());
-        Mockito.verify(matchNotificationService).notifyRecurringMatchesCancelled(result);
+        Assertions.assertEquals(List.of(result), matchNotificationService.cancelledSeries);
     }
 
     @Test
@@ -1556,7 +1564,7 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals("cancelled", result.getStatus());
         Assertions.assertEquals(24L, result.getId());
-        Mockito.verifyNoInteractions(matchNotificationService);
+        Assertions.assertTrue(matchNotificationService.isEmpty());
     }
 
     @Test
@@ -1617,7 +1625,7 @@ public class MatchServiceImplTest {
                                 null));
 
         Assertions.assertEquals(25L, result.getId());
-        Mockito.verify(matchNotificationService).notifyMatchUpdated(updatedMatch);
+        Assertions.assertEquals(List.of(updatedMatch), matchNotificationService.updatedMatches);
     }
 
     @Test
@@ -1647,7 +1655,7 @@ public class MatchServiceImplTest {
         final Match result = matchService.cancelMatch(26L, 1L);
 
         Assertions.assertEquals("cancelled", result.getStatus());
-        Mockito.verify(matchNotificationService).notifyMatchCancelled(cancelledMatch);
+        Assertions.assertEquals(List.of(cancelledMatch), matchNotificationService.cancelledMatches);
     }
 
     @Test
@@ -1673,7 +1681,7 @@ public class MatchServiceImplTest {
                                         "open",
                                         null)));
 
-        Mockito.verifyNoInteractions(matchNotificationService);
+        Assertions.assertTrue(matchNotificationService.isEmpty());
     }
 
     @Test
@@ -1683,7 +1691,66 @@ public class MatchServiceImplTest {
         Assertions.assertThrows(
                 MatchCancellationException.class, () -> matchService.cancelMatch(28L, 1L));
 
-        Mockito.verifyNoInteractions(matchNotificationService);
+        Assertions.assertTrue(matchNotificationService.isEmpty());
+    }
+
+    private static class RecordingMatchNotificationService implements MatchNotificationService {
+
+        private final List<Match> updatedMatches = new ArrayList<>();
+        private final List<Match> cancelledMatches = new ArrayList<>();
+        private final List<List<Match>> updatedSeries = new ArrayList<>();
+        private final List<List<Match>> cancelledSeries = new ArrayList<>();
+
+        @Override
+        public void notifyMatchUpdated(final Match match) {
+            updatedMatches.add(match);
+        }
+
+        @Override
+        public void notifyMatchCancelled(final Match match) {
+            cancelledMatches.add(match);
+        }
+
+        @Override
+        public void notifyRecurringMatchesUpdated(final List<Match> matches) {
+            updatedSeries.add(matches);
+        }
+
+        @Override
+        public void notifyRecurringMatchesCancelled(final List<Match> matches) {
+            cancelledSeries.add(matches);
+        }
+
+        @Override
+        public void notifyHostPlayerJoined(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostJoinRequestReceived(final Match match, final User player) {}
+
+        @Override
+        public void notifyPlayerRequestApproved(final Match match, final User player) {}
+
+        @Override
+        public void notifyPlayerRequestRejected(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostInviteAccepted(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostInviteDeclined(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostPlayerLeft(final Match match, final User player) {}
+
+        @Override
+        public void notifyPlayerRemovedByHost(final Match match, final User player) {}
+
+        private boolean isEmpty() {
+            return updatedMatches.isEmpty()
+                    && cancelledMatches.isEmpty()
+                    && updatedSeries.isEmpty()
+                    && cancelledSeries.isEmpty();
+        }
     }
 
     @Test

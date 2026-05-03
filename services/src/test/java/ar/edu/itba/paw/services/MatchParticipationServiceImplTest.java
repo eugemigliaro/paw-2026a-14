@@ -36,9 +36,9 @@ public class MatchParticipationServiceImplTest {
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
-    @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
+    private RecordingMatchNotificationService matchNotificationService;
     private MatchParticipationServiceImpl matchParticipationService;
 
     private static final Instant NOW = Instant.parse("2026-04-20T10:00:00Z");
@@ -46,6 +46,7 @@ public class MatchParticipationServiceImplTest {
     @BeforeEach
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
+        matchNotificationService = new RecordingMatchNotificationService();
         matchParticipationService =
                 new MatchParticipationServiceImpl(
                         matchDao,
@@ -234,8 +235,7 @@ public class MatchParticipationServiceImplTest {
         matchParticipationService.removeParticipant(10L, 20L, 20L);
 
         // Assert
-        Mockito.verify(matchNotificationService)
-                .notifyHostPlayerLeft(Mockito.any(), Mockito.eq(player));
+        Assertions.assertEquals(List.of(player), matchNotificationService.leftPlayers);
     }
 
     @Test
@@ -348,8 +348,7 @@ public class MatchParticipationServiceImplTest {
         matchParticipationService.removeParticipant(10L, 1L, 30L);
 
         // Assert
-        Mockito.verify(matchNotificationService)
-                .notifyPlayerRemovedByHost(Mockito.any(), Mockito.eq(player));
+        Assertions.assertEquals(List.of(player), matchNotificationService.removedPlayers);
     }
 
     @Test
@@ -897,6 +896,52 @@ public class MatchParticipationServiceImplTest {
         public void dispatch(final String recipientEmail, final MailContent content) {
             recipients.add(recipientEmail);
             contents.add(content);
+        }
+    }
+
+    private static class RecordingMatchNotificationService implements MatchNotificationService {
+
+        private final List<User> leftPlayers = new ArrayList<>();
+        private final List<User> removedPlayers = new ArrayList<>();
+
+        @Override
+        public void notifyMatchUpdated(final Match match) {}
+
+        @Override
+        public void notifyMatchCancelled(final Match match) {}
+
+        @Override
+        public void notifyRecurringMatchesUpdated(final List<Match> matches) {}
+
+        @Override
+        public void notifyRecurringMatchesCancelled(final List<Match> matches) {}
+
+        @Override
+        public void notifyHostPlayerJoined(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostJoinRequestReceived(final Match match, final User player) {}
+
+        @Override
+        public void notifyPlayerRequestApproved(final Match match, final User player) {}
+
+        @Override
+        public void notifyPlayerRequestRejected(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostInviteAccepted(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostInviteDeclined(final Match match, final User player) {}
+
+        @Override
+        public void notifyHostPlayerLeft(final Match match, final User player) {
+            leftPlayers.add(player);
+        }
+
+        @Override
+        public void notifyPlayerRemovedByHost(final Match match, final User player) {
+            removedPlayers.add(player);
         }
     }
 

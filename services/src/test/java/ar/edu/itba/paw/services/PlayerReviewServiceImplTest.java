@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -129,11 +130,18 @@ public class PlayerReviewServiceImplTest {
 
     @Test
     public void testDeleteReviewDelegatesToDao() {
-        Mockito.when(playerReviewDao.softDeleteReview(2L, 3L)).thenReturn(true);
+        final List<Long> deletedReviewArgs = new ArrayList<>();
+        Mockito.when(playerReviewDao.softDeleteReview(2L, 3L))
+                .thenAnswer(
+                        invocation -> {
+                            deletedReviewArgs.add(invocation.getArgument(0));
+                            deletedReviewArgs.add(invocation.getArgument(1));
+                            return true;
+                        });
 
         playerReviewService.deleteReview(2L, 3L);
 
-        Mockito.verify(playerReviewDao).softDeleteReview(2L, 3L);
+        Assertions.assertEquals(List.of(2L, 3L), deletedReviewArgs);
     }
 
     @Test
