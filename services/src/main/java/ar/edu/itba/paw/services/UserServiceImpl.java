@@ -5,6 +5,8 @@ import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -48,6 +50,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> findById(final Long id) {
         return userDao.findById(id);
+    }
+
+    @Override
+    public List<User> findByIds(final Collection<Long> ids) {
+        return userDao.findByIds(ids);
     }
 
     @Override

@@ -17,6 +17,10 @@ public enum UserRole {
         return dbValue;
     }
 
+    public boolean isAdmin() {
+        return this == ADMIN_MOD;
+    }
+
     public static Optional<UserRole> fromDbValue(final String value) {
         return Arrays.stream(values())
                 .filter(role -> role.dbValue.equalsIgnoreCase(value))

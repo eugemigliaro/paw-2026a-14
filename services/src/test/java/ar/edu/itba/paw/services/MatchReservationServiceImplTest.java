@@ -27,6 +27,8 @@ public class MatchReservationServiceImplTest {
 
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
+    @Mock private MatchNotificationService matchNotificationService;
+    @Mock private UserService userService;
 
     private MatchReservationServiceImpl matchReservationService;
 
@@ -34,7 +36,11 @@ public class MatchReservationServiceImplTest {
     public void setUp() {
         matchReservationService =
                 new MatchReservationServiceImpl(
-                        matchDao, matchParticipantDao, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+                        matchDao,
+                        matchParticipantDao,
+                        matchNotificationService,
+                        userService,
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     @Test

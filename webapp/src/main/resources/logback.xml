@@ -7,7 +7,7 @@
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>logs/paw-2026a-14.warnings.%d{yyyy-MM-dd}.log</fileNamePattern>
 			<maxHistory>5</maxHistory>
-			<totalSizeCap>1GB</totalSizeCap>
+			<totalSizeCap>50MB</totalSizeCap>
 			<cleanHistoryOnStart>true</cleanHistoryOnStart>
 		</rollingPolicy>
 		<encoder>
@@ -20,7 +20,7 @@
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>logs/paw-2026a-14.%d{yyyy-MM-dd}.log</fileNamePattern>
 			<maxHistory>5</maxHistory>
-			<totalSizeCap>2GB</totalSizeCap>
+			<totalSizeCap>50MB</totalSizeCap>
 			<cleanHistoryOnStart>true</cleanHistoryOnStart>
 		</rollingPolicy>
 		<encoder>

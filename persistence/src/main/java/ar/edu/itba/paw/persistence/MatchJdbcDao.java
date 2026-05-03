@@ -46,10 +46,12 @@ public class MatchJdbcDao implements MatchDao {
                     + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
                     + " m.visibility, m.join_policy, m.series_id, m.series_occurrence_index, "
                     + DERIVED_STATUS_SQL
-                    + " AS status, m.banner_image_id, COUNT(mp.id) AS joined_players";
+                    + " AS status, m.banner_image_id, m.deleted, m.deleted_at,"
+                    + " m.deleted_by_user_id, m.delete_reason, COUNT(mp.id) AS joined_players";
 
     private static final String BASE_FROM =
             " FROM matches m"
+                    + " JOIN users hu ON hu.id = m.host_user_id"
                     + " LEFT JOIN match_participants mp"
                     + " ON mp.match_id = m.id"
                     + " AND mp.status IN ('joined', 'checked_in', 'invited') ";
@@ -86,7 +88,13 @@ public class MatchJdbcDao implements MatchDao {
                         rs.getObject("series_id") == null ? null : rs.getLong("series_id"),
                         rs.getObject("series_occurrence_index") == null
                                 ? null
-                                : rs.getInt("series_occurrence_index"));
+                                : rs.getInt("series_occurrence_index"),
+                        rs.getBoolean("deleted"),
+                        toInstant(rs.getTimestamp("deleted_at")),
+                        rs.getObject("deleted_by_user_id") == null
+                                ? null
+                                : rs.getLong("deleted_by_user_id"),
+                        rs.getString("delete_reason"));
             };
 
     private final JdbcTemplate jdbcTemplate;
@@ -143,6 +151,7 @@ public class MatchJdbcDao implements MatchDao {
         values.put("banner_image_id", bannerImageId);
         values.put("series_id", seriesId);
         values.put("series_occurrence_index", seriesOccurrenceIndex);
+        values.put("deleted", Boolean.FALSE);
         values.put("created_at", new Timestamp(System.currentTimeMillis()));
         values.put("updated_at", new Timestamp(System.currentTimeMillis()));
 
@@ -254,6 +263,37 @@ public class MatchJdbcDao implements MatchDao {
     }
 
     @Override
+    public boolean softDeleteMatch(
+            final Long matchId, final Long deletedByUserId, final String deleteReason) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', deleted = TRUE,"
+                                + " deleted_at = CURRENT_TIMESTAMP, deleted_by_user_id = ?,"
+                                + " delete_reason = ?, updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ?",
+                        deletedByUserId,
+                        deleteReason,
+                        matchId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
+    public boolean restoreMatch(final Long matchId) {
+        final int updatedRows =
+                jdbcTemplate.update(
+                        "UPDATE matches"
+                                + " SET status = 'cancelled', deleted = FALSE,"
+                                + " deleted_at = NULL, deleted_by_user_id = NULL,"
+                                + " delete_reason = NULL, updated_at = CURRENT_TIMESTAMP"
+                                + " WHERE id = ?",
+                        matchId);
+
+        return updatedRows > 0;
+    }
+
+    @Override
     public Optional<Match> findById(final Long matchId) {
         final String sql =
                 MATCH_SELECT_WITH_JOINED_PLAYERS + BASE_FROM + " WHERE m.id = ? GROUP BY m.id";
@@ -321,9 +361,10 @@ public class MatchJdbcDao implements MatchDao {
                 List.of(EventVisibility.PUBLIC),
                 List.of(EventStatus.OPEN),
                 Boolean.TRUE);
+        sql.append(" AND m.deleted = FALSE");
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
-        appendSort(sql, sort, null, null);
+        appendSort(sql, params, sort, null, null);
         sql.append(" LIMIT ? OFFSET ?");
         params.add(limit);
         params.add(offset);
@@ -368,7 +409,7 @@ public class MatchJdbcDao implements MatchDao {
                 Boolean.TRUE);
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
-        appendSort(sql, sort, latitude, longitude);
+        appendSort(sql, params, sort, latitude, longitude);
         sql.append(" LIMIT ? OFFSET ?");
         params.add(limit);
         params.add(offset);
@@ -407,6 +448,7 @@ public class MatchJdbcDao implements MatchDao {
                 List.of(EventVisibility.PUBLIC),
                 List.of(EventStatus.OPEN),
                 Boolean.TRUE);
+        sql.append(" AND m.deleted = FALSE");
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
         sql.append(") filtered_matches");
@@ -438,6 +480,7 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(BASE_FROM);
         sql.append(" WHERE m.host_user_id = ?");
         params.add(hostUserId);
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -483,6 +526,7 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(BASE_FROM);
         sql.append(" WHERE m.host_user_id = ?");
         params.add(hostUserId);
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -532,6 +576,7 @@ public class MatchJdbcDao implements MatchDao {
                         + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -582,6 +627,7 @@ public class MatchJdbcDao implements MatchDao {
                         + " AND me.status IN ('joined', 'checked_in')");
         params.add(userId);
         sql.append(" WHERE 1=1");
+        sql.append(" AND m.deleted = FALSE");
         appendFilters(
                 sql,
                 params,
@@ -636,10 +682,20 @@ public class MatchJdbcDao implements MatchDao {
             return;
         }
 
-        sql.append(" AND (LOWER(m.title) LIKE ? OR LOWER(COALESCE(m.description, '')) LIKE ?)");
+        sql.append(
+                " AND (LOWER(m.title) LIKE ?"
+                        + " OR LOWER(COALESCE(m.description, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(m.address, '')) LIKE ?"
+                        + " OR LOWER(CAST(m.sport AS VARCHAR(30))) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.last_name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.username, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.name, '') || ' ' || COALESCE(hu.last_name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.last_name, '') || ' ' || COALESCE(hu.name, '')) LIKE ?)");
         final String queryPattern = "%" + query.trim().toLowerCase() + "%";
-        params.add(queryPattern);
-        params.add(queryPattern);
+        for (int i = 0; i < 9; i++) {
+            params.add(queryPattern);
+        }
     }
 
     private static void appendSportFilter(
@@ -661,6 +717,7 @@ public class MatchJdbcDao implements MatchDao {
 
     private static void appendSort(
             final StringBuilder sql,
+            final List<Object> params,
             final MatchSort sort,
             final Double latitude,
             final Double longitude) {
@@ -673,33 +730,31 @@ public class MatchJdbcDao implements MatchDao {
                     sql.append(" ORDER BY CASE WHEN m.latitude IS NULL OR m.longitude IS NULL")
                             .append(" THEN 1 ELSE 0 END ASC,")
                             .append(" CASE WHEN m.latitude IS NULL OR m.longitude IS NULL")
-                            .append(" THEN 0 ELSE ((m.latitude - ")
-                            .append(latitude)
-                            .append(") * (m.latitude - ")
-                            .append(latitude)
-                            .append(")) + ((m.longitude - ")
-                            .append(longitude)
-                            .append(") * ")
-                            .append(cosLatitude)
-                            .append(" * (m.longitude - ")
-                            .append(longitude)
-                            .append(") * ")
-                            .append(cosLatitude)
-                            .append(") END ASC, m.starts_at ASC");
+                            .append(" THEN 0 ELSE ((m.latitude - ?) * (m.latitude - ?))")
+                            .append(" + ((m.longitude - ?) * ? * (m.longitude - ?) * ?)")
+                            .append(" END ASC, m.starts_at ASC, m.id ASC");
+                    params.add(latitude);
+                    params.add(latitude);
+                    params.add(longitude);
+                    params.add(cosLatitude);
+                    params.add(longitude);
+                    params.add(cosLatitude);
                     break;
                 }
-                sql.append(" ORDER BY m.starts_at ASC");
+                sql.append(" ORDER BY m.starts_at ASC, m.id ASC");
                 break;
             case PRICE_LOW:
-                sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC");
+                sql.append(
+                        " ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC, m.id ASC");
                 break;
             case SPOTS_DESC:
                 sql.append(
-                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, " + "m.starts_at ASC");
+                        " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, "
+                                + "m.starts_at ASC, m.id ASC");
                 break;
             case SOONEST:
             default:
-                sql.append(" ORDER BY m.starts_at ASC");
+                sql.append(" ORDER BY m.starts_at ASC, m.id ASC");
                 break;
         }
     }
@@ -707,23 +762,24 @@ public class MatchJdbcDao implements MatchDao {
     private static void appendSort(
             final StringBuilder sql, final MatchSort sort, final Boolean upcoming) {
         if (upcoming == null || upcoming) {
-            appendSort(sql, sort, null, null);
+            appendSort(sql, new ArrayList<>(), sort, null, null);
             return;
         }
 
         final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
         switch (safeSort) {
             case PRICE_LOW:
-                sql.append(" ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at DESC");
+                sql.append(
+                        " ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at DESC, m.id DESC");
                 break;
             case SPOTS_DESC:
                 sql.append(
                         " ORDER BY (MAX(m.max_players) - COUNT(mp.id)) DESC, "
-                                + "m.starts_at DESC");
+                                + "m.starts_at DESC, m.id DESC");
                 break;
             case SOONEST:
             default:
-                sql.append(" ORDER BY m.starts_at DESC");
+                sql.append(" ORDER BY m.starts_at DESC, m.id DESC");
                 break;
         }
     }
@@ -864,6 +920,10 @@ public class MatchJdbcDao implements MatchDao {
 
         final ZonedDateTime start = now.minusDays(7);
         return new TimeRange(start.toInstant(), now.toInstant());
+    }
+
+    private static Instant toInstant(final Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
     }
 
     private record TimeRange(Instant start, Instant end) {}

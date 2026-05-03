@@ -19,10 +19,45 @@
 					<h1 class="page-heading__title">
 						<spring:message code="host.invites.title" />
 					</h1>
-					<p class="page-heading__description">
-						<c:out value="${match.title}" /> &mdash;
-						<spring:message code="host.invites.description" />
-					</p>
+					<div class="participation-event-heading">
+						<h2 class="participation-event-heading__title">
+							<c:out value="${match.title}" />
+						</h2>
+						<div class="participation-event-heading__meta">
+							<span class="participation-event-heading__meta-item">
+								<span class="participation-event-heading__meta-icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+										<line x1="16" y1="2" x2="16" y2="6" />
+										<line x1="8" y1="2" x2="8" y2="6" />
+										<line x1="3" y1="10" x2="21" y2="10" />
+									</svg>
+								</span>
+								<c:out value="${participationEventDate}" />
+							</span>
+							<span class="participation-event-heading__meta-item">
+								<span class="participation-event-heading__meta-icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<circle cx="12" cy="12" r="10" />
+										<polyline points="12 6 12 12 16 14" />
+									</svg>
+								</span>
+								<c:out value="${participationEventTime}" />
+							</span>
+							<span class="participation-event-heading__meta-item">
+								<span class="participation-event-heading__meta-icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M12 22s8-4.35 8-11a8 8 0 1 0-16 0c0 6.65 8 11 8 11z" />
+										<circle cx="12" cy="11" r="3" />
+									</svg>
+								</span>
+								<c:out value="${participationEventVenue}" />
+							</span>
+						</div>
+						<p class="page-heading__description participation-event-heading__description">
+							<spring:message code="host.invites.description" />
+						</p>
+					</div>
 				</header>
 
 				<c:if test="${param.action eq 'invited'}">
@@ -39,13 +74,11 @@
 				<div class="participation-layout">
 					<div class="participation-nav">
 						<c:url var="backToEventHref" value="/matches/${matchId}" />
-						<a class="section-link" href="${backToEventHref}">
-							<spring:message code="participation.backToEvent" />
-						</a>
+						<spring:message var="backToEventLabel" code="participation.backToEvent" />
+						<ui:button label="${backToEventLabel}" href="${backToEventHref}" variant="secondary" className="participation-nav__button" />
 						<c:url var="rosterHref" value="${rosterUrl}" />
-						<a class="section-link" href="${rosterHref}">
-							<spring:message code="host.invites.viewRoster" />
-						</a>
+						<spring:message var="viewRosterLabel" code="host.invites.viewRoster" />
+						<ui:button label="${viewRosterLabel}" href="${rosterHref}" variant="primary" className="participation-nav__button" />
 					</div>
 
 					<section class="panel participation-panel">
@@ -121,9 +154,19 @@
 											<span class="participant-list__avatar" aria-hidden="true">
 												<c:out value="${p.avatarLabel}" />
 											</span>
-											<strong class="participant-manage-list__name">
-												<c:out value="${p.username}" />
-											</strong>
+											<c:choose>
+												<c:when test="${not empty p.profileHref}">
+													<c:url var="pendingProfileHref" value="${p.profileHref}" />
+													<a class="participant-manage-list__name" href="${pendingProfileHref}">
+														<c:out value="${p.username}" />
+													</a>
+												</c:when>
+												<c:otherwise>
+													<strong class="participant-manage-list__name">
+														<c:out value="${p.username}" />
+													</strong>
+												</c:otherwise>
+											</c:choose>
 										</div>
 										<span class="participant-manage-list__status participant-manage-list__status--pending">
 											<spring:message code="host.invites.status.pending" />
@@ -146,9 +189,19 @@
 											<span class="participant-list__avatar" aria-hidden="true">
 												<c:out value="${p.avatarLabel}" />
 											</span>
-											<strong class="participant-manage-list__name">
-												<c:out value="${p.username}" />
-											</strong>
+											<c:choose>
+												<c:when test="${not empty p.profileHref}">
+													<c:url var="acceptedProfileHref" value="${p.profileHref}" />
+													<a class="participant-manage-list__name" href="${acceptedProfileHref}">
+														<c:out value="${p.username}" />
+													</a>
+												</c:when>
+												<c:otherwise>
+													<strong class="participant-manage-list__name">
+														<c:out value="${p.username}" />
+													</strong>
+												</c:otherwise>
+											</c:choose>
 										</div>
 										<div class="participant-manage-list__actions">
 											<span class="participant-manage-list__status participant-manage-list__status--accepted">
@@ -186,9 +239,19 @@
 											<span class="participant-list__avatar" aria-hidden="true">
 												<c:out value="${p.avatarLabel}" />
 											</span>
-											<strong class="participant-manage-list__name">
-												<c:out value="${p.username}" />
-											</strong>
+											<c:choose>
+												<c:when test="${not empty p.profileHref}">
+													<c:url var="declinedProfileHref" value="${p.profileHref}" />
+													<a class="participant-manage-list__name" href="${declinedProfileHref}">
+														<c:out value="${p.username}" />
+													</a>
+												</c:when>
+												<c:otherwise>
+													<strong class="participant-manage-list__name">
+														<c:out value="${p.username}" />
+													</strong>
+												</c:otherwise>
+											</c:choose>
 										</div>
 										<span class="participant-manage-list__status participant-manage-list__status--declined">
 											<spring:message code="host.invites.status.declined" />

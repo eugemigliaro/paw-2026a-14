@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MatchServiceImpl implements MatchService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MAX_PLAYERS_PER_MATCH = 1000;
     private static final int MIN_RECURRING_OCCURRENCES = 2;
     private static final int MAX_RECURRING_OCCURRENCES = 52;
 
@@ -68,6 +69,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getEndsAt(),
                 new IllegalArgumentException(message("match.schedule.error.startsAtPast")),
                 new IllegalArgumentException(message("match.schedule.error.endBeforeStart")));
+        validateCreateCapacityOrThrow(request.getMaxPlayers());
 
         if (request.isRecurring()) {
             return createRecurringMatch(request);
@@ -106,25 +108,6 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private Match createSingleMatch(final CreateMatchRequest request) {
-        if (hasCoordinates(request.getLatitude(), request.getLongitude())) {
-            return matchDao.createMatch(
-                    request.getHostUserId(),
-                    request.getAddress(),
-                    request.getTitle(),
-                    request.getDescription(),
-                    request.getStartsAt(),
-                    request.getEndsAt(),
-                    request.getMaxPlayers(),
-                    request.getPricePerPlayer(),
-                    request.getSport(),
-                    request.getVisibility(),
-                    request.getJoinPolicy(),
-                    request.getStatus(),
-                    request.getBannerImageId(),
-                    request.getLatitude(),
-                    request.getLongitude());
-        }
-
         return matchDao.createMatch(
                 request.getHostUserId(),
                 request.getAddress(),
@@ -138,7 +121,9 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 request.getJoinPolicy(),
                 request.getStatus(),
-                request.getBannerImageId());
+                request.getBannerImageId(),
+                request.getLatitude(),
+                request.getLongitude());
     }
 
     private Match createSeriesOccurrence(
@@ -146,27 +131,6 @@ public class MatchServiceImpl implements MatchService {
             final OccurrenceWindow occurrence,
             final Long seriesId,
             final int seriesOccurrenceIndex) {
-        if (hasCoordinates(request.getLatitude(), request.getLongitude())) {
-            return matchDao.createMatch(
-                    request.getHostUserId(),
-                    request.getAddress(),
-                    request.getTitle(),
-                    request.getDescription(),
-                    occurrence.startsAt(),
-                    occurrence.endsAt(),
-                    request.getMaxPlayers(),
-                    request.getPricePerPlayer(),
-                    request.getSport(),
-                    request.getVisibility(),
-                    request.getJoinPolicy(),
-                    request.getStatus(),
-                    request.getBannerImageId(),
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    seriesId,
-                    seriesOccurrenceIndex);
-        }
-
         return matchDao.createMatch(
                 request.getHostUserId(),
                 request.getAddress(),
@@ -181,6 +145,8 @@ public class MatchServiceImpl implements MatchService {
                 request.getJoinPolicy(),
                 request.getStatus(),
                 request.getBannerImageId(),
+                request.getLatitude(),
+                request.getLongitude(),
                 seriesId,
                 seriesOccurrenceIndex);
     }
@@ -190,26 +156,6 @@ public class MatchServiceImpl implements MatchService {
             final Long actingUserId,
             final UpdateMatchRequest request,
             final String status) {
-        if (hasCoordinates(request.getLatitude(), request.getLongitude())) {
-            return matchDao.updateMatch(
-                    matchId,
-                    actingUserId,
-                    request.getAddress(),
-                    request.getTitle(),
-                    request.getDescription(),
-                    request.getStartsAt(),
-                    request.getEndsAt(),
-                    request.getMaxPlayers(),
-                    request.getPricePerPlayer(),
-                    request.getSport(),
-                    request.getVisibility(),
-                    request.getJoinPolicy(),
-                    status,
-                    request.getBannerImageId(),
-                    request.getLatitude(),
-                    request.getLongitude());
-        }
-
         return matchDao.updateMatch(
                 matchId,
                 actingUserId,
@@ -224,7 +170,9 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 request.getJoinPolicy(),
                 status,
-                request.getBannerImageId());
+                request.getBannerImageId(),
+                request.getLatitude(),
+                request.getLongitude());
     }
 
     private static boolean hasCoordinates(final Double latitude, final Double longitude) {
@@ -263,6 +211,7 @@ public class MatchServiceImpl implements MatchService {
                 new MatchUpdateException(
                         MatchUpdateFailureReason.INVALID_SCHEDULE,
                         message("match.schedule.error.endBeforeStart")));
+        validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final int confirmedParticipants =
                 matchParticipantDao.findConfirmedParticipants(matchId).size();
@@ -313,6 +262,7 @@ public class MatchServiceImpl implements MatchService {
                 new MatchUpdateException(
                         MatchUpdateFailureReason.INVALID_SCHEDULE,
                         message("match.schedule.error.endBeforeStart")));
+        validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final List<Match> targets = editableFutureSeriesTargets(pivot);
         if (targets.isEmpty()) {
@@ -737,9 +687,8 @@ public class MatchServiceImpl implements MatchService {
                                 minPrice,
                                 maxPrice,
                                 zoneId),
-                (offset, safePageSize) -> {
-                    if (hasCoordinates(latitude, longitude)) {
-                        return matchDao.findPublicMatches(
+                (offset, safePageSize) ->
+                        matchDao.findPublicMatches(
                                 query,
                                 sportFilters,
                                 EventTimeFilter.ALL,
@@ -752,21 +701,7 @@ public class MatchServiceImpl implements MatchService {
                                 latitude,
                                 longitude,
                                 offset,
-                                safePageSize);
-                    }
-                    return matchDao.findPublicMatches(
-                            query,
-                            sportFilters,
-                            EventTimeFilter.ALL,
-                            dateRange.start(),
-                            dateRange.endExclusive(),
-                            minPrice,
-                            maxPrice,
-                            sortFilter,
-                            zoneId,
-                            offset,
-                            safePageSize);
-                });
+                                safePageSize));
     }
 
     private static MatchSort withoutDistance(final MatchSort sort) {
@@ -987,6 +922,20 @@ public class MatchServiceImpl implements MatchService {
 
         if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
             throw endsAtException;
+        }
+    }
+
+    private void validateCreateCapacityOrThrow(final int maxPlayers) {
+        if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
+            throw new IllegalArgumentException(message("match.create.error.capacityAboveMax"));
+        }
+    }
+
+    private void validateUpdateCapacityOrThrow(final int maxPlayers) {
+        if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.CAPACITY_ABOVE_MAX,
+                    message("match.update.error.capacityAboveMax"));
         }
     }
 

@@ -14,9 +14,11 @@
 	var map = picker.querySelector('[data-location-map]');
 	var tiles = picker.querySelector('[data-location-tiles]');
 	var pin = picker.querySelector('[data-location-pin]');
-	var status = picker.querySelector('[data-location-status]');
 	var latitudeInput = document.getElementById('match-location-latitude');
 	var longitudeInput = document.getElementById('match-location-longitude');
+	if (!latitudeInput || !longitudeInput) {
+		return;
+	}
 	var currentButton = picker.querySelector('[data-location-current]');
 	var clearButton = picker.querySelector('[data-location-clear]');
 	var zoomInButton = picker.querySelector('[data-location-zoom-in]');
@@ -25,10 +27,10 @@
 	var defaultLatitude = Number(picker.dataset.defaultLatitude || 0);
 	var defaultLongitude = Number(picker.dataset.defaultLongitude || 0);
 	var zoom = clamp(Number(picker.dataset.defaultZoom || 14), MIN_ZOOM, MAX_ZOOM);
-	var centerLatitude = Number(latitudeInput && latitudeInput.value ? latitudeInput.value : defaultLatitude);
-	var centerLongitude = Number(longitudeInput && longitudeInput.value ? longitudeInput.value : defaultLongitude);
-	var selectedLatitude = latitudeInput && latitudeInput.value ? Number(latitudeInput.value) : null;
-	var selectedLongitude = longitudeInput && longitudeInput.value ? Number(longitudeInput.value) : null;
+	var centerLatitude = Number(latitudeInput.value ? latitudeInput.value : defaultLatitude);
+	var centerLongitude = Number(longitudeInput.value ? longitudeInput.value : defaultLongitude);
+	var selectedLatitude = latitudeInput.value ? Number(latitudeInput.value) : null;
+	var selectedLongitude = longitudeInput.value ? Number(longitudeInput.value) : null;
 	var dragState = null;
 
 	function clamp(value, min, max) {
@@ -283,9 +285,6 @@
 			longitudeInput.value = '';
 			if (pin) {
 				pin.hidden = true;
-			}
-			if (status) {
-				status.textContent = '';
 			}
 		});
 	}

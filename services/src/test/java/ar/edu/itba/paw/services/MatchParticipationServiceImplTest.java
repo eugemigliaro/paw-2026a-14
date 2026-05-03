@@ -36,9 +36,12 @@ public class MatchParticipationServiceImplTest {
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
+    @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchParticipationServiceImpl matchParticipationService;
+
+    private static final Instant NOW = Instant.parse("2026-04-20T10:00:00Z");
 
     @BeforeEach
     public void setUp() {
@@ -51,7 +54,8 @@ public class MatchParticipationServiceImplTest {
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
                         mailDispatchService,
                         templateRenderer,
-                        new StaticMessageSource());
+                        new StaticMessageSource(),
+                        matchNotificationService);
     }
 
     @Test
@@ -209,6 +213,32 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
+    public void testRemoveParticipantNotifiesHostWhenPlayerLeaves() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        "private",
+                                        "invite_only",
+                                        "open",
+                                        FIXED_NOW.plusSeconds(3600))));
+        final User player =
+                new User(20L, "player@test.com", "player-account", "Jamie", "Rivera", null, null);
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(true);
+        Mockito.when(matchParticipantDao.removeParticipant(10L, 20L)).thenReturn(true);
+        Mockito.when(userService.findById(20L)).thenReturn(Optional.of(player));
+
+        // Exercise
+        matchParticipationService.removeParticipant(10L, 20L, 20L);
+
+        // Assert
+        Mockito.verify(matchNotificationService)
+                .notifyHostPlayerLeft(Mockito.any(), Mockito.eq(player));
+    }
+
+    @Test
     public void testRemoveParticipantRejectsSelfLeaveForStartedMatch() {
         // Arrange
         Mockito.when(matchDao.findMatchById(10L))
@@ -295,6 +325,31 @@ public class MatchParticipationServiceImplTest {
         // Exercise and Assert
         Assertions.assertDoesNotThrow(
                 () -> matchParticipationService.removeParticipant(10L, 1L, 30L));
+    }
+
+    @Test
+    public void testRemoveParticipantNotifiesPlayerWhenHostKicksThem() {
+        // Arrange
+        Mockito.when(matchDao.findMatchById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        "public",
+                                        "approval_required",
+                                        "open",
+                                        FIXED_NOW.plusSeconds(3600))));
+        final User player =
+                new User(30L, "player@test.com", "player-account", "Alex", "Morgan", null, null);
+        Mockito.when(matchParticipantDao.removeParticipant(10L, 30L)).thenReturn(true);
+        Mockito.when(userService.findById(30L)).thenReturn(Optional.of(player));
+
+        // Exercise
+        matchParticipationService.removeParticipant(10L, 1L, 30L);
+
+        // Assert
+        Mockito.verify(matchNotificationService)
+                .notifyPlayerRemovedByHost(Mockito.any(), Mockito.eq(player));
     }
 
     @Test
@@ -775,6 +830,62 @@ public class MatchParticipationServiceImplTest {
 
         // Assert
         Assertions.assertEquals("not_recurring", exception.getCode());
+    }
+
+    @Test
+    public void testRequestToJoinFailsIfMatchClosed() {
+        final Match match =
+                createMatch(10L, "public", "approval_required", "cancelled", NOW.plusSeconds(3600));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+
+        final MatchParticipationException ex =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () -> matchParticipationService.requestToJoin(10L, 2L));
+        Assertions.assertEquals("closed", ex.getCode());
+    }
+
+    @Test
+    public void testRequestToJoinFailsIfMatchFull() {
+        final Match match =
+                new Match(
+                        10L,
+                        Sport.FOOTBALL,
+                        1L,
+                        "Test Address",
+                        "Test Match",
+                        "Test Description",
+                        NOW.plusSeconds(3600),
+                        null,
+                        4,
+                        BigDecimal.ZERO,
+                        "public",
+                        "approval_required",
+                        "open",
+                        4,
+                        null);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 2L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.hasPendingRequest(10L, 2L)).thenReturn(false);
+
+        final MatchParticipationException ex =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () -> matchParticipationService.requestToJoin(10L, 2L));
+        Assertions.assertEquals("full", ex.getCode());
+    }
+
+    @Test
+    public void testApproveRequestFailsIfNotHost() {
+        final Match match =
+                createMatch(10L, "public", "approval_required", "open", NOW.plusSeconds(3600));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+
+        final MatchParticipationException ex =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () -> matchParticipationService.approveRequest(10L, 3L, 2L));
+        Assertions.assertEquals("forbidden", ex.getCode());
     }
 
     private static class RecordingMailDispatchService implements MailDispatchService {

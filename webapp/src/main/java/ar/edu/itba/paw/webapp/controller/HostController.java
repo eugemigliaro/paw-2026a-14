@@ -47,6 +47,9 @@ public class HostController {
     private static final String JOIN_POLICY_DIRECT = "direct";
     private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
     private static final String JOIN_POLICY_INVITE_ONLY = "invite_only";
+    private static final double DEFAULT_MAP_LATITUDE = -34.6037;
+    private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
+    private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final MatchService matchService;
     private final ImageService imageService;
@@ -68,9 +71,11 @@ public class HostController {
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
-            @Value("${map.default.latitude:-34.6037}") final double mapDefaultLatitude,
-            @Value("${map.default.longitude:-58.3816}") final double mapDefaultLongitude,
-            @Value("${map.default.zoom:14}") final int mapDefaultZoom) {
+            @Value("${map.default.latitude:" + DEFAULT_MAP_LATITUDE + "}")
+                    final double mapDefaultLatitude,
+            @Value("${map.default.longitude:" + DEFAULT_MAP_LONGITUDE + "}")
+                    final double mapDefaultLongitude,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
         this.imageService = imageService;
         this.clock = clock;
@@ -96,9 +101,9 @@ public class HostController {
                 false,
                 "",
                 "",
-                -34.6037,
-                -58.3816,
-                14);
+                DEFAULT_MAP_LATITUDE,
+                DEFAULT_MAP_LONGITUDE,
+                DEFAULT_MAP_ZOOM);
     }
 
     @ModelAttribute("createEventForm")
@@ -274,6 +279,11 @@ public class HostController {
                         "maxPlayers",
                         "match.update.error.capacityBelowConfirmed",
                         exception.getMessage());
+            } else if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_ABOVE_MAX) {
+                bindingResult.rejectValue(
+                        "maxPlayers",
+                        "match.update.error.capacityAboveMax",
+                        exception.getMessage());
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
             } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
@@ -358,6 +368,11 @@ public class HostController {
                         "maxPlayers",
                         "match.update.error.capacityBelowConfirmed",
                         exception.getMessage());
+            } else if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_ABOVE_MAX) {
+                bindingResult.rejectValue(
+                        "maxPlayers",
+                        "match.update.error.capacityAboveMax",
+                        exception.getMessage());
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
             } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
@@ -420,7 +435,7 @@ public class HostController {
         mav.addObject("pageTitle", formConfig.pageTitle());
         mav.addObject(
                 "shell",
-                ShellViewModelFactory.hostShell(messageSource, locale, "/host/matches/new"));
+                ShellViewModelFactory.playerShell(messageSource, locale, "/host/matches/new"));
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         mav.addObject("formEyebrow", formConfig.eyebrow());

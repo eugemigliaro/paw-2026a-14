@@ -9,22 +9,31 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.services.MatchParticipationService;
+import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
+import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.SelectOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,11 +55,22 @@ public class FeedController {
     private static final String SESSION_EXPLORE_LONGITUDE = "exploreLocationLongitude";
 
     private final MatchService matchService;
+    private final MatchParticipationService matchParticipationService;
+    private final MatchReservationService matchReservationService;
+    private final UserService userService;
     private final MessageSource messageSource;
 
     @Autowired
-    public FeedController(final MatchService matchService, final MessageSource messageSource) {
+    public FeedController(
+            final MatchService matchService,
+            final MatchParticipationService matchParticipationService,
+            final MatchReservationService matchReservationService,
+            final UserService userService,
+            final MessageSource messageSource) {
         this.matchService = matchService;
+        this.matchParticipationService = matchParticipationService;
+        this.matchReservationService = matchReservationService;
+        this.userService = userService;
         this.messageSource = messageSource;
     }
 
@@ -73,9 +93,12 @@ public class FeedController {
                 bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
                         ? ""
                         : feedSearchForm.getQ();
-        final FeedFilters filters =
+        FeedFilters filters =
                 normalizeFilters(sports, startDate, endDate, sort, timezone, minPrice, maxPrice);
         final ExploreLocation exploreLocation = exploreLocation(session);
+        if (exploreLocation == null && "distance".equals(filters.selectedSort())) {
+            filters = filters.withSort("soonest");
+        }
         final PaginatedResult<Match> result =
                 searchPublicMatches(query, filters, page, exploreLocation);
         final ModelAndView mav = new ModelAndView("feed/index");
@@ -91,6 +114,10 @@ public class FeedController {
                 "selectedDateMinValue", LocalDate.now(parseZone(filters.timezone())).toString());
         mav.addObject("selectedStartDateValue", filters.startDate());
         mav.addObject("selectedEndDateValue", filters.endDate());
+        mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
+        mav.addObject(
+                "sortOptions",
+                buildSortOptions(query, filters, locale, email, exploreLocation != null));
         mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
         mav.addObject("nearMeAvailable", exploreLocation != null);
         return mav;
@@ -123,6 +150,8 @@ public class FeedController {
             final String email) {
 
         final ZoneId zoneId = parseZone(filters.timezone());
+        final Long currentUserId =
+                CurrentAuthenticatedUser.get().map(user -> user.getUserId()).orElse(null);
 
         return new FeedPageViewModel(
                 "",
@@ -132,7 +161,9 @@ public class FeedController {
                 messageSource.getMessage("feed.search.button", null, locale),
                 List.of(),
                 buildFilterGroups(query, filters, locale, email),
-                result.getItems().stream().map(match -> toCard(match, zoneId, locale)).toList(),
+                result.getItems().stream()
+                        .map(match -> toCard(match, zoneId, locale, currentUserId))
+                        .toList(),
                 result.getPage(),
                 result.getTotalPages(),
                 buildPaginationItems(
@@ -200,6 +231,36 @@ public class FeedController {
         items.add(pageItem(totalPages, query, filters, currentPage, email, locale));
 
         return items;
+    }
+
+    private List<SelectOptionViewModel> buildSortOptions(
+            final String query,
+            final FeedFilters filters,
+            final Locale locale,
+            final String email,
+            final boolean includeDistance) {
+        final List<SelectOptionViewModel> sortOptions = new ArrayList<>();
+        sortOptions.add(sortOption(query, filters, locale, email, "soonest", "feed.sort.soonest"));
+        sortOptions.add(sortOption(query, filters, locale, email, "price", "feed.sort.price"));
+        sortOptions.add(sortOption(query, filters, locale, email, "spots", "feed.sort.spots"));
+        if (includeDistance) {
+            sortOptions.add(
+                    sortOption(query, filters, locale, email, "distance", "feed.sort.distance"));
+        }
+        return List.copyOf(sortOptions);
+    }
+
+    private SelectOptionViewModel sortOption(
+            final String query,
+            final FeedFilters filters,
+            final Locale locale,
+            final String email,
+            final String sort,
+            final String labelCode) {
+        return new SelectOptionViewModel(
+                messageSource.getMessage(labelCode, null, locale),
+                buildUrl(query, filters.withSort(sort), 1, email, locale),
+                sort.equals(filters.selectedSort()));
     }
 
     private static PaginationItemViewModel pageItem(
@@ -282,14 +343,34 @@ public class FeedController {
                                                 email,
                                                 locale),
                                         null,
-                                        isSportSelected(selectedSports, Sport.PADEL)))));
+                                        isSportSelected(selectedSports, Sport.PADEL)),
+                                new FilterOptionViewModel(
+                                        messageSource.getMessage("sport.other", null, locale),
+                                        buildUrl(
+                                                query,
+                                                filters.withSports(
+                                                        toggleSport(selectedSports, Sport.OTHER)),
+                                                1,
+                                                email,
+                                                locale),
+                                        null,
+                                        isSportSelected(selectedSports, Sport.OTHER)))));
     }
 
-    private EventCardViewModel toCard(final Match match, final ZoneId zoneId, final Locale locale) {
+    private EventCardViewModel toCard(
+            final Match match, final ZoneId zoneId, final Locale locale, final Long currentUserId) {
         final Locale resolvedLocale = resolvedLocale(locale);
-        final String schedule =
-                scheduleFormatter(resolvedLocale).format(match.getStartsAt().atZone(zoneId));
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
+        final String schedule = scheduleFormatter(resolvedLocale).format(startsAt);
+        final String dateLabel =
+                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale).format(startsAt);
+        final String timeLabel =
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt);
         final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
+        final List<EventRelationshipBadgeViewModel> relationshipBadges =
+                relationshipBadgesFor(match, currentUserId, locale);
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
@@ -297,13 +378,59 @@ public class FeedController {
                 toSportLabel(match.getSport(), resolvedLocale),
                 match.getTitle(),
                 match.getAddress(),
+                hostLabelFor(match),
                 schedule,
+                dateLabel,
+                timeLabel,
                 priceLabel,
                 messageSource.getMessage(
                         "event.spotsLeft", new Object[] {match.getAvailableSpots()}, locale),
+                relationshipBadges,
+                recurringLabelFor(match, locale),
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private String hostLabelFor(final Match match) {
+        if (match == null || match.getHostUserId() == null) {
+            return null;
+        }
+        final Optional<User> host =
+                Optional.ofNullable(userService.findById(match.getHostUserId()))
+                        .orElse(Optional.empty());
+        return host.map(User::getUsername).orElse(null);
+    }
+
+    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
+            final Match match, final Long currentUserId, final Locale locale) {
+        if (currentUserId == null) {
+            return List.of();
+        }
+        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
+        if (currentUserId.equals(match.getHostUserId())) {
+            badges.add(relationshipBadge("my_event", locale));
+        }
+        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("pending", locale));
+        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("invited", locale));
+        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            badges.add(relationshipBadge("going", locale));
+        }
+        return List.copyOf(badges);
+    }
+
+    private EventRelationshipBadgeViewModel relationshipBadge(
+            final String type, final Locale locale) {
+        return new EventRelationshipBadgeViewModel(
+                type, messageSource.getMessage("event.relationship." + type, null, locale));
+    }
+
+    private String recurringLabelFor(final Match match, final Locale locale) {
+        return match.isRecurringOccurrence()
+                ? messageSource.getMessage("event.recurringBadge", null, locale)
+                : null;
     }
 
     private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
@@ -329,8 +456,10 @@ public class FeedController {
             case BASKETBALL:
                 return "media-tile--basketball";
             case PADEL:
-            default:
                 return "media-tile--padel";
+            case OTHER:
+            default:
+                return "media-tile--other";
         }
     }
 
@@ -555,6 +684,17 @@ public class FeedController {
                     startDate,
                     endDate,
                     selectedSort,
+                    timezone,
+                    minPrice,
+                    maxPrice);
+        }
+
+        private FeedFilters withSort(final String sort) {
+            return new FeedFilters(
+                    selectedSports,
+                    startDate,
+                    endDate,
+                    normalizeSort(sort),
                     timezone,
                     minPrice,
                     maxPrice);

@@ -75,6 +75,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 10,
                                 10))
                 .thenReturn(List.of(match));
@@ -124,6 +126,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(match));
@@ -163,6 +167,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(footballMatch, tennisMatch));
@@ -212,6 +218,8 @@ public class MatchServiceImplTest {
                                 maxPrice,
                                 MatchSort.PRICE_LOW,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(match));
@@ -260,6 +268,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 12,
                                 12))
                 .thenReturn(List.of(match));
@@ -292,7 +302,9 @@ public class MatchServiceImplTest {
                                 "public",
                                 "direct",
                                 "open",
-                                null))
+                                null,
+                                (Double) null,
+                                (Double) null))
                 .thenReturn(expectedMatch);
 
         final Match result =
@@ -395,6 +407,8 @@ public class MatchServiceImplTest {
                                 "direct",
                                 "open",
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 1))
                 .thenReturn(firstOccurrence);
@@ -413,6 +427,8 @@ public class MatchServiceImplTest {
                                 "direct",
                                 "open",
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 2))
                 .thenReturn(secondOccurrence);
@@ -431,6 +447,8 @@ public class MatchServiceImplTest {
                                 "direct",
                                 "open",
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 3))
                 .thenReturn(thirdOccurrence);
@@ -529,6 +547,8 @@ public class MatchServiceImplTest {
                                 "direct",
                                 "open",
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 88L,
                                 1))
                 .thenReturn(firstOccurrence);
@@ -547,6 +567,8 @@ public class MatchServiceImplTest {
                                 "direct",
                                 "open",
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 88L,
                                 2))
                 .thenReturn(secondOccurrence);
@@ -640,6 +662,33 @@ public class MatchServiceImplTest {
                                                 null)));
 
         Assertions.assertEquals("match.schedule.error.startsAtPast", exception.getMessage());
+    }
+
+    @Test
+    public void testCreateMatchRejectsCapacityAboveMaximum() {
+        // 1. Arrange
+        final CreateMatchRequest request =
+                new CreateMatchRequest(
+                        1L,
+                        "Test Address",
+                        "Test Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        1001,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        // 2. Exercise
+        final IllegalArgumentException exception =
+                Assertions.assertThrows(
+                        IllegalArgumentException.class, () -> matchService.createMatch(request));
+
+        // 3. Assert
+        Assertions.assertEquals("match.create.error.capacityAboveMax", exception.getMessage());
     }
 
     @Test
@@ -838,6 +887,38 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateMatchRejectsCapacityAboveMaximum() {
+        // 1. Arrange
+        final Match existingMatch = createTestMatch(11L, "Test Match", "football");
+        Mockito.when(matchDao.findById(11L)).thenReturn(Optional.of(existingMatch));
+
+        // 2. Exercise
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        11L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Test Match",
+                                                "Test Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                1001,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                "public",
+                                                "open",
+                                                null)));
+
+        // 3. Assert
+        Assertions.assertEquals(MatchUpdateFailureReason.CAPACITY_ABOVE_MAX, exception.getReason());
+        Assertions.assertEquals("match.update.error.capacityAboveMax", exception.getMessage());
+    }
+
+    @Test
     public void testUpdateMatchPersistsAndReturnsUpdatedMatch() {
         final Match existingMatch = createTestMatch(12L, "Old Title", "football");
         final Match updatedMatch =
@@ -876,6 +957,8 @@ public class MatchServiceImplTest {
                                 "public",
                                 "approval_required",
                                 "open",
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -924,6 +1007,8 @@ public class MatchServiceImplTest {
                                 "public",
                                 "direct",
                                 "open",
+                                null,
+                                null,
                                 null))
                 .thenReturn(false);
 
@@ -1185,6 +1270,8 @@ public class MatchServiceImplTest {
                                 "public",
                                 "direct",
                                 "open",
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
         Mockito.when(
@@ -1202,6 +1289,8 @@ public class MatchServiceImplTest {
                                 "public",
                                 "direct",
                                 "open",
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1537,6 +1626,8 @@ public class MatchServiceImplTest {
                                 "public",
                                 "direct",
                                 "open",
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 

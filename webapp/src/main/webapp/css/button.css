@@ -7,7 +7,7 @@
 	appearance: none;
 	background-color: var(--btn-background);
 	border: 1px solid var(--btn-border);
-	border-radius: 999px;
+	border-radius: 12px;
 	box-shadow: 0 10px 20px -16px rgba(15, 23, 42, 0.9);
 	color: var(--btn-color);
 	cursor: pointer;

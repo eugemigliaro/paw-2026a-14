@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.config;
 
+import ar.edu.itba.paw.services.AdminBootstrapService;
 import java.util.Locale;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -88,6 +89,12 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
+    public AdminBootstrapRunner adminBootstrapRunner(
+            final AdminBootstrapService adminBootstrapService) {
+        return new AdminBootstrapRunner(adminBootstrapService);
+    }
+
+    @Bean
     public PlatformTransactionManager transactionManager(@NonNull final DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
     }
@@ -98,6 +105,7 @@ public class WebConfig implements WebMvcConfigurer {
                 new ReloadableResourceBundleMessageSource();
         ms.setBasename("classpath:i18n/messages");
         ms.setDefaultEncoding("UTF-8");
+        ms.setFallbackToSystemLocale(false);
         return ms;
     }
 

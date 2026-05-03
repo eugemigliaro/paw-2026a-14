@@ -20,15 +20,20 @@
 <c:url var="cssAuthHref" value="/css/auth.css" />
 <c:url var="cssParticipationHref" value="/css/participation.css" />
 <c:url var="cssProfileHref" value="/css/profile.css" />
+<c:url var="cssEventPageHref" value="/css/event-page.css" />
+<c:url var="cssReportsHref" value="/css/reports.css" />
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
 <c:url var="accountEditFormHref" value="/js/account-edit-form.js" />
 <c:url var="passwordToggleHref" value="/js/password-visibility-toggle.js" />
 <c:url var="timezoneFieldHref" value="/js/timezone-field.js" />
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
 <c:url var="overflowMenuHref" value="/js/overflow-menu.js" />
+<c:url var="filterDropdownsHref" value="/js/filter-dropdowns.js" />
 <c:url var="recurrenceScheduleHref" value="/js/recurrence-schedule.js?v=20260428" />
 <c:url var="exploreLocationHref" value="/js/explore-location.js" />
 <c:url var="locationPickerHref" value="/js/location-picker.js" />
+<c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
+<c:url var="reportFiltersHref" value="/js/report-filters.js" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
 <link rel="stylesheet" href="${cssComponentsHref}" />
 <link rel="stylesheet" href="${cssBaseHref}" />
@@ -42,12 +47,17 @@
 <link rel="stylesheet" href="${cssAuthHref}" />
 <link rel="stylesheet" href="${cssParticipationHref}" />
 <link rel="stylesheet" href="${cssProfileHref}" />
+<link rel="stylesheet" href="${cssEventPageHref}" />
+<link rel="stylesheet" href="${cssReportsHref}" />
 <script defer src="${formSubmitGuardHref}"></script>
 <script defer src="${accountEditFormHref}"></script>
 <script defer src="${passwordToggleHref}"></script>
 <script defer src="${timezoneFieldHref}"></script>
 <script defer src="${hostJoinPolicyGuardHref}"></script>
 <script defer src="${overflowMenuHref}"></script>
+<script defer src="${filterDropdownsHref}"></script>
 <script defer src="${recurrenceScheduleHref}"></script>
 <script defer src="${exploreLocationHref}"></script>
 <script defer src="${locationPickerHref}"></script>
+<script defer src="${reportDropdownsHref}"></script>
+<script defer src="${reportFiltersHref}"></script>

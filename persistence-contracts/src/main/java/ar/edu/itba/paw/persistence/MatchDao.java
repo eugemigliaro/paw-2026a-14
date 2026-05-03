@@ -270,6 +270,10 @@ public interface MatchDao {
 
     boolean cancelMatch(Long matchId, Long hostUserId);
 
+    boolean softDeleteMatch(Long matchId, Long deletedByUserId, String deleteReason);
+
+    boolean restoreMatch(Long matchId);
+
     Optional<Match> findById(Long matchId);
 
     Optional<Match> findPublicMatchById(Long matchId);
@@ -290,6 +294,8 @@ public interface MatchDao {
             BigDecimal maxPrice,
             MatchSort sort,
             ZoneId zoneId,
+            Double latitude,
+            Double longitude,
             int offset,
             int limit);
 
@@ -303,8 +309,6 @@ public interface MatchDao {
             BigDecimal maxPrice,
             MatchSort sort,
             ZoneId zoneId,
-            Double latitude,
-            Double longitude,
             int offset,
             int limit) {
         return findPublicMatches(
@@ -317,6 +321,8 @@ public interface MatchDao {
                 maxPrice,
                 sort,
                 zoneId,
+                null,
+                null,
                 offset,
                 limit);
     }
