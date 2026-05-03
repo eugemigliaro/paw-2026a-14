@@ -70,8 +70,8 @@ class ViewTemplateAssetsTest {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
 
-        assertTrue(sortSelectTag.contains("data-browser-timezone-url-options=\"true\""));
-        assertTrue(timezoneScript.contains("data-browser-timezone-url-options"));
+        assertTrue(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
+        assertTrue(timezoneScript.contains("data-browser-timezone-url-link"));
         assertTrue(timezoneScript.contains("searchParams.set('tz', timezone)"));
     }
 

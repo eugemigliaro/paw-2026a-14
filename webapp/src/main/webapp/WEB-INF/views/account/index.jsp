@@ -34,7 +34,7 @@
 				<spring:message var="namePlaceholder" code="form.name.placeholder" />
 				<spring:message var="lastNamePlaceholder" code="form.lastName.placeholder" />
 				<spring:message var="phonePlaceholder" code="form.phone.placeholder" />
-				<spring:message var="profileImageLabel" code="account.profileImage.field" />
+				<spring:message var="profileImageChangeLabel" code="account.profileImage.change" />
 				<c:url var="accountAction" value="/account/edit" />
 				<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
 
@@ -49,42 +49,48 @@
 					<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 
 					<div class="account-inline-left">
-						<div class="field">
-							<span class="field__label">
-								<c:out value="${profileImageLabel}" />
-							</span>
-							<section class="account-profile-media account-profile-media--editable">
-								<div class="account-profile-media__preview">
-									<img class="account-profile-media__image" src="${accountProfileImageSrc}"
-										alt="<c:out value='${accountProfileImageAlt}' />" loading="eager"
-										decoding="async" />
-									<div class="account-profile-media__copy">
-										<h2 class="account-profile-media__title">
-											<c:out value="${accountProfileImageTitle}" />
-										</h2>
-										<p class="account-profile-media__description">
-											<c:out value="${accountProfileImageDescription}" />
-										</p>
+						<div class="account-profile-card-stack">
+							<div class="field account-profile-current-field">
+								<span class="field__label account-profile-media__label">
+									<c:out value="${accountProfileImageTitle}" />
+								</span>
+								<section class="account-profile-media account-profile-media--current">
+									<div class="account-profile-media__preview">
+										<img class="account-profile-media__image" src="${accountProfileImageSrc}"
+											alt="<c:out value='${accountProfileImageAlt}' />" loading="eager"
+											decoding="async" />
 									</div>
-								</div>
+								</section>
+							</div>
 
-								<c:if test="${not empty accountProfileImageError}">
-									<p class="auth-notice auth-notice--error">
-										<c:out value="${accountProfileImageError}" />
-									</p>
-								</c:if>
+							<c:if test="${not empty accountProfileImageError}">
+								<p class="auth-notice auth-notice--error">
+									<c:out value="${accountProfileImageError}" />
+								</p>
+							</c:if>
 
-								<label class="field" for="account-profile-image">
-									<span class="field__label">
-										<c:out value="${profileImageLabel}" />
+							<label class="account-profile-media account-profile-media--change" for="account-profile-image">
+								<span class="account-profile-media__change-content">
+									<span class="upload-card__dropzone-icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="M4 17.5V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5Z" />
+											<path d="m8 14 2.2-2.2a1.2 1.2 0 0 1 1.7 0L16 16" />
+											<path d="m13.5 13.5 1.1-1.1a1.2 1.2 0 0 1 1.7 0L20 16" />
+											<circle cx="8.5" cy="8.5" r="1.2" />
+										</svg>
+									</span>
+									<span class="upload-card__dropzone-copy">
+										<span class="upload-card__dropzone-title">
+											<c:out value="${profileImageChangeLabel}" />
+										</span>
+										<span class="field__hint">
+											<c:out value="${accountProfileImageHint}" />
+										</span>
 									</span>
 									<input id="account-profile-image" name="profileImage" type="file"
-										class="field__control" accept="image/png,image/jpeg,image/webp,image/gif" />
-								</label>
-								<p class="auth-links__meta">
-									<c:out value="${accountProfileImageHint}" />
-								</p>
-							</section>
+										class="upload-card__file-input" accept="image/png,image/jpeg,image/webp,image/gif" />
+								</span>
+							</label>
 						</div>
 
 
