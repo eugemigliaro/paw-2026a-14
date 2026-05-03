@@ -300,7 +300,10 @@
 												</span>
 												<spring:message code="event.booking.availability" />
 											</dt>
-											<dd><c:out value="${eventPage.availabilityLabel}" /> &middot; <c:out value="${eventPage.participantCountLabel}" /></dd>
+											<dd>
+												<c:out value="${eventPage.availabilityLabel}" /><br />
+												<c:out value="${eventPage.participantCountLabel}" />
+											</dd>
 										</div>
 									</dl>
 								</article>
@@ -1168,6 +1171,20 @@
 													</svg>
 												</span>
 												<c:out value="${event.timeLabel}" />
+											</span>
+										</c:if>
+										<c:if test="${not empty event.hostLabel}">
+											<span class="event-card__meta-item">
+												<span class="event-card__meta-icon" aria-hidden="true">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+														<circle cx="12" cy="7" r="4" />
+													</svg>
+												</span>
+												<span class="event-card__meta-text">
+													<spring:message code="event.card.hostedBy" />
+													<c:out value="${event.hostLabel}" />
+												</span>
 											</span>
 										</c:if>
 									</div>

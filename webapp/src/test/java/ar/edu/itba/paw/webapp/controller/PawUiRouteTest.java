@@ -1273,6 +1273,7 @@ class PawUiRouteTest {
                                         matchService,
                                         matchParticipationService,
                                         matchReservationService,
+                                        userService,
                                         messageSource),
                                 new EventController(
                                         matchService,
@@ -1294,6 +1295,7 @@ class PawUiRouteTest {
                                         matchService,
                                         matchParticipationService,
                                         matchReservationService,
+                                        userService,
                                         messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(accountAuthService, messageSource))

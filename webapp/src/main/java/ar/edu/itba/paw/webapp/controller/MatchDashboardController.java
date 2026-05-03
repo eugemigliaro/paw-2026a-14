@@ -9,9 +9,11 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
@@ -33,6 +35,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -56,6 +59,7 @@ public class MatchDashboardController {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
+    private final UserService userService;
     private final MessageSource messageSource;
 
     @Autowired
@@ -63,10 +67,12 @@ public class MatchDashboardController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
+            final UserService userService,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
+        this.userService = userService;
         this.messageSource = messageSource;
     }
 
@@ -591,6 +597,7 @@ public class MatchDashboardController {
                         locale),
                 match.getTitle(),
                 match.getAddress(),
+                hostLabelFor(match),
                 schedule,
                 dateLabel,
                 timeLabel,
@@ -601,6 +608,16 @@ public class MatchDashboardController {
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private String hostLabelFor(final Match match) {
+        if (match == null || match.getHostUserId() == null) {
+            return null;
+        }
+        final Optional<User> host =
+                Optional.ofNullable(userService.findById(match.getHostUserId()))
+                        .orElse(Optional.empty());
+        return host.map(User::getUsername).orElse(null);
     }
 
     private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(

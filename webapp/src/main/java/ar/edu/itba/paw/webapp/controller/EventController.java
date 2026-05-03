@@ -497,6 +497,7 @@ public class EventController {
                 toSportLabel(match.getSport(), locale),
                 match.getTitle(),
                 match.getAddress(),
+                hostLabelFor(match),
                 scheduleFormatter(locale).format(startsAt),
                 DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale(locale)).format(startsAt),
                 DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
@@ -509,6 +510,16 @@ public class EventController {
                 null,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
+    }
+
+    private String hostLabelFor(final Match match) {
+        if (match == null || match.getHostUserId() == null) {
+            return null;
+        }
+        return Optional.ofNullable(userService.findById(match.getHostUserId()))
+                .orElse(Optional.empty())
+                .map(User::getUsername)
+                .orElse(null);
     }
 
     private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
