@@ -505,12 +505,25 @@ public class MatchDashboardController {
             }
         }
 
-        // Filter by search query (title and host name)
+        // Filter by search query.
         if (searchQuery != null && !searchQuery.isBlank()) {
             final String lowerQuery = searchQuery.trim().toLowerCase(Locale.ROOT);
             final boolean titleMatches =
-                    match.getTitle().toLowerCase(Locale.ROOT).contains(lowerQuery);
-            if (!titleMatches) {
+                    match.getTitle() != null
+                            && match.getTitle().toLowerCase(Locale.ROOT).contains(lowerQuery);
+            final boolean descriptionMatches =
+                    match.getDescription() != null
+                            && match.getDescription().toLowerCase(Locale.ROOT).contains(lowerQuery);
+            final boolean venueMatches =
+                    match.getAddress() != null
+                            && match.getAddress().toLowerCase(Locale.ROOT).contains(lowerQuery);
+            final boolean sportMatches =
+                    match.getSport() != null
+                            && match.getSport()
+                                    .getDbValue()
+                                    .toLowerCase(Locale.ROOT)
+                                    .contains(lowerQuery);
+            if (!titleMatches && !descriptionMatches && !venueMatches && !sportMatches) {
                 return false;
             }
         }

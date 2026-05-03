@@ -579,15 +579,19 @@ public class MatchJdbcDao implements MatchDao {
         }
 
         sql.append(
-                " AND (LOWER(m.title) LIKE ? OR LOWER(COALESCE(m.description, '')) LIKE ? OR LOWER(COALESCE(hu.name, '')) LIKE ? OR LOWER(COALESCE(hu.last_name, '')) LIKE ? OR LOWER(COALESCE(hu.username, '')) LIKE ? OR LOWER(COALESCE(hu.name, '') || ' ' || COALESCE(hu.last_name, '')) LIKE ? OR LOWER(COALESCE(hu.last_name, '') || ' ' || COALESCE(hu.name, '')) LIKE ?)");
+                " AND (LOWER(m.title) LIKE ?"
+                        + " OR LOWER(COALESCE(m.description, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(m.address, '')) LIKE ?"
+                        + " OR LOWER(CAST(m.sport AS VARCHAR(30))) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.last_name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.username, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.name, '') || ' ' || COALESCE(hu.last_name, '')) LIKE ?"
+                        + " OR LOWER(COALESCE(hu.last_name, '') || ' ' || COALESCE(hu.name, '')) LIKE ?)");
         final String queryPattern = "%" + query.trim().toLowerCase() + "%";
-        params.add(queryPattern);
-        params.add(queryPattern);
-        params.add(queryPattern);
-        params.add(queryPattern);
-        params.add(queryPattern);
-        params.add(queryPattern);
-        params.add(queryPattern);
+        for (int i = 0; i < 9; i++) {
+            params.add(queryPattern);
+        }
     }
 
     private static void appendSportFilter(

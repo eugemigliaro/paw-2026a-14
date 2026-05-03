@@ -175,13 +175,20 @@ public class MatchJdbcDaoTest {
 
     @Test
     public void testFindPublicEventsBySearchText() {
-        insertMatch(
+        final long namedHostId = createUser("serena-host", "serena-host@test.com");
+        matchDao.createMatch(
+                namedHostId,
+                "River Court",
                 "Morning Football",
                 "Fast 5v5 match",
-                "football",
+                ZonedDateTime.now().plusDays(1).toInstant(),
+                null,
                 10,
-                0,
-                ZonedDateTime.now().plusDays(1));
+                BigDecimal.ZERO,
+                Sport.FOOTBALL,
+                "public",
+                "open",
+                null);
         insertMatch(
                 "Basketball Session",
                 "Stretching",
@@ -190,20 +197,12 @@ public class MatchJdbcDaoTest {
                 0,
                 ZonedDateTime.now().plusDays(1));
 
-        final List<Match> result =
-                matchDao.findPublicMatches(
-                        "football",
-                        List.of(),
-                        EventTimeFilter.WEEK,
-                        null,
-                        null,
-                        MatchSort.SOONEST,
-                        ZoneId.systemDefault(),
-                        0,
-                        20);
+        for (final String query : List.of("football", "fast", "river", "serena")) {
+            final List<Match> result = findPublicMatchesByQuery(query);
 
-        Assertions.assertEquals(1, result.size());
-        Assertions.assertEquals("Morning Football", result.get(0).getTitle());
+            Assertions.assertEquals(1, result.size(), query);
+            Assertions.assertEquals("Morning Football", result.get(0).getTitle(), query);
+        }
     }
 
     @Test
@@ -1117,6 +1116,19 @@ public class MatchJdbcDaoTest {
                     matchId,
                     userId);
         }
+    }
+
+    private List<Match> findPublicMatchesByQuery(final String query) {
+        return matchDao.findPublicMatches(
+                query,
+                List.of(),
+                EventTimeFilter.WEEK,
+                null,
+                null,
+                MatchSort.SOONEST,
+                ZoneId.systemDefault(),
+                0,
+                20);
     }
 
     private Match insertMatchWithStatus(
