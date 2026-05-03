@@ -137,23 +137,41 @@
 	background: #dfe8e5;
 	border: 1px solid #c7d6d1;
 	border-radius: 16px;
-	cursor: crosshair;
+	cursor: grab;
 	height: 16rem;
 	overflow: hidden;
 	position: relative;
+	touch-action: none;
+	user-select: none;
+}
+
+.location-picker__map:active {
+	cursor: grabbing;
 }
 
 .location-picker__tiles {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
 	height: 100%;
+	position: relative;
 	width: 100%;
 }
 
 .location-picker__tile {
-	height: 100%;
+	background:
+		linear-gradient(135deg, rgba(255, 255, 255, 0.48) 25%, transparent 25%),
+		linear-gradient(225deg, rgba(255, 255, 255, 0.48) 25%, transparent 25%),
+		linear-gradient(45deg, rgba(255, 255, 255, 0.48) 25%, transparent 25%),
+		linear-gradient(315deg, rgba(255, 255, 255, 0.48) 25%, #dce6e2 25%);
+	background-position: 12px 0, 12px 0, 0 0, 0 0;
+	background-size: 24px 24px;
+	height: 256px;
 	object-fit: cover;
-	width: 100%;
+	position: absolute;
+	-webkit-user-drag: none;
+	width: 256px;
+}
+
+.location-picker__tile--missing {
+	border: 1px solid rgba(92, 112, 108, 0.16);
 }
 
 .location-picker__pin {

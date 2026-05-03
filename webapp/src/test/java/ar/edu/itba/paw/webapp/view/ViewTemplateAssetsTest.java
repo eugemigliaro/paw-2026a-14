@@ -73,12 +73,69 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("path=\"latitude\""));
         assertTrue(hostCreateMatch.contains("path=\"longitude\""));
         assertTrue(hostCreateMatch.contains("data-location-picker=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-zoom-in=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-zoom-out=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-current=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-clear=\"true\""));
         assertFalse(hostCreateMatch.contains("latitude.placeholder"));
         assertFalse(hostCreateMatch.contains("longitude.placeholder"));
         assertEquals("Near me", english.getProperty("feed.nearMe"));
         assertEquals("Cerca de m\u00ed", spanish.getProperty("feed.nearMe"));
         assertEquals("Map location", english.getProperty("host.form.location.map"));
         assertEquals("Ubicaci\u00f3n en mapa", spanish.getProperty("host.form.location.map"));
+        assertEquals("Zoom in", english.getProperty("host.form.location.zoomIn"));
+        assertEquals("Zoom out", english.getProperty("host.form.location.zoomOut"));
+        assertEquals("Acercar", spanish.getProperty("host.form.location.zoomIn"));
+        assertEquals("Alejar", spanish.getProperty("host.form.location.zoomOut"));
+    }
+
+    @Test
+    void mapPickerUsesCommittedTileDefaults() throws IOException {
+        final String local = read("../config/local.example.properties");
+        final String pampero = read("../config/pampero.example.properties");
+
+        assertTrue(local.contains("map.picker.enabled=true"));
+        assertTrue(local.contains("map.tiles.urlTemplate=/assets/tiles/{z}/{x}/{y}.png"));
+        assertTrue(local.contains("map.tiles.attribution=Local Buenos Aires map tiles"));
+        assertTrue(local.contains("map.default.zoom=14"));
+        assertTrue(pampero.contains("map.picker.enabled=true"));
+        assertTrue(pampero.contains("map.tiles.urlTemplate=/assets/tiles/{z}/{x}/{y}.png"));
+        assertTrue(pampero.contains("map.tiles.attribution=Local Buenos Aires map tiles"));
+        assertTrue(pampero.contains("map.default.zoom=14"));
+    }
+
+    @Test
+    void locationPickerUsesWebMercatorTilesAndBoundedZoomControls() throws IOException {
+        final String script = read("src/main/webapp/js/location-picker.js");
+
+        assertTrue(script.contains("MIN_ZOOM = 12"));
+        assertTrue(script.contains("MAX_ZOOM = 16"));
+        assertTrue(script.contains("longitudeToWorldPixelX"));
+        assertTrue(script.contains("latitudeToWorldPixelY"));
+        assertTrue(script.contains("worldPixelXToLongitude"));
+        assertTrue(script.contains("worldPixelYToLatitude"));
+        assertTrue(script.contains("data-location-zoom-in"));
+        assertTrue(script.contains("data-location-zoom-out"));
+        assertTrue(script.contains("translateDuringDrag"));
+        assertTrue(script.contains("finalizeDrag"));
+        assertTrue(script.contains("img.draggable = false"));
+        assertTrue(script.contains("dragstart"));
+        assertFalse(script.contains("xRatio * 0.08"));
+    }
+
+    @Test
+    void committedTilesIncludeEverySupportedPickerZoom() {
+        for (int zoom = 12; zoom <= 16; zoom++) {
+            final Path zoomPath = Path.of("src/main/webapp/assets/tiles", String.valueOf(zoom));
+
+            assertTrue(Files.exists(zoomPath), "Missing tile zoom directory " + zoom);
+            try (var tiles =
+                    Files.find(zoomPath, 3, (path, attrs) -> path.toString().endsWith(".png"))) {
+                assertTrue(tiles.findAny().isPresent(), "Missing PNG tiles for zoom " + zoom);
+            } catch (final IOException e) {
+                throw new AssertionError("Could not inspect tile zoom directory " + zoom, e);
+            }
+        }
     }
 
     @Test

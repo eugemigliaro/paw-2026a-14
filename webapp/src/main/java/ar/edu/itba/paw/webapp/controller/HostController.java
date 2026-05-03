@@ -70,7 +70,7 @@ public class HostController {
             @Value("${map.tiles.attribution:}") final String mapAttribution,
             @Value("${map.default.latitude:-34.6037}") final double mapDefaultLatitude,
             @Value("${map.default.longitude:-58.3816}") final double mapDefaultLongitude,
-            @Value("${map.default.zoom:12}") final int mapDefaultZoom) {
+            @Value("${map.default.zoom:14}") final int mapDefaultZoom) {
         this.matchService = matchService;
         this.imageService = imageService;
         this.clock = clock;
@@ -98,7 +98,7 @@ public class HostController {
                 "",
                 -34.6037,
                 -58.3816,
-                12);
+                14);
     }
 
     @ModelAttribute("createEventForm")

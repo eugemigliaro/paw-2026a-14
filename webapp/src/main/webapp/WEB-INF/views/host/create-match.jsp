@@ -181,6 +181,12 @@
 												<p class="field__hint"><spring:message code="host.form.location.map.hint" /></p>
 											</div>
 											<div class="location-picker__actions">
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
+													<spring:message code="host.form.location.zoomOut" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
+													<spring:message code="host.form.location.zoomIn" />
+												</button>
 												<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
 													<spring:message code="host.form.location.current" />
 												</button>
