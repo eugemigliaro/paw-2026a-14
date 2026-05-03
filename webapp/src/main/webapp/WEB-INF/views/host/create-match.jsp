@@ -31,13 +31,9 @@
 								<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
 								<spring:message var="durationCustom" code="host.form.duration.custom" />
 								<spring:message var="durationLabel" code="host.form.duration" />
-								<spring:message var="recurrenceFrequencyPlaceholder"
-									code="host.form.recurrence.frequency.placeholder" />
 								<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
 								<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
 								<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
-								<spring:message var="recurrenceEndModePlaceholder"
-									code="host.form.recurrence.endMode.placeholder" />
 								<spring:message var="recurrenceEndUntilDate"
 									code="host.form.recurrence.endMode.untilDate" />
 								<spring:message var="recurrenceEndOccurrenceCount"
@@ -388,49 +384,80 @@
 
 														<div class="create-stack recurrence-settings"
 															id="recurrence-settings">
-															<label class="field" for="match-recurrence-frequency">
-																<span class="field__label">
+															<div class="field">
+																<span class="field__label" id="match-recurrence-frequency-label">
 																	<spring:message
 																		code="host.form.recurrence.frequency" />
 																</span>
-																<span class="field__select-wrap">
-																	<form:select path="recurrenceFrequency"
+																<c:set var="selectedRecurrenceFrequency"
+																	value="${empty createEventForm.recurrenceFrequency ? 'daily' : createEventForm.recurrenceFrequency}" />
+																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--three"
+																	id="match-recurrence-frequency-toggle"
+																	data-events-toggle="true"
+																	aria-labelledby="match-recurrence-frequency-label">
+																	<input type="hidden" name="recurrenceFrequency"
 																		id="match-recurrence-frequency"
-																		cssClass="field__control field__control--select">
-																		<form:option value=""
-																			label="${recurrenceFrequencyPlaceholder}" />
-																		<form:option value="daily"
-																			label="${recurrenceDaily}" />
-																		<form:option value="weekly"
-																			label="${recurrenceWeekly}" />
-																		<form:option value="monthly"
-																			label="${recurrenceMonthly}" />
-																	</form:select>
-																</span>
+																		value="<c:out value='${selectedRecurrenceFrequency}' />"
+																		data-events-toggle-input="true" />
+																	<div class="events-toggle-slider"
+																		data-events-toggle-slider="true"></div>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceFrequency eq 'daily' ? 'active' : ''}"
+																		data-value="daily"
+																		aria-pressed="${selectedRecurrenceFrequency eq 'daily' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceDaily}" />
+																	</button>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceFrequency eq 'weekly' ? 'active' : ''}"
+																		data-value="weekly"
+																		aria-pressed="${selectedRecurrenceFrequency eq 'weekly' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceWeekly}" />
+																	</button>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceFrequency eq 'monthly' ? 'active' : ''}"
+																		data-value="monthly"
+																		aria-pressed="${selectedRecurrenceFrequency eq 'monthly' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceMonthly}" />
+																	</button>
+																</div>
 																<form:errors path="recurrenceFrequency"
 																	cssClass="field__error" element="span" />
-															</label>
+															</div>
 
-															<label class="field" for="match-recurrence-end-mode">
-																<span class="field__label">
+															<div class="field">
+																<span class="field__label" id="match-recurrence-end-mode-label">
 																	<spring:message
 																		code="host.form.recurrence.endMode" />
 																</span>
-																<span class="field__select-wrap">
-																	<form:select path="recurrenceEndMode"
+																<c:set var="selectedRecurrenceEndMode"
+																	value="${empty createEventForm.recurrenceEndMode ? 'until_date' : createEventForm.recurrenceEndMode}" />
+																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--two"
+																	id="match-recurrence-end-mode-toggle"
+																	data-events-toggle="true"
+																	data-events-toggle-right-value="occurrence_count"
+																	aria-labelledby="match-recurrence-end-mode-label">
+																	<input type="hidden" name="recurrenceEndMode"
 																		id="match-recurrence-end-mode"
-																		cssClass="field__control field__control--select">
-																		<form:option value=""
-																			label="${recurrenceEndModePlaceholder}" />
-																		<form:option value="until_date"
-																			label="${recurrenceEndUntilDate}" />
-																		<form:option value="occurrence_count"
-																			label="${recurrenceEndOccurrenceCount}" />
-																	</form:select>
-																</span>
+																		value="<c:out value='${selectedRecurrenceEndMode}' />"
+																		data-events-toggle-input="true" />
+																	<div class="events-toggle-slider ${selectedRecurrenceEndMode eq 'occurrence_count' ? 'right' : ''}"
+																		data-events-toggle-slider="true"></div>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceEndMode eq 'until_date' ? 'active' : ''}"
+																		data-value="until_date"
+																		aria-pressed="${selectedRecurrenceEndMode eq 'until_date' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceEndUntilDate}" />
+																	</button>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceEndMode eq 'occurrence_count' ? 'active' : ''}"
+																		data-value="occurrence_count"
+																		aria-pressed="${selectedRecurrenceEndMode eq 'occurrence_count' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceEndOccurrenceCount}" />
+																	</button>
+																</div>
 																<form:errors path="recurrenceEndMode"
 																	cssClass="field__error" element="span" />
-															</label>
+															</div>
 
 															<label class="field" for="match-recurrence-until-date"
 																id="recurrence-until-date-field">
@@ -521,6 +548,8 @@
 								var joinPolicyToggle = document.getElementById('match-join-policy-toggle');
 								var recurringCheckbox = document.getElementById('match-recurring');
 								var recurrenceSettings = document.getElementById('recurrence-settings');
+								var recurrenceFrequencyToggle = document.getElementById('match-recurrence-frequency-toggle');
+								var recurrenceEndModeToggle = document.getElementById('match-recurrence-end-mode-toggle');
 								var recurrenceEndModeSelect = document.getElementById('match-recurrence-end-mode');
 								var recurrenceUntilDateField = document.getElementById('recurrence-until-date-field');
 								var recurrenceCountField = document.getElementById('recurrence-count-field');
@@ -542,10 +571,16 @@
 									}
 
 									function syncUi(nextValue) {
-										buttons.forEach(function (button) {
+										var selectedIndex = 0;
+										buttons.forEach(function (button, index) {
 											var isActive = button.getAttribute('data-value') === nextValue;
 											button.classList.toggle('active', isActive);
+											button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+											if (isActive) {
+												selectedIndex = index;
+											}
 										});
+										toggleRoot.style.setProperty('--events-toggle-index', String(selectedIndex));
 										slider.classList.toggle('right', nextValue === rightValue);
 									}
 
@@ -554,6 +589,7 @@
 											var nextValue = button.getAttribute('data-value');
 											hiddenInput.value = nextValue;
 											syncUi(nextValue);
+											hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
 										});
 									});
 									function updateRecurrenceEndFields() {
@@ -602,6 +638,8 @@
 
 								var visibilityInput = initializeBinaryToggle(visibilityToggle);
 								var joinPolicyInput = initializeBinaryToggle(joinPolicyToggle);
+								initializeBinaryToggle(recurrenceFrequencyToggle);
+								initializeBinaryToggle(recurrenceEndModeToggle);
 
 								if (visibilityInput && joinPolicyField && joinPolicyInput) {
 

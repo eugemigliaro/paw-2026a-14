@@ -151,11 +151,41 @@
 	line-height: 1.45;
 }
 
+.create-form .recurrence-segmented-toggle {
+	--events-toggle-index: 0;
+	align-self: start;
+	flex: none;
+	min-width: 0;
+	width: min(100%, 26rem);
+}
+
+.create-form .recurrence-segmented-toggle--two {
+	--segment-count: 2;
+}
+
+.create-form .recurrence-segmented-toggle--three {
+	--segment-count: 3;
+}
+
+.create-form .recurrence-segmented-toggle .events-toggle-slider {
+	transform: translateX(calc(var(--events-toggle-index, 0) * 100%));
+	width: calc((100% - 8px) / var(--segment-count, 2));
+}
+
+.create-form .recurrence-segmented-toggle .events-toggle-slider.right {
+	transform: translateX(calc(var(--events-toggle-index, 0) * 100%));
+}
+
+.create-form .recurrence-segmented-toggle .events-toggle-btn {
+	padding-left: 0.5rem;
+	padding-right: 0.5rem;
+}
+
 .recurrence-settings {
-	background: #f8faf8;
-	border: 1px solid rgba(0, 100, 90, 0.12);
-	border-radius: 18px;
-	padding: 1rem;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	padding: 0;
 }
 
 .pricing-field {
