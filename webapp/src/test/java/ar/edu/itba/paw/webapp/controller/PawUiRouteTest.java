@@ -12,6 +12,9 @@ import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
+import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewReaction;
+import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
@@ -24,7 +27,9 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
+import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
@@ -38,6 +43,7 @@ import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterGroupViewModel;
@@ -61,6 +67,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
@@ -1053,6 +1060,95 @@ class PawUiRouteTest {
                     }
                 };
 
+        final PlayerReviewService playerReviewService =
+                new PlayerReviewService() {
+                    private PlayerReview viewerReview =
+                            new PlayerReview(
+                                    1L,
+                                    9L,
+                                    3L,
+                                    PlayerReviewReaction.LIKE,
+                                    "Good teammate",
+                                    FIXED_NOW,
+                                    FIXED_NOW,
+                                    null);
+
+                    @Override
+                    public Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public PlayerReview submitReview(
+                            final Long reviewerUserId,
+                            final Long reviewedUserId,
+                            final PlayerReviewReaction reaction,
+                            final String comment) {
+                        if (!canReview(reviewerUserId, reviewedUserId)) {
+                            throw new PlayerReviewException(
+                                    PlayerReviewException.NOT_ELIGIBLE, "Not eligible");
+                        }
+                        viewerReview =
+                                new PlayerReview(
+                                        1L,
+                                        reviewerUserId,
+                                        reviewedUserId,
+                                        reaction,
+                                        comment == null || comment.isBlank()
+                                                ? null
+                                                : comment.trim(),
+                                        FIXED_NOW,
+                                        FIXED_NOW,
+                                        null);
+                        return viewerReview;
+                    }
+
+                    @Override
+                    public void deleteReview(final Long reviewerUserId, final Long reviewedUserId) {
+                        if (viewerReview == null
+                                || !reviewerUserId.equals(viewerReview.getReviewerUserId())
+                                || !reviewedUserId.equals(viewerReview.getReviewedUserId())) {
+                            throw new PlayerReviewException(
+                                    PlayerReviewException.NOT_FOUND, "Missing review");
+                        }
+                        viewerReview = null;
+                    }
+
+                    @Override
+                    public Optional<PlayerReview> findReviewByPair(
+                            final Long reviewerUserId, final Long reviewedUserId) {
+                        return viewerReview == null
+                                        || !reviewerUserId.equals(viewerReview.getReviewerUserId())
+                                        || !reviewedUserId.equals(viewerReview.getReviewedUserId())
+                                ? Optional.empty()
+                                : Optional.of(viewerReview);
+                    }
+
+                    @Override
+                    public PlayerReviewSummary findSummaryForUser(final Long reviewedUserId) {
+                        return reviewedUserId.equals(3L)
+                                ? new PlayerReviewSummary(3L, 1, 0, 1)
+                                : new PlayerReviewSummary(reviewedUserId, 0, 0, 0);
+                    }
+
+                    @Override
+                    public List<PlayerReview> findRecentReviewsForUser(
+                            final Long reviewedUserId, final int limit, final int offset) {
+                        if (reviewedUserId.equals(3L) && viewerReview != null) {
+                            return List.of(viewerReview);
+                        }
+                        return List.of();
+                    }
+
+                    @Override
+                    public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
+                        return reviewerUserId != null
+                                && reviewedUserId != null
+                                && reviewerUserId.equals(9L)
+                                && reviewedUserId.equals(3L);
+                    }
+                };
+
         final AccountAuthService accountAuthService =
                 new AccountAuthService() {
                     @Override
@@ -1156,6 +1252,9 @@ class PawUiRouteTest {
                 };
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
+        final ModerationService moderationService = Mockito.mock(ModerationService.class);
+        Mockito.when(moderationService.findActiveBan(Mockito.anyLong()))
+                .thenReturn(Optional.empty());
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -1164,10 +1263,15 @@ class PawUiRouteTest {
                                         matchService,
                                         matchReservationService,
                                         matchParticipationService,
+                                        playerReviewService,
                                         userService,
                                         messageSource,
                                         fixedClock),
-                                new PublicProfileController(userService, messageSource),
+                                new PublicProfileController(
+                                        userService,
+                                        playerReviewService,
+                                        moderationService,
+                                        messageSource),
                                 new PlayerParticipationController(
                                         matchParticipationService, messageSource),
                                 new AccountController(userService, messageSource),
@@ -1181,6 +1285,7 @@ class PawUiRouteTest {
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
+                        .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .setValidator(validator)
                         .setConversionService(new DefaultFormattingConversionService())
                         .build();
@@ -1308,7 +1413,19 @@ class PawUiRouteTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attribute("reservationRequiresLogin", false));
+                .andExpect(model().attribute("reservationRequiresLogin", false))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "participants",
+                                                Matchers.contains(
+                                                        Matchers.hasProperty(
+                                                                "reviewHref", Matchers.nullValue()),
+                                                        Matchers.hasProperty(
+                                                                "reviewHref",
+                                                                Matchers.is(
+                                                                        "/users/second-player?reviewForm=open#reviews"))))));
     }
 
     @Test
@@ -2634,6 +2751,11 @@ class PawUiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attributeExists("profilePage"))
+                .andExpect(model().attributeExists("reviewSummary"))
+                .andExpect(model().attributeExists("profileReviews"))
+                .andExpect(model().attribute("reviewLikeLabel", "Likes"))
+                .andExpect(model().attribute("reviewDislikeLabel", "Dislikes"))
+                .andExpect(model().attribute("reviewFormVisible", false))
                 .andExpect(
                         model().attribute(
                                         "profilePage",
@@ -2662,6 +2784,60 @@ class PawUiRouteTest {
                                                 "profileImageUrl",
                                                 Matchers.is(
                                                         "/assets/default-profile-avatar.svg"))));
+    }
+
+    @Test
+    void getPublicProfileRouteShowsReviewActionsForEligibleAuthenticatedViewer() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("reviewCanSubmit", true))
+                .andExpect(model().attribute("reviewFormVisible", false))
+                .andExpect(model().attribute("reviewLikeLabel", "Like"))
+                .andExpect(model().attribute("reviewDislikeLabel", "Dislikes"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewFormPath",
+                                        "/users/second-player?reviewForm=open#reviews"))
+                .andExpect(model().attributeExists("viewerReview"))
+                .andExpect(
+                        model().attribute(
+                                        "reviewSummary",
+                                        Matchers.hasProperty("reviewCount", Matchers.is(1L))));
+    }
+
+    @Test
+    void getPublicProfileRouteOpensReviewFormWhenRequested() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/users/second-player").param("reviewForm", "open"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/profile"))
+                .andExpect(model().attribute("reviewCanSubmit", true))
+                .andExpect(model().attribute("reviewFormVisible", true));
+    }
+
+    @Test
+    void postPublicProfileReviewSavesReviewAndRedirects() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/users/second-player/reviews")
+                                .param("reaction", "dislike")
+                                .param("comment", "Arrived late"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/users/second-player?review=saved#reviews"));
+    }
+
+    @Test
+    void postPublicProfileReviewDeleteRemovesReviewAndRedirects() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(post("/users/second-player/reviews/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/users/second-player?review=deleted#reviews"));
     }
 
     @Test
@@ -2697,7 +2873,8 @@ class PawUiRouteTest {
 
         mockMvc.perform(get("/users/host-player"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("profileEditHref", "/account/edit"));
+                .andExpect(model().attribute("profileEditHref", "/account/edit"))
+                .andExpect(model().attribute("reviewFormVisible", false));
     }
 
     @Test
@@ -2764,6 +2941,7 @@ class PawUiRouteTest {
                 new ReloadableResourceBundleMessageSource();
         messageSource.setBasename("classpath:i18n/messages");
         messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setFallbackToSystemLocale(false);
         return messageSource;
     }
 

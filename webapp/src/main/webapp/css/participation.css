@@ -74,9 +74,11 @@ player pending join requests
 }
 
 .participant-manage-list__name {
+	color: var(--text-primary);
 	font-size: 0.95rem;
 	font-weight: 700;
 	overflow: hidden;
+	text-decoration: none;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
@@ -98,6 +100,10 @@ player pending join requests
 	color: #0f766e;
 }
 
+a.participant-manage-list__name:hover {
+	text-decoration: underline;
+}
+
 .participant-manage-list__actions {
 	display: flex;
 	flex-shrink: 0;
@@ -116,6 +122,7 @@ player pending join requests
 	font-size: 0.95rem;
 	line-height: 1.55;
 	padding: 0.875rem 1.1rem;
+	margin-bottom: 1.5rem;
 }
 
 .notice--success {

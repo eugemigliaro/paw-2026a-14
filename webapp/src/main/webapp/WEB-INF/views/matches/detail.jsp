@@ -154,7 +154,7 @@
 								/></span>
 							</div>
 
-							<c:if test="${hostCanManage}">
+							<c:if test="${not empty pageContext.request.userPrincipal}">
 								<spring:message var="hostManageEditLabel" code="host.manage.edit" />
 								<c:choose>
 									<c:when test="${not empty eventPage.occurrences}">
@@ -172,32 +172,17 @@
 								<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
 								<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
 								<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
+								<spring:message var="reportMenuLabel" code="moderation.report.match.menu" />
 								<ui:overflowMenu
 									ariaLabel="${hostManageMenuTriggerLabel}"
 									menuAriaLabel="${hostManageMenuLabel}"
 									className="booking-panel__overflow-menu">
-									<c:url var="hostEditHref" value="${hostEditPath}" />
-									<c:choose>
-										<c:when test="${hostCanEdit}">
-											<a class="overflow-menu__item" href="${hostEditHref}" role="menuitem">
-												<c:out value="${hostManageEditLabel}" />
-											</a>
-										</c:when>
-										<c:otherwise>
-											<span
-												class="overflow-menu__item overflow-menu__item--disabled"
-												role="menuitem"
-												aria-disabled="true">
-												<c:out value="${hostManageEditLabel}" />
-											</span>
-										</c:otherwise>
-									</c:choose>
-									<c:if test="${not empty eventPage.occurrences}">
-										<c:url var="hostSeriesEditHref" value="${hostSeriesEditPath}" />
+									<c:if test="${hostCanManage}">
+										<c:url var="hostEditHref" value="${hostEditPath}" />
 										<c:choose>
-											<c:when test="${hostCanEditSeries}">
-												<a class="overflow-menu__item" href="${hostSeriesEditHref}" role="menuitem">
-													<c:out value="${hostManageEditSeriesLabel}" />
+											<c:when test="${hostCanEdit}">
+												<a class="overflow-menu__item" href="${hostEditHref}" role="menuitem">
+													<c:out value="${hostManageEditLabel}" />
 												</a>
 											</c:when>
 											<c:otherwise>
@@ -205,54 +190,42 @@
 													class="overflow-menu__item overflow-menu__item--disabled"
 													role="menuitem"
 													aria-disabled="true">
-													<c:out value="${hostManageEditSeriesLabel}" />
+													<c:out value="${hostManageEditLabel}" />
 												</span>
 											</c:otherwise>
 										</c:choose>
-									</c:if>
-									<c:url var="hostCancelAction" value="${hostCancelPath}" />
-									<form
-										method="post"
-										action="${hostCancelAction}"
-										data-submit-guard="true"
-										data-submit-loading-label="${hostManageCancellingLabel}">
-										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<c:choose>
-											<c:when test="${hostCanCancel}">
-												<button
-													class="overflow-menu__item overflow-menu__item--danger"
-													type="submit"
-													role="menuitem">
-													<c:out value="${hostManageCancelLabel}" />
-												</button>
-											</c:when>
-											<c:otherwise>
-												<button
-													class="overflow-menu__item overflow-menu__item--danger"
-													type="submit"
-													role="menuitem"
-													disabled="disabled"
-													aria-disabled="true">
-													<c:out value="${hostManageCancelLabel}" />
-												</button>
-											</c:otherwise>
-										</c:choose>
-									</form>
-									<c:if test="${not empty eventPage.occurrences}">
-										<c:url var="hostSeriesCancelAction" value="${hostSeriesCancelPath}" />
+										<c:if test="${not empty eventPage.occurrences}">
+											<c:url var="hostSeriesEditHref" value="${hostSeriesEditPath}" />
+											<c:choose>
+												<c:when test="${hostCanEditSeries}">
+													<a class="overflow-menu__item" href="${hostSeriesEditHref}" role="menuitem">
+														<c:out value="${hostManageEditSeriesLabel}" />
+													</a>
+												</c:when>
+												<c:otherwise>
+													<span
+														class="overflow-menu__item overflow-menu__item--disabled"
+														role="menuitem"
+														aria-disabled="true">
+														<c:out value="${hostManageEditSeriesLabel}" />
+													</span>
+												</c:otherwise>
+											</c:choose>
+										</c:if>
+										<c:url var="hostCancelAction" value="${hostCancelPath}" />
 										<form
 											method="post"
-											action="${hostSeriesCancelAction}"
+											action="${hostCancelAction}"
 											data-submit-guard="true"
 											data-submit-loading-label="${hostManageCancellingLabel}">
 											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 											<c:choose>
-												<c:when test="${hostCanCancelSeries}">
+												<c:when test="${hostCanCancel}">
 													<button
 														class="overflow-menu__item overflow-menu__item--danger"
 														type="submit"
 														role="menuitem">
-														<c:out value="${hostManageCancelSeriesLabel}" />
+														<c:out value="${hostManageCancelLabel}" />
 													</button>
 												</c:when>
 												<c:otherwise>
@@ -262,20 +235,27 @@
 														role="menuitem"
 														disabled="disabled"
 														aria-disabled="true">
-														<c:out value="${hostManageCancelSeriesLabel}" />
+														<c:out value="${hostManageCancelLabel}" />
 													</button>
 												</c:otherwise>
 											</c:choose>
 										</form>
 									</c:if>
+									<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+									<a class="overflow-menu__item overflow-menu__item--danger" href="${reportMatchHref}" role="menuitem">
+										<c:out value="${reportMenuLabel}" />
+									</a>
 								</ui:overflowMenu>
+							</c:if>
+
+							<c:if test="${hostCanManage}">
 								<div class="booking-panel__host-note">
 									<p class="detail-label"><spring:message code="host.manage.label" /></p>
 									<p><c:out value="${hostManageDetailLabel}" /></p>
 								</div>
 							</c:if>
 
-							<dl class="booking-panel__details">
+								<dl class="booking-panel__details">
 								<c:forEach
 									var="detail"
 									items="${eventPage.bookingDetails}"
@@ -289,7 +269,9 @@
 										</dd>
 									</div>
 								</c:forEach>
-							</dl>
+								</dl>
+
+
 
 							<c:if test="${joinRequested}">
 								<p class="booking-panel__notice booking-panel__notice--success">
@@ -717,6 +699,12 @@
 														><c:out
 															value="${participant.username}"
 													/></a>
+													<c:if test="${not empty participant.reviewHref}">
+														<c:url var="participantReviewHref" value="${participant.reviewHref}" />
+														<a class="participant-list__review-link" href="${participantReviewHref}">
+															<spring:message code="event.participants.review" />
+														</a>
+													</c:if>
 												</div>
 											</li>
 										</c:forEach>

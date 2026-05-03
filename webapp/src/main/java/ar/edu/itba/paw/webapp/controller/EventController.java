@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
@@ -51,6 +52,7 @@ public class EventController {
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
     private final MatchParticipationService matchParticipationService;
+    private final PlayerReviewService playerReviewService;
     private final UserService userService;
     private final MessageSource messageSource;
     private final Clock clock;
@@ -60,12 +62,14 @@ public class EventController {
             final MatchService matchService,
             final MatchReservationService matchReservationService,
             final MatchParticipationService matchParticipationService,
+            final PlayerReviewService playerReviewService,
             final UserService userService,
             final MessageSource messageSource,
             final Clock clock) {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
+        this.playerReviewService = playerReviewService;
         this.userService = userService;
         this.messageSource = messageSource;
         this.clock = clock;
@@ -381,7 +385,7 @@ public class EventController {
                                         locale)),
                 host.map(this::profileHrefFor).orElse(null),
                 host.map(user -> profileUrlFor(user)).orElse(DEFAULT_PROFILE_IMAGE_URL),
-                toParticipantViewModels(confirmedParticipants),
+                toParticipantViewModels(confirmedParticipants, currentUserId),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
                 buildAboutParagraphs(match, locale),
@@ -437,7 +441,7 @@ public class EventController {
     }
 
     private List<ParticipantViewModel> toParticipantViewModels(
-            final List<User> confirmedParticipants) {
+            final List<User> confirmedParticipants, final Long currentUserId) {
         return confirmedParticipants.stream()
                 .map(
                         participant ->
@@ -445,8 +449,19 @@ public class EventController {
                                         participant.getUsername(),
                                         avatarLabelForUsername(participant.getUsername()),
                                         profileHrefFor(participant),
-                                        profileImageUrlForParticipant(participant)))
+                                        profileImageUrlForParticipant(participant),
+                                        reviewHrefForParticipant(participant, currentUserId)))
                 .toList();
+    }
+
+    private String reviewHrefForParticipant(final User participant, final Long currentUserId) {
+        if (currentUserId == null
+                || participant.getId() == null
+                || currentUserId.equals(participant.getId())
+                || !playerReviewService.canReview(currentUserId, participant.getId())) {
+            return null;
+        }
+        return profileHrefFor(participant) + "?reviewForm=open#reviews";
     }
 
     private String profileImageUrlForParticipant(final User participant) {

@@ -1,0 +1,12 @@
+Match Point
+[[${mailEyebrow}]]
+
+[[${title}]]
+
+[[${summary}]]
+
+[[${usernameLabel}]]: [[${username}]]
+[[${bannedUntilLabel}]]: [[${bannedUntil}]]
+[[${reasonLabel}]]: [[${reason}]]
+
+[[${loginLabel}]]: [[${loginUrl}]]

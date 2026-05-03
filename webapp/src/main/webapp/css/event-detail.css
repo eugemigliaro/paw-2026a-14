@@ -507,6 +507,17 @@
 	text-decoration: underline;
 }
 
+.participant-list__review-link {
+	color: #0f766e;
+	font-size: 0.84rem;
+	font-weight: 800;
+	text-decoration: none;
+}
+
+.participant-list__review-link:hover {
+	text-decoration: underline;
+}
+
 .participant-empty-state {
 	display: grid;
 	gap: 0.35rem;

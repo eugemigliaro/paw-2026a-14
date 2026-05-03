@@ -1069,6 +1069,80 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Upcoming Premium", result.get(0).getTitle());
     }
 
+    @Test
+    public void testSoftDeleteMatch() {
+        final Match created =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Original Address",
+                        "Original Title",
+                        "Original Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        final long adminId = createUser("admin", "admin@test.com");
+        final boolean deleted = matchDao.softDeleteMatch(created.getId(), adminId, "Violation");
+
+        Assertions.assertTrue(deleted);
+
+        final Match found = matchDao.findById(created.getId()).orElseThrow();
+        Assertions.assertTrue(found.isDeleted());
+        Assertions.assertEquals(adminId, found.getDeletedByUserId());
+        Assertions.assertEquals("Violation", found.getDeleteReason());
+        Assertions.assertNotNull(found.getDeletedAt());
+        Assertions.assertEquals("cancelled", found.getStatus());
+    }
+
+    @Test
+    public void testFindPublicEventsExcludesDeletedMatches() {
+        insertMatch(
+                "Active Match",
+                "Fast 5v5 match",
+                "football",
+                10,
+                0,
+                ZonedDateTime.now().plusDays(1));
+
+        final Match toDelete =
+                matchDao.createMatch(
+                        hostUserId,
+                        "Deleted Address",
+                        "Deleted Match",
+                        "Deleted Description",
+                        ZonedDateTime.now().plusDays(1).toInstant(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "open",
+                        null);
+
+        final long adminId = createUser("admin2", "admin2@test.com");
+        matchDao.softDeleteMatch(toDelete.getId(), adminId, "Violation");
+
+        final List<Match> result =
+                matchDao.findPublicMatches(
+                        null,
+                        List.of(),
+                        EventTimeFilter.WEEK,
+                        null,
+                        null,
+                        MatchSort.SOONEST,
+                        ZoneId.systemDefault(),
+                        0,
+                        20);
+
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals("Active Match", result.get(0).getTitle());
+    }
+
     private void insertMatch(
             final String title,
             final String description,

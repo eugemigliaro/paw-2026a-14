@@ -92,9 +92,19 @@
 													<c:out value="${req.avatarLabel}" />
 												</span>
 												<div class="participant-manage-list__details">
-													<strong class="participant-manage-list__name">
-														<c:out value="${req.username}" />
-													</strong>
+													<c:choose>
+														<c:when test="${not empty req.profileHref}">
+															<c:url var="requestProfileHref" value="${req.profileHref}" />
+															<a class="participant-manage-list__name" href="${requestProfileHref}">
+																<c:out value="${req.username}" />
+															</a>
+														</c:when>
+														<c:otherwise>
+															<strong class="participant-manage-list__name">
+																<c:out value="${req.username}" />
+															</strong>
+														</c:otherwise>
+													</c:choose>
 													<c:if test="${not empty req.matchHref}">
 														<c:url var="requestMatchHref" value="${req.matchHref}" />
 														<a class="participant-manage-list__meta-link" href="${requestMatchHref}">

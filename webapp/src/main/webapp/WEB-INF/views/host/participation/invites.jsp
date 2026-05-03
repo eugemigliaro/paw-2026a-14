@@ -121,9 +121,19 @@
 											<span class="participant-list__avatar" aria-hidden="true">
 												<c:out value="${p.avatarLabel}" />
 											</span>
-											<strong class="participant-manage-list__name">
-												<c:out value="${p.username}" />
-											</strong>
+											<c:choose>
+												<c:when test="${not empty p.profileHref}">
+													<c:url var="pendingProfileHref" value="${p.profileHref}" />
+													<a class="participant-manage-list__name" href="${pendingProfileHref}">
+														<c:out value="${p.username}" />
+													</a>
+												</c:when>
+												<c:otherwise>
+													<strong class="participant-manage-list__name">
+														<c:out value="${p.username}" />
+													</strong>
+												</c:otherwise>
+											</c:choose>
 										</div>
 										<span class="participant-manage-list__status participant-manage-list__status--pending">
 											<spring:message code="host.invites.status.pending" />
@@ -146,9 +156,19 @@
 											<span class="participant-list__avatar" aria-hidden="true">
 												<c:out value="${p.avatarLabel}" />
 											</span>
-											<strong class="participant-manage-list__name">
-												<c:out value="${p.username}" />
-											</strong>
+											<c:choose>
+												<c:when test="${not empty p.profileHref}">
+													<c:url var="acceptedProfileHref" value="${p.profileHref}" />
+													<a class="participant-manage-list__name" href="${acceptedProfileHref}">
+														<c:out value="${p.username}" />
+													</a>
+												</c:when>
+												<c:otherwise>
+													<strong class="participant-manage-list__name">
+														<c:out value="${p.username}" />
+													</strong>
+												</c:otherwise>
+											</c:choose>
 										</div>
 										<div class="participant-manage-list__actions">
 											<span class="participant-manage-list__status participant-manage-list__status--accepted">
@@ -186,9 +206,19 @@
 											<span class="participant-list__avatar" aria-hidden="true">
 												<c:out value="${p.avatarLabel}" />
 											</span>
-											<strong class="participant-manage-list__name">
-												<c:out value="${p.username}" />
-											</strong>
+											<c:choose>
+												<c:when test="${not empty p.profileHref}">
+													<c:url var="declinedProfileHref" value="${p.profileHref}" />
+													<a class="participant-manage-list__name" href="${declinedProfileHref}">
+														<c:out value="${p.username}" />
+													</a>
+												</c:when>
+												<c:otherwise>
+													<strong class="participant-manage-list__name">
+														<c:out value="${p.username}" />
+													</strong>
+												</c:otherwise>
+											</c:choose>
 										</div>
 										<span class="participant-manage-list__status participant-manage-list__status--declined">
 											<spring:message code="host.invites.status.declined" />
