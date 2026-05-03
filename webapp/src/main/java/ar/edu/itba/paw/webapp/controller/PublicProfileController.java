@@ -25,7 +25,11 @@ import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -212,9 +216,21 @@ public class PublicProfileController {
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
                         user.getId(), selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
+        final Map<Long, User> reviewersById =
+                userService
+                        .findByIds(
+                                reviewResult.getItems().stream()
+                                        .map(PlayerReview::getReviewerUserId)
+                                        .filter(Objects::nonNull)
+                                        .distinct()
+                                        .toList())
+                        .stream()
+                        .collect(
+                                Collectors.toMap(
+                                        User::getId, Function.identity(), (left, right) -> left));
         final List<PlayerReviewViewModel> reviews =
                 reviewResult.getItems().stream()
-                        .map(review -> toReviewViewModel(review, locale))
+                        .map(review -> toReviewViewModel(review, reviewersById, locale))
                         .toList();
         final Long currentUserId =
                 CurrentAuthenticatedUser.get()
@@ -360,23 +376,23 @@ public class PublicProfileController {
     }
 
     private PlayerReviewViewModel toReviewViewModel(
-            final PlayerReview review, final Locale locale) {
-        final User reviewer =
-                userService
-                        .findById(review.getReviewerUserId())
-                        .orElse(
-                                new User(
-                                        review.getReviewerUserId(),
-                                        null,
-                                        messageSource.getMessage(
-                                                "profile.reviews.unknownReviewer",
-                                                null,
-                                                "Unknown player",
-                                                locale)));
+            final PlayerReview review, final Map<Long, User> reviewersById, final Locale locale) {
+        final User reviewer = reviewersById.get(review.getReviewerUserId());
+        final String reviewerUsername =
+                reviewer == null
+                        ? messageSource.getMessage(
+                                "profile.reviews.unknownReviewer", null, "Unknown player", locale)
+                        : reviewer.getUsername();
+        final String reviewerProfileHref =
+                reviewer == null
+                                || reviewer.getUsername() == null
+                                || reviewer.getUsername().isBlank()
+                        ? null
+                        : "/users/" + reviewer.getUsername();
         return new PlayerReviewViewModel(
                 review.getId(),
-                reviewer.getUsername(),
-                reviewer.getUsername() == null ? null : "/users/" + reviewer.getUsername(),
+                reviewerUsername,
+                reviewerProfileHref,
                 review.getReaction().getDbValue(),
                 reactionLabel(review.getReaction(), locale),
                 review.getComment(),

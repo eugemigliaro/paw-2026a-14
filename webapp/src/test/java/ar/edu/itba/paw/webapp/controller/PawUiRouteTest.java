@@ -985,6 +985,14 @@ class PawUiRouteTest {
                     }
 
                     @Override
+                    public List<User> findByIds(final java.util.Collection<Long> ids) {
+                        return ids.stream()
+                                .map(id -> findById(id).orElse(null))
+                                .filter(java.util.Objects::nonNull)
+                                .toList();
+                    }
+
+                    @Override
                     public Optional<User> findByUsername(final String username) {
                         if (currentUser.getUsername().equals(username)) {
                             return Optional.of(currentUser);
