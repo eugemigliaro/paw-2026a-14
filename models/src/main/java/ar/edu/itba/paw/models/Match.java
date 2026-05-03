@@ -15,8 +15,8 @@ public class Match {
     private final Instant endsAt;
     private final int maxPlayers;
     private final BigDecimal pricePerPlayer;
-    private final String visibility;
-    private final String joinPolicy;
+    private final EventVisibility visibility;
+    private final EventJoinPolicy joinPolicy;
     private final String status;
     private final int joinedPlayers;
     private final Long bannerImageId;
@@ -53,7 +53,7 @@ public class Match {
                 endsAt,
                 maxPlayers,
                 pricePerPlayer,
-                visibility,
+                parseVisibility(visibility),
                 defaultJoinPolicyForVisibility(visibility),
                 status,
                 joinedPlayers,
@@ -93,8 +93,8 @@ public class Match {
                 endsAt,
                 maxPlayers,
                 pricePerPlayer,
-                visibility,
-                joinPolicy,
+                parseVisibility(visibility),
+                parseJoinPolicy(joinPolicy),
                 status,
                 joinedPlayers,
                 bannerImageId,
@@ -115,6 +115,88 @@ public class Match {
             final BigDecimal pricePerPlayer,
             final String visibility,
             final String joinPolicy,
+            final String status,
+            final int joinedPlayers,
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                parseVisibility(visibility),
+                parseJoinPolicy(joinPolicy),
+                status,
+                joinedPlayers,
+                bannerImageId,
+                seriesId,
+                seriesOccurrenceIndex,
+                false,
+                null,
+                null,
+                null);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final String status,
+            final int joinedPlayers,
+            final Long bannerImageId) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                visibility,
+                joinPolicy,
+                status,
+                joinedPlayers,
+                bannerImageId,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
             final String status,
             final int joinedPlayers,
             final Long bannerImageId,
@@ -166,6 +248,52 @@ public class Match {
             final Instant deletedAt,
             final Long deletedByUserId,
             final String deleteReason) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                parseVisibility(visibility),
+                parseJoinPolicy(joinPolicy),
+                status,
+                joinedPlayers,
+                bannerImageId,
+                seriesId,
+                seriesOccurrenceIndex,
+                deleted,
+                deletedAt,
+                deletedByUserId,
+                deleteReason);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final String status,
+            final int joinedPlayers,
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex,
+            final boolean deleted,
+            final Instant deletedAt,
+            final Long deletedByUserId,
+            final String deleteReason) {
         this.id = id;
         this.sport = sport;
         this.hostUserId = hostUserId;
@@ -189,14 +317,24 @@ public class Match {
         this.deleteReason = deleteReason;
     }
 
-    private static String defaultJoinPolicyForVisibility(final String visibility) {
-        if ("public".equalsIgnoreCase(visibility)) {
-            return "direct";
+    private static EventVisibility parseVisibility(final String visibility) {
+        return EventVisibility.fromDbValue(visibility)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown event visibility"));
+    }
+
+    private static EventJoinPolicy parseJoinPolicy(final String joinPolicy) {
+        return EventJoinPolicy.fromDbValue(joinPolicy)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown event join policy"));
+    }
+
+    private static EventJoinPolicy defaultJoinPolicyForVisibility(final String visibility) {
+        if (EventVisibility.PUBLIC.toString().equalsIgnoreCase(visibility)) {
+            return EventJoinPolicy.DIRECT;
         }
-        if ("private".equalsIgnoreCase(visibility)) {
-            return "invite_only";
+        if (EventVisibility.PRIVATE.toString().equalsIgnoreCase(visibility)) {
+            return EventJoinPolicy.INVITE_ONLY;
         }
-        return "approval_required";
+        return EventJoinPolicy.APPROVAL_REQUIRED;
     }
 
     public Long getId() {
@@ -239,11 +377,11 @@ public class Match {
         return pricePerPlayer;
     }
 
-    public String getVisibility() {
+    public EventVisibility getVisibility() {
         return visibility;
     }
 
-    public String getJoinPolicy() {
+    public EventJoinPolicy getJoinPolicy() {
         return joinPolicy;
     }
 

@@ -2,6 +2,8 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
@@ -59,9 +61,9 @@ public class HostParticipationController {
         final List<User> participants =
                 matchParticipationService.findConfirmedParticipants(resolvedMatchId, hostUserId);
 
-        final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
+        final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
         final boolean isApprovalRequired =
-                "approval_required".equalsIgnoreCase(match.getJoinPolicy());
+                match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
         final ModelAndView mav = new ModelAndView("host/participation/roster");
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("match", match);
@@ -83,7 +85,7 @@ public class HostParticipationController {
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
-        if (!"approval_required".equalsIgnoreCase(match.getJoinPolicy())) {
+        if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -129,7 +131,7 @@ public class HostParticipationController {
         final long targetUserId = parseUserIdOrThrow(userId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
-        if (!"approval_required".equalsIgnoreCase(match.getJoinPolicy())) {
+        if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -153,7 +155,7 @@ public class HostParticipationController {
         final long targetUserId = parseUserIdOrThrow(userId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
-        if (!"approval_required".equalsIgnoreCase(match.getJoinPolicy())) {
+        if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -179,7 +181,7 @@ public class HostParticipationController {
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
-        if (!"invite_only".equalsIgnoreCase(match.getJoinPolicy())) {
+        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -196,7 +198,7 @@ public class HostParticipationController {
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
         final Match match = requireHostMatch(resolvedMatchId, hostUserId);
 
-        if (!"invite_only".equalsIgnoreCase(match.getJoinPolicy())) {
+        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 

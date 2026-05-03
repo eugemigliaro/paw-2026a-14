@@ -500,8 +500,8 @@ public class HostController {
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
         form.setSport(match.getSport().getDbValue());
-        form.setVisibility(match.getVisibility());
-        form.setJoinPolicy(match.getJoinPolicy());
+        form.setVisibility(match.getVisibility().getValue());
+        form.setJoinPolicy(match.getJoinPolicy().getValue());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
         final LocalDateTime endsAt =

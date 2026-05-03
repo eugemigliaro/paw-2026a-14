@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.Match;
@@ -979,7 +980,7 @@ public class MatchServiceImplTest {
         Assertions.assertEquals("Updated Title", result.getTitle());
         Assertions.assertEquals(Sport.TENNIS, result.getSport());
         Assertions.assertEquals("Updated Address", result.getAddress());
-        Assertions.assertEquals("approval_required", result.getJoinPolicy());
+        Assertions.assertEquals(EventJoinPolicy.APPROVAL_REQUIRED, result.getJoinPolicy());
     }
 
     @Test

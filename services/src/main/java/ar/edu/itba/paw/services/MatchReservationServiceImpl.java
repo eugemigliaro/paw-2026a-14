@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
@@ -245,7 +247,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
         final boolean hostReservation = isHost(match, userId);
 
-        if (!hostReservation && !"public".equalsIgnoreCase(match.getVisibility())) {
+        if (!hostReservation && match.getVisibility() != EventVisibility.PUBLIC) {
             LOGGER.warn(
                     "Reservation rejected code=closed matchId={} userId={} visibility={}",
                     match.getId(),
@@ -255,7 +257,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "closed", "The event is not open for reservations.");
         }
 
-        if (!hostReservation && !"direct".equalsIgnoreCase(match.getJoinPolicy())) {
+        if (!hostReservation && match.getJoinPolicy() != EventJoinPolicy.DIRECT) {
             LOGGER.warn(
                     "Reservation rejected code=closed matchId={} userId={} joinPolicy={}",
                     match.getId(),
@@ -307,8 +309,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
         if (!"open".equalsIgnoreCase(currentMatch.getStatus())
                 || (!hostReservation
-                        && (!"public".equalsIgnoreCase(currentMatch.getVisibility())
-                                || !"direct".equalsIgnoreCase(currentMatch.getJoinPolicy())))) {
+                        && (currentMatch.getVisibility() != EventVisibility.PUBLIC
+                                || currentMatch.getJoinPolicy() != EventJoinPolicy.DIRECT))) {
             return new MatchReservationException(
                     "closed", "The event is not open for reservations.");
         }
@@ -378,8 +380,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     private static boolean isSeriesReservableOccurrence(final Match occurrence, final Long userId) {
         return "open".equalsIgnoreCase(occurrence.getStatus())
                 && (isHost(occurrence, userId)
-                        || ("public".equalsIgnoreCase(occurrence.getVisibility())
-                                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())));
+                        || (occurrence.getVisibility() == EventVisibility.PUBLIC
+                                && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));
     }
 
     private static boolean isHost(final Match match, final Long userId) {

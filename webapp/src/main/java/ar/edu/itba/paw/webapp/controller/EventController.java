@@ -8,7 +8,9 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
@@ -252,21 +254,21 @@ public class EventController {
         final boolean hasPendingRequest =
                 !isHostViewer
                         && currentUserId != null
-                        && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
+                        && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
                         && matchParticipationService.hasPendingRequest(eventId, currentUserId);
         final boolean isInvitedPlayer =
                 !isHostViewer
                         && currentUserId != null
-                        && "invite_only".equalsIgnoreCase(match.getJoinPolicy())
+                        && match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY
                         && matchParticipationService.hasInvitation(eventId, currentUserId);
         final boolean isConfirmedParticipant =
                 currentUserId != null
                         && matchReservationService.hasActiveReservation(
                                 match.getId(), currentUserId);
         final boolean isApprovalRequired =
-                "approval_required".equalsIgnoreCase(match.getJoinPolicy());
-        final boolean isInviteOnly = "invite_only".equalsIgnoreCase(match.getJoinPolicy());
-        final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
+                match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
+        final boolean isInviteOnly = match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY;
+        final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final List<Match> seriesOccurrences =
@@ -618,8 +620,8 @@ public class EventController {
             final Match occurrence, final boolean isHostViewer) {
         return "open".equalsIgnoreCase(occurrence.getStatus())
                 && (isHostViewer
-                        || ("public".equalsIgnoreCase(occurrence.getVisibility())
-                                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())));
+                        || (occurrence.getVisibility() == EventVisibility.PUBLIC
+                                && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));
     }
 
     private SeriesJoinRequestUiState buildSeriesJoinRequestUiState(
@@ -697,8 +699,8 @@ public class EventController {
     }
 
     private static boolean isSeriesJoinRequestOpenOccurrence(final Match occurrence) {
-        return "public".equalsIgnoreCase(occurrence.getVisibility())
-                && "approval_required".equalsIgnoreCase(occurrence.getJoinPolicy())
+        return occurrence.getVisibility() == EventVisibility.PUBLIC
+                && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
                 && "open".equalsIgnoreCase(occurrence.getStatus());
     }
 
@@ -837,7 +839,7 @@ public class EventController {
             return currentUserId != null && currentUserId.equals(match.getHostUserId());
         }
 
-        if ("private".equalsIgnoreCase(match.getVisibility())
+        if (match.getVisibility() == EventVisibility.PRIVATE
                 || "cancelled".equalsIgnoreCase(match.getStatus())) {
             if (currentUserId != null && currentUserId.equals(match.getHostUserId())) {
                 return true;
@@ -853,21 +855,21 @@ public class EventController {
             return false;
         }
 
-        return "public".equalsIgnoreCase(match.getVisibility());
+        return match.getVisibility() == EventVisibility.PUBLIC;
     }
 
     private boolean canReserveMatch(final Match match, final boolean isHostViewer) {
         return "open".equalsIgnoreCase(match.getStatus())
                 && (isHostViewer
-                        || ("public".equalsIgnoreCase(match.getVisibility())
-                                && "direct".equalsIgnoreCase(match.getJoinPolicy())))
+                        || (match.getVisibility() == EventVisibility.PUBLIC
+                                && match.getJoinPolicy() == EventJoinPolicy.DIRECT))
                 && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
     }
 
     private boolean canRequestToJoin(final Match match) {
-        return "public".equalsIgnoreCase(match.getVisibility())
-                && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
+        return match.getVisibility() == EventVisibility.PUBLIC
+                && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
                 && "open".equalsIgnoreCase(match.getStatus())
                 && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
@@ -880,7 +882,7 @@ public class EventController {
     private boolean shouldRedirectToPlayerMatchesAfterCancellation(
             final Match match, final Long userId) {
         return match != null
-                && "private".equalsIgnoreCase(match.getVisibility())
+                && match.getVisibility() == EventVisibility.PRIVATE
                 && !userId.equals(match.getHostUserId());
     }
 

@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.Sport;
@@ -509,7 +511,7 @@ public class MatchJdbcDaoTest {
         final Match found = matchDao.findMatchById(created.getId()).orElseThrow();
 
         Assertions.assertEquals(created.getId(), found.getId());
-        Assertions.assertEquals("private", found.getVisibility());
+        Assertions.assertEquals(EventVisibility.PRIVATE, found.getVisibility());
         Assertions.assertEquals(1, found.getJoinedPlayers());
     }
 
@@ -554,8 +556,8 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Updated Title", found.getTitle());
         Assertions.assertEquals("Updated Description", found.getDescription());
         Assertions.assertEquals(Sport.TENNIS, found.getSport());
-        Assertions.assertEquals("private", found.getVisibility());
-        Assertions.assertEquals("invite_only", found.getJoinPolicy());
+        Assertions.assertEquals(EventVisibility.PRIVATE, found.getVisibility());
+        Assertions.assertEquals(EventJoinPolicy.INVITE_ONLY, found.getJoinPolicy());
         Assertions.assertEquals(10, found.getMaxPlayers());
         Assertions.assertEquals(new BigDecimal("15.00"), found.getPricePerPlayer());
     }
