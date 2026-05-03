@@ -1,12 +1,52 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="primaryNavAria" code="nav.primary" />
+<spring:message var="languageAria" code="nav.language" text="Language" />
+<spring:message var="englishShortLabel" code="nav.language.englishShort" text="EN" />
+<spring:message var="spanishShortLabel" code="nav.language.spanishShort" text="ES" />
+<spring:message var="switchToEnglishLabel" code="nav.language.switchToEnglish" text="Switch to English" />
+<spring:message var="switchToSpanishLabel" code="nav.language.switchToSpanish" text="Switch to Spanish" />
 <c:url var="siteHeaderBrandHref" value="/" />
 <c:url var="loginHref" value="/login" />
 <c:url var="registerHref" value="/register" />
 <c:url var="accountHref" value="/account" />
 <c:url var="logoutAction" value="/logout" />
+<c:set var="currentLanguage" value="${pageContext.response.locale.language}" />
+<c:set var="currentRequestUri" value="${requestScope['javax.servlet.forward.request_uri']}" />
+<c:if test="${empty currentRequestUri}">
+  <c:set var="currentRequestUri" value="${pageContext.request.requestURI}" />
+</c:if>
+<c:set var="currentPath" value="${currentRequestUri}" />
+<c:if test="${not empty pageContext.request.contextPath and fn:startsWith(currentRequestUri, pageContext.request.contextPath)}">
+  <c:set var="currentPathStart" value="${fn:length(pageContext.request.contextPath)}" />
+  <c:set var="currentPathEnd" value="${fn:length(currentRequestUri)}" />
+  <c:set var="currentPath" value="${fn:substring(currentRequestUri, currentPathStart, currentPathEnd)}" />
+</c:if>
+<c:if test="${empty currentPath}">
+  <c:set var="currentPath" value="/" />
+</c:if>
+<c:url var="englishHref" value="${currentPath}">
+  <c:forEach var="queryParam" items="${pageContext.request.parameterMap}">
+    <c:if test="${queryParam.key ne 'lang'}">
+      <c:forEach var="queryParamValue" items="${queryParam.value}">
+        <c:param name="${queryParam.key}" value="${queryParamValue}" />
+      </c:forEach>
+    </c:if>
+  </c:forEach>
+  <c:param name="lang" value="en" />
+</c:url>
+<c:url var="spanishHref" value="${currentPath}">
+  <c:forEach var="queryParam" items="${pageContext.request.parameterMap}">
+    <c:if test="${queryParam.key ne 'lang'}">
+      <c:forEach var="queryParamValue" items="${queryParam.value}">
+        <c:param name="${queryParam.key}" value="${queryParamValue}" />
+      </c:forEach>
+    </c:if>
+  </c:forEach>
+  <c:param name="lang" value="es" />
+</c:url>
 <header class="site-header">
   <div class="site-header__inner">
     <a class="site-header__brand" href="${siteHeaderBrandHref}">
@@ -34,6 +74,26 @@
     </c:if>
 
     <div class="site-header__actions">
+      <nav class="site-header__language-toggle" aria-label="${languageAria}">
+        <a
+          class="site-header__language-link ${currentLanguage eq 'en' ? 'site-header__language-link--active' : ''}"
+          href="${englishHref}"
+          hreflang="en"
+          lang="en"
+          aria-label="${switchToEnglishLabel}"
+          aria-current="${currentLanguage eq 'en' ? 'true' : 'false'}">
+          <c:out value="${englishShortLabel}" />
+        </a>
+        <a
+          class="site-header__language-link ${currentLanguage eq 'es' ? 'site-header__language-link--active' : ''}"
+          href="${spanishHref}"
+          hreflang="es"
+          lang="es"
+          aria-label="${switchToSpanishLabel}"
+          aria-current="${currentLanguage eq 'es' ? 'true' : 'false'}">
+          <c:out value="${spanishShortLabel}" />
+        </a>
+      </nav>
       <c:if test="${not empty shell.hostMatchNav}">
         <c:url var="hostMatchNavHref" value="${shell.hostMatchNav.href}" />
         <a
