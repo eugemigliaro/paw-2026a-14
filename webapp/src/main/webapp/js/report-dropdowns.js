@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Close dropdown
                 dropdown.classList.remove('is-open');
-                
+
                 // Trigger change event on select
                 select.dispatchEvent(new Event('change'));
             });

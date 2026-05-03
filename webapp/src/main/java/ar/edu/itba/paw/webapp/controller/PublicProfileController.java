@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
@@ -12,15 +14,22 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FilterOptionViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PlayerReviewViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PublicProfilePageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -30,11 +39,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 public class PublicProfileController {
 
-    private static final int RECENT_REVIEW_LIMIT = 10;
+    private static final int REVIEW_PAGE_SIZE = 10;
 
     private final UserService userService;
     private final PlayerReviewService playerReviewService;
@@ -56,6 +66,8 @@ public class PublicProfileController {
     public ModelAndView showPublicProfile(
             @PathVariable("username") final String username,
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
+            @RequestParam(value = "reviewFilter", required = false) final String reviewFilter,
+            @RequestParam(value = "reviewPage", defaultValue = "1") final String reviewPage,
             final Locale locale) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final User user =
@@ -81,7 +93,8 @@ public class PublicProfileController {
                         user.getEmail(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, reviewForm, resolvedLocale);
+        addReviewModel(
+                mav, user, reviewForm, reviewFilter, parseReviewPage(reviewPage), resolvedLocale);
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(
@@ -175,13 +188,33 @@ public class PublicProfileController {
     }
 
     private void addReviewModel(
-            final ModelAndView mav, final User user, final String reviewForm, final Locale locale) {
+            final ModelAndView mav,
+            final User user,
+            final String reviewForm,
+            final String reviewFilter,
+            final int reviewPage,
+            final Locale locale) {
         final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user.getId());
-        final List<PlayerReviewViewModel> reviews =
-                playerReviewService
-                        .findRecentReviewsForUser(user.getId(), RECENT_REVIEW_LIMIT, 0)
+        final PlayerReviewFilter selectedFilter =
+                PlayerReviewFilter.fromQueryValueOrDefault(reviewFilter);
+        final PaginatedResult<PlayerReview> reviewResult =
+                playerReviewService.findReviewsForUser(
+                        user.getId(), selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
+        final Map<Long, User> reviewersById =
+                userService
+                        .findByIds(
+                                reviewResult.getItems().stream()
+                                        .map(PlayerReview::getReviewerUserId)
+                                        .filter(Objects::nonNull)
+                                        .distinct()
+                                        .toList())
                         .stream()
-                        .map(review -> toReviewViewModel(review, locale))
+                        .collect(
+                                Collectors.toMap(
+                                        User::getId, Function.identity(), (left, right) -> left));
+        final List<PlayerReviewViewModel> reviews =
+                reviewResult.getItems().stream()
+                        .map(review -> toReviewViewModel(review, reviewersById, locale))
                         .toList();
         final Long currentUserId =
                 CurrentAuthenticatedUser.get()
@@ -213,33 +246,137 @@ public class PublicProfileController {
                         "profile.reviews.dislikes",
                         locale));
         mav.addObject("profileReviews", reviews);
+        mav.addObject("reviewFilterOptions", reviewFilterOptions(user, selectedFilter, locale));
+        mav.addObject("selectedReviewFilter", selectedFilter.getQueryValue());
+        mav.addObject("reviewTotalPages", reviewResult.getTotalPages());
+        mav.addObject(
+                "reviewPaginationItems",
+                buildReviewPaginationItems(user, selectedFilter, reviewResult));
+        mav.addObject(
+                "reviewPreviousPageHref",
+                reviewResult.hasPrevious()
+                        ? buildReviewPageUrl(user, selectedFilter, reviewResult.getPage() - 1)
+                        : null);
+        mav.addObject(
+                "reviewNextPageHref",
+                reviewResult.hasNext()
+                        ? buildReviewPageUrl(user, selectedFilter, reviewResult.getPage() + 1)
+                        : null);
         mav.addObject("reviewCanSubmit", reviewCanSubmit);
         mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
         mav.addObject("viewerReview", viewerReview.orElse(null));
         mav.addObject("reviewActionPath", profilePath + "/reviews");
         mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
-        mav.addObject("reviewFormPath", profilePath + "?reviewForm=open#reviews");
-        mav.addObject("reviewSectionPath", profilePath + "#reviews");
+        mav.addObject(
+                "reviewFormPath",
+                buildReviewPageUrl(user, selectedFilter, reviewResult.getPage(), "open"));
+        mav.addObject(
+                "reviewSectionPath",
+                buildReviewPageUrl(user, selectedFilter, reviewResult.getPage()));
+    }
+
+    private List<FilterOptionViewModel> reviewFilterOptions(
+            final User user, final PlayerReviewFilter selectedFilter, final Locale locale) {
+        return List.of(
+                reviewFilterOption(user, PlayerReviewFilter.BOTH, selectedFilter, locale),
+                reviewFilterOption(user, PlayerReviewFilter.POSITIVE, selectedFilter, locale),
+                reviewFilterOption(user, PlayerReviewFilter.BAD, selectedFilter, locale));
+    }
+
+    private FilterOptionViewModel reviewFilterOption(
+            final User user,
+            final PlayerReviewFilter filter,
+            final PlayerReviewFilter selectedFilter,
+            final Locale locale) {
+        final String label =
+                messageSource.getMessage(
+                        "profile.reviews.filter." + filter.getQueryValue(), null, locale);
+        return new FilterOptionViewModel(
+                label, buildReviewPageUrl(user, filter, 1), null, filter == selectedFilter);
+    }
+
+    private static List<PaginationItemViewModel> buildReviewPaginationItems(
+            final User user,
+            final PlayerReviewFilter selectedFilter,
+            final PaginatedResult<PlayerReview> result) {
+        if (result.getTotalPages() <= 1) {
+            return List.of();
+        }
+
+        final List<PaginationItemViewModel> items = new ArrayList<>();
+        final int startPage =
+                Math.max(2, Math.min(result.getPage() - 1, result.getTotalPages() - 3));
+        final int endPage = Math.min(result.getTotalPages() - 1, Math.max(result.getPage() + 1, 4));
+
+        items.add(reviewPageItem(user, selectedFilter, 1, result.getPage()));
+
+        if (startPage > 2) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+
+        for (int page = startPage; page <= endPage; page++) {
+            items.add(reviewPageItem(user, selectedFilter, page, result.getPage()));
+        }
+
+        if (endPage < result.getTotalPages() - 1) {
+            items.add(new PaginationItemViewModel("...", null, false, true));
+        }
+
+        items.add(reviewPageItem(user, selectedFilter, result.getTotalPages(), result.getPage()));
+
+        return items;
+    }
+
+    private static PaginationItemViewModel reviewPageItem(
+            final User user,
+            final PlayerReviewFilter selectedFilter,
+            final int page,
+            final int currentPage) {
+        return new PaginationItemViewModel(
+                Integer.toString(page),
+                buildReviewPageUrl(user, selectedFilter, page),
+                page == currentPage,
+                false);
+    }
+
+    private static String buildReviewPageUrl(
+            final User user, final PlayerReviewFilter selectedFilter, final int page) {
+        return buildReviewPageUrl(user, selectedFilter, page, null);
+    }
+
+    private static String buildReviewPageUrl(
+            final User user,
+            final PlayerReviewFilter selectedFilter,
+            final int page,
+            final String reviewForm) {
+        final UriComponentsBuilder builder =
+                UriComponentsBuilder.fromPath("/users/" + user.getUsername())
+                        .queryParam("reviewFilter", selectedFilter.getQueryValue())
+                        .queryParam("reviewPage", page);
+        if (reviewForm != null && !reviewForm.isBlank()) {
+            builder.queryParam("reviewForm", reviewForm);
+        }
+        return builder.fragment("reviews").build().toUriString();
     }
 
     private PlayerReviewViewModel toReviewViewModel(
-            final PlayerReview review, final Locale locale) {
-        final User reviewer =
-                userService
-                        .findById(review.getReviewerUserId())
-                        .orElse(
-                                new User(
-                                        review.getReviewerUserId(),
-                                        null,
-                                        messageSource.getMessage(
-                                                "profile.reviews.unknownReviewer",
-                                                null,
-                                                "Unknown player",
-                                                locale)));
+            final PlayerReview review, final Map<Long, User> reviewersById, final Locale locale) {
+        final User reviewer = reviewersById.get(review.getReviewerUserId());
+        final String reviewerUsername =
+                reviewer == null
+                        ? messageSource.getMessage(
+                                "profile.reviews.unknownReviewer", null, "Unknown player", locale)
+                        : reviewer.getUsername();
+        final String reviewerProfileHref =
+                reviewer == null
+                                || reviewer.getUsername() == null
+                                || reviewer.getUsername().isBlank()
+                        ? null
+                        : "/users/" + reviewer.getUsername();
         return new PlayerReviewViewModel(
                 review.getId(),
-                reviewer.getUsername(),
-                reviewer.getUsername() == null ? null : "/users/" + reviewer.getUsername(),
+                reviewerUsername,
+                reviewerProfileHref,
                 review.getReaction().getDbValue(),
                 reactionLabel(review.getReaction(), locale),
                 review.getComment(),
@@ -269,6 +406,15 @@ public class PublicProfileController {
         return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
                 .withLocale(locale == null ? Locale.ENGLISH : locale)
                 .format(review.getUpdatedAt().atZone(ZoneId.systemDefault()));
+    }
+
+    private static int parseReviewPage(final String reviewPage) {
+        try {
+            final int parsedPage = Integer.parseInt(reviewPage);
+            return parsedPage > 0 ? parsedPage : 1;
+        } catch (final NumberFormatException e) {
+            return 1;
+        }
     }
 
     private User findUserByUsernameOrThrow(final String username) {

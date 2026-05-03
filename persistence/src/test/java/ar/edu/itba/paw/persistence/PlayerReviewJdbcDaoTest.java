@@ -1,12 +1,14 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlayerReviewJdbcDaoTest {
 
     private static final Instant PAST_START = Instant.parse("2026-04-01T18:00:00Z");
-    private static final Instant FUTURE_START = Instant.now().plusSeconds(86400);
+    private static final Instant FUTURE_START = Instant.parse("2099-04-01T18:00:00Z");
 
     @Autowired private PlayerReviewDao playerReviewDao;
 
@@ -169,18 +171,99 @@ public class PlayerReviewJdbcDaoTest {
     }
 
     @Test
-    public void testFindRecentReviewsReturnsNewestFirst() {
+    public void testFindReviewsReturnsNewestFirst() {
         joinMatch(10L, 1L, "joined");
         joinMatch(10L, 2L, "joined");
         joinMatch(10L, 3L, "joined");
         playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "First");
         playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Second");
 
-        final List<PlayerReview> reviews = playerReviewDao.findRecentReviewsForUser(3L, 10, 0);
+        final List<PlayerReview> reviews =
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 0);
 
         Assertions.assertEquals(2, reviews.size());
         Assertions.assertEquals("Second", reviews.get(0).getComment());
         Assertions.assertEquals("First", reviews.get(1).getComment());
+    }
+
+    @Test
+    public void testFindReviewsFiltersPositiveReviews() {
+        joinMatch(10L, 1L, "joined");
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
+
+        final List<PlayerReview> reviews =
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.POSITIVE, 10, 0);
+
+        Assertions.assertEquals(1, reviews.size());
+        Assertions.assertEquals(PlayerReviewReaction.LIKE, reviews.get(0).getReaction());
+        Assertions.assertEquals("Helpful", reviews.get(0).getComment());
+    }
+
+    @Test
+    public void testFindReviewsFiltersBadReviews() {
+        joinMatch(10L, 1L, "joined");
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
+
+        final List<PlayerReview> reviews =
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BAD, 10, 0);
+
+        Assertions.assertEquals(1, reviews.size());
+        Assertions.assertEquals(PlayerReviewReaction.DISLIKE, reviews.get(0).getReaction());
+        Assertions.assertEquals("Late", reviews.get(0).getComment());
+    }
+
+    @Test
+    public void testCountReviewsForUserCountsActiveReviewsByFilter() {
+        joinMatch(10L, 1L, "joined");
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        joinMatch(10L, 4L, "joined");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
+        playerReviewDao.upsertReview(4L, 3L, PlayerReviewReaction.LIKE, "Reliable");
+
+        Assertions.assertEquals(
+                3, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BOTH));
+        Assertions.assertEquals(
+                2, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.POSITIVE));
+        Assertions.assertEquals(1, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BAD));
+    }
+
+    @Test
+    public void testCountReviewsForUserExcludesDeletedReviews() {
+        joinMatch(10L, 1L, "joined");
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
+        Assertions.assertTrue(playerReviewDao.softDeleteReview(2L, 3L));
+
+        Assertions.assertEquals(
+                1, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BOTH));
+        Assertions.assertEquals(0, playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BAD));
+    }
+
+    @Test
+    public void testFindReviewsBothPreservesLimitAndOffset() {
+        joinMatch(10L, 1L, "joined");
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        joinMatch(10L, 4L, "joined");
+        playerReviewDao.upsertReview(1L, 3L, PlayerReviewReaction.LIKE, "First");
+        playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Second");
+        playerReviewDao.upsertReview(4L, 3L, PlayerReviewReaction.LIKE, "Third");
+
+        final List<PlayerReview> reviews =
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 1, 1);
+
+        Assertions.assertEquals(1, reviews.size());
+        Assertions.assertEquals("Second", reviews.get(0).getComment());
     }
 
     @Test
@@ -217,6 +300,21 @@ public class PlayerReviewJdbcDaoTest {
         joinMatch(10L, 3L, "cancelled");
 
         Assertions.assertFalse(playerReviewDao.canReview(2L, 3L));
+    }
+
+    @Test
+    public void testFindReviewableUserIdsReturnsSharedCompletedParticipants() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "checked_in");
+        joinMatch(10L, 4L, "joined");
+        joinMatch(12L, 2L, "joined");
+        joinMatch(12L, 1L, "joined");
+        joinMatch(13L, 2L, "joined");
+        joinMatch(13L, 1L, "joined");
+
+        final Set<Long> reviewableUserIds = Set.copyOf(playerReviewDao.findReviewableUserIds(2L));
+
+        Assertions.assertEquals(Set.of(3L, 4L), reviewableUserIds);
     }
 
     private void insertMatch(final Long id, final String status, final Instant startsAt) {

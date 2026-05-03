@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.PlayerReviewFilter;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
@@ -8,6 +10,7 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -151,18 +154,74 @@ public class PlayerReviewServiceImplTest {
         final PlayerReviewSummary summary = new PlayerReviewSummary(3L, 1, 0, 1);
         Mockito.when(playerReviewDao.findByPair(2L, 3L)).thenReturn(Optional.of(review));
         Mockito.when(playerReviewDao.getSummaryForUser(3L)).thenReturn(summary);
-        Mockito.when(playerReviewDao.findRecentReviewsForUser(3L, 10, 0))
-                .thenReturn(List.of(review));
 
         Assertions.assertTrue(playerReviewService.findReviewByPair(2L, 3L).isPresent());
         Assertions.assertEquals(summary, playerReviewService.findSummaryForUser(3L));
-        Assertions.assertEquals(1, playerReviewService.findRecentReviewsForUser(3L, 0, -10).size());
     }
 
     @Test
-    public void testFindRecentReviewsClampsLargeLimit() {
-        playerReviewService.findRecentReviewsForUser(3L, 1000, 0);
-        Mockito.verify(playerReviewDao).findRecentReviewsForUser(3L, 50, 0);
+    public void testFindReviewsForUserReturnsRequestedPage() {
+        final PlayerReview review = review(2L, 4L, 3L, PlayerReviewReaction.LIKE, "Second", null);
+        Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BOTH))
+                .thenReturn(21);
+        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 10))
+                .thenReturn(List.of(review));
+
+        final PaginatedResult<PlayerReview> result =
+                playerReviewService.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 2, 10);
+
+        Assertions.assertEquals(2, result.getPage());
+        Assertions.assertEquals(3, result.getTotalPages());
+        Assertions.assertEquals(21, result.getTotalCount());
+        Assertions.assertEquals(List.of(review), result.getItems());
+    }
+
+    @Test
+    public void testFindReviewsForUserNormalizesInvalidPageAndPageSize() {
+        final PlayerReview review = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great", null);
+        Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.POSITIVE))
+                .thenReturn(1);
+        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.POSITIVE, 10, 0))
+                .thenReturn(List.of(review));
+
+        final PaginatedResult<PlayerReview> result =
+                playerReviewService.findReviewsForUser(3L, PlayerReviewFilter.POSITIVE, -2, 0);
+
+        Assertions.assertEquals(1, result.getPage());
+        Assertions.assertEquals(10, result.getPageSize());
+        Assertions.assertEquals(List.of(review), result.getItems());
+    }
+
+    @Test
+    public void testFindReviewsForUserClampsPagePastTotal() {
+        final PlayerReview review = review(3L, 5L, 3L, PlayerReviewReaction.DISLIKE, "Third", null);
+        Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BAD))
+                .thenReturn(25);
+        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BAD, 10, 20))
+                .thenReturn(List.of(review));
+
+        final PaginatedResult<PlayerReview> result =
+                playerReviewService.findReviewsForUser(3L, PlayerReviewFilter.BAD, 9, 10);
+
+        Assertions.assertEquals(3, result.getPage());
+        Assertions.assertEquals(3, result.getTotalPages());
+        Assertions.assertEquals(List.of(review), result.getItems());
+    }
+
+    @Test
+    public void testFindReviewableUserIdsReturnsDaoIdsAsSet() {
+        Mockito.when(playerReviewDao.findReviewableUserIds(2L)).thenReturn(List.of(3L, 4L, 3L));
+
+        final Set<Long> reviewableUserIds = playerReviewService.findReviewableUserIds(2L);
+
+        Assertions.assertEquals(Set.of(3L, 4L), reviewableUserIds);
+    }
+
+    @Test
+    public void testFindReviewableUserIdsRejectsMissingReviewer() {
+        final Set<Long> reviewableUserIds = playerReviewService.findReviewableUserIds(null);
+
+        Assertions.assertTrue(reviewableUserIds.isEmpty());
     }
 
     private static PlayerReview review(
