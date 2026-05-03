@@ -42,7 +42,8 @@
 									code="host.form.recurrence.endMode.untilDate" />
 								<spring:message var="recurrenceEndOccurrenceCount"
 									code="host.form.recurrence.endMode.occurrenceCount" />
-								<c:url var="resolvedFormAction" value="${formAction}" />
+								<c:set var="resolvedFormAction"
+									value="${pageContext.request.contextPath}${formAction}" />
 
 								<main class="page-shell">
 									<ui:returnButton />
@@ -80,7 +81,8 @@
 											code="host.form.duration.ninetyMinutes" />
 										<spring:message var="durationCustom" code="host.form.duration.custom" />
 										<spring:message var="durationLabel" code="host.form.duration" />
-										<c:url var="resolvedFormAction" value="${formAction}" />
+										<c:set var="resolvedFormAction"
+											value="${pageContext.request.contextPath}${formAction}" />
 
 										<form:form method="post" action="${resolvedFormAction}"
 											modelAttribute="createEventForm" enctype="multipart/form-data"
@@ -249,7 +251,7 @@
 													<spring:message code="host.section.visibility.subtitle" />
 												</h2>
 												<div class="form-card__grid">
-													<label class="field" for="match-visibility">
+													<div class="field">
 														<span class="field__label">
 															<spring:message code="host.form.visibility" />
 														</span>
@@ -284,9 +286,9 @@
 																	element="span" />
 															</c:otherwise>
 														</c:choose>
-													</label>
+													</div>
 
-													<label class="field" for="match-join-policy" id="join-policy-field">
+													<div class="field" id="join-policy-field">
 														<span class="field__label">
 															<spring:message code="host.form.joinPolicy" />
 														</span>
@@ -322,7 +324,7 @@
 																	element="span" />
 															</c:otherwise>
 														</c:choose>
-													</label>
+													</div>
 												</div>
 											</article>
 

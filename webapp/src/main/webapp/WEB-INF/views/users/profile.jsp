@@ -88,14 +88,16 @@
 										<c:out value="${profilePage.email}" />
 									</span>
 								</span>
-								<span class="public-profile-summary__pair">
-									<span class="field__label">
-										<c:out value="${profilePhoneLabel}" />:
+								<c:if test="${not empty profilePage.phone}">
+									<span class="public-profile-summary__pair">
+										<span class="field__label">
+											<c:out value="${profilePhoneLabel}" />:
+										</span>
+										<span class="public-profile-summary__value">
+											<c:out value="${profilePage.phone}" />
+										</span>
 									</span>
-									<span class="public-profile-summary__value">
-										<c:out value="${profilePage.phone}" />
-									</span>
-								</span>
+								</c:if>
 							</div>
 						</div>
 					</div>

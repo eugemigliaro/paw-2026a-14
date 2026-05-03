@@ -62,7 +62,7 @@
 										<span class="search-panel__icon" aria-hidden="true"></span>
 										<form:input
 											path="q"
-											cssClass="field__control search-panel__control"
+											cssClass="search-panel__control"
 											placeholder="${feedPage.searchPlaceholder}" />
 									</div>
 									<ui:button label="${feedPage.searchButtonLabel}" type="submit" />
@@ -75,15 +75,31 @@
 							<c:forEach var="group" items="${feedPage.filterGroups}">
 								<div class="filter-dropdown" data-filter-name="${group.title}">
 									<button type="button" class="filter-dropdown__toggle">
-										<span class="filter-dropdown__icon">
-											<c:choose>
-												<c:when test="${fn:contains(fn:toLowerCase(group.title), 'sport') || fn:contains(fn:toLowerCase(group.title), 'deporte')}">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<circle cx="12" cy="12" r="10" />
-														<path d="M5.5 18.5c3-3 3-10 13-13" />
-														<path d="M5.5 5.5c3 3 3 10 13 13" />
-													</svg>
-												</c:when>
+											<span class="filter-dropdown__icon">
+												<c:choose>
+													<c:when test="${fn:contains(fn:toLowerCase(group.title), 'category') || fn:contains(fn:toLowerCase(group.title), 'categoría') || fn:contains(fn:toLowerCase(group.title), 'categoria')}">
+														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+															stroke-linecap="round" stroke-linejoin="round">
+															<line x1="4" y1="6" x2="20" y2="6"/>
+															<line x1="4" y1="12" x2="20" y2="12"/>
+															<line x1="4" y1="18" x2="20" y2="18"/>
+															<circle cx="8" cy="6" r="2" fill="white"/>
+															<circle cx="15" cy="12" r="2" fill="white"/>
+															<circle cx="10" cy="18" r="2" fill="white"/>
+														</svg>
+													</c:when>
+													<c:when test="${fn:contains(fn:toLowerCase(group.title), 'sport') || fn:contains(fn:toLowerCase(group.title), 'deporte')}">
+														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+															stroke-linecap="round" stroke-linejoin="round">
+															<circle cx="12" cy="12" r="10"/>
+															<polygon points="12,7.4 16.37,10.58 14.7,15.72 9.3,15.72 7.63,10.58"/>
+															<line x1="12" y1="7.4" x2="12" y2="2"/>
+															<line x1="16.37" y1="10.58" x2="21.5" y2="8.9"/>
+															<line x1="14.7" y1="15.72" x2="17.9" y2="20.1"/>
+															<line x1="9.3" y1="15.72" x2="6.1" y2="20.1"/>
+															<line x1="7.63" y1="10.58" x2="2.5" y2="8.9"/>
+														</svg>
+													</c:when>
 												<c:when test="${fn:contains(fn:toLowerCase(group.title), 'status') || fn:contains(fn:toLowerCase(group.title), 'estado')}">
 													<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
 												</c:when>
