@@ -28,25 +28,11 @@
 				</header>
 
 				<section class="matches-search-sort-panel">
-					<c:if test="${not empty listControls.sortOptions}">
-						<form method="get" action="${listControls.searchAction}" class="sort-panel" aria-label="${sortAriaLabel}">
-							<label class="field sort-panel__field" for="sort-select">
-								<span class="field__label"><c:out value="${listControls.sortLabel}" /></span>
-								<select
-									id="sort-select"
-									name="sort"
-									class="field__control field__control--select sort-panel__select"
-									onchange="if(this.value){window.location.href=this.value;}">
-									<c:forEach var="option" items="${listControls.sortOptions}">
-										<c:url var="optionHref" value="${option.href}" />
-										<option value="${optionHref}" ${option.selected ? 'selected="selected"' : ''}>
-											<c:out value="${option.label}" />
-										</option>
-									</c:forEach>
-								</select>
-							</label>
-						</form>
-					</c:if>
+					<ui:sortSelect
+						id="sort-select"
+						label="${listControls.sortLabel}"
+						ariaLabel="${sortAriaLabel}"
+						options="${listControls.sortOptions}" />
 
 					<section class="search-panel matches-search-panel" aria-label="${searchAriaLabel}">
 						<form:form
