@@ -38,6 +38,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -50,6 +51,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 @Controller
 public class EventController {
+    private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
@@ -58,6 +60,32 @@ public class EventController {
     private final UserService userService;
     private final MessageSource messageSource;
     private final Clock clock;
+    private final boolean mapPickerEnabled;
+    private final String mapTileUrlTemplate;
+    private final String mapAttribution;
+    private final int mapDefaultZoom;
+
+    public EventController(
+            final MatchService matchService,
+            final MatchReservationService matchReservationService,
+            final MatchParticipationService matchParticipationService,
+            final PlayerReviewService playerReviewService,
+            final UserService userService,
+            final MessageSource messageSource,
+            final Clock clock) {
+        this(
+                matchService,
+                matchReservationService,
+                matchParticipationService,
+                playerReviewService,
+                userService,
+                messageSource,
+                clock,
+                false,
+                "",
+                "",
+                DEFAULT_MAP_ZOOM);
+    }
 
     @Autowired
     public EventController(
@@ -67,7 +95,11 @@ public class EventController {
             final PlayerReviewService playerReviewService,
             final UserService userService,
             final MessageSource messageSource,
-            final Clock clock) {
+            final Clock clock,
+            @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
+            @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
+            @Value("${map.tiles.attribution:}") final String mapAttribution,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
@@ -75,6 +107,10 @@ public class EventController {
         this.userService = userService;
         this.messageSource = messageSource;
         this.clock = clock;
+        this.mapPickerEnabled = mapPickerEnabled;
+        this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
+        this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
+        this.mapDefaultZoom = mapDefaultZoom;
     }
 
     @GetMapping("/matches/{eventId}")
@@ -402,7 +438,13 @@ public class EventController {
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
                 loadNearbyMatches(match.getId(), currentUserId, locale),
-                toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale));
+                toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale),
+                mapPickerEnabled && !mapTileUrlTemplate.isBlank() && match.hasCoordinates(),
+                match.getLatitude(),
+                match.getLongitude(),
+                mapTileUrlTemplate,
+                mapAttribution,
+                mapDefaultZoom);
     }
 
     private List<String> buildAboutParagraphs(final Match match, final Locale locale) {

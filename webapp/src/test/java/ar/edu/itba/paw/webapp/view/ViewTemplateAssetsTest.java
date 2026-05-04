@@ -21,6 +21,7 @@ class ViewTemplateAssetsTest {
         assertTrue(head.contains("/css/auth.css"));
         assertTrue(head.contains("/js/overflow-menu.js"));
         assertTrue(head.contains("/js/recurrence-schedule.js"));
+        assertTrue(head.contains("/js/event-map.js"));
     }
 
     @Test
@@ -209,6 +210,29 @@ class ViewTemplateAssetsTest {
         assertEquals(
                 "Cancelar todas las fechas recurrentes pr\u00f3ximas",
                 spanish.getProperty("host.manage.cancelSeries"));
+    }
+
+    @Test
+    void matchDetailIncludesPinnedLocationMapWhenCoordinatesExist() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+        final Path scriptPath = Path.of("src/main/webapp/js/event-map.js");
+        final String script = Files.readString(scriptPath);
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(detailView.contains("eventPage.mapAvailable"));
+        assertTrue(detailView.contains("data-event-map=\"true\""));
+        assertTrue(detailView.contains("data-tile-url-template"));
+        assertTrue(detailView.contains("data-latitude"));
+        assertTrue(detailView.contains("data-longitude"));
+        assertTrue(detailView.contains("event.detail.locationMap.aria"));
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(script.contains("data-event-map"));
+        assertTrue(script.contains("longitudeToWorldPixelX"));
+        assertTrue(script.contains("latitudeToWorldPixelY"));
+        assertTrue(script.contains("event-detail-map__tile--missing"));
+        assertNotNull(english.getProperty("event.detail.locationMap.aria"));
+        assertNotNull(spanish.getProperty("event.detail.locationMap.aria"));
     }
 
     @Test

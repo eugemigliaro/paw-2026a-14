@@ -338,6 +338,25 @@
 										</div>
 									</dl>
 								</article>
+								<c:if test="${eventPage.mapAvailable}">
+									<spring:message var="eventMapAria" code="event.detail.locationMap.aria" />
+									<div
+										class="event-detail-map"
+										data-event-map="true"
+										data-tile-url-template="${eventPage.mapTileUrlTemplate}"
+										data-attribution="${eventPage.mapAttribution}"
+										data-latitude="${eventPage.mapLatitude}"
+										data-longitude="${eventPage.mapLongitude}"
+										data-zoom="${eventPage.mapZoom}"
+										role="img"
+										aria-label="${eventMapAria}">
+										<div class="event-detail-map__tiles" data-event-map-tiles="true"></div>
+										<div class="event-detail-map__pin" aria-hidden="true"></div>
+										<c:if test="${not empty eventPage.mapAttribution}">
+											<p class="event-detail-map__attribution"><c:out value="${eventPage.mapAttribution}" /></p>
+										</c:if>
+									</div>
+								</c:if>
 
 								<article class="panel event-info-panel event-info-panel--hosted-by">
 									<dl class="event-info-panel__list">
@@ -704,6 +723,25 @@
 										</div>
 									</dl>
 								</article>
+								<c:if test="${eventPage.mapAvailable}">
+									<spring:message var="eventMapAria" code="event.detail.locationMap.aria" />
+									<div
+										class="event-detail-map"
+										data-event-map="true"
+										data-tile-url-template="${eventPage.mapTileUrlTemplate}"
+										data-attribution="${eventPage.mapAttribution}"
+										data-latitude="${eventPage.mapLatitude}"
+										data-longitude="${eventPage.mapLongitude}"
+										data-zoom="${eventPage.mapZoom}"
+										role="img"
+										aria-label="${eventMapAria}">
+										<div class="event-detail-map__tiles" data-event-map-tiles="true"></div>
+										<div class="event-detail-map__pin" aria-hidden="true"></div>
+										<c:if test="${not empty eventPage.mapAttribution}">
+											<p class="event-detail-map__attribution"><c:out value="${eventPage.mapAttribution}" /></p>
+										</c:if>
+									</div>
+								</c:if>
 
 								<article class="panel event-info-panel event-info-panel--hosted-by">
 									<dl class="event-info-panel__list">

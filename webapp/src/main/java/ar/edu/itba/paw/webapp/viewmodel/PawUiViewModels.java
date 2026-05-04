@@ -1009,6 +1009,12 @@ public final class PawUiViewModels {
         private final String ctaLabel;
         private final List<EventCardViewModel> nearbyEvents;
         private final List<EventOccurrenceViewModel> occurrences;
+        private final boolean mapAvailable;
+        private final Double mapLatitude;
+        private final Double mapLongitude;
+        private final String mapTileUrlTemplate;
+        private final String mapAttribution;
+        private final int mapZoom;
 
         public EventDetailPageViewModel(
                 final EventCardViewModel event,
@@ -1027,6 +1033,54 @@ public final class PawUiViewModels {
                 final String ctaLabel,
                 final List<EventCardViewModel> nearbyEvents,
                 final List<EventOccurrenceViewModel> occurrences) {
+            this(
+                    event,
+                    heroSubtitle,
+                    heroMeta,
+                    hostLabel,
+                    hostProfileHref,
+                    hostProfileImageUrl,
+                    participants,
+                    participantCountLabel,
+                    participantsEmptyState,
+                    aboutParagraphs,
+                    bookingPrice,
+                    bookingDetails,
+                    availabilityLabel,
+                    ctaLabel,
+                    nearbyEvents,
+                    occurrences,
+                    false,
+                    null,
+                    null,
+                    "",
+                    "",
+                    14);
+        }
+
+        public EventDetailPageViewModel(
+                final EventCardViewModel event,
+                final String heroSubtitle,
+                final String heroMeta,
+                final String hostLabel,
+                final String hostProfileHref,
+                final String hostProfileImageUrl,
+                final List<ParticipantViewModel> participants,
+                final String participantCountLabel,
+                final String participantsEmptyState,
+                final List<String> aboutParagraphs,
+                final String bookingPrice,
+                final List<BookingDetailViewModel> bookingDetails,
+                final String availabilityLabel,
+                final String ctaLabel,
+                final List<EventCardViewModel> nearbyEvents,
+                final List<EventOccurrenceViewModel> occurrences,
+                final boolean mapAvailable,
+                final Double mapLatitude,
+                final Double mapLongitude,
+                final String mapTileUrlTemplate,
+                final String mapAttribution,
+                final int mapZoom) {
             this.event = event;
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
@@ -1043,6 +1097,12 @@ public final class PawUiViewModels {
             this.ctaLabel = ctaLabel;
             this.nearbyEvents = nearbyEvents;
             this.occurrences = occurrences;
+            this.mapAvailable = mapAvailable;
+            this.mapLatitude = mapLatitude;
+            this.mapLongitude = mapLongitude;
+            this.mapTileUrlTemplate = mapTileUrlTemplate;
+            this.mapAttribution = mapAttribution;
+            this.mapZoom = mapZoom;
         }
 
         public EventCardViewModel getEvent() {
@@ -1107,6 +1167,30 @@ public final class PawUiViewModels {
 
         public List<EventOccurrenceViewModel> getOccurrences() {
             return occurrences;
+        }
+
+        public boolean isMapAvailable() {
+            return mapAvailable;
+        }
+
+        public Double getMapLatitude() {
+            return mapLatitude;
+        }
+
+        public Double getMapLongitude() {
+            return mapLongitude;
+        }
+
+        public String getMapTileUrlTemplate() {
+            return mapTileUrlTemplate;
+        }
+
+        public String getMapAttribution() {
+            return mapAttribution;
+        }
+
+        public int getMapZoom() {
+            return mapZoom;
         }
     }
 

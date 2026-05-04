@@ -1343,7 +1343,11 @@ class PawUiRouteTest {
                                         playerReviewService,
                                         userService,
                                         messageSource,
-                                        fixedClock),
+                                        fixedClock,
+                                        true,
+                                        "/assets/tiles/{z}/{x}/{y}.png",
+                                        "Local Buenos Aires map tiles",
+                                        14),
                                 new PublicProfileController(
                                         userService, playerReviewService,
                                         moderationService, messageSource),
@@ -1531,6 +1535,22 @@ class PawUiRouteTest {
                                         "eventPage",
                                         Matchers.hasProperty(
                                                 "hostProfileImageUrl", Matchers.is("/images/88"))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.allOf(
+                                                Matchers.hasProperty(
+                                                        "mapAvailable", Matchers.is(true)),
+                                                Matchers.hasProperty(
+                                                        "mapTileUrlTemplate",
+                                                        Matchers.is(
+                                                                "/assets/tiles/{z}/{x}/{y}.png")),
+                                                Matchers.hasProperty(
+                                                        "mapLatitude",
+                                                        Matchers.closeTo(-34.61, 0.000001)),
+                                                Matchers.hasProperty(
+                                                        "mapLongitude",
+                                                        Matchers.closeTo(-58.38, 0.000001)))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
