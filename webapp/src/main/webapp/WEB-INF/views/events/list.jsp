@@ -25,6 +25,7 @@
 										<spring:message var="sortAriaLabel" code="feed.aria.sort" />
 										<spring:message var="searchPlaceholder" code="events.search.placeholder" />
 										<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
+										<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 										<spring:message var="priceRangeError" code="filter.price.rangeError" />
 
 									<main class="page-shell page-shell--matches-list">
@@ -180,6 +181,9 @@
 																		<ui:button label="${clearFilterLabel}" href="${clearFilterUrl}"
 																			variant="secondary" size="sm"
 																			className="filter-dropdown__action" />
+																			<ui:button label="${seeResultsLabel}" type="button"
+																			variant="primary" size="sm"
+																			className="filter-dropdown__action filter-dropdown__close" />
 																	</div>
 																</div>
 																<c:set var="hasSelectedFilterOptions" value="${false}" />
