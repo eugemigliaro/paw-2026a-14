@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.EventVisibility;
@@ -75,6 +76,11 @@ public class MatchServiceImpl implements MatchService {
             return createRecurringMatch(request);
         }
 
+        final EventJoinPolicy joinPolicy =
+                EventVisibility.PRIVATE == request.getVisibility()
+                        ? EventJoinPolicy.INVITE_ONLY
+                        : request.getJoinPolicy();
+
         return matchDao.createMatch(
                 request.getHostUserId(),
                 request.getAddress(),
@@ -86,7 +92,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getPricePerPlayer(),
                 request.getSport(),
                 request.getVisibility(),
-                request.getJoinPolicy(),
+                joinPolicy,
                 request.getStatus(),
                 request.getBannerImageId());
     }
@@ -111,6 +117,10 @@ public class MatchServiceImpl implements MatchService {
         Match firstOccurrence = null;
         for (int i = 0; i < occurrences.size(); i++) {
             final OccurrenceWindow occurrence = occurrences.get(i);
+            final EventJoinPolicy joinPolicy =
+                    EventVisibility.PRIVATE == request.getVisibility()
+                            ? EventJoinPolicy.INVITE_ONLY
+                            : request.getJoinPolicy();
             final Match created =
                     matchDao.createMatch(
                             request.getHostUserId(),
@@ -123,7 +133,7 @@ public class MatchServiceImpl implements MatchService {
                             request.getPricePerPlayer(),
                             request.getSport(),
                             request.getVisibility(),
-                            request.getJoinPolicy(),
+                            joinPolicy,
                             request.getStatus(),
                             request.getBannerImageId(),
                             seriesId,
@@ -152,8 +162,8 @@ public class MatchServiceImpl implements MatchService {
                     MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
         }
 
-        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())
-                || EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.CANCELLED.equals(match.getStatus())
+                || EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_EDITABLE,
                     message("match.update.error.notEditable"));
@@ -178,6 +188,11 @@ public class MatchServiceImpl implements MatchService {
                     message("match.update.error.capacityBelowConfirmed"));
         }
 
+        final EventJoinPolicy joinPolicy =
+                EventVisibility.PRIVATE == request.getVisibility()
+                        ? EventJoinPolicy.INVITE_ONLY
+                        : request.getJoinPolicy();
+
         final boolean updated =
                 matchDao.updateMatch(
                         matchId,
@@ -191,7 +206,7 @@ public class MatchServiceImpl implements MatchService {
                         request.getPricePerPlayer(),
                         request.getSport(),
                         request.getVisibility(),
-                        request.getJoinPolicy(),
+                        joinPolicy,
                         request.getStatus(),
                         request.getBannerImageId());
 
@@ -324,13 +339,13 @@ public class MatchServiceImpl implements MatchService {
                     message("match.cancel.error.forbidden"));
         }
 
-        if (EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
                     message("match.cancel.error.forbidden"));
         }
 
-        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.CANCELLED.equals(match.getStatus())) {
             return match;
         }
 
@@ -456,9 +471,8 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private static boolean isEditableMatch(final Match match) {
-        return EventStatus.fromDbValue(match.getStatus())
-                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
-                .orElse(true);
+        return match.getStatus() != EventStatus.COMPLETED
+                && match.getStatus() != EventStatus.CANCELLED;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
@@ -88,7 +89,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     "is_host", "Hosts cannot request to join their own event.");
         }
 
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
+        if (!EventStatus.OPEN.equals(match.getStatus())) {
             throw new MatchParticipationException(
                     "closed", "The event is not open for join requests.");
         }
@@ -261,7 +262,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             return;
         }
 
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
+        if (!EventStatus.OPEN.equals(match.getStatus())) {
             throw new MatchParticipationException("closed", "The event is not open.");
         }
 
@@ -478,7 +479,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             return;
         }
 
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
+        if (!EventStatus.OPEN.equals(match.getStatus())) {
             throw new MatchParticipationException("closed", "The event is not open.");
         }
 
@@ -589,7 +590,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     private static void requireInvitableMatch(final Match match) {
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
+        if (!EventStatus.OPEN.equals(match.getStatus())) {
             throw new MatchParticipationException("closed", "The event is not open.");
         }
 
@@ -635,7 +636,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                         locale);
         final String statusLabel =
                 messageSource.getMessage(
-                        "match.status." + match.getStatus(), null, match.getStatus(), locale);
+                        "match.status." + match.getStatus().getValue(),
+                        null,
+                        match.getStatus().getValue(),
+                        locale);
 
         return new MatchLifecycleMailTemplateData(
                 recipient.getEmail(),
@@ -653,7 +657,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("started", "The event has already started.");
         }
 
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
+        if (!EventStatus.OPEN.equals(match.getStatus())) {
             throw new MatchParticipationException(
                     "not_cancellable", "This reservation can no longer be cancelled.");
         }
@@ -741,7 +745,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     private static boolean isSeriesJoinRequestableOccurrence(final Match occurrence) {
-        return "open".equalsIgnoreCase(occurrence.getStatus())
+        return EventStatus.OPEN.equals(occurrence.getStatus())
                 && occurrence.getVisibility() == EventVisibility.PUBLIC
                 && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
     }
@@ -795,7 +799,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     private static boolean isSeriesInvitableOccurrence(final Match occurrence) {
-        return "open".equalsIgnoreCase(occurrence.getStatus())
+        return EventStatus.OPEN.equals(occurrence.getStatus())
                 && occurrence.getVisibility() == EventVisibility.PRIVATE
                 && occurrence.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY;
     }

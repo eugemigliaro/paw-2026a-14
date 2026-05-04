@@ -210,9 +210,10 @@ public class MatchDashboardController {
                                                 locale,
                                                 currentUserId,
                                                 messageSource.getMessage(
-                                                        "match.status." + match.getStatus(),
+                                                        "match.status."
+                                                                + match.getStatus().getValue(),
                                                         null,
-                                                        match.getStatus(),
+                                                        match.getStatus().getValue(),
                                                         locale),
                                                 messageSource,
                                                 userService,
@@ -489,7 +490,7 @@ public class MatchDashboardController {
         // Filter by status
         if (statuses != null && !statuses.isBlank()) {
             final List<String> statusList = normalizeCsvValues(List.of(statuses));
-            if (!statusList.isEmpty() && !statusList.contains(match.getStatus())) {
+            if (!statusList.isEmpty() && !statusList.contains(match.getStatus().getValue())) {
                 return false;
             }
         }

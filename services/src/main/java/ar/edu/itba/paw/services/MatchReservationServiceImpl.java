@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.persistence.MatchDao;
@@ -235,7 +236,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     }
 
     private void validateReservable(final Match match, final Long userId) {
-        if (!"open".equalsIgnoreCase(match.getStatus())) {
+        if (!EventStatus.OPEN.equals(match.getStatus())) {
             LOGGER.warn(
                     "Reservation rejected code=closed matchId={} userId={} status={}",
                     match.getId(),
@@ -307,7 +308,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
         final boolean hostReservation = isHost(currentMatch, userId);
 
-        if (!"open".equalsIgnoreCase(currentMatch.getStatus())
+        if (!EventStatus.OPEN.equals(currentMatch.getStatus())
                 || (!hostReservation
                         && (currentMatch.getVisibility() != EventVisibility.PUBLIC
                                 || currentMatch.getJoinPolicy() != EventJoinPolicy.DIRECT))) {
@@ -378,7 +379,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     }
 
     private static boolean isSeriesReservableOccurrence(final Match occurrence, final Long userId) {
-        return "open".equalsIgnoreCase(occurrence.getStatus())
+        return EventStatus.OPEN.equals(occurrence.getStatus())
                 && (isHost(occurrence, userId)
                         || (occurrence.getVisibility() == EventVisibility.PUBLIC
                                 && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.EventVisibility;
@@ -75,9 +76,11 @@ public class MatchJdbcDao implements MatchDao {
                         endsAt == null ? null : endsAt.toInstant(),
                         rs.getInt("max_players"),
                         price,
-                        rs.getString("visibility"),
-                        rs.getString("join_policy"),
-                        rs.getString("status"),
+                        EventVisibility.fromDbValue(rs.getString("visibility"))
+                                .orElse(EventVisibility.PUBLIC),
+                        EventJoinPolicy.fromDbValue(rs.getString("join_policy"))
+                                .orElse(EventJoinPolicy.DIRECT),
+                        EventStatus.fromDbValue(rs.getString("status")).orElse(EventStatus.OPEN),
                         rs.getInt("joined_players"),
                         rs.getObject("banner_image_id") == null
                                 ? null
@@ -122,9 +125,9 @@ public class MatchJdbcDao implements MatchDao {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Long bannerImageId,
             final Long seriesId,
             final Integer seriesOccurrenceIndex) {
@@ -138,9 +141,9 @@ public class MatchJdbcDao implements MatchDao {
         values.put("max_players", maxPlayers);
         values.put("price_per_player", pricePerPlayer);
         values.put("sport", new SqlParameterValue(Types.OTHER, sport.getDbValue()));
-        values.put("visibility", new SqlParameterValue(Types.OTHER, visibility));
-        values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy));
-        values.put("status", new SqlParameterValue(Types.OTHER, status));
+        values.put("visibility", new SqlParameterValue(Types.OTHER, visibility.getValue()));
+        values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy.getValue()));
+        values.put("status", new SqlParameterValue(Types.OTHER, status.getValue()));
         values.put("banner_image_id", bannerImageId);
         values.put("series_id", seriesId);
         values.put("series_occurrence_index", seriesOccurrenceIndex);
@@ -205,9 +208,9 @@ public class MatchJdbcDao implements MatchDao {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Long bannerImageId) {
         final int updatedRows =
                 jdbcTemplate.update(
@@ -225,9 +228,9 @@ public class MatchJdbcDao implements MatchDao {
                         maxPlayers,
                         pricePerPlayer,
                         new SqlParameterValue(Types.OTHER, sport.getDbValue()),
-                        new SqlParameterValue(Types.OTHER, visibility),
-                        new SqlParameterValue(Types.OTHER, joinPolicy),
-                        new SqlParameterValue(Types.OTHER, status),
+                        new SqlParameterValue(Types.OTHER, visibility.getValue()),
+                        new SqlParameterValue(Types.OTHER, joinPolicy.getValue()),
+                        new SqlParameterValue(Types.OTHER, status.getValue()),
                         bannerImageId,
                         matchId,
                         hostUserId);

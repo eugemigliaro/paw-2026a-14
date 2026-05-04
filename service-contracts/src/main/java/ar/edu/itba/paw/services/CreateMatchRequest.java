@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,9 +18,9 @@ public class CreateMatchRequest {
     private final int maxPlayers;
     private final BigDecimal pricePerPlayer;
     private final Sport sport;
-    private final String visibility;
-    private final String joinPolicy;
-    private final String status;
+    private final EventVisibility visibility;
+    private final EventJoinPolicy joinPolicy;
+    private final EventStatus status;
     private final Long bannerImageId;
     private final CreateRecurrenceRequest recurrence;
 
@@ -31,8 +34,8 @@ public class CreateMatchRequest {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String status,
+            final EventVisibility visibility,
+            final EventStatus status,
             final Long bannerImageId) {
         this(
                 hostUserId,
@@ -45,7 +48,9 @@ public class CreateMatchRequest {
                 pricePerPlayer,
                 sport,
                 visibility,
-                "public".equalsIgnoreCase(visibility) ? "direct" : "invite_only",
+                EventVisibility.PUBLIC.equals(visibility)
+                        ? EventJoinPolicy.DIRECT
+                        : EventJoinPolicy.INVITE_ONLY,
                 status,
                 bannerImageId,
                 null);
@@ -61,9 +66,9 @@ public class CreateMatchRequest {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Long bannerImageId) {
         this(
                 hostUserId,
@@ -92,9 +97,9 @@ public class CreateMatchRequest {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Long bannerImageId,
             final CreateRecurrenceRequest recurrence) {
         this.hostUserId = hostUserId;
@@ -149,15 +154,15 @@ public class CreateMatchRequest {
         return sport;
     }
 
-    public String getVisibility() {
+    public EventVisibility getVisibility() {
         return visibility;
     }
 
-    public String getJoinPolicy() {
+    public EventJoinPolicy getJoinPolicy() {
         return joinPolicy;
     }
 
-    public String getStatus() {
+    public EventStatus getStatus() {
         return status;
     }
 

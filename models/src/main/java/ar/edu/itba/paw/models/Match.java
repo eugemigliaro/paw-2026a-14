@@ -17,7 +17,7 @@ public class Match {
     private final BigDecimal pricePerPlayer;
     private final EventVisibility visibility;
     private final EventJoinPolicy joinPolicy;
-    private final String status;
+    private final EventStatus status;
     private final int joinedPlayers;
     private final Long bannerImageId;
     private final Long seriesId;
@@ -38,126 +38,9 @@ public class Match {
             final Instant endsAt,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
-            final String visibility,
-            final String status,
-            final int joinedPlayers,
-            final Long bannerImageId) {
-        this(
-                id,
-                sport,
-                hostUserId,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                parseVisibility(visibility),
-                defaultJoinPolicyForVisibility(visibility),
-                status,
-                joinedPlayers,
-                bannerImageId,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null);
-    }
-
-    public Match(
-            final Long id,
-            final Sport sport,
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
-            final int joinedPlayers,
-            final Long bannerImageId) {
-        this(
-                id,
-                sport,
-                hostUserId,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                parseVisibility(visibility),
-                parseJoinPolicy(joinPolicy),
-                status,
-                joinedPlayers,
-                bannerImageId,
-                null,
-                null);
-    }
-
-    public Match(
-            final Long id,
-            final Sport sport,
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
-            final int joinedPlayers,
-            final Long bannerImageId,
-            final Long seriesId,
-            final Integer seriesOccurrenceIndex) {
-        this(
-                id,
-                sport,
-                hostUserId,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                parseVisibility(visibility),
-                parseJoinPolicy(joinPolicy),
-                status,
-                joinedPlayers,
-                bannerImageId,
-                seriesId,
-                seriesOccurrenceIndex,
-                false,
-                null,
-                null,
-                null);
-    }
-
-    public Match(
-            final Long id,
-            final Sport sport,
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
-            final String status,
+            final EventStatus status,
             final int joinedPlayers,
             final Long bannerImageId) {
         this(
@@ -197,7 +80,7 @@ public class Match {
             final BigDecimal pricePerPlayer,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
-            final String status,
+            final EventStatus status,
             final int joinedPlayers,
             final Long bannerImageId,
             final Long seriesId,
@@ -237,55 +120,9 @@ public class Match {
             final Instant endsAt,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
-            final int joinedPlayers,
-            final Long bannerImageId,
-            final Long seriesId,
-            final Integer seriesOccurrenceIndex,
-            final boolean deleted,
-            final Instant deletedAt,
-            final Long deletedByUserId,
-            final String deleteReason) {
-        this(
-                id,
-                sport,
-                hostUserId,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                parseVisibility(visibility),
-                parseJoinPolicy(joinPolicy),
-                status,
-                joinedPlayers,
-                bannerImageId,
-                seriesId,
-                seriesOccurrenceIndex,
-                deleted,
-                deletedAt,
-                deletedByUserId,
-                deleteReason);
-    }
-
-    public Match(
-            final Long id,
-            final Sport sport,
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
-            final String status,
+            final EventStatus status,
             final int joinedPlayers,
             final Long bannerImageId,
             final Long seriesId,
@@ -315,26 +152,6 @@ public class Match {
         this.deletedAt = deletedAt;
         this.deletedByUserId = deletedByUserId;
         this.deleteReason = deleteReason;
-    }
-
-    private static EventVisibility parseVisibility(final String visibility) {
-        return EventVisibility.fromDbValue(visibility)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown event visibility"));
-    }
-
-    private static EventJoinPolicy parseJoinPolicy(final String joinPolicy) {
-        return EventJoinPolicy.fromDbValue(joinPolicy)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown event join policy"));
-    }
-
-    private static EventJoinPolicy defaultJoinPolicyForVisibility(final String visibility) {
-        if (EventVisibility.PUBLIC.toString().equalsIgnoreCase(visibility)) {
-            return EventJoinPolicy.DIRECT;
-        }
-        if (EventVisibility.PRIVATE.toString().equalsIgnoreCase(visibility)) {
-            return EventJoinPolicy.INVITE_ONLY;
-        }
-        return EventJoinPolicy.APPROVAL_REQUIRED;
     }
 
     public Long getId() {
@@ -385,7 +202,7 @@ public class Match {
         return joinPolicy;
     }
 
-    public String getStatus() {
+    public EventStatus getStatus() {
         return status;
     }
 

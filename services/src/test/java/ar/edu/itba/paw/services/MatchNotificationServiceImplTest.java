@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
@@ -63,7 +66,7 @@ public class MatchNotificationServiceImplTest {
 
     @Test
     public void testNotifyMatchUpdatedSendsOneMailPerParticipant() {
-        final Match match = createMatch(40L, "Updated Match", "open");
+        final Match match = createMatch(40L, "Updated Match", EventStatus.OPEN);
         final List<User> participants =
                 List.of(
                         new User(2L, "first@test.com", "first"),
@@ -84,7 +87,7 @@ public class MatchNotificationServiceImplTest {
 
     @Test
     public void testNotifyMatchCancelledSendsOneMailPerParticipant() {
-        final Match match = createMatch(41L, "Cancelled Match", "cancelled");
+        final Match match = createMatch(41L, "Cancelled Match", EventStatus.CANCELLED);
         final List<User> participants =
                 List.of(
                         new User(2L, "first@test.com", "first"),
@@ -105,7 +108,7 @@ public class MatchNotificationServiceImplTest {
 
     @Test
     public void testNotifyMatchUpdatedDoesNothingWhenNoParticipants() {
-        final Match match = createMatch(42L, "Quiet Match", "open");
+        final Match match = createMatch(42L, "Quiet Match", EventStatus.OPEN);
         Mockito.when(matchParticipantDao.findConfirmedParticipants(42L)).thenReturn(List.of());
 
         matchNotificationService.notifyMatchUpdated(match);
@@ -117,8 +120,10 @@ public class MatchNotificationServiceImplTest {
     @Test
     public void testNotifyRecurringMatchesUpdatedDeduplicatesAffectedParticipants() {
         // 1. Arrange
-        final Match firstOccurrence = createRecurringMatch(50L, "Weekly Padel", "open", 600L, 1);
-        final Match secondOccurrence = createRecurringMatch(51L, "Weekly Padel", "open", 600L, 2);
+        final Match firstOccurrence =
+                createRecurringMatch(50L, "Weekly Padel", EventStatus.OPEN, 600L, 1);
+        final Match secondOccurrence =
+                createRecurringMatch(51L, "Weekly Padel", EventStatus.OPEN, 600L, 2);
         final User firstParticipant = new User(2L, "first@test.com", "first");
         final User secondParticipant = new User(3L, "second@test.com", "second");
         final MailContent mail = new MailContent("series-updated", "<p>updated</p>", "updated");
@@ -144,9 +149,9 @@ public class MatchNotificationServiceImplTest {
     public void testNotifyRecurringMatchesCancelledUsesPerRecipientAffectedDateCount() {
         // 1. Arrange
         final Match firstOccurrence =
-                createRecurringMatch(52L, "Weekly Padel", "cancelled", 600L, 1);
+                createRecurringMatch(52L, "Weekly Padel", EventStatus.CANCELLED, 600L, 1);
         final Match secondOccurrence =
-                createRecurringMatch(53L, "Weekly Padel", "cancelled", 600L, 2);
+                createRecurringMatch(53L, "Weekly Padel", EventStatus.CANCELLED, 600L, 2);
         final User firstParticipant = new User(2L, "first@test.com", "first");
         final User secondParticipant = new User(3L, "second@test.com", "second");
         final MailContent mail =
@@ -177,7 +182,7 @@ public class MatchNotificationServiceImplTest {
 
     @Test
     public void testNotifyHostPlayerLeftSendsMailToHost() {
-        final Match match = createMatch(60L, "Weekly Padel", "open");
+        final Match match = createMatch(60L, "Weekly Padel", EventStatus.OPEN);
         final User player =
                 new User(2L, "player@test.com", "player", "Jamie", "Rivera", null, null);
         final User host = new User(1L, "host@test.com", "host", "Host", "User", null, null);
@@ -194,7 +199,7 @@ public class MatchNotificationServiceImplTest {
 
     @Test
     public void testNotifyPlayerRemovedByHostSendsMailToPlayer() {
-        final Match match = createMatch(61L, "Weekly Padel", "open");
+        final Match match = createMatch(61L, "Weekly Padel", EventStatus.OPEN);
         final User player =
                 new User(2L, "player@test.com", "player", "Jamie", "Rivera", null, null);
         final MailContent mail = new MailContent("removed", "<p>removed</p>", "removed");
@@ -219,7 +224,7 @@ public class MatchNotificationServiceImplTest {
         }
     }
 
-    private static Match createMatch(final long id, final String title, final String status) {
+    private static Match createMatch(final long id, final String title, final EventStatus status) {
         return new Match(
                 id,
                 Sport.PADEL,
@@ -231,7 +236,8 @@ public class MatchNotificationServiceImplTest {
                 Instant.parse("2026-04-06T19:00:00Z"),
                 10,
                 BigDecimal.ZERO,
-                "public",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
                 status,
                 0,
                 null);
@@ -240,7 +246,7 @@ public class MatchNotificationServiceImplTest {
     private static Match createRecurringMatch(
             final long id,
             final String title,
-            final String status,
+            final EventStatus status,
             final long seriesId,
             final int occurrenceIndex) {
         return new Match(
@@ -254,8 +260,8 @@ public class MatchNotificationServiceImplTest {
                 Instant.parse("2026-04-06T19:00:00Z").plusSeconds(604800L * occurrenceIndex),
                 10,
                 BigDecimal.ZERO,
-                "public",
-                "direct",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
                 status,
                 0,
                 null,

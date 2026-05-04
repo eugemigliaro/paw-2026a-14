@@ -618,7 +618,7 @@ public class EventController {
 
     private static boolean isSeriesReservationOpenOccurrence(
             final Match occurrence, final boolean isHostViewer) {
-        return "open".equalsIgnoreCase(occurrence.getStatus())
+        return EventStatus.OPEN == occurrence.getStatus()
                 && (isHostViewer
                         || (occurrence.getVisibility() == EventVisibility.PUBLIC
                                 && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));
@@ -701,11 +701,11 @@ public class EventController {
     private static boolean isSeriesJoinRequestOpenOccurrence(final Match occurrence) {
         return occurrence.getVisibility() == EventVisibility.PUBLIC
                 && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
-                && "open".equalsIgnoreCase(occurrence.getStatus());
+                && EventStatus.OPEN == occurrence.getStatus();
     }
 
     private EventDisplayState eventDisplayState(final Match match) {
-        final Optional<EventStatus> status = EventStatus.fromDbValue(match.getStatus());
+        final Optional<EventStatus> status = Optional.of(match.getStatus());
         if (status.filter(EventStatus.CANCELLED::equals).isPresent()) {
             return new EventDisplayState("cancelled", "cancelled");
         }
@@ -835,12 +835,12 @@ public class EventController {
     }
 
     private boolean isMatchVisibleToUser(final Match match, final Long currentUserId) {
-        if ("draft".equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.DRAFT == match.getStatus()) {
             return currentUserId != null && currentUserId.equals(match.getHostUserId());
         }
 
         if (match.getVisibility() == EventVisibility.PRIVATE
-                || "cancelled".equalsIgnoreCase(match.getStatus())) {
+                || EventStatus.CANCELLED == match.getStatus()) {
             if (currentUserId != null && currentUserId.equals(match.getHostUserId())) {
                 return true;
             }
@@ -859,7 +859,7 @@ public class EventController {
     }
 
     private boolean canReserveMatch(final Match match, final boolean isHostViewer) {
-        return "open".equalsIgnoreCase(match.getStatus())
+        return EventStatus.OPEN == match.getStatus()
                 && (isHostViewer
                         || (match.getVisibility() == EventVisibility.PUBLIC
                                 && match.getJoinPolicy() == EventJoinPolicy.DIRECT))
@@ -870,13 +870,13 @@ public class EventController {
     private boolean canRequestToJoin(final Match match) {
         return match.getVisibility() == EventVisibility.PUBLIC
                 && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
-                && "open".equalsIgnoreCase(match.getStatus())
+                && EventStatus.OPEN == match.getStatus()
                 && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
     }
 
     private boolean canCancelReservation(final Match match) {
-        return "open".equalsIgnoreCase(match.getStatus()) && !hasEventStarted(match);
+        return EventStatus.OPEN == match.getStatus() && !hasEventStarted(match);
     }
 
     private boolean shouldRedirectToPlayerMatchesAfterCancellation(
@@ -965,18 +965,16 @@ public class EventController {
         if (hasEventEnded(match)) {
             return false;
         }
-        return EventStatus.fromDbValue(match.getStatus())
-                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
-                .orElse(true);
+        return match.getStatus() != EventStatus.COMPLETED
+                && match.getStatus() != EventStatus.CANCELLED;
     }
 
     private boolean canHostCancel(final Match match) {
         if (hasEventEnded(match)) {
             return false;
         }
-        return EventStatus.fromDbValue(match.getStatus())
-                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
-                .orElse(true);
+        return match.getStatus() != EventStatus.COMPLETED
+                && match.getStatus() != EventStatus.CANCELLED;
     }
 
     private boolean canHostManageParticipants(final Match match) {
