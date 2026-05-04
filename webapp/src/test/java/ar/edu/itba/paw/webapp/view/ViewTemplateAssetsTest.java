@@ -130,6 +130,25 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void feedClearAllResetsToPublicExploreWithoutPreservingFilters() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final int clearAllIndex = feedIndex.indexOf("var=\"clearFiltersHref\"");
+        final int clearAllLabelIndex = feedIndex.indexOf("var=\"clearAllLabel\"");
+
+        assertTrue(clearAllIndex >= 0);
+        assertTrue(clearAllLabelIndex > clearAllIndex);
+        assertTrue(
+                feedIndex.contains(
+                        "<c:url var=\"clearFiltersHref\" value=\"${feedFormAction}\" />"));
+        final String clearAllBlock = feedIndex.substring(clearAllIndex, clearAllLabelIndex);
+        assertFalse(clearAllBlock.contains("name=\"sort\""));
+        assertFalse(clearAllBlock.contains("name=\"startDate\""));
+        assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"minPrice\""));
+        assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
+    }
+
+    @Test
     void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");

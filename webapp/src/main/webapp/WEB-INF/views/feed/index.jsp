@@ -297,15 +297,7 @@
 									</c:if>
 								</div>
 
-								<c:url var="clearFiltersHref" value="${feedFormAction}">
-								<c:param name="q" value="${feedSearchForm.q}" />
-								<c:param name="sort" value="${selectedSort}" />
-								<c:param name="tz" value="${selectedTimezone}" />
-								<c:param name="startDate" value="" />
-								<c:param name="endDate" value="" />
-								<c:param name="minPrice" value="" />
-								<c:param name="maxPrice" value="" />
-							</c:url>
+								<c:url var="clearFiltersHref" value="${feedFormAction}" />
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
 							<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 							<ui:button
