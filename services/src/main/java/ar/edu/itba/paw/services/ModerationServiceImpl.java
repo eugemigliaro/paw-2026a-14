@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
@@ -432,29 +433,41 @@ public class ModerationServiceImpl implements ModerationService {
         }
     }
 
-    private void sendBanEmail(final Long userId, final Instant bannedUntil, final String reason) {
-        final Locale locale = currentLocale();
+    private void sendBanEmail(
+            final Long moderationReportId,
+            final Long userId,
+            final Instant bannedUntil,
+            final String reason) {
         final UserAccount account =
                 userDao.findAccountById(userId)
                         .orElseThrow(
                                 () -> new ModerationException("user_not_found", "User not found."));
+        final Locale locale = UserLanguages.toLocale(account.getPreferredLanguage());
+        final String localizedReason =
+                reason == null || reason.isBlank()
+                        ? messageSource.getMessage(
+                                "moderation.action.defaultReason",
+                                new Object[] {moderationReportId},
+                                locale)
+                        : reason;
         final MailContent content =
                 templateRenderer.renderBanNotification(
                         new BanMailTemplateData(
                                 account.getEmail(),
                                 account.getUsername(),
                                 bannedUntil,
-                                reason,
+                                localizedReason,
                                 stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
                                 locale));
         mailDispatchService.dispatch(account.getEmail(), content);
     }
 
-    private void sendUnbanEmail(final Long userId, final Locale locale) {
+    private void sendUnbanEmail(final Long userId) {
         final UserAccount account =
                 userDao.findAccountById(userId)
                         .orElseThrow(
                                 () -> new ModerationException("user_not_found", "User not found."));
+        final Locale locale = UserLanguages.toLocale(account.getPreferredLanguage());
         final MailContent content =
                 templateRenderer.renderUnbanNotification(
                         new UnbanMailTemplateData(
@@ -568,14 +581,7 @@ public class ModerationServiceImpl implements ModerationService {
                 && report.getTargetType() == ReportTargetType.USER) {
             final Instant bannedUntil =
                     Instant.now(clock).plusSeconds(DEFAULT_BAN_DURATION_DAYS * 24L * 3600L);
-            final String reason =
-                    resolutionDetails == null
-                            ? messageSource.getMessage(
-                                    "moderation.action.defaultReason",
-                                    new Object[] {report.getId()},
-                                    currentLocale())
-                            : resolutionDetails;
-            banUser(sourceReportId, bannedUntil, report.getTargetId(), reason);
+            banUser(sourceReportId, bannedUntil, report.getTargetId(), resolutionDetails);
         }
     }
 
@@ -618,7 +624,7 @@ public class ModerationServiceImpl implements ModerationService {
             final Optional<UserBan> ban =
                     userBanDao.findActiveBanForUser(report.getTargetId(), Instant.now(clock));
             ban.ifPresent(found -> userBanDao.upliftBan(found.getId()));
-            sendUnbanEmail(report.getTargetId(), currentLocale());
+            sendUnbanEmail(report.getTargetId());
             return;
         }
         if (report.getTargetType() == ReportTargetType.MATCH) {
@@ -642,7 +648,7 @@ public class ModerationServiceImpl implements ModerationService {
             final String banReason) {
         final UserBan ban = userBanDao.createBan(moderationReportId, bannedUntil);
         cancelFutureContentForUser(userId);
-        sendBanEmail(userId, bannedUntil, banReason);
+        sendBanEmail(moderationReportId, userId, bannedUntil, banReason);
         return ban;
     }
 }

@@ -14,6 +14,7 @@ public class UserAccount {
     private final String passwordHash;
     private final UserRole role;
     private final Instant emailVerifiedAt;
+    private final String preferredLanguage;
 
     public UserAccount(
             final Long id,
@@ -22,7 +23,18 @@ public class UserAccount {
             final String passwordHash,
             final UserRole role,
             final Instant emailVerifiedAt) {
-        this(id, email, username, null, null, null, null, passwordHash, role, emailVerifiedAt);
+        this(
+                id,
+                email,
+                username,
+                null,
+                null,
+                null,
+                null,
+                passwordHash,
+                role,
+                emailVerifiedAt,
+                UserLanguages.DEFAULT_LANGUAGE);
     }
 
     public UserAccount(
@@ -36,6 +48,32 @@ public class UserAccount {
             final String passwordHash,
             final UserRole role,
             final Instant emailVerifiedAt) {
+        this(
+                id,
+                email,
+                username,
+                name,
+                lastName,
+                phone,
+                profileImageId,
+                passwordHash,
+                role,
+                emailVerifiedAt,
+                UserLanguages.DEFAULT_LANGUAGE);
+    }
+
+    public UserAccount(
+            final Long id,
+            final String email,
+            final String username,
+            final String name,
+            final String lastName,
+            final String phone,
+            final Long profileImageId,
+            final String passwordHash,
+            final UserRole role,
+            final Instant emailVerifiedAt,
+            final String preferredLanguage) {
         this.id = id;
         this.email = email;
         this.username = username;
@@ -46,6 +84,7 @@ public class UserAccount {
         this.passwordHash = passwordHash;
         this.role = role;
         this.emailVerifiedAt = emailVerifiedAt;
+        this.preferredLanguage = UserLanguages.normalizeLanguage(preferredLanguage);
     }
 
     public Long getId() {
@@ -88,6 +127,10 @@ public class UserAccount {
         return emailVerifiedAt;
     }
 
+    public String getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
     public boolean isEmailVerified() {
         return emailVerifiedAt != null;
     }
@@ -122,6 +165,9 @@ public class UserAccount {
                 + (phone != null && !phone.isBlank())
                 + ", hasPassword="
                 + hasPassword()
+                + ", preferredLanguage='"
+                + preferredLanguage
+                + '\''
                 + '}';
     }
 }

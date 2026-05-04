@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.persistence.UserDao;
 import java.time.Clock;
@@ -75,6 +76,7 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
                 name,
                 lastName,
                 null,
+                UserLanguages.DEFAULT_LANGUAGE,
                 passwordHash,
                 UserRole.ADMIN_MOD,
                 Instant.now(clock));

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import java.io.ByteArrayInputStream;
 import java.sql.Timestamp;
@@ -62,6 +63,7 @@ public class UserJdbcDaoTest {
                         "Jamie",
                         "Rivera",
                         "+1 555 123 4567",
+                        UserLanguages.SPANISH,
                         "{bcrypt}encoded",
                         UserRole.ADMIN_MOD,
                         verifiedAt);
@@ -76,6 +78,7 @@ public class UserJdbcDaoTest {
         Assertions.assertEquals("{bcrypt}encoded", persisted.getPasswordHash());
         Assertions.assertEquals(UserRole.ADMIN_MOD, persisted.getRole());
         Assertions.assertEquals(verifiedAt, persisted.getEmailVerifiedAt());
+        Assertions.assertEquals(UserLanguages.SPANISH, persisted.getPreferredLanguage());
     }
 
     @Test
@@ -86,6 +89,7 @@ public class UserJdbcDaoTest {
                 "Jamie",
                 "Rivera",
                 "+1 555 123 4567",
+                UserLanguages.DEFAULT_LANGUAGE,
                 "{bcrypt}encoded",
                 UserRole.USER,
                 null);
@@ -95,6 +99,7 @@ public class UserJdbcDaoTest {
 
         Assertions.assertNull(persisted.getEmailVerifiedAt());
         Assertions.assertEquals(UserRole.USER, persisted.getRole());
+        Assertions.assertEquals(UserLanguages.DEFAULT_LANGUAGE, persisted.getPreferredLanguage());
     }
 
     @Test
@@ -106,6 +111,7 @@ public class UserJdbcDaoTest {
                         "Jamie",
                         "Rivera",
                         "+1 555 123 4567",
+                        UserLanguages.DEFAULT_LANGUAGE,
                         null,
                         UserRole.USER,
                         Instant.now());
@@ -127,6 +133,7 @@ public class UserJdbcDaoTest {
                         "Jamie",
                         "Rivera",
                         "+1 555 123 4567",
+                        UserLanguages.DEFAULT_LANGUAGE,
                         "{bcrypt}hash",
                         UserRole.USER,
                         null);
@@ -149,6 +156,7 @@ public class UserJdbcDaoTest {
                         "Jamie",
                         "Rivera",
                         "+1 555 123 4567",
+                        UserLanguages.DEFAULT_LANGUAGE,
                         "{bcrypt}hash",
                         UserRole.USER,
                         Instant.now());
@@ -162,6 +170,28 @@ public class UserJdbcDaoTest {
         Assertions.assertEquals("Taylor", persisted.getName());
         Assertions.assertEquals("Morgan", persisted.getLastName());
         Assertions.assertNull(persisted.getPhone());
+        Assertions.assertEquals(UserLanguages.DEFAULT_LANGUAGE, persisted.getPreferredLanguage());
+    }
+
+    @Test
+    public void testUpdatePreferredLanguageUpdatesExistingAccount() {
+        final UserAccount account =
+                userDao.createAccount(
+                        "locale@test.com",
+                        "locale_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
+                        UserLanguages.DEFAULT_LANGUAGE,
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        Instant.now());
+
+        userDao.updatePreferredLanguage(account.getId(), UserLanguages.SPANISH);
+
+        final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
+
+        Assertions.assertEquals(UserLanguages.SPANISH, persisted.getPreferredLanguage());
     }
 
     @Test
@@ -187,6 +217,7 @@ public class UserJdbcDaoTest {
                         "Jamie",
                         "Rivera",
                         "+1 555 123 4567",
+                        UserLanguages.DEFAULT_LANGUAGE,
                         "{bcrypt}hash",
                         UserRole.USER,
                         Instant.now());
@@ -211,6 +242,7 @@ public class UserJdbcDaoTest {
         Assertions.assertEquals(UserRole.USER, persisted.getRole());
         Assertions.assertNotNull(persisted.getEmailVerifiedAt());
         Assertions.assertNull(persisted.getPasswordHash());
+        Assertions.assertEquals(UserLanguages.DEFAULT_LANGUAGE, persisted.getPreferredLanguage());
         Assertions.assertTrue(
                 jdbcTemplate.queryForObject(
                                 "SELECT email_verified_at FROM users WHERE id = ?",

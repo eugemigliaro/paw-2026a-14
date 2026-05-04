@@ -1,9 +1,11 @@
 package ar.edu.itba.paw.webapp.config;
 
 import ar.edu.itba.paw.services.AdminBootstrapService;
+import ar.edu.itba.paw.services.UserService;
 import java.util.Locale;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -30,8 +32,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
-import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 @ComponentScan({
@@ -49,11 +51,14 @@ public class WebConfig implements WebMvcConfigurer {
     private final String databaseUrl;
     private final String databaseUsername;
     private final String databasePassword;
+    private final ObjectProvider<UserService> userServiceProvider;
 
     public WebConfig(
+            final ObjectProvider<UserService> userServiceProvider,
             @Value("${db.url}") final String databaseUrl,
             @Value("${db.username}") final String databaseUsername,
             @Value("${db.password}") final String databasePassword) {
+        this.userServiceProvider = userServiceProvider;
         this.databaseUrl = requireNonBlank(databaseUrl, "db.url");
         this.databaseUsername = requireNonBlank(databaseUsername, "db.username");
         this.databasePassword = requireNonBlank(databasePassword, "db.password");
@@ -111,9 +116,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Bean
     public LocaleResolver localeResolver() {
-        final SessionLocaleResolver slr = new SessionLocaleResolver();
-        slr.setDefaultLocale(Locale.ENGLISH);
-        return slr;
+        final CookieLocaleResolver clr = new CookieLocaleResolver();
+        clr.setDefaultLocale(Locale.ENGLISH);
+        clr.setCookieName("paw_locale");
+        clr.setCookiePath("/");
+        clr.setCookieMaxAge(60 * 60 * 24 * 365);
+        clr.setCookieHttpOnly(true);
+        return clr;
     }
 
     @Bean
@@ -123,9 +132,17 @@ public class WebConfig implements WebMvcConfigurer {
         return lci;
     }
 
+    @Bean
+    public AuthenticatedLocalePersistenceInterceptor authenticatedLocalePersistenceInterceptor(
+            final UserService userService) {
+        return new AuthenticatedLocalePersistenceInterceptor(userService);
+    }
+
     @Override
     public void addInterceptors(@NonNull final InterceptorRegistry registry) {
         registry.addInterceptor(localeChangeInterceptor());
+        registry.addInterceptor(
+                authenticatedLocalePersistenceInterceptor(userServiceProvider.getObject()));
     }
 
     @Bean
