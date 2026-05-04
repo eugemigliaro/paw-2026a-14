@@ -48,6 +48,7 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -160,6 +161,8 @@ class PawUiRouteTest {
                         Sport.PADEL,
                         7L,
                         "Downtown Club",
+                        -34.61,
+                        -58.38,
                         "Sunrise Padel",
                         "Friendly\\n doubles session",
                         Instant.parse("2026-04-06T10:00:00Z"),
@@ -167,8 +170,11 @@ class PawUiRouteTest {
                         8,
                         BigDecimal.TEN,
                         "public",
+                        "direct",
                         "open",
                         2,
+                        null,
+                        null,
                         null);
         final Match footballMatch =
                 new Match(
@@ -1448,6 +1454,43 @@ class PawUiRouteTest {
                 result.getRequest().getSession().getAttribute("exploreLocationLatitude"));
         Assertions.assertNull(
                 result.getRequest().getSession().getAttribute("exploreLocationLongitude"));
+    }
+
+    @Test
+    void getFeedRouteShowsNearMeSortOptionBeforeLocationIsStored() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "sortOptions",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "href",
+                                                        Matchers.containsString(
+                                                                "sort=distance")))));
+    }
+
+    @Test
+    void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
+        final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+    }
+
+    @Test
+    void getFeedRouteIncludesDistanceLabelWithStoredLocation() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/").sessionAttr("exploreLocationLatitude", -34.60)
+                                        .sessionAttr("exploreLocationLongitude", -58.38))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNotNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
     }
 
     @Test

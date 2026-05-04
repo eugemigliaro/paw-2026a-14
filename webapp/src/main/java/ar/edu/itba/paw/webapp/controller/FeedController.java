@@ -25,6 +25,7 @@ import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.SelectOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -115,10 +116,10 @@ public class FeedController {
         mav.addObject("selectedStartDateValue", filters.startDate());
         mav.addObject("selectedEndDateValue", filters.endDate());
         mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
+        mav.addObject("sortOptions", buildSortOptions(query, filters, locale, email));
         mav.addObject(
-                "sortOptions",
-                buildSortOptions(query, filters, locale, email, exploreLocation != null));
-        mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
+                "feedPage",
+                buildFeedPageViewModel(query, filters, result, locale, email, exploreLocation));
         mav.addObject("nearMeAvailable", exploreLocation != null);
         return mav;
     }
@@ -147,7 +148,8 @@ public class FeedController {
             final FeedFilters filters,
             final PaginatedResult<Match> result,
             final Locale locale,
-            final String email) {
+            final String email,
+            final ExploreLocation exploreLocation) {
 
         final ZoneId zoneId = parseZone(filters.timezone());
         final Long currentUserId =
@@ -162,7 +164,7 @@ public class FeedController {
                 List.of(),
                 buildFilterGroups(query, filters, locale, email),
                 result.getItems().stream()
-                        .map(match -> toCard(match, zoneId, locale, currentUserId))
+                        .map(match -> toCard(match, zoneId, locale, currentUserId, exploreLocation))
                         .toList(),
                 result.getPage(),
                 result.getTotalPages(),
@@ -237,16 +239,13 @@ public class FeedController {
             final String query,
             final FeedFilters filters,
             final Locale locale,
-            final String email,
-            final boolean includeDistance) {
+            final String email) {
         final List<SelectOptionViewModel> sortOptions = new ArrayList<>();
         sortOptions.add(sortOption(query, filters, locale, email, "soonest", "feed.sort.soonest"));
         sortOptions.add(sortOption(query, filters, locale, email, "price", "feed.sort.price"));
         sortOptions.add(sortOption(query, filters, locale, email, "spots", "feed.sort.spots"));
-        if (includeDistance) {
-            sortOptions.add(
-                    sortOption(query, filters, locale, email, "distance", "feed.sort.distance"));
-        }
+        sortOptions.add(
+                sortOption(query, filters, locale, email, "distance", "feed.sort.distance"));
         return List.copyOf(sortOptions);
     }
 
@@ -358,7 +357,11 @@ public class FeedController {
     }
 
     private EventCardViewModel toCard(
-            final Match match, final ZoneId zoneId, final Locale locale, final Long currentUserId) {
+            final Match match,
+            final ZoneId zoneId,
+            final Locale locale,
+            final Long currentUserId,
+            final ExploreLocation exploreLocation) {
         final Locale resolvedLocale = resolvedLocale(locale);
         final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
         final String schedule = scheduleFormatter(resolvedLocale).format(startsAt);
@@ -371,6 +374,7 @@ public class FeedController {
         final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
         final List<EventRelationshipBadgeViewModel> relationshipBadges =
                 relationshipBadgesFor(match, currentUserId, locale);
+        final String distanceLabel = distanceLabel(match, exploreLocation, locale);
 
         return new EventCardViewModel(
                 String.valueOf(match.getId()),
@@ -388,6 +392,7 @@ public class FeedController {
                 relationshipBadges,
                 recurringLabelFor(match, locale),
                 null,
+                distanceLabel,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }
@@ -445,6 +450,46 @@ public class FeedController {
     private String toSportLabel(final Sport sport, final Locale locale) {
         return messageSource.getMessage(
                 "sport." + sport.getDbValue(), null, sport.getDisplayName(), locale);
+    }
+
+    private static String distanceLabel(
+            final Match match, final ExploreLocation exploreLocation, final Locale locale) {
+        if (match == null || exploreLocation == null || !match.hasCoordinates()) {
+            return null;
+        }
+        final double distanceKm =
+                distanceInKilometers(
+                        exploreLocation.latitude(),
+                        exploreLocation.longitude(),
+                        match.getLatitude(),
+                        match.getLongitude());
+        final NumberFormat formatter = NumberFormat.getNumberInstance(resolvedLocale(locale));
+        if (distanceKm < 1) {
+            formatter.setMaximumFractionDigits(0);
+            return formatter.format(Math.max(1, Math.round(distanceKm * 1000))) + " m";
+        }
+        formatter.setMinimumFractionDigits(distanceKm < 10 ? 1 : 0);
+        formatter.setMaximumFractionDigits(distanceKm < 10 ? 1 : 0);
+        return formatter.format(distanceKm) + " km";
+    }
+
+    private static double distanceInKilometers(
+            final double fromLatitude,
+            final double fromLongitude,
+            final double toLatitude,
+            final double toLongitude) {
+        final double earthRadiusKm = 6371.0088;
+        final double fromLatRad = Math.toRadians(fromLatitude);
+        final double toLatRad = Math.toRadians(toLatitude);
+        final double deltaLatRad = Math.toRadians(toLatitude - fromLatitude);
+        final double deltaLonRad = Math.toRadians(toLongitude - fromLongitude);
+        final double a =
+                Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2)
+                        + Math.cos(fromLatRad)
+                                * Math.cos(toLatRad)
+                                * Math.sin(deltaLonRad / 2)
+                                * Math.sin(deltaLonRad / 2);
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private static String mediaClassFor(final Sport sport) {

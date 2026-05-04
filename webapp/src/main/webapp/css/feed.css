@@ -24,6 +24,10 @@
 	justify-content: flex-end;
 }
 
+.near-me-panel--hidden {
+	display: none;
+}
+
 .near-me-panel__status {
 	color: #5c706c;
 	font-size: 0.85rem;
