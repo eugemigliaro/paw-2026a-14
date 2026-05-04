@@ -27,7 +27,7 @@
 		maxInput.setCustomValidity(
 			isValid
 				? ''
-				: maxInput.getAttribute('data-price-range-error') || 'To must be greater than from.'
+				: maxInput.getAttribute('data-price-range-error') || ''
 		);
 		if (!isValid) {
 			maxInput.reportValidity();

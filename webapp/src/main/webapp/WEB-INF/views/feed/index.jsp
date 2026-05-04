@@ -500,10 +500,12 @@
 								</div>
 
 								<c:if test="${feedPage.totalPages > 1}">
+									<spring:message var="paginationAriaLabel" code="pagination.aria" />
+									<spring:message var="feedPaginationPagesLabel" code="feed.pagination.pages" />
 									<spring:message var="previousLabel" code="pagination.previous" />
 									<spring:message var="nextLabel" code="pagination.next" />
-									<section class="feed-pagination" aria-label="Pagination">
-										<nav class="feed-pagination__nav" aria-label="Feed pages">
+									<section class="feed-pagination" aria-label="${paginationAriaLabel}">
+										<nav class="feed-pagination__nav" aria-label="${feedPaginationPagesLabel}">
 											<c:choose>
 												<c:when test="${not empty feedPage.previousPageHref}">
 													<c:url var="feedPrevHref" value="${feedPage.previousPageHref}" />

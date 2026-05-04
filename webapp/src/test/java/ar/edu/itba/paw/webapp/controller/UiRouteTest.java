@@ -2949,6 +2949,17 @@ class UiRouteTest {
     }
 
     @Test
+    void getAccountRouteWithSpanishLocaleLocalizesPublicProfileAction() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/account").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/index"))
+                .andExpect(
+                        model().attribute("accountPublicProfileLabel", "Ver perfil p\u00fablico"));
+    }
+
+    @Test
     void getAccountRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(get("/account")).andExpect(status().isUnauthorized());
     }

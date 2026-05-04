@@ -111,6 +111,25 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void feedPaginationAndPriceValidationCopyUseMessageKeys() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(feedIndex.contains("code=\"pagination.aria\""));
+        assertTrue(feedIndex.contains("code=\"feed.pagination.pages\""));
+        assertFalse(feedIndex.contains("aria-label=\"Pagination\""));
+        assertFalse(feedIndex.contains("aria-label=\"Feed pages\""));
+        assertTrue(filterDropdowns.contains("data-price-range-error"));
+        assertFalse(filterDropdowns.contains("To must be greater than from."));
+        assertEquals("Pagination", english.getProperty("pagination.aria"));
+        assertEquals("Feed pages", english.getProperty("feed.pagination.pages"));
+        assertEquals("Paginaci\u00f3n", spanish.getProperty("pagination.aria"));
+        assertEquals("P\u00e1ginas del feed", spanish.getProperty("feed.pagination.pages"));
+    }
+
+    @Test
     void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
