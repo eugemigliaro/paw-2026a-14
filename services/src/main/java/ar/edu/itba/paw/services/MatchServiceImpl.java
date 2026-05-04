@@ -41,10 +41,6 @@ public class MatchServiceImpl implements MatchService {
     private static final int MAX_PLAYERS_PER_MATCH = 1000;
     private static final int MIN_RECURRING_OCCURRENCES = 2;
     private static final int MAX_RECURRING_OCCURRENCES = 52;
-    private static final String VISIBILITY_PUBLIC = "public";
-    private static final String VISIBILITY_PRIVATE = "private";
-    private static final String JOIN_POLICY_DIRECT = "direct";
-    private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
@@ -307,24 +303,24 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private static boolean wasPrivate(final Match match) {
-        return VISIBILITY_PRIVATE.equalsIgnoreCase(match.getVisibility());
+        return EventVisibility.PRIVATE == match.getVisibility();
     }
 
     private static boolean wasApprovalRequired(final Match match) {
-        return VISIBILITY_PUBLIC.equalsIgnoreCase(match.getVisibility())
-                && JOIN_POLICY_APPROVAL_REQUIRED.equalsIgnoreCase(match.getJoinPolicy());
+        return EventVisibility.PUBLIC == match.getVisibility()
+                && EventJoinPolicy.APPROVAL_REQUIRED == match.getJoinPolicy();
     }
 
     private static boolean isPublic(final UpdateMatchRequest request) {
-        return VISIBILITY_PUBLIC.equalsIgnoreCase(request.getVisibility());
+        return EventVisibility.PUBLIC == request.getVisibility();
     }
 
     private static boolean isPrivate(final UpdateMatchRequest request) {
-        return VISIBILITY_PRIVATE.equalsIgnoreCase(request.getVisibility());
+        return EventVisibility.PRIVATE == request.getVisibility();
     }
 
     private static boolean isDirectPublic(final UpdateMatchRequest request) {
-        return isPublic(request) && JOIN_POLICY_DIRECT.equalsIgnoreCase(request.getJoinPolicy());
+        return isPublic(request) && EventJoinPolicy.DIRECT == request.getJoinPolicy();
     }
 
     private enum ParticipationPolicyTransitionType {

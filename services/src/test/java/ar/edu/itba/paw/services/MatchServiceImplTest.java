@@ -50,6 +50,7 @@ public class MatchServiceImplTest {
     @Mock private UserService userService;
 
     private RecordingMailDispatchService mailDispatchService;
+    private MatchNotificationService matchNotificationService;
     private MatchServiceImpl matchService;
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
@@ -57,13 +58,14 @@ public class MatchServiceImplTest {
     @BeforeEach
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
-        final MatchNotificationService matchNotificationService =
-                new MatchNotificationServiceImpl(
-                        matchParticipantDao,
-                        mailDispatchService,
-                        templateRenderer,
-                        messageSource,
-                        userService);
+        matchNotificationService =
+                Mockito.spy(
+                        new MatchNotificationServiceImpl(
+                                matchParticipantDao,
+                                mailDispatchService,
+                                templateRenderer,
+                                messageSource,
+                                userService));
         matchService =
                 new MatchServiceImpl(
                         matchDao,
@@ -1051,9 +1053,11 @@ public class MatchServiceImplTest {
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1070,9 +1074,9 @@ public class MatchServiceImplTest {
                         10,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null));
 
         // 3. Assert
@@ -1120,9 +1124,11 @@ public class MatchServiceImplTest {
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
-                                "private",
-                                "invite_only",
-                                "open",
+                                EventVisibility.PRIVATE,
+                                EventJoinPolicy.INVITE_ONLY,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1139,9 +1145,9 @@ public class MatchServiceImplTest {
                         10,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         null));
 
         // 3. Assert
@@ -1179,9 +1185,9 @@ public class MatchServiceImplTest {
                                                 3,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "direct",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventJoinPolicy.DIRECT,
+                                                EventStatus.OPEN,
                                                 null)));
 
         // 3. Assert
@@ -1235,9 +1241,11 @@ public class MatchServiceImplTest {
                                 4,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1254,9 +1262,9 @@ public class MatchServiceImplTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null));
 
         // 3. Assert
@@ -2298,6 +2306,10 @@ public class MatchServiceImplTest {
             final String sport,
             final String visibility,
             final String joinPolicy) {
+        final EventVisibility parsedVisibility =
+                EventVisibility.fromDbValue(visibility).orElse(EventVisibility.PUBLIC);
+        final EventJoinPolicy parsedJoinPolicy =
+                EventJoinPolicy.fromDbValue(joinPolicy).orElse(EventJoinPolicy.DIRECT);
         return new Match(
                 id,
                 Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
@@ -2309,8 +2321,8 @@ public class MatchServiceImplTest {
                 null,
                 10,
                 BigDecimal.ZERO,
-                EventVisibility.PUBLIC,
-                EventJoinPolicy.DIRECT,
+                parsedVisibility,
+                parsedJoinPolicy,
                 EventStatus.OPEN,
                 0,
                 null);

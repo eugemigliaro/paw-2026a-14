@@ -51,16 +51,21 @@
 	}
 
 	sortSelects.forEach(function (select) {
-		select.addEventListener('change', function (event) {
-			if (!select.value) {
-				return;
-			}
-			var url = new URL(select.value, window.location.href);
-			if (url.searchParams.get('sort') === 'distance' && form && form.dataset.locationAvailable !== 'true') {
-				requestExploreLocation(event);
-				return;
-			}
-			window.location.href = select.value;
+		select.querySelectorAll('.sort-panel__item').forEach(function (option) {
+			option.addEventListener('click', function (event) {
+				var url = new URL(option.href, window.location.href);
+				if (
+					url.searchParams.get('sort') === 'distance' &&
+					form &&
+					form.dataset.locationAvailable !== 'true' &&
+					navigator.geolocation &&
+					latitudeInput &&
+					longitudeInput
+				) {
+					event.preventDefault();
+					requestExploreLocation(event);
+				}
+			});
 		});
 	});
 })();

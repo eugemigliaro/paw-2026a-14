@@ -213,10 +213,12 @@ class ViewTemplateAssetsTest {
     @Test
     void feedIncludesNearMeGeolocationPostWithoutUrlCoordinates() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final Path scriptPath = Path.of("src/main/webapp/js/explore-location.js");
         final String script = Files.readString(scriptPath);
 
         assertTrue(feedIndex.contains("/explore/location"));
+        assertTrue(sortSelectTag.contains("data-sort-select=\"true\""));
         assertTrue(feedIndex.contains("data-explore-location-form=\"true\""));
         assertTrue(feedIndex.contains("near-me-panel--hidden"));
         assertFalse(feedIndex.contains("data-explore-location-submit=\"true\""));
@@ -224,7 +226,8 @@ class ViewTemplateAssetsTest {
         assertTrue(feedIndex.contains("sortOptions"));
         assertTrue(Files.exists(scriptPath));
         assertTrue(script.contains("navigator.geolocation"));
-        assertTrue(script.contains("sort') === 'distance'"));
+        assertTrue(script.contains(".sort-panel__item"));
+        assertTrue(script.contains("locationAvailable !== 'true'"));
     }
 
     @Test

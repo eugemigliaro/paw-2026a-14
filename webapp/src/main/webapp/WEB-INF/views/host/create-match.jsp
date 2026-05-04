@@ -601,8 +601,4 @@
 										</form:form>
 									</section>
 								</main>
-						</div>
-
-				</body>
-
-					</html>
+						</div
