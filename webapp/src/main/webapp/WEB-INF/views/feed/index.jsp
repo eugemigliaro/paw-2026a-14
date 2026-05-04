@@ -17,7 +17,6 @@
 					<spring:message var="filtersAriaLabel" code="feed.aria.filters" />
 					<spring:message var="searchAriaLabel" code="feed.aria.search" />
 					<spring:message var="sortAriaLabel" code="feed.aria.sort" />
-					<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 					<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 					<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 					<spring:message var="priceRangeError" code="filter.price.rangeError" />
@@ -301,7 +300,6 @@
 
 							<c:url var="clearFiltersHref" value="${feedPath}" />
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
-							<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 							<ui:button
 								label="${clearAllLabel}"
 								href="${clearFiltersHref}"
@@ -313,7 +311,6 @@
 									id="feed-sort-select"
 									label="${sortLabel}"
 									ariaLabel="${sortAriaLabel}"
-									hint="${nearMeAvailable ? '' : locationUnavailableMessage}"
 									options="${sortOptions}" />
 
 								<form
@@ -321,14 +318,77 @@
 									action="<c:url value='/explore/location' />"
 									class="near-me-panel near-me-panel--hidden"
 									data-explore-location-form="true"
-									data-location-available="${nearMeAvailable}"
-									data-location-unavailable-message="${locationUnavailableMessage}">
+									data-location-available="${nearMeAvailable}">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-									<input type="hidden" name="latitude" data-explore-location-latitude="true" />
-									<input type="hidden" name="longitude" data-explore-location-longitude="true" />
-									<p class="near-me-panel__status" data-explore-location-status="true" role="status"></p>
+									<input type="hidden" id="explore-location-latitude" name="latitude" data-explore-location-latitude="true" />
+									<input type="hidden" id="explore-location-longitude" name="longitude" data-explore-location-longitude="true" />
 								</form>
 							</div>
+							<c:if test="${mapPickerEnabled}">
+								<spring:message var="exploreLocationTitle" code="feed.locationPicker.title" />
+								<spring:message var="exploreLocationDescription" code="feed.locationPicker.description" />
+								<spring:message var="exploreLocationUseLabel" code="feed.locationPicker.use" />
+								<spring:message var="exploreLocationCancelLabel" code="feed.locationPicker.cancel" />
+								<spring:message var="exploreLocationMapAria" code="feed.locationPicker.map.aria" />
+								<c:url var="appRootUrl" value="/" />
+								<c:set var="contextAwareFeedMapTileUrlTemplate"
+									value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
+								<div class="explore-location-modal" data-explore-location-modal="true" hidden="hidden">
+									<section class="explore-location-modal__panel" role="dialog" aria-modal="true" aria-labelledby="explore-location-title">
+										<div class="explore-location-modal__header">
+											<div>
+												<h2 id="explore-location-title" class="explore-location-modal__title">
+													<c:out value="${exploreLocationTitle}" />
+												</h2>
+												<p class="explore-location-modal__copy">
+													<c:out value="${exploreLocationDescription}" />
+												</p>
+											</div>
+											<button type="button" class="btn btn--ghost btn--sm" data-explore-location-cancel="true">
+												<c:out value="${exploreLocationCancelLabel}" />
+											</button>
+										</div>
+										<section
+											class="location-picker explore-location-picker"
+											data-location-picker="true"
+											data-location-picker-deferred="true"
+											data-latitude-input="#explore-location-latitude"
+											data-longitude-input="#explore-location-longitude"
+											data-tile-url-template="${contextAwareFeedMapTileUrlTemplate}"
+											data-attribution="${mapAttribution}"
+											data-default-latitude="${mapDefaultLatitude}"
+											data-default-longitude="${mapDefaultLongitude}"
+											data-default-zoom="${mapDefaultZoom}">
+											<div class="location-picker__header">
+												<span class="field__label"><c:out value="${exploreLocationTitle}" /></span>
+												<div class="location-picker__actions">
+													<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
+														<spring:message code="host.form.location.zoomOut" />
+													</button>
+													<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
+														<spring:message code="host.form.location.zoomIn" />
+													</button>
+													<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
+														<spring:message code="host.form.location.clear" />
+													</button>
+												</div>
+											</div>
+											<div class="location-picker__map" data-location-map="true" aria-label="${exploreLocationMapAria}"></div>
+											<c:if test="${not empty mapAttribution}">
+												<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
+											</c:if>
+										</section>
+										<div class="explore-location-modal__actions">
+											<button type="button" class="btn btn--ghost" data-explore-location-cancel="true">
+												<c:out value="${exploreLocationCancelLabel}" />
+											</button>
+											<button type="button" class="btn btn--primary" data-explore-location-confirm="true" disabled="disabled">
+												<c:out value="${exploreLocationUseLabel}" />
+											</button>
+										</div>
+									</section>
+								</div>
+							</c:if>
 
 					<section>
 						<div class="section-head section-head--feed-list">

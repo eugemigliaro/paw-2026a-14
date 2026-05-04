@@ -35,6 +35,70 @@
 	min-height: 1.2rem;
 }
 
+.explore-location-modal[hidden] {
+	display: none;
+}
+
+.explore-location-modal {
+	align-items: center;
+	background: rgba(7, 21, 18, 0.48);
+	display: flex;
+	inset: 0;
+	justify-content: center;
+	padding: 1rem;
+	position: fixed;
+	z-index: 60;
+}
+
+.explore-location-modal__panel {
+	background: #ffffff;
+	border: 1px solid rgba(19, 52, 48, 0.12);
+	border-radius: 22px;
+	box-shadow: 0 30px 70px -40px rgba(7, 21, 18, 0.42);
+	display: grid;
+	gap: 1rem;
+	max-height: min(90vh, 42rem);
+	max-width: min(100%, 42rem);
+	overflow: auto;
+	padding: 1rem;
+	width: 100%;
+}
+
+.explore-location-modal__header {
+	align-items: start;
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+}
+
+.explore-location-modal__title {
+	color: var(--text-primary);
+	font-size: 1.15rem;
+	margin: 0;
+}
+
+.explore-location-modal__copy {
+	color: var(--text-secondary);
+	font-size: 0.95rem;
+	line-height: 1.45;
+	margin: 0.25rem 0 0;
+}
+
+.explore-location-picker .location-picker__map {
+	height: min(52vh, 22rem);
+}
+
+.explore-location-modal__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	justify-content: flex-end;
+}
+
+.modal-open {
+	overflow: hidden;
+}
+
 .filter-rail {
 	background: linear-gradient(180deg,
 			rgba(255, 255, 255, 0.98) 0%,
