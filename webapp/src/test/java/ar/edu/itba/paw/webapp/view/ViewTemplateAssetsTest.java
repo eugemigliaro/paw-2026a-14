@@ -132,11 +132,15 @@ class ViewTemplateAssetsTest {
     @Test
     void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
+        final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
         final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
 
         assertTrue(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
+        assertTrue(sortSelectTag.contains("data-close-on-select=\"true\""));
         assertTrue(sortSelectTag.contains("aria-expanded=\"false\""));
         assertTrue(sortSelectTag.contains("aria-current="));
+        assertTrue(filterDropdowns.contains("data-close-on-select"));
+        assertTrue(filterDropdowns.contains("sessionStorage.removeItem('pawOpenFilter')"));
         assertFalse(sortSelectTag.contains("aria-haspopup=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"option\""));

@@ -75,7 +75,14 @@
 		var item = e.target.closest('.filter-dropdown__item');
 		if (item) {
 			var dd = item.closest('.filter-dropdown');
-			if (dd) sessionStorage.setItem('pawOpenFilter', dd.getAttribute('data-filter-name') || '');
+			if (dd) {
+				if (dd.getAttribute('data-close-on-select') === 'true') {
+					sessionStorage.removeItem('pawOpenFilter');
+					closeAll();
+					return;
+				}
+				sessionStorage.setItem('pawOpenFilter', dd.getAttribute('data-filter-name') || '');
+			}
 		}
 	});
 
