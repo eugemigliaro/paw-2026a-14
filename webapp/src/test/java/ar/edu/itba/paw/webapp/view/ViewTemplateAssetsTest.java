@@ -111,13 +111,55 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void feedPaginationAndPriceValidationCopyUseMessageKeys() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(feedIndex.contains("code=\"pagination.aria\""));
+        assertTrue(feedIndex.contains("code=\"feed.pagination.pages\""));
+        assertFalse(feedIndex.contains("aria-label=\"Pagination\""));
+        assertFalse(feedIndex.contains("aria-label=\"Feed pages\""));
+        assertTrue(filterDropdowns.contains("data-price-range-error"));
+        assertFalse(filterDropdowns.contains("To must be greater than from."));
+        assertEquals("Pagination", english.getProperty("pagination.aria"));
+        assertEquals("Feed pages", english.getProperty("feed.pagination.pages"));
+        assertEquals("Paginaci\u00f3n", spanish.getProperty("pagination.aria"));
+        assertEquals("P\u00e1ginas del feed", spanish.getProperty("feed.pagination.pages"));
+    }
+
+    @Test
+    void feedClearAllResetsToPublicExploreWithoutPreservingFilters() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final int clearAllIndex = feedIndex.indexOf("var=\"clearFiltersHref\"");
+        final int clearAllLabelIndex = feedIndex.indexOf("var=\"clearAllLabel\"");
+
+        assertTrue(clearAllIndex >= 0);
+        assertTrue(clearAllLabelIndex > clearAllIndex);
+        assertTrue(
+                feedIndex.contains(
+                        "<c:url var=\"clearFiltersHref\" value=\"${feedFormAction}\" />"));
+        final String clearAllBlock = feedIndex.substring(clearAllIndex, clearAllLabelIndex);
+        assertFalse(clearAllBlock.contains("name=\"sort\""));
+        assertFalse(clearAllBlock.contains("name=\"startDate\""));
+        assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"minPrice\""));
+        assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
+    }
+
+    @Test
     void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
+        final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
         final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
 
         assertTrue(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
+        assertTrue(sortSelectTag.contains("data-close-on-select=\"true\""));
         assertTrue(sortSelectTag.contains("aria-expanded=\"false\""));
         assertTrue(sortSelectTag.contains("aria-current="));
+        assertTrue(filterDropdowns.contains("data-close-on-select"));
+        assertTrue(filterDropdowns.contains("sessionStorage.removeItem('pawOpenFilter')"));
         assertFalse(sortSelectTag.contains("aria-haspopup=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"option\""));
@@ -132,6 +174,16 @@ class ViewTemplateAssetsTest {
 
         assertTrue(Files.exists(scriptPath));
         assertTrue(Files.readString(scriptPath).contains("data-browser-timezone-field"));
+    }
+
+    @Test
+    void languageSwitcherMarksOnlyExplicitLanguageSwitchesForPersistence() throws IOException {
+        final String siteHeader = read("src/main/webapp/WEB-INF/views/includes/site-header.jspf");
+
+        assertTrue(siteHeader.contains("<c:param name=\"persistLang\" value=\"true\" />"));
+        assertTrue(
+                siteHeader.contains(
+                        "queryParam.key ne 'lang' and queryParam.key ne 'persistLang'"));
     }
 
     @Test
@@ -444,9 +496,18 @@ class ViewTemplateAssetsTest {
     void eventsListUsesReusableEventsToggleTag() throws IOException {
         final Path toggleTagPath = Path.of("src/main/webapp/WEB-INF/tags/eventsFilterToggle.tag");
         final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+        final String profile = read("src/main/webapp/WEB-INF/views/users/profile.jsp");
+        final String toggleTag = read("src/main/webapp/WEB-INF/tags/eventsFilterToggle.tag");
 
         assertTrue(Files.exists(toggleTagPath));
         assertTrue(eventsList.contains("<ui:eventsFilterToggle"));
+        assertTrue(profile.contains("<ui:eventsFilterToggle"));
+        assertTrue(profile.contains("id=\"profile-review-filter-toggle\""));
+        assertFalse(profile.contains("public-profile-review-filter__options"));
+        assertFalse(profile.contains("public-profile-review-filter__option"));
+        assertTrue(toggleTag.contains("thirdValue"));
+        assertTrue(toggleTag.contains("leftHref"));
+        assertTrue(toggleTag.contains("data-events-toggle-options"));
     }
 
     @Test

@@ -18,7 +18,10 @@
 	<div class="sort-panel" aria-label="${ariaLabel}" data-sort-select="true">
 		<div class="field sort-panel__field">
 			<span class="field__label" id="${resolvedId}-label"><c:out value="${label}" /></span>
-			<div class="filter-dropdown sort-panel__dropdown" data-filter-name="${resolvedId}">
+			<div
+				class="filter-dropdown sort-panel__dropdown"
+				data-filter-name="${resolvedId}"
+				data-close-on-select="true">
 				<button
 					type="button"
 					class="filter-dropdown__toggle sort-panel__toggle"

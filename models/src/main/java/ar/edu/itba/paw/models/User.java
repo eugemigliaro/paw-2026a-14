@@ -9,9 +9,10 @@ public class User {
     private final String lastName;
     private final String phone;
     private final Long profileImageId;
+    private final String preferredLanguage;
 
     public User(final Long id, final String email, final String username) {
-        this(id, email, username, null, null, null, null);
+        this(id, email, username, null, null, null, null, UserLanguages.DEFAULT_LANGUAGE);
     }
 
     public User(
@@ -22,6 +23,26 @@ public class User {
             final String lastName,
             final String phone,
             final Long profileImageId) {
+        this(
+                id,
+                email,
+                username,
+                name,
+                lastName,
+                phone,
+                profileImageId,
+                UserLanguages.DEFAULT_LANGUAGE);
+    }
+
+    public User(
+            final Long id,
+            final String email,
+            final String username,
+            final String name,
+            final String lastName,
+            final String phone,
+            final Long profileImageId,
+            final String preferredLanguage) {
         this.id = id;
         this.email = email;
         this.username = username;
@@ -29,6 +50,7 @@ public class User {
         this.lastName = lastName;
         this.phone = phone;
         this.profileImageId = profileImageId;
+        this.preferredLanguage = UserLanguages.normalizeLanguage(preferredLanguage);
     }
 
     public Long getId() {
@@ -59,6 +81,10 @@ public class User {
         return profileImageId;
     }
 
+    public String getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
     @Override
     public String toString() {
         return "User{"
@@ -77,6 +103,9 @@ public class User {
                 + (lastName != null && !lastName.isBlank())
                 + ", hasPhone="
                 + (phone != null && !phone.isBlank())
+                + ", preferredLanguage='"
+                + preferredLanguage
+                + '\''
                 + '}';
     }
 }

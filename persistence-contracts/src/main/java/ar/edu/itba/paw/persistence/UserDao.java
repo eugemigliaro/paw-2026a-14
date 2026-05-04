@@ -18,6 +18,7 @@ public interface UserDao {
             String name,
             String lastName,
             String phone,
+            String preferredLanguage,
             String passwordHash,
             UserRole role,
             Instant emailVerifiedAt);
@@ -47,4 +48,6 @@ public interface UserDao {
     void updatePasswordHash(Long id, String passwordHash);
 
     void markEmailVerified(Long id, Instant emailVerifiedAt);
+
+    void updatePreferredLanguage(Long id, String preferredLanguage);
 }

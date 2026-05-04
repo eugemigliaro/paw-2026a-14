@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class MatchServiceImpl implements MatchService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
@@ -190,6 +191,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    @Transactional
     public Match updateMatch(
             final Long matchId, final Long actingUserId, final UpdateMatchRequest request) {
         final Match match =
@@ -475,6 +477,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    @Transactional
     public Match cancelMatch(final Long matchId, final Long actingUserId) {
         final Match match =
                 matchDao.findById(matchId)

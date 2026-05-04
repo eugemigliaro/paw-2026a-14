@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -210,6 +212,41 @@ public class MatchNotificationServiceImplTest {
 
         Assertions.assertEquals(List.of("player@test.com"), mailDispatchService.recipients);
         Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
+    }
+
+    @Test
+    public void testNotifyMatchUpdatedUsesRecipientPreferredLanguage() {
+        final Match match = createMatch(62L, "Weekly Padel", EventStatus.OPEN);
+        final User participant =
+                new User(
+                        2L,
+                        "player@test.com",
+                        "player",
+                        "Jamie",
+                        "Rivera",
+                        null,
+                        null,
+                        UserLanguages.SPANISH);
+        final AtomicReference<Locale> capturedLocale = new AtomicReference<>();
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(62L))
+                .thenReturn(List.of(participant));
+        Mockito.when(
+                        messageSource.getMessage(
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.isNull(),
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.any(Locale.class)))
+                .thenAnswer(
+                        invocation -> {
+                            capturedLocale.set(invocation.getArgument(3));
+                            return invocation.getArgument(2);
+                        });
+        Mockito.when(templateRenderer.renderMatchUpdatedNotification(ArgumentMatchers.any()))
+                .thenReturn(new MailContent("updated", "<p>1</p>", "1"));
+
+        matchNotificationService.notifyMatchUpdated(match);
+
+        Assertions.assertEquals(Locale.of("es"), capturedLocale.get());
     }
 
     private static class RecordingMailDispatchService implements MailDispatchService {

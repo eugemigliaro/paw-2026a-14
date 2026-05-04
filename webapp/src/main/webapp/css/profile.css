@@ -289,34 +289,9 @@
 	text-transform: uppercase;
 }
 
-.public-profile-review-filter__options {
-	background: var(--bg-muted);
-	border: 1px solid rgba(28, 46, 43, 0.08);
-	border-radius: 999px;
-	display: inline-flex;
-	gap: 0.25rem;
-	padding: 0.25rem;
-}
-
-.public-profile-review-filter__option {
-	border-radius: 999px;
-	color: var(--text-secondary);
-	font-size: 0.86rem;
-	font-weight: 800;
-	padding: 0.45rem 0.75rem;
-	text-decoration: none;
-}
-
-.public-profile-review-filter__option:hover,
-.public-profile-review-filter__option:focus-visible {
-	color: var(--text-primary);
-	outline: none;
-}
-
-.public-profile-review-filter__option.is-active {
-	background: #ffffff;
-	box-shadow: 0 10px 24px -20px rgba(18, 45, 40, 0.55);
-	color: var(--text-primary);
+.public-profile-review-filter__toggle {
+	flex: 0 1 300px;
+	min-width: 0;
 }
 
 .public-profile-review-list {
@@ -415,13 +390,9 @@
 		align-items: stretch;
 	}
 
-	.public-profile-review-filter__options {
+	.public-profile-review-filter__toggle {
+		flex-basis: 100%;
 		width: 100%;
-	}
-
-	.public-profile-review-filter__option {
-		flex: 1 1 0;
-		text-align: center;
 	}
 }
 

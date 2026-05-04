@@ -33,4 +33,6 @@ public interface UserService {
     User updateProfileImage(
             Long id, String contentType, long contentLength, InputStream contentStream)
             throws IOException;
+
+    void updatePreferredLanguage(Long id, String preferredLanguage);
 }

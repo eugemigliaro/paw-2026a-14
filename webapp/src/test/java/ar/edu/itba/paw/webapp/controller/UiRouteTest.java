@@ -1134,6 +1134,21 @@ class UiRouteTest {
                                         500L);
                         return currentUser;
                     }
+
+                    @Override
+                    public void updatePreferredLanguage(
+                            final Long id, final String preferredLanguage) {
+                        currentUser =
+                                new User(
+                                        currentUser.getId(),
+                                        currentUser.getEmail(),
+                                        currentUser.getUsername(),
+                                        currentUser.getName(),
+                                        currentUser.getLastName(),
+                                        currentUser.getPhone(),
+                                        currentUser.getProfileImageId(),
+                                        preferredLanguage);
+                    }
                 };
 
         final PlayerReviewService playerReviewService =
@@ -3068,6 +3083,17 @@ class UiRouteTest {
                 .andExpect(model().attributeExists("accountProfile"))
                 .andExpect(model().attributeExists("accountProfileForm"))
                 .andExpect(model().attributeExists("shell"));
+    }
+
+    @Test
+    void getAccountRouteWithSpanishLocaleLocalizesPublicProfileAction() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/account").param("lang", "es"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/index"))
+                .andExpect(
+                        model().attribute("accountPublicProfileLabel", "Ver perfil p\u00fablico"));
     }
 
     @Test

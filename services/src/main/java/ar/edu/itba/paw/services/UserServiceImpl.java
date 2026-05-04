@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9_]{3,50}$");
@@ -38,6 +40,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User createUser(final String email, final String username) {
         return userDao.createUser(email, username);
     }
@@ -121,7 +124,8 @@ public class UserServiceImpl implements UserService {
                 normalizedName,
                 normalizedLastName,
                 normalizedPhone,
-                profileImageId);
+                profileImageId,
+                existingUser.getPreferredLanguage());
     }
 
     @Override
@@ -144,7 +148,15 @@ public class UserServiceImpl implements UserService {
                 existingUser.getName(),
                 existingUser.getLastName(),
                 existingUser.getPhone(),
-                profileImageId);
+                profileImageId,
+                existingUser.getPreferredLanguage());
+    }
+
+    @Override
+    @Transactional
+    public void updatePreferredLanguage(final Long id, final String preferredLanguage) {
+        userDao.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        userDao.updatePreferredLanguage(id, UserLanguages.normalizeLanguage(preferredLanguage));
     }
 
     private Long resolveProfileImageId(
