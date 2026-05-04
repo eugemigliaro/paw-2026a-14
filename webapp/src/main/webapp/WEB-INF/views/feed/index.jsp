@@ -307,6 +307,7 @@
 								<c:param name="maxPrice" value="" />
 							</c:url>
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
+							<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 							<ui:button
 								label="${clearAllLabel}"
 								href="${clearFiltersHref}"
@@ -325,7 +326,8 @@
 									action="<c:url value='/explore/location' />"
 									class="near-me-panel near-me-panel--hidden"
 									data-explore-location-form="true"
-									data-location-available="${nearMeAvailable}">
+									data-location-available="${nearMeAvailable}"
+									data-location-unavailable-message="${locationUnavailableMessage}">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 									<input type="hidden" name="latitude" data-explore-location-latitude="true" />
 									<input type="hidden" name="longitude" data-explore-location-longitude="true" />

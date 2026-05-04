@@ -148,6 +148,8 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("data-location-zoom-out=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-current=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-clear=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-unavailable-message"));
+        assertTrue(hostCreateMatch.contains("data-location-current-status"));
         assertFalse(hostCreateMatch.contains("latitude.placeholder"));
         assertFalse(hostCreateMatch.contains("longitude.placeholder"));
         assertNotNull(english.getProperty("feed.nearMe"));
@@ -182,6 +184,7 @@ class ViewTemplateAssetsTest {
         assertTrue(script.contains("L.tileLayer"));
         assertTrue(script.contains("L.marker"));
         assertTrue(script.contains("L.divIcon"));
+        assertTrue(script.contains("isSecureContext"));
         assertTrue(script.contains("data-location-zoom-in"));
         assertTrue(script.contains("data-location-zoom-out"));
         assertTrue(script.contains("data-location-picker"));
@@ -214,12 +217,14 @@ class ViewTemplateAssetsTest {
         assertTrue(feedIndex.contains("/explore/location"));
         assertTrue(sortSelectTag.contains("data-sort-select=\"true\""));
         assertTrue(feedIndex.contains("data-explore-location-form=\"true\""));
+        assertTrue(feedIndex.contains("data-location-unavailable-message"));
         assertTrue(feedIndex.contains("near-me-panel--hidden"));
         assertFalse(feedIndex.contains("data-explore-location-submit=\"true\""));
         assertTrue(feedIndex.contains("event.distanceLabel"));
         assertTrue(feedIndex.contains("sortOptions"));
         assertTrue(Files.exists(scriptPath));
         assertTrue(script.contains("navigator.geolocation"));
+        assertTrue(script.contains("isSecureContext"));
         assertTrue(script.contains(".sort-panel__item"));
         assertTrue(script.contains("locationAvailable !== 'true'"));
     }
