@@ -132,7 +132,7 @@
 												<c:url var="clearFilterUrl" value="${clearFilterHref}" />
 												<ui:button label="${clearFilterLabel}" href="${clearFilterUrl}"
 													variant="secondary" size="sm" className="filter-dropdown__action" />
-												<ui:button label="${seeResultsLabel}" type="button"
+													<ui:button label="${seeResultsLabel}" type="button"
 													variant="primary" size="sm"
 													className="filter-dropdown__action filter-dropdown__close" />
 											</div>
@@ -319,6 +319,18 @@
 									label="${sortLabel}"
 									ariaLabel="${sortAriaLabel}"
 									options="${sortOptions}" />
+
+								<form
+									method="post"
+									action="<c:url value='/explore/location' />"
+									class="near-me-panel near-me-panel--hidden"
+									data-explore-location-form="true"
+									data-location-available="${nearMeAvailable}">
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<input type="hidden" name="latitude" data-explore-location-latitude="true" />
+									<input type="hidden" name="longitude" data-explore-location-longitude="true" />
+									<p class="near-me-panel__status" data-explore-location-status="true" role="status"></p>
+								</form>
 							</div>
 
 					<section>
@@ -422,6 +434,23 @@
 														</span>
 
 													</span>
+													<c:if test="${not empty event.distanceLabel}">
+														<span class="event-card__meta-item">
+															<span class="event-card__meta-icon" aria-hidden="true">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+																	<path d="M21 6H3" />
+																	<path d="M7 6v4" />
+																	<path d="M11 6v3" />
+																	<path d="M15 6v4" />
+																	<path d="M19 6v3" />
+																	<rect x="3" y="6" width="18" height="12" rx="2" />
+																</svg>
+															</span>
+															<span class="event-card__meta-text">
+																<c:out value="${event.distanceLabel}" />
+															</span>
+														</span>
+													</c:if>
 													<span class="event-card__meta-item">
 														<span class="event-card__meta-icon" aria-hidden="true">
 															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

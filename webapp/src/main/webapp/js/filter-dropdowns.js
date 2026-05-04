@@ -4,6 +4,10 @@
 	function closeAll() {
 		document.querySelectorAll('.filter-dropdown.is-open').forEach(function (d) {
 			d.classList.remove('is-open');
+			var trigger = d.querySelector('.filter-dropdown__toggle');
+			if (trigger) {
+				trigger.setAttribute('aria-expanded', 'false');
+			}
 		});
 	}
 
@@ -45,7 +49,10 @@
 			var dd = toggle.closest('.filter-dropdown');
 			var wasOpen = dd.classList.contains('is-open');
 			closeAll();
-			if (!wasOpen) dd.classList.add('is-open');
+			if (!wasOpen) {
+				dd.classList.add('is-open');
+				toggle.setAttribute('aria-expanded', 'true');
+			}
 			return;
 		}
 		if (!e.target.closest('.filter-dropdown__panel')) {
@@ -88,6 +95,12 @@
 	if (saved) {
 		sessionStorage.removeItem('pawOpenFilter');
 		var t = document.querySelector('.filter-dropdown[data-filter-name="' + saved + '"]');
-		if (t) t.classList.add('is-open');
+		if (t) {
+			t.classList.add('is-open');
+			var trigger = t.querySelector('.filter-dropdown__toggle');
+			if (trigger) {
+				trigger.setAttribute('aria-expanded', 'true');
+			}
+		}
 	}
 })();

@@ -1,13 +1,18 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_URL;
-import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -23,21 +28,17 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventOccurrenceViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ParticipantViewModel;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -52,6 +53,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class EventController {
+    private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
@@ -60,6 +62,32 @@ public class EventController {
     private final UserService userService;
     private final MessageSource messageSource;
     private final Clock clock;
+    private final boolean mapPickerEnabled;
+    private final String mapTileUrlTemplate;
+    private final String mapAttribution;
+    private final int mapDefaultZoom;
+
+    public EventController(
+            final MatchService matchService,
+            final MatchReservationService matchReservationService,
+            final MatchParticipationService matchParticipationService,
+            final PlayerReviewService playerReviewService,
+            final UserService userService,
+            final MessageSource messageSource,
+            final Clock clock) {
+        this(
+                matchService,
+                matchReservationService,
+                matchParticipationService,
+                playerReviewService,
+                userService,
+                messageSource,
+                clock,
+                false,
+                "",
+                "",
+                DEFAULT_MAP_ZOOM);
+    }
 
     @Autowired
     public EventController(
@@ -69,7 +97,11 @@ public class EventController {
             final PlayerReviewService playerReviewService,
             final UserService userService,
             final MessageSource messageSource,
-            final Clock clock) {
+            final Clock clock,
+            @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
+            @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
+            @Value("${map.tiles.attribution:}") final String mapAttribution,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
@@ -77,6 +109,10 @@ public class EventController {
         this.userService = userService;
         this.messageSource = messageSource;
         this.clock = clock;
+        this.mapPickerEnabled = mapPickerEnabled;
+        this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
+        this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
+        this.mapDefaultZoom = mapDefaultZoom;
     }
 
     @GetMapping("/matches/{eventId}")
@@ -283,21 +319,21 @@ public class EventController {
         final boolean hasPendingRequest =
                 !isHostViewer
                         && currentUserId != null
-                        && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
+                        && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
                         && matchParticipationService.hasPendingRequest(eventId, currentUserId);
         final boolean isInvitedPlayer =
                 !isHostViewer
                         && currentUserId != null
-                        && "invite_only".equalsIgnoreCase(match.getJoinPolicy())
+                        && match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY
                         && matchParticipationService.hasInvitation(eventId, currentUserId);
         final boolean isConfirmedParticipant =
                 currentUserId != null
                         && matchReservationService.hasActiveReservation(
                                 match.getId(), currentUserId);
         final boolean isApprovalRequired =
-                "approval_required".equalsIgnoreCase(match.getJoinPolicy());
-        final boolean isInviteOnly = "invite_only".equalsIgnoreCase(match.getJoinPolicy());
-        final boolean isPrivateEvent = "private".equalsIgnoreCase(match.getVisibility());
+                match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
+        final boolean isInviteOnly = match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY;
+        final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final List<Match> seriesOccurrences =
@@ -421,7 +457,16 @@ public class EventController {
                                         playerReviewService.findReviewableUserIds(currentUserId))
                                 .orElseGet(Set::of);
         return new EventDetailPageViewModel(
-                toCard(match, locale, currentUserId),
+                toCard(
+                        match,
+                        ZoneId.systemDefault(),
+                        locale,
+                        currentUserId,
+                        buildAvailabilityLabel(match, locale),
+                        messageSource,
+                        userService,
+                        matchParticipationService,
+                        matchReservationService),
                 null,
                 null,
                 host.map(User::getUsername)
@@ -436,12 +481,18 @@ public class EventController {
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
                 buildAboutParagraphs(match, locale),
-                toPriceLabel(match.getPricePerPlayer(), locale),
+                priceLabel(match.getPricePerPlayer(), locale, messageSource),
                 buildBookingDetails(match, locale),
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
                 loadNearbyMatches(match.getId(), currentUserId, locale),
-                toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale));
+                toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale),
+                mapPickerEnabled && !mapTileUrlTemplate.isBlank() && match.hasCoordinates(),
+                match.getLatitude(),
+                match.getLongitude(),
+                mapTileUrlTemplate,
+                mapAttribution,
+                mapDefaultZoom);
     }
 
     private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
@@ -531,75 +582,19 @@ public class EventController {
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)
-                .map(match -> toCard(match, locale, currentUserId))
+                .map(
+                        match ->
+                                toCard(
+                                        match,
+                                        ZoneId.systemDefault(),
+                                        locale,
+                                        currentUserId,
+                                        buildAvailabilityLabel(match, locale),
+                                        messageSource,
+                                        userService,
+                                        matchParticipationService,
+                                        matchReservationService))
                 .toList();
-    }
-
-    private EventCardViewModel toCard(
-            final Match match, final Locale locale, final Long currentUserId) {
-        final ZonedDateTime startsAt = match.getStartsAt().atZone(ZoneId.systemDefault());
-        final List<EventRelationshipBadgeViewModel> relationshipBadges =
-                relationshipBadgesFor(match, currentUserId, locale);
-        return new EventCardViewModel(
-                String.valueOf(match.getId()),
-                "/matches/" + match.getId(),
-                toSportLabel(match.getSport(), locale),
-                match.getTitle(),
-                match.getAddress(),
-                hostLabelFor(match),
-                scheduleFormatter(locale).format(startsAt),
-                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale(locale)).format(startsAt),
-                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                        .withLocale(resolvedLocale(locale))
-                        .format(startsAt),
-                toPriceLabel(match.getPricePerPlayer(), locale),
-                buildAvailabilityLabel(match, locale),
-                relationshipBadges,
-                recurringLabelFor(match, locale),
-                null,
-                mediaClassFor(match.getSport()),
-                bannerUrlFor(match));
-    }
-
-    private String hostLabelFor(final Match match) {
-        if (match == null || match.getHostUserId() == null) {
-            return null;
-        }
-        return Optional.ofNullable(userService.findById(match.getHostUserId()))
-                .orElse(Optional.empty())
-                .map(User::getUsername)
-                .orElse(null);
-    }
-
-    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
-            final Match match, final Long currentUserId, final Locale locale) {
-        if (currentUserId == null) {
-            return List.of();
-        }
-        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
-        if (currentUserId.equals(match.getHostUserId())) {
-            badges.add(relationshipBadge("my_event", locale));
-        }
-        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("pending", locale));
-        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("invited", locale));
-        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("going", locale));
-        }
-        return List.copyOf(badges);
-    }
-
-    private EventRelationshipBadgeViewModel relationshipBadge(
-            final String type, final Locale locale) {
-        return new EventRelationshipBadgeViewModel(
-                type, messageSource.getMessage("event.relationship." + type, null, locale));
-    }
-
-    private String recurringLabelFor(final Match match, final Locale locale) {
-        return match.isRecurringOccurrence()
-                ? messageSource.getMessage("event.recurringBadge", null, locale)
-                : null;
     }
 
     private List<EventOccurrenceViewModel> toOccurrenceViewModels(
@@ -704,10 +699,10 @@ public class EventController {
 
     private static boolean isSeriesReservationOpenOccurrence(
             final Match occurrence, final boolean isHostViewer) {
-        return "open".equalsIgnoreCase(occurrence.getStatus())
+        return EventStatus.OPEN == occurrence.getStatus()
                 && (isHostViewer
-                        || ("public".equalsIgnoreCase(occurrence.getVisibility())
-                                && "direct".equalsIgnoreCase(occurrence.getJoinPolicy())));
+                        || (occurrence.getVisibility() == EventVisibility.PUBLIC
+                                && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));
     }
 
     private SeriesJoinRequestUiState buildSeriesJoinRequestUiState(
@@ -785,13 +780,13 @@ public class EventController {
     }
 
     private static boolean isSeriesJoinRequestOpenOccurrence(final Match occurrence) {
-        return "public".equalsIgnoreCase(occurrence.getVisibility())
-                && "approval_required".equalsIgnoreCase(occurrence.getJoinPolicy())
-                && "open".equalsIgnoreCase(occurrence.getStatus());
+        return occurrence.getVisibility() == EventVisibility.PUBLIC
+                && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
+                && EventStatus.OPEN == occurrence.getStatus();
     }
 
     private EventDisplayState eventDisplayState(final Match match) {
-        final Optional<EventStatus> status = EventStatus.fromDbValue(match.getStatus());
+        final Optional<EventStatus> status = Optional.of(match.getStatus());
         if (status.filter(EventStatus.CANCELLED::equals).isPresent()) {
             return new EventDisplayState("cancelled", "cancelled");
         }
@@ -855,28 +850,6 @@ public class EventController {
                         "event.participants.many", new Object[] {participantCount}, locale);
     }
 
-    private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
-        if (pricePerPlayer == null) {
-            return messageSource.getMessage("price.tbd", null, locale);
-        }
-        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
-                ? messageSource.getMessage("price.free", null, locale)
-                : messageSource.getMessage("price.amount", new Object[] {pricePerPlayer}, locale);
-    }
-
-    private String toSportLabel(final Sport sport, final Locale locale) {
-        return messageSource.getMessage(
-                "sport." + sport.getDbValue(),
-                null,
-                sport.getDisplayName(),
-                resolvedLocale(locale));
-    }
-
-    private static DateTimeFormatter scheduleFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                .withLocale(resolvedLocale(locale));
-    }
-
     private String reservationErrorMessage(final String code, final Locale locale) {
         switch (code) {
             case "closed":
@@ -913,20 +886,6 @@ public class EventController {
         }
     }
 
-    private static DateTimeFormatter dateFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-                .withLocale(resolvedLocale(locale));
-    }
-
-    private static DateTimeFormatter timeFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                .withLocale(resolvedLocale(locale));
-    }
-
-    private static Locale resolvedLocale(final Locale locale) {
-        return locale == null ? Locale.ENGLISH : locale;
-    }
-
     private static String avatarLabelForUsername(final String username) {
         if (username == null || username.isBlank()) {
             return "?";
@@ -956,29 +915,13 @@ public class EventController {
         }
     }
 
-    private static String mediaClassFor(final Sport sport) {
-        switch (sport) {
-            case FOOTBALL:
-                return "media-tile--football";
-            case TENNIS:
-                return "media-tile--tennis";
-            case BASKETBALL:
-                return "media-tile--basketball";
-            case PADEL:
-                return "media-tile--padel";
-            case OTHER:
-            default:
-                return "media-tile--other";
-        }
-    }
-
     private boolean isMatchVisibleToUser(final Match match, final Long currentUserId) {
-        if ("draft".equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.DRAFT == match.getStatus()) {
             return currentUserId != null && currentUserId.equals(match.getHostUserId());
         }
 
-        if ("private".equalsIgnoreCase(match.getVisibility())
-                || "cancelled".equalsIgnoreCase(match.getStatus())) {
+        if (match.getVisibility() == EventVisibility.PRIVATE
+                || EventStatus.CANCELLED == match.getStatus()) {
             if (currentUserId != null && currentUserId.equals(match.getHostUserId())) {
                 return true;
             }
@@ -993,34 +936,34 @@ public class EventController {
             return false;
         }
 
-        return "public".equalsIgnoreCase(match.getVisibility());
+        return match.getVisibility() == EventVisibility.PUBLIC;
     }
 
     private boolean canReserveMatch(final Match match, final boolean isHostViewer) {
-        return "open".equalsIgnoreCase(match.getStatus())
+        return EventStatus.OPEN == match.getStatus()
                 && (isHostViewer
-                        || ("public".equalsIgnoreCase(match.getVisibility())
-                                && "direct".equalsIgnoreCase(match.getJoinPolicy())))
+                        || (match.getVisibility() == EventVisibility.PUBLIC
+                                && match.getJoinPolicy() == EventJoinPolicy.DIRECT))
                 && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
     }
 
     private boolean canRequestToJoin(final Match match) {
-        return "public".equalsIgnoreCase(match.getVisibility())
-                && "approval_required".equalsIgnoreCase(match.getJoinPolicy())
-                && "open".equalsIgnoreCase(match.getStatus())
+        return match.getVisibility() == EventVisibility.PUBLIC
+                && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
+                && EventStatus.OPEN == match.getStatus()
                 && !hasEventStarted(match)
                 && match.getAvailableSpots() > 0;
     }
 
     private boolean canCancelReservation(final Match match) {
-        return "open".equalsIgnoreCase(match.getStatus()) && !hasEventStarted(match);
+        return EventStatus.OPEN == match.getStatus() && !hasEventStarted(match);
     }
 
     private boolean shouldRedirectToPlayerMatchesAfterCancellation(
             final Match match, final Long userId) {
         return match != null
-                && "private".equalsIgnoreCase(match.getVisibility())
+                && match.getVisibility() == EventVisibility.PRIVATE
                 && !userId.equals(match.getHostUserId());
     }
 
@@ -1108,18 +1051,16 @@ public class EventController {
         if (hasEventEnded(match)) {
             return false;
         }
-        return EventStatus.fromDbValue(match.getStatus())
-                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
-                .orElse(true);
+        return match.getStatus() != EventStatus.COMPLETED
+                && match.getStatus() != EventStatus.CANCELLED;
     }
 
     private boolean canHostCancel(final Match match) {
         if (hasEventEnded(match)) {
             return false;
         }
-        return EventStatus.fromDbValue(match.getStatus())
-                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
-                .orElse(true);
+        return match.getStatus() != EventStatus.COMPLETED
+                && match.getStatus() != EventStatus.CANCELLED;
     }
 
     private boolean canHostManageParticipants(final Match match) {

@@ -223,6 +223,7 @@
 						</includes>
 						<excludes>
 							<exclude>**/target/**</exclude>
+							<exclude>**/vendor/**</exclude>
 						</excludes>
 						<indent>
 							<tabs>true</tabs>

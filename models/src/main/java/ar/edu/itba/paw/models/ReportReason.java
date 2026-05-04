@@ -26,4 +26,9 @@ public enum ReportReason {
                 .filter(reason -> reason.dbValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }

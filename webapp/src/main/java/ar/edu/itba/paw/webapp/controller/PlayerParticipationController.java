@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
+
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -108,12 +108,6 @@ public class PlayerParticipationController {
             return new ModelAndView(
                     "redirect:/matches/" + resolvedMatchId + "?inviteError=" + e.getCode());
         }
-    }
-
-    private static long requireAuthenticatedUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static long parseMatchIdOrThrow(final String raw) {

@@ -6,6 +6,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.UserAccount;
@@ -93,8 +96,9 @@ class EventControllerTest {
                         Instant.now().plusSeconds(4600),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null);
         Mockito.when(matchService.findMatchById(42L)).thenReturn(Optional.of(match));

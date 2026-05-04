@@ -140,4 +140,48 @@ public class ModerationReport {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+
+    @Override
+    public String toString() {
+        return "ModerationReport{"
+                + "id="
+                + id
+                + ", reporterUserId="
+                + reporterUserId
+                + ", targetType="
+                + targetType
+                + ", targetId="
+                + targetId
+                + ", reason="
+                + reason
+                + ", status="
+                + status
+                + ", resolution="
+                + resolution
+                + ", reviewedByUserId="
+                + reviewedByUserId
+                + ", reviewedAt="
+                + reviewedAt
+                + ", appealCount="
+                + appealCount
+                + ", appealedAt="
+                + appealedAt
+                + ", appealDecision="
+                + appealDecision
+                + ", appealResolvedByUserId="
+                + appealResolvedByUserId
+                + ", appealResolvedAt="
+                + appealResolvedAt
+                + ", createdAt="
+                + createdAt
+                + ", updatedAt="
+                + updatedAt
+                + ", hasDetails="
+                + (details != null && !details.isBlank())
+                + ", hasResolutionDetails="
+                + (resolutionDetails != null && !resolutionDetails.isBlank())
+                + ", hasAppealReason="
+                + (appealReason != null && !appealReason.isBlank())
+                + '}';
+    }
 }

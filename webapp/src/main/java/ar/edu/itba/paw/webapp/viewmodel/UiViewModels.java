@@ -305,6 +305,7 @@ public final class UiViewModels {
         private final List<EventRelationshipBadgeViewModel> relationshipBadges;
         private final String recurringLabel;
         private final String level;
+        private final String distanceLabel;
         private final String mediaClass;
         private final String bannerImageUrl;
 
@@ -346,6 +347,7 @@ public final class UiViewModels {
                                             relationshipBadgeType, relationshipBadgeLabel));
             this.recurringLabel = recurringLabel;
             this.level = level;
+            this.distanceLabel = null;
             this.mediaClass = mediaClass;
             this.bannerImageUrl = bannerImageUrl;
         }
@@ -385,6 +387,7 @@ public final class UiViewModels {
             this.relationshipBadgeLabel = firstBadge == null ? null : firstBadge.getLabel();
             this.recurringLabel = recurringLabel;
             this.level = level;
+            this.distanceLabel = null;
             this.mediaClass = mediaClass;
             this.bannerImageUrl = bannerImageUrl;
         }
@@ -406,6 +409,44 @@ public final class UiViewModels {
                 final String level,
                 final String mediaClass,
                 final String bannerImageUrl) {
+            this(
+                    id,
+                    href,
+                    sport,
+                    title,
+                    venue,
+                    hostLabel,
+                    schedule,
+                    dateLabel,
+                    timeLabel,
+                    priceLabel,
+                    badge,
+                    relationshipBadges,
+                    recurringLabel,
+                    level,
+                    null,
+                    mediaClass,
+                    bannerImageUrl);
+        }
+
+        public EventCardViewModel(
+                final String id,
+                final String href,
+                final String sport,
+                final String title,
+                final String venue,
+                final String hostLabel,
+                final String schedule,
+                final String dateLabel,
+                final String timeLabel,
+                final String priceLabel,
+                final String badge,
+                final List<EventRelationshipBadgeViewModel> relationshipBadges,
+                final String recurringLabel,
+                final String level,
+                final String distanceLabel,
+                final String mediaClass,
+                final String bannerImageUrl) {
             this.id = id;
             this.href = href;
             this.sport = sport;
@@ -425,6 +466,7 @@ public final class UiViewModels {
             this.relationshipBadgeLabel = firstBadge == null ? null : firstBadge.getLabel();
             this.recurringLabel = recurringLabel;
             this.level = level;
+            this.distanceLabel = distanceLabel;
             this.mediaClass = mediaClass;
             this.bannerImageUrl = bannerImageUrl;
         }
@@ -567,6 +609,10 @@ public final class UiViewModels {
 
         public String getLevel() {
             return level;
+        }
+
+        public String getDistanceLabel() {
+            return distanceLabel;
         }
 
         public String getMediaClass() {
@@ -963,6 +1009,12 @@ public final class UiViewModels {
         private final String ctaLabel;
         private final List<EventCardViewModel> nearbyEvents;
         private final List<EventOccurrenceViewModel> occurrences;
+        private final boolean mapAvailable;
+        private final Double mapLatitude;
+        private final Double mapLongitude;
+        private final String mapTileUrlTemplate;
+        private final String mapAttribution;
+        private final int mapZoom;
 
         public EventDetailPageViewModel(
                 final EventCardViewModel event,
@@ -981,6 +1033,54 @@ public final class UiViewModels {
                 final String ctaLabel,
                 final List<EventCardViewModel> nearbyEvents,
                 final List<EventOccurrenceViewModel> occurrences) {
+            this(
+                    event,
+                    heroSubtitle,
+                    heroMeta,
+                    hostLabel,
+                    hostProfileHref,
+                    hostProfileImageUrl,
+                    participants,
+                    participantCountLabel,
+                    participantsEmptyState,
+                    aboutParagraphs,
+                    bookingPrice,
+                    bookingDetails,
+                    availabilityLabel,
+                    ctaLabel,
+                    nearbyEvents,
+                    occurrences,
+                    false,
+                    null,
+                    null,
+                    "",
+                    "",
+                    14);
+        }
+
+        public EventDetailPageViewModel(
+                final EventCardViewModel event,
+                final String heroSubtitle,
+                final String heroMeta,
+                final String hostLabel,
+                final String hostProfileHref,
+                final String hostProfileImageUrl,
+                final List<ParticipantViewModel> participants,
+                final String participantCountLabel,
+                final String participantsEmptyState,
+                final List<String> aboutParagraphs,
+                final String bookingPrice,
+                final List<BookingDetailViewModel> bookingDetails,
+                final String availabilityLabel,
+                final String ctaLabel,
+                final List<EventCardViewModel> nearbyEvents,
+                final List<EventOccurrenceViewModel> occurrences,
+                final boolean mapAvailable,
+                final Double mapLatitude,
+                final Double mapLongitude,
+                final String mapTileUrlTemplate,
+                final String mapAttribution,
+                final int mapZoom) {
             this.event = event;
             this.heroSubtitle = heroSubtitle;
             this.heroMeta = heroMeta;
@@ -997,6 +1097,12 @@ public final class UiViewModels {
             this.ctaLabel = ctaLabel;
             this.nearbyEvents = nearbyEvents;
             this.occurrences = occurrences;
+            this.mapAvailable = mapAvailable;
+            this.mapLatitude = mapLatitude;
+            this.mapLongitude = mapLongitude;
+            this.mapTileUrlTemplate = mapTileUrlTemplate;
+            this.mapAttribution = mapAttribution;
+            this.mapZoom = mapZoom;
         }
 
         public EventCardViewModel getEvent() {
@@ -1061,6 +1167,30 @@ public final class UiViewModels {
 
         public List<EventOccurrenceViewModel> getOccurrences() {
             return occurrences;
+        }
+
+        public boolean isMapAvailable() {
+            return mapAvailable;
+        }
+
+        public Double getMapLatitude() {
+            return mapLatitude;
+        }
+
+        public Double getMapLongitude() {
+            return mapLongitude;
+        }
+
+        public String getMapTileUrlTemplate() {
+            return mapTileUrlTemplate;
+        }
+
+        public String getMapAttribution() {
+            return mapAttribution;
+        }
+
+        public int getMapZoom() {
+            return mapZoom;
         }
     }
 

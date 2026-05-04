@@ -33,4 +33,18 @@ public class PlayerReviewSummary {
     public long getReviewCount() {
         return reviewCount;
     }
+
+    @Override
+    public String toString() {
+        return "PlayerReviewSummary{"
+                + "reviewedUserId="
+                + reviewedUserId
+                + ", likeCount="
+                + likeCount
+                + ", dislikeCount="
+                + dislikeCount
+                + ", reviewCount="
+                + reviewCount
+                + '}';
+    }
 }

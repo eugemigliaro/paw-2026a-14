@@ -1,5 +1,5 @@
 (function() {
-	function initializeBinaryToggle(toggleRoot) {
+	function initializeSegmentedToggle(toggleRoot) {
 		if (!toggleRoot) {
 			return null;
 		}
@@ -14,10 +14,16 @@
 		}
 
 		function syncUi(nextValue) {
-			buttons.forEach(function(button) {
+			var selectedIndex = 0;
+			buttons.forEach(function(button, index) {
 				var isActive = button.getAttribute("data-value") === nextValue;
 				button.classList.toggle("active", isActive);
+				button.setAttribute("aria-pressed", isActive ? "true" : "false");
+				if (isActive) {
+					selectedIndex = index;
+				}
 			});
+			toggleRoot.style.setProperty("--events-toggle-index", String(selectedIndex));
 			slider.classList.toggle("right", nextValue === rightValue);
 		}
 
@@ -26,6 +32,7 @@
 				var nextValue = button.getAttribute("data-value");
 				hiddenInput.value = nextValue;
 				syncUi(nextValue);
+				hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
 			});
 		});
 
@@ -34,7 +41,7 @@
 	}
 
 	function initJoinPolicyVisibility(visibilityToggle, joinPolicyField, joinPolicyToggle, visibilityInput, joinPolicyInput) {
-		if (!visibilityInput || !joinPolicyField || !joinPolicyInput || !joinPolicyToggle || !visibilityToggle) {
+		if (!visibilityToggle || !visibilityInput || !joinPolicyField || !joinPolicyToggle || !joinPolicyInput) {
 			return;
 		}
 
@@ -46,31 +53,35 @@
 				joinPolicyInput.value = "";
 				joinPolicyToggle.querySelectorAll(".events-toggle-btn").forEach(function(button) {
 					button.classList.remove("active");
+					button.setAttribute("aria-pressed", "false");
 				});
+				var slider = joinPolicyToggle.querySelector("[data-events-toggle-slider='true']");
+				if (slider) {
+					slider.classList.remove("right");
+				}
+				joinPolicyToggle.style.setProperty("--events-toggle-index", "0");
 			}
 		}
 
-		visibilityToggle.querySelectorAll(".events-toggle-btn").forEach(function(button) {
-			button.addEventListener("click", updateJoinPolicyVisibility);
-		});
+		visibilityInput.addEventListener("change", updateJoinPolicyVisibility);
 		updateJoinPolicyVisibility();
 	}
 
 	function initRecurrenceFields() {
 		var recurringCheckbox = document.getElementById("match-recurring");
 		var recurrenceSettings = document.getElementById("recurrence-settings");
-		var recurrenceEndModeSelect = document.getElementById("match-recurrence-end-mode");
+		var recurrenceEndModeInput = document.getElementById("match-recurrence-end-mode");
 		var recurrenceUntilDateField = document.getElementById("recurrence-until-date-field");
 		var recurrenceCountField = document.getElementById("recurrence-count-field");
 		var recurrenceUntilDateInput = document.getElementById("match-recurrence-until-date");
 		var recurrenceCountInput = document.getElementById("match-recurrence-occurrence-count");
 
 		function updateRecurrenceEndFields() {
-			if (!recurrenceEndModeSelect || !recurrenceUntilDateField || !recurrenceCountField) {
+			if (!recurrenceEndModeInput || !recurrenceUntilDateField || !recurrenceCountField) {
 				return;
 			}
 
-			var mode = recurrenceEndModeSelect.value;
+			var mode = recurrenceEndModeInput.value;
 			recurrenceUntilDateField.style.display = mode === "until_date" ? "" : "none";
 			recurrenceCountField.style.display = mode === "occurrence_count" ? "" : "none";
 			if (mode === "until_date" && recurrenceCountInput) {
@@ -93,8 +104,8 @@
 		if (recurringCheckbox) {
 			recurringCheckbox.addEventListener("change", updateRecurrenceSettings);
 		}
-		if (recurrenceEndModeSelect) {
-			recurrenceEndModeSelect.addEventListener("change", updateRecurrenceEndFields);
+		if (recurrenceEndModeInput) {
+			recurrenceEndModeInput.addEventListener("change", updateRecurrenceEndFields);
 		}
 		updateRecurrenceSettings();
 	}
@@ -210,9 +221,13 @@
 		var visibilityToggle = document.getElementById("match-visibility-toggle");
 		var joinPolicyField = document.getElementById("join-policy-field");
 		var joinPolicyToggle = document.getElementById("match-join-policy-toggle");
-		var visibilityInput = initializeBinaryToggle(visibilityToggle);
-		var joinPolicyInput = initializeBinaryToggle(joinPolicyToggle);
+		var recurrenceFrequencyToggle = document.getElementById("match-recurrence-frequency-toggle");
+		var recurrenceEndModeToggle = document.getElementById("match-recurrence-end-mode-toggle");
+		var visibilityInput = initializeSegmentedToggle(visibilityToggle);
+		var joinPolicyInput = initializeSegmentedToggle(joinPolicyToggle);
 
+		initializeSegmentedToggle(recurrenceFrequencyToggle);
+		initializeSegmentedToggle(recurrenceEndModeToggle);
 		initJoinPolicyVisibility(visibilityToggle, joinPolicyField, joinPolicyToggle, visibilityInput, joinPolicyInput);
 		initRecurrenceFields();
 		initDurationPresets();

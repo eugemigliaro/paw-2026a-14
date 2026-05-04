@@ -28,4 +28,9 @@ public enum RecurrenceFrequency {
                 .filter(frequency -> frequency.value.equalsIgnoreCase(normalized))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

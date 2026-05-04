@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
@@ -48,7 +51,12 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
-                                createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
+                                createMatch(
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600),
+                                        4,
+                                        1)));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false);
         Mockito.when(matchParticipantDao.createReservationIfSpace(10L, 20L)).thenReturn(true);
 
@@ -61,7 +69,12 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
-                                createMatch("private", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
+                                createMatch(
+                                        EventVisibility.PRIVATE,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600),
+                                        4,
+                                        1)));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 1L)).thenReturn(false);
         Mockito.when(matchParticipantDao.createReservationIfSpace(10L, 1L)).thenReturn(true);
 
@@ -75,7 +88,12 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
-                                createMatch("private", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
+                                createMatch(
+                                        EventVisibility.PRIVATE,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600),
+                                        4,
+                                        1)));
 
         // Exercise
         final MatchReservationException exception =
@@ -108,7 +126,12 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
-                                createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
+                                createMatch(
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600),
+                                        4,
+                                        1)));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(true);
 
         final MatchReservationException exception =
@@ -124,7 +147,12 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
-                                createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 4)));
+                                createMatch(
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600),
+                                        4,
+                                        4)));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false);
 
         final MatchReservationException exception =
@@ -140,7 +168,12 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
-                                createMatch("public", "open", FIXED_NOW.minusSeconds(60), 4, 1)));
+                                createMatch(
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.minusSeconds(60),
+                                        4,
+                                        1)));
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -157,7 +190,11 @@ public class MatchReservationServiceImplTest {
                 .thenReturn(
                         Optional.of(
                                 createMatch(
-                                        "public", "cancelled", FIXED_NOW.plusSeconds(3600), 4, 1)));
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.CANCELLED,
+                                        FIXED_NOW.plusSeconds(3600),
+                                        4,
+                                        1)));
 
         // Exercise
         final MatchReservationException exception =
@@ -183,8 +220,20 @@ public class MatchReservationServiceImplTest {
 
     @Test
     public void testReserveSpotMapsLateRaceConditionToFull() {
-        final Match initialMatch = createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 3);
-        final Match fullMatch = createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 4);
+        final Match initialMatch =
+                createMatch(
+                        EventVisibility.PUBLIC,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        3);
+        final Match fullMatch =
+                createMatch(
+                        EventVisibility.PUBLIC,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        4);
 
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(Optional.of(initialMatch))
@@ -226,10 +275,22 @@ public class MatchReservationServiceImplTest {
         // Arrange
         final Match selectedOccurrence =
                 createRecurringMatch(
-                        10L, FIXED_NOW.plusSeconds(3600), 4, 1, 100L, 1, "approval_required");
+                        10L,
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
         final Match secondOccurrence =
                 createRecurringMatch(
-                        11L, FIXED_NOW.plusSeconds(7200), 4, 0, 100L, 2, "approval_required");
+                        11L,
+                        FIXED_NOW.plusSeconds(7200),
+                        4,
+                        0,
+                        100L,
+                        2,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
         Mockito.when(matchDao.findSeriesOccurrences(100L))
                 .thenReturn(List.of(selectedOccurrence, secondOccurrence));
@@ -363,7 +424,12 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L))
                 .thenReturn(
                         Optional.of(
-                                createMatch("public", "open", FIXED_NOW.plusSeconds(3600), 4, 1)));
+                                createMatch(
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600),
+                                        4,
+                                        1)));
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -374,11 +440,17 @@ public class MatchReservationServiceImplTest {
     }
 
     private static Match createMatch(
-            final String visibility,
-            final String status,
+            final EventVisibility visibility,
+            final EventStatus status,
             final Instant startsAt,
             final int maxPlayers,
             final int joinedPlayers) {
+
+        final EventJoinPolicy joinPolicy =
+                visibility.equals(EventVisibility.PUBLIC)
+                        ? EventJoinPolicy.DIRECT
+                        : EventJoinPolicy.APPROVAL_REQUIRED;
+
         return new Match(
                 10L,
                 Sport.FOOTBALL,
@@ -391,6 +463,7 @@ public class MatchReservationServiceImplTest {
                 maxPlayers,
                 BigDecimal.ZERO,
                 visibility,
+                joinPolicy,
                 status,
                 joinedPlayers,
                 null);
@@ -404,7 +477,13 @@ public class MatchReservationServiceImplTest {
             final Long seriesId,
             final int occurrenceIndex) {
         return createRecurringMatch(
-                id, startsAt, maxPlayers, joinedPlayers, seriesId, occurrenceIndex, "direct");
+                id,
+                startsAt,
+                maxPlayers,
+                joinedPlayers,
+                seriesId,
+                occurrenceIndex,
+                EventJoinPolicy.DIRECT);
     }
 
     private static Match createRecurringMatch(
@@ -414,7 +493,7 @@ public class MatchReservationServiceImplTest {
             final int joinedPlayers,
             final Long seriesId,
             final int occurrenceIndex,
-            final String joinPolicy) {
+            final EventJoinPolicy joinPolicy) {
         return new Match(
                 id,
                 Sport.FOOTBALL,
@@ -426,9 +505,9 @@ public class MatchReservationServiceImplTest {
                 null,
                 maxPlayers,
                 BigDecimal.ZERO,
-                "public",
+                EventVisibility.PUBLIC,
                 joinPolicy,
-                "open",
+                EventStatus.OPEN,
                 joinedPlayers,
                 null,
                 seriesId,

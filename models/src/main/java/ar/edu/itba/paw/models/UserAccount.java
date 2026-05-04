@@ -95,4 +95,33 @@ public class UserAccount {
     public boolean hasPassword() {
         return passwordHash != null && !passwordHash.isBlank();
     }
+
+    @Override
+    public String toString() {
+        return "UserAccount{"
+                + "id="
+                + id
+                + ", username='"
+                + username
+                + '\''
+                + ", role="
+                + role
+                + ", profileImageId="
+                + profileImageId
+                + ", emailVerified="
+                + isEmailVerified()
+                + ", emailVerifiedAt="
+                + emailVerifiedAt
+                + ", hasEmail="
+                + (email != null && !email.isBlank())
+                + ", hasName="
+                + (name != null && !name.isBlank())
+                + ", hasLastName="
+                + (lastName != null && !lastName.isBlank())
+                + ", hasPhone="
+                + (phone != null && !phone.isBlank())
+                + ", hasPassword="
+                + hasPassword()
+                + '}';
+    }
 }

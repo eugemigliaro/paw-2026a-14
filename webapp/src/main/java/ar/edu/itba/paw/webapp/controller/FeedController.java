@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
@@ -9,31 +9,26 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Sport;
-import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventRelationshipBadgeViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
+import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -41,6 +36,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -49,6 +45,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class FeedController {
 
     private static final int PAGE_SIZE = 12;
+    private static final String SESSION_EXPLORE_LATITUDE = "exploreLocationLatitude";
+    private static final String SESSION_EXPLORE_LONGITUDE = "exploreLocationLongitude";
 
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
@@ -83,14 +81,20 @@ public class FeedController {
             @RequestParam(value = "minPrice", required = false) final String minPrice,
             @RequestParam(value = "maxPrice", required = false) final String maxPrice,
             @RequestParam(value = "tz", required = false) final String timezone,
+            final HttpSession session,
             final Locale locale) {
         final String query =
                 bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
                         ? ""
                         : feedSearchForm.getQ();
-        final FeedFilters filters =
+        FeedFilters filters =
                 normalizeFilters(sports, startDate, endDate, sort, timezone, minPrice, maxPrice);
-        final PaginatedResult<Match> result = searchPublicMatches(query, filters, page);
+        final ExploreLocation exploreLocation = exploreLocation(session);
+        if (exploreLocation == null && "distance".equals(filters.selectedSort())) {
+            filters = filters.withSort("soonest");
+        }
+        final PaginatedResult<Match> result =
+                searchPublicMatches(query, filters, page, exploreLocation);
         final ModelAndView mav = new ModelAndView("feed/index");
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/"));
         mav.addObject("selectedSort", filters.selectedSort());
@@ -106,8 +110,30 @@ public class FeedController {
         mav.addObject("selectedEndDateValue", filters.endDate());
         mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
         mav.addObject("sortOptions", buildSortOptions(query, filters, locale, email));
-        mav.addObject("feedPage", buildFeedPageViewModel(query, filters, result, locale, email));
+        mav.addObject(
+                "feedPage",
+                buildFeedPageViewModel(query, filters, result, locale, email, exploreLocation));
+        mav.addObject("nearMeAvailable", exploreLocation != null);
         return mav;
+    }
+
+    @PostMapping("/explore/location")
+    public ModelAndView storeExploreLocation(
+            @RequestParam(value = "latitude", required = false) final String latitude,
+            @RequestParam(value = "longitude", required = false) final String longitude,
+            final HttpSession session) {
+        final Double parsedLatitude = parseCoordinate(latitude);
+        final Double parsedLongitude = parseCoordinate(longitude);
+        if (parsedLatitude != null
+                && parsedLatitude >= -90
+                && parsedLatitude <= 90
+                && parsedLongitude != null
+                && parsedLongitude >= -180
+                && parsedLongitude <= 180) {
+            session.setAttribute(SESSION_EXPLORE_LATITUDE, parsedLatitude);
+            session.setAttribute(SESSION_EXPLORE_LONGITUDE, parsedLongitude);
+        }
+        return new ModelAndView("redirect:/?sort=distance");
     }
 
     private FeedPageViewModel buildFeedPageViewModel(
@@ -115,7 +141,8 @@ public class FeedController {
             final FeedFilters filters,
             final PaginatedResult<Match> result,
             final Locale locale,
-            final String email) {
+            final String email,
+            final ExploreLocation exploreLocation) {
 
         final ZoneId zoneId = parseZone(filters.timezone());
         final Long currentUserId =
@@ -130,12 +157,29 @@ public class FeedController {
                 List.of(),
                 buildFilterGroups(query, filters, locale, email),
                 result.getItems().stream()
-                        .map(match -> toCard(match, zoneId, locale, currentUserId))
+                        .map(
+                                match ->
+                                        toCard(
+                                                match,
+                                                zoneId,
+                                                locale,
+                                                currentUserId,
+                                                messageSource.getMessage(
+                                                        "event.spotsLeft",
+                                                        new Object[] {match.getAvailableSpots()},
+                                                        locale),
+                                                distanceLabel(match, exploreLocation, locale),
+                                                messageSource,
+                                                userService,
+                                                matchParticipationService,
+                                                matchReservationService))
                         .toList(),
                 result.getPage(),
                 result.getTotalPages(),
-                buildPaginationItems(
-                        query, filters, result.getPage(), result.getTotalPages(), email, locale),
+                PaginationUtils.buildPaginationItems(
+                        result.getPage(),
+                        result.getTotalPages(),
+                        page -> buildUrl(query, filters, page, email, locale)),
                 result.hasPrevious()
                         ? buildUrl(query, filters, result.getPage() - 1, email, locale)
                         : null,
@@ -145,7 +189,10 @@ public class FeedController {
     }
 
     private PaginatedResult<Match> searchPublicMatches(
-            final String query, final FeedFilters filters, final int page) {
+            final String query,
+            final FeedFilters filters,
+            final int page,
+            final ExploreLocation exploreLocation) {
         final int safePage = page > 0 ? page : 1;
         final String encodedSports = encodeCsv(filters.selectedSports());
 
@@ -159,41 +206,9 @@ public class FeedController {
                 PAGE_SIZE,
                 filters.timezone(),
                 filters.minPrice(),
-                filters.maxPrice());
-    }
-
-    private static List<PaginationItemViewModel> buildPaginationItems(
-            final String query,
-            final FeedFilters filters,
-            final int currentPage,
-            final int totalPages,
-            final String email,
-            final Locale locale) {
-        if (totalPages <= 1) {
-            return List.of();
-        }
-
-        final List<PaginationItemViewModel> items = new ArrayList<>();
-        final int startPage = Math.max(2, Math.min(currentPage - 1, totalPages - 3));
-        final int endPage = Math.min(totalPages - 1, Math.max(currentPage + 1, 4));
-
-        items.add(pageItem(1, query, filters, currentPage, email, locale));
-
-        if (startPage > 2) {
-            items.add(new PaginationItemViewModel("...", null, false, true));
-        }
-
-        for (int page = startPage; page <= endPage; page++) {
-            items.add(pageItem(page, query, filters, currentPage, email, locale));
-        }
-
-        if (endPage < totalPages - 1) {
-            items.add(new PaginationItemViewModel("...", null, false, true));
-        }
-
-        items.add(pageItem(totalPages, query, filters, currentPage, email, locale));
-
-        return items;
+                filters.maxPrice(),
+                exploreLocation == null ? null : exploreLocation.latitude(),
+                exploreLocation == null ? null : exploreLocation.longitude());
     }
 
     private List<SelectOptionViewModel> buildSortOptions(
@@ -201,10 +216,13 @@ public class FeedController {
             final FeedFilters filters,
             final Locale locale,
             final String email) {
-        return List.of(
-                sortOption(query, filters, locale, email, "soonest", "feed.sort.soonest"),
-                sortOption(query, filters, locale, email, "price", "feed.sort.price"),
-                sortOption(query, filters, locale, email, "spots", "feed.sort.spots"));
+        final List<SelectOptionViewModel> sortOptions = new ArrayList<>();
+        sortOptions.add(sortOption(query, filters, locale, email, "soonest", "feed.sort.soonest"));
+        sortOptions.add(sortOption(query, filters, locale, email, "price", "feed.sort.price"));
+        sortOptions.add(sortOption(query, filters, locale, email, "spots", "feed.sort.spots"));
+        sortOptions.add(
+                sortOption(query, filters, locale, email, "distance", "feed.sort.distance"));
+        return List.copyOf(sortOptions);
     }
 
     private SelectOptionViewModel sortOption(
@@ -218,20 +236,6 @@ public class FeedController {
                 messageSource.getMessage(labelCode, null, locale),
                 buildUrl(query, filters.withSort(sort), 1, email, locale),
                 sort.equals(filters.selectedSort()));
-    }
-
-    private static PaginationItemViewModel pageItem(
-            final int page,
-            final String query,
-            final FeedFilters filters,
-            final int currentPage,
-            final String email,
-            final Locale locale) {
-        return new PaginationItemViewModel(
-                Integer.toString(page),
-                buildUrl(query, filters, page, email, locale),
-                page == currentPage,
-                false);
     }
 
     private List<FilterGroupViewModel> buildFilterGroups(
@@ -314,110 +318,45 @@ public class FeedController {
                                         isSportSelected(selectedSports, Sport.OTHER)))));
     }
 
-    private EventCardViewModel toCard(
-            final Match match, final ZoneId zoneId, final Locale locale, final Long currentUserId) {
-        final Locale resolvedLocale = resolvedLocale(locale);
-        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
-        final String schedule = scheduleFormatter(resolvedLocale).format(startsAt);
-        final String dateLabel =
-                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale).format(startsAt);
-        final String timeLabel =
-                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                        .withLocale(resolvedLocale)
-                        .format(startsAt);
-        final String priceLabel = toPriceLabel(match.getPricePerPlayer(), locale);
-        final List<EventRelationshipBadgeViewModel> relationshipBadges =
-                relationshipBadgesFor(match, currentUserId, locale);
-
-        return new EventCardViewModel(
-                String.valueOf(match.getId()),
-                "/matches/" + match.getId(),
-                toSportLabel(match.getSport(), resolvedLocale),
-                match.getTitle(),
-                match.getAddress(),
-                hostLabelFor(match),
-                schedule,
-                dateLabel,
-                timeLabel,
-                priceLabel,
-                messageSource.getMessage(
-                        "event.spotsLeft", new Object[] {match.getAvailableSpots()}, locale),
-                relationshipBadges,
-                recurringLabelFor(match, locale),
-                null,
-                mediaClassFor(match.getSport()),
-                bannerUrlFor(match));
-    }
-
-    private String hostLabelFor(final Match match) {
-        if (match == null || match.getHostUserId() == null) {
+    private static String distanceLabel(
+            final Match match, final ExploreLocation exploreLocation, final Locale locale) {
+        if (match == null || exploreLocation == null || !match.hasCoordinates()) {
             return null;
         }
-        final Optional<User> host =
-                Optional.ofNullable(userService.findById(match.getHostUserId()))
-                        .orElse(Optional.empty());
-        return host.map(User::getUsername).orElse(null);
-    }
-
-    private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
-            final Match match, final Long currentUserId, final Locale locale) {
-        if (currentUserId == null) {
-            return List.of();
+        final double distanceKm =
+                distanceInKilometers(
+                        exploreLocation.latitude(),
+                        exploreLocation.longitude(),
+                        match.getLatitude(),
+                        match.getLongitude());
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
+        final NumberFormat formatter = NumberFormat.getNumberInstance(resolvedLocale);
+        if (distanceKm < 1) {
+            formatter.setMaximumFractionDigits(0);
+            return formatter.format(Math.max(1, Math.round(distanceKm * 1000))) + " m";
         }
-        final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
-        if (currentUserId.equals(match.getHostUserId())) {
-            badges.add(relationshipBadge("my_event", locale));
-        }
-        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("pending", locale));
-        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("invited", locale));
-        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
-            badges.add(relationshipBadge("going", locale));
-        }
-        return List.copyOf(badges);
+        formatter.setMinimumFractionDigits(distanceKm < 10 ? 1 : 0);
+        formatter.setMaximumFractionDigits(distanceKm < 10 ? 1 : 0);
+        return formatter.format(distanceKm) + " km";
     }
 
-    private EventRelationshipBadgeViewModel relationshipBadge(
-            final String type, final Locale locale) {
-        return new EventRelationshipBadgeViewModel(
-                type, messageSource.getMessage("event.relationship." + type, null, locale));
-    }
-
-    private String recurringLabelFor(final Match match, final Locale locale) {
-        return match.isRecurringOccurrence()
-                ? messageSource.getMessage("event.recurringBadge", null, locale)
-                : null;
-    }
-
-    private String toPriceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
-        if (pricePerPlayer == null) {
-            return messageSource.getMessage("price.tbd", null, locale);
-        }
-        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
-                ? messageSource.getMessage("price.free", null, locale)
-                : messageSource.getMessage("price.amount", new Object[] {pricePerPlayer}, locale);
-    }
-
-    private String toSportLabel(final Sport sport, final Locale locale) {
-        return messageSource.getMessage(
-                "sport." + sport.getDbValue(), null, sport.getDisplayName(), locale);
-    }
-
-    private static String mediaClassFor(final Sport sport) {
-        switch (sport) {
-            case FOOTBALL:
-                return "media-tile--football";
-            case TENNIS:
-                return "media-tile--tennis";
-            case BASKETBALL:
-                return "media-tile--basketball";
-            case PADEL:
-                return "media-tile--padel";
-            case OTHER:
-            default:
-                return "media-tile--other";
-        }
+    private static double distanceInKilometers(
+            final double fromLatitude,
+            final double fromLongitude,
+            final double toLatitude,
+            final double toLongitude) {
+        final double earthRadiusKm = 6371.0088;
+        final double fromLatRad = Math.toRadians(fromLatitude);
+        final double toLatRad = Math.toRadians(toLatitude);
+        final double deltaLatRad = Math.toRadians(toLatitude - fromLatitude);
+        final double deltaLonRad = Math.toRadians(toLongitude - fromLongitude);
+        final double a =
+                Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2)
+                        + Math.cos(fromLatRad)
+                                * Math.cos(toLatRad)
+                                * Math.sin(deltaLonRad / 2)
+                                * Math.sin(deltaLonRad / 2);
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private static ZoneId parseZone(final String timezone) {
@@ -430,15 +369,6 @@ public class FeedController {
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
         }
-    }
-
-    private static DateTimeFormatter scheduleFormatter(final Locale locale) {
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-                .withLocale(resolvedLocale(locale));
-    }
-
-    private static Locale resolvedLocale(final Locale locale) {
-        return locale == null ? Locale.ENGLISH : locale;
     }
 
     private static String buildUrl(
@@ -564,6 +494,29 @@ public class FeedController {
         return new PriceRange(minPrice, maxPrice);
     }
 
+    private static Double parseCoordinate(final String rawCoordinate) {
+        if (rawCoordinate == null || rawCoordinate.isBlank()) {
+            return null;
+        }
+        try {
+            return Double.valueOf(rawCoordinate.trim());
+        } catch (final NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private static ExploreLocation exploreLocation(final HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        final Object latitude = session.getAttribute(SESSION_EXPLORE_LATITUDE);
+        final Object longitude = session.getAttribute(SESSION_EXPLORE_LONGITUDE);
+        if (latitude instanceof Double && longitude instanceof Double) {
+            return new ExploreLocation((Double) latitude, (Double) longitude);
+        }
+        return null;
+    }
+
     private static BigDecimal parseNonNegativePrice(final String rawPrice) {
         if (rawPrice == null || rawPrice.isBlank()) {
             return null;
@@ -600,6 +553,8 @@ public class FeedController {
     private record PriceRange(BigDecimal minPrice, BigDecimal maxPrice) {}
 
     private record DateRange(String startDate, String endDate) {}
+
+    private record ExploreLocation(Double latitude, Double longitude) {}
 
     private record FeedFilters(
             List<String> selectedSports,

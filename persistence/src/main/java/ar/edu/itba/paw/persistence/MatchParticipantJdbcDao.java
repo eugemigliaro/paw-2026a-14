@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.Sport;
@@ -931,9 +934,11 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                 endsAt == null ? null : endsAt.toInstant(),
                 rs.getInt("max_players"),
                 price,
-                rs.getString("visibility"),
-                rs.getString("join_policy"),
-                rs.getString("status"),
+                EventVisibility.fromDbValue(rs.getString("visibility"))
+                        .orElse(EventVisibility.PUBLIC),
+                EventJoinPolicy.fromDbValue(rs.getString("join_policy"))
+                        .orElse(EventJoinPolicy.DIRECT),
+                EventStatus.fromDbValue(rs.getString("status")).orElse(EventStatus.OPEN),
                 rs.getInt("joined_players"),
                 rs.getObject("banner_image_id") == null ? null : rs.getLong("banner_image_id"),
                 rs.getObject("series_id") == null ? null : rs.getLong("series_id"),

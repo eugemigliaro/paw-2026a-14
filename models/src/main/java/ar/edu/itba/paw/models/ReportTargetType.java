@@ -23,4 +23,9 @@ public enum ReportTargetType {
                 .filter(type -> type.dbValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }
