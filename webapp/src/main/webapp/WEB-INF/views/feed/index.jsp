@@ -17,6 +17,7 @@
 					<spring:message var="filtersAriaLabel" code="feed.aria.filters" />
 					<spring:message var="searchAriaLabel" code="feed.aria.search" />
 					<spring:message var="sortAriaLabel" code="feed.aria.sort" />
+					<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 					<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 					<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 					<spring:message var="priceRangeError" code="filter.price.rangeError" />
@@ -319,6 +320,7 @@
 									id="feed-sort-select"
 									label="${sortLabel}"
 									ariaLabel="${sortAriaLabel}"
+									hint="${nearMeAvailable ? '' : locationUnavailableMessage}"
 									options="${sortOptions}" />
 
 								<form

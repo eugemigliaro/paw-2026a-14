@@ -87,6 +87,8 @@ public class FeedController {
                 bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
                         ? ""
                         : feedSearchForm.getQ();
+        final boolean nearMeUnavailable =
+                exploreLocation(session) == null && "distance".equals(sort);
         FeedFilters filters =
                 normalizeFilters(sports, startDate, endDate, sort, timezone, minPrice, maxPrice);
         final ExploreLocation exploreLocation = exploreLocation(session);
@@ -110,6 +112,7 @@ public class FeedController {
         mav.addObject("selectedEndDateValue", filters.endDate());
         mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
         mav.addObject("sortOptions", buildSortOptions(query, filters, locale, email));
+        mav.addObject("nearMeUnavailable", nearMeUnavailable);
         mav.addObject(
                 "feedPage",
                 buildFeedPageViewModel(query, filters, result, locale, email, exploreLocation));

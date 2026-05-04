@@ -1419,7 +1419,8 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
                 .andExpect(model().attributeExists("shell"))
-                .andExpect(model().attributeExists("feedPage"));
+                .andExpect(model().attributeExists("feedPage"))
+                .andExpect(model().attribute("nearMeUnavailable", false));
     }
 
     @Test

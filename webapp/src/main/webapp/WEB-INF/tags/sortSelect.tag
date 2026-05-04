@@ -4,6 +4,7 @@
 <%@ attribute name="label" required="true" rtexprvalue="true" %>
 <%@ attribute name="ariaLabel" required="false" rtexprvalue="true" %>
 <%@ attribute name="options" required="true" rtexprvalue="true" type="java.util.List" %>
+<%@ attribute name="hint" required="false" rtexprvalue="true" %>
 
 <c:set var="resolvedId" value="${empty id ? 'sort-select' : id}" />
 
@@ -45,6 +46,9 @@
 						</a>
 					</c:forEach>
 				</div>
+				<c:if test="${not empty hint}">
+					<span class="field__hint sort-panel__hint"><c:out value="${hint}" /></span>
+				</c:if>
 			</div>
 		</div>
 	</div>
