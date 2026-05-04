@@ -611,7 +611,6 @@ public class ModerationServiceImpl implements ModerationService {
         }
     }
 
-    @Transactional
     private void upliftReportDecision(final ModerationReport report) {
         if (report.getTargetType() == ReportTargetType.REVIEW) {
             final Optional<PlayerReview> review =
@@ -640,7 +639,6 @@ public class ModerationServiceImpl implements ModerationService {
         }
     }
 
-    @Transactional
     private UserBan banUser(
             final Long moderationReportId,
             final Instant bannedUntil,

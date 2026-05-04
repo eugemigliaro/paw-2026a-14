@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class MatchReservationServiceImpl implements MatchReservationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MatchReservationServiceImpl.class);
@@ -58,6 +59,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     }
 
     @Override
+    @Transactional
     public void reserveSpot(final Long matchId, final Long userId) {
         LOGGER.info("Reservation requested matchId={} userId={}", matchId, userId);
         final Match match =

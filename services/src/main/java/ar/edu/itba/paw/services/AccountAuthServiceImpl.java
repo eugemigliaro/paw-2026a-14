@@ -142,6 +142,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     }
 
     @Override
+    @Transactional
     public VerificationPreview getVerificationPreview(final String rawToken) {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
@@ -203,6 +204,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     }
 
     @Override
+    @Transactional
     public PasswordResetPreview getPasswordResetPreview(final String rawToken) {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
@@ -245,6 +247,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<UserAccount> findAccountByEmail(final String email) {
         return userDao.findAccountByEmail(normalizeEmail(email));
     }

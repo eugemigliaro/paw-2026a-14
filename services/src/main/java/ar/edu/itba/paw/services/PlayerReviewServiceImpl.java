@@ -13,8 +13,10 @@ import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     private static final int DEFAULT_RECENT_LIMIT = 10;
@@ -26,6 +28,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
+    @Transactional
     public PlayerReview submitReview(
             final Long reviewerUserId,
             final Long reviewedUserId,
@@ -38,6 +41,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
+    @Transactional
     public void deleteReview(final Long reviewerUserId, final Long reviewedUserId) {
         if (!playerReviewDao.softDeleteReview(reviewerUserId, reviewedUserId)) {
             throw new PlayerReviewException(

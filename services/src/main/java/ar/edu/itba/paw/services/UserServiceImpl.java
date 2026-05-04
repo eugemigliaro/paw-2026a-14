@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9_]{3,50}$");
@@ -39,6 +40,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User createUser(final String email, final String username) {
         return userDao.createUser(email, username);
     }

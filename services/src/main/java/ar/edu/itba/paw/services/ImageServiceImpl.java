@@ -11,8 +11,10 @@ import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class ImageServiceImpl implements ImageService {
 
     public static final long MAX_IMAGE_SIZE_BYTES = 5L * 1024L * 1024L;
@@ -28,6 +30,7 @@ public class ImageServiceImpl implements ImageService {
     }
 
     @Override
+    @Transactional
     public Long store(
             final String contentType, final long contentLength, final InputStream contentStream)
             throws IOException {
