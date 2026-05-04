@@ -61,7 +61,8 @@ public class SecurityServiceImpl implements SecurityService {
         } catch (final Exception e) {
             LOGGER.debug(
                     "Unable to extract user id from principal of type {}",
-                    principal.getClass().getName());
+                    principal.getClass().getName(),
+                    e);
             return null;
         }
     }
