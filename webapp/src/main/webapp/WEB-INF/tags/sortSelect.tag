@@ -22,7 +22,7 @@
 					type="button"
 					class="filter-dropdown__toggle sort-panel__toggle"
 					id="${resolvedId}"
-					aria-haspopup="listbox"
+					aria-expanded="false"
 					aria-labelledby="${resolvedId}-label ${resolvedId}">
 					<span class="filter-dropdown__icon sort-panel__icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24">
@@ -33,14 +33,13 @@
 					</span>
 					<span class="sort-panel__toggle-label"><c:out value="${selectedLabel}" /></span>
 				</button>
-				<div class="filter-dropdown__panel sort-panel__panel" role="listbox" aria-labelledby="${resolvedId}-label">
+				<div class="filter-dropdown__panel sort-panel__panel" aria-labelledby="${resolvedId}-label">
 					<c:forEach var="option" items="${options}">
 						<c:url var="optionHref" value="${option.href}" />
 						<a
 							href="${optionHref}"
 							class="filter-dropdown__item sort-panel__item ${option.selected ? 'filter-dropdown__item--active sort-panel__item--active' : ''}"
-							role="option"
-							aria-selected="${option.selected ? 'true' : 'false'}"
+							aria-current="${option.selected ? 'true' : 'false'}"
 							data-browser-timezone-url-link="true">
 							<c:out value="${option.label}" />
 						</a>
