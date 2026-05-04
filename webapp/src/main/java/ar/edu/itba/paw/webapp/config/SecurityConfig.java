@@ -64,6 +64,11 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(
                                                 new AntPathRequestMatcher(
+                                                        "/explore/location",
+                                                        HttpMethod.POST.name()))
+                                        .permitAll()
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher(
                                                         "/matches/*/reservations",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
