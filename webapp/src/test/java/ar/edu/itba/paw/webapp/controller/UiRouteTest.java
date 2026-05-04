@@ -1312,7 +1312,16 @@ class UiRouteTest {
                                     VerificationFailureReason.NOT_FOUND, "Missing link");
                         }
 
-                        return new VerificationConfirmationResult(9L, "/login?verified=1", "done");
+                        return new VerificationConfirmationResult(
+                                new UserAccount(
+                                        9L,
+                                        "player@test.com",
+                                        "player-account",
+                                        "{bcrypt}hash",
+                                        UserRole.USER,
+                                        FIXED_NOW),
+                                "/",
+                                "done");
                     }
 
                     @Override
@@ -2256,10 +2265,22 @@ class UiRouteTest {
     }
 
     @Test
-    void postVerificationConfirmRedirectsToLogin() throws Exception {
-        mockMvc.perform(post("/verifications/abc123/confirm"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?verified=1"));
+    void postVerificationConfirmAuthenticatesAndRedirectsHome() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(post("/verifications/abc123/confirm"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/"))
+                        .andReturn();
+
+        final org.springframework.security.core.context.SecurityContext securityContext =
+                (org.springframework.security.core.context.SecurityContext)
+                        result.getRequest().getSession().getAttribute("SPRING_SECURITY_CONTEXT");
+        Assertions.assertNotNull(securityContext);
+        Assertions.assertTrue(securityContext.getAuthentication().isAuthenticated());
+        Assertions.assertEquals(
+                9L,
+                ((AuthenticatedUserPrincipal) securityContext.getAuthentication().getPrincipal())
+                        .getUserId());
     }
 
     @Test

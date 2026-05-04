@@ -452,7 +452,9 @@ public class AccountAuthServiceImplTest {
                 accountAuthService.confirmVerification("raw-token");
 
         Assertions.assertEquals(5L, result.getUserId());
-        Assertions.assertEquals("/login?verified=1", result.getRedirectUrl());
+        Assertions.assertEquals("/", result.getRedirectUrl());
+        Assertions.assertTrue(result.getAccount().isPresent());
+        Assertions.assertEquals(5L, result.getAccount().orElseThrow().getId());
         Assertions.assertEquals(EmailActionStatus.COMPLETED, updatedStatus.get());
         Assertions.assertEquals(FIXED_NOW, verificationTimestamp.get());
     }

@@ -185,10 +185,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.COMPLETED, account.getId(), now);
 
+        final UserAccount verifiedAccount =
+                account.isEmailVerified()
+                        ? account
+                        : userDao.findAccountById(account.getId()).orElse(account);
         return new VerificationConfirmationResult(
-                account.getId(),
-                "/login?verified=1",
-                message("verification.message.accountVerified", locale));
+                verifiedAccount, "/", message("verification.message.accountVerified", locale));
     }
 
     @Override
