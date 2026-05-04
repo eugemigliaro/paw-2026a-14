@@ -34,7 +34,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class HostParticipationController {
@@ -194,7 +193,6 @@ public class HostParticipationController {
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("inviteForm") final InviteForm inviteForm,
             final BindingResult bindingResult,
-            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final long hostUserId = requireAuthenticatedUserId();
         final Match match = requireHostMatch(matchId, hostUserId);

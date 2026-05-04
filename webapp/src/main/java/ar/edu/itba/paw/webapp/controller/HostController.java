@@ -42,7 +42,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @PreAuthorize("isAuthenticated()")
@@ -209,7 +208,6 @@ public class HostController {
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
-            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final Long actingUserId = requireAuthenticatedUserId();
         final Match existingMatch = findOwnedEditableMatchOrThrowNotFound(matchId, actingUserId);
@@ -334,7 +332,6 @@ public class HostController {
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
-            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final Long actingUserId = requireAuthenticatedUserId();
         final Match existingMatch =
