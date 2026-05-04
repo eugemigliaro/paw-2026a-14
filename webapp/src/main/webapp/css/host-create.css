@@ -14,7 +14,9 @@
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-
+.location-picker__current-location {
+	justify-content: right;
+}
 
 .form-card,
 .upload-card {

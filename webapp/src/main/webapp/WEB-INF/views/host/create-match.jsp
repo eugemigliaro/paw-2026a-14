@@ -207,7 +207,7 @@
 																	<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
 																		<spring:message code="host.form.location.zoomIn" />
 																	</button>
-																	<div>
+																	<div class="location-picker__current-location">
 																		<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
 																			<spring:message code="host.form.location.current" />
 																		</button>
