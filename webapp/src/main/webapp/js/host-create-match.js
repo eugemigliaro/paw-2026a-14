@@ -42,11 +42,30 @@
 			var isPrivate = visibilityInput.value === "private";
 			joinPolicyField.style.display = isPrivate ? "none" : "";
 
+			var buttons = joinPolicyToggle.querySelectorAll(".events-toggle-btn");
+			var slider = joinPolicyToggle.querySelector("[data-events-toggle-slider='true']");
+
 			if (isPrivate) {
+				// hide and clear selection when private
 				joinPolicyInput.value = "";
-				joinPolicyToggle.querySelectorAll(".events-toggle-btn").forEach(function(button) {
-					button.classList.remove("active");
+				buttons.forEach(function(button) { button.classList.remove("active"); });
+				if (slider) { slider.classList.remove("right"); }
+			} else {
+				// when becoming public again, ensure input and UI are synced
+				// if input is empty, pick the first button as the default
+				if (!joinPolicyInput.value && buttons.length) {
+					joinPolicyInput.value = buttons[0].getAttribute("data-value") || "";
+				}
+
+				buttons.forEach(function(button) {
+					var isActive = button.getAttribute("data-value") === joinPolicyInput.value;
+					button.classList.toggle("active", isActive);
 				});
+
+				if (slider) {
+					var rightValue = joinPolicyToggle.getAttribute("data-events-toggle-right-value");
+					slider.classList.toggle("right", joinPolicyInput.value === rightValue);
+				}
 			}
 		}
 
