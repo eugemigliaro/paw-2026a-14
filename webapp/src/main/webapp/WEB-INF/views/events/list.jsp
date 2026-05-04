@@ -107,35 +107,32 @@
 														<div class="filter-dropdown" data-filter-name="${group.title}">
 															<button type="button" class="filter-dropdown__toggle">
 																<span class="filter-dropdown__icon">
-																	<c:choose>
-																		<c:when
-																			test="${fn:contains(fn:toLowerCase(group.title), 'category') || fn:contains(fn:toLowerCase(group.title), 'categoría')}">
-																			<svg viewBox="0 0 24 24" fill="none"
-																				stroke="currentColor" stroke-width="2"
-																				stroke-linecap="round"
-																				stroke-linejoin="round">
-																				<path d="M6 21V14" />
-																				<path d="M6 10V3" />
-																				<path d="M12 21V12" />
-																				<path d="M12 8V3" />
-																				<path d="M18 21V16" />
-																				<path d="M18 12V3" />
-																				<rect x="4" y="10" width="4" height="4" />
-																				<rect x="10" y="8" width="4" height="4" />
-																				<rect x="16" y="12" width="4" height="4" />
-																			</svg>
-																		</c:when>
+																		<c:choose>
+																			<c:when
+																				test="${fn:contains(fn:toLowerCase(group.title), 'category') || fn:contains(fn:toLowerCase(group.title), 'categoría') || fn:contains(fn:toLowerCase(group.title), 'categoria')}">
+																				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+																					stroke-linecap="round" stroke-linejoin="round">
+																				<line x1="4" y1="6"  x2="20" y2="6"/>
+																				<line x1="4" y1="12" x2="20" y2="12"/>
+																				<line x1="4" y1="18" x2="20" y2="18"/>
+																				<circle cx="8"  cy="6"  r="2" fill="white"/>
+																				<circle cx="15" cy="12" r="2" fill="white"/>
+																				<circle cx="10" cy="18" r="2" fill="white"/>
+																				</svg>
+																			</c:when>
 																		<c:when
 																			test="${fn:contains(fn:toLowerCase(group.title), 'sport') || fn:contains(fn:toLowerCase(group.title), 'deporte')}">
-																			<svg viewBox="0 0 24 24" fill="none"
-																				stroke="currentColor" stroke-width="2"
-																				stroke-linecap="round"
-																				stroke-linejoin="round">
-																				<circle cx="12" cy="12" r="10" />
-																				<path d="M5.5 18.5c3-3 3-10 13-13" />
-																				<path d="M5.5 5.5c3 3 3 10 13 13" />
+																			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+																				stroke-linecap="round" stroke-linejoin="round">
+																				<circle cx="12" cy="12" r="10"/>
+																				<polygon points="12,7.4 16.37,10.58 14.7,15.72 9.3,15.72 7.63,10.58"/>
+																				<line x1="12"    y1="7.4"   x2="12"    y2="2"/>
+																				<line x1="16.37" y1="10.58" x2="21.5"  y2="8.9"/>
+																				<line x1="14.7"  y1="15.72" x2="17.9"  y2="20.1"/>
+																				<line x1="9.3"   y1="15.72" x2="6.1"   y2="20.1"/>
+																				<line x1="7.63"  y1="10.58" x2="2.5"   y2="8.9"/>
 																			</svg>
-																		</c:when>
+																			</c:when>
 																		<c:when
 																			test="${fn:contains(fn:toLowerCase(group.title), 'status') || fn:contains(fn:toLowerCase(group.title), 'estado')}">
 																			<svg viewBox="0 0 24 24">
@@ -763,42 +760,6 @@
 
 									</main>
 							</div>
-						</body>
-						<script>
-							document.querySelectorAll("[data-events-toggle='true']").forEach(toggleRoot => {
-								const eventsButtons = toggleRoot.querySelectorAll(".events-toggle-btn");
-								const eventsSlider = toggleRoot.querySelector("[data-events-toggle-slider='true']");
+							</body>
 
-								if (!eventsButtons.length || !eventsSlider) {
-									return;
-								}
-
-								eventsButtons.forEach(btn => {
-									btn.addEventListener("click", () => {
-										const value = btn.dataset.value;
-										const isPast = value === "past";
-
-										eventsSlider.classList.toggle("right", isPast);
-										eventsButtons.forEach(b => b.classList.remove("active"));
-										btn.classList.add("active");
-
-										const currentUrl = new URL(window.location);
-										if (isPast) {
-											currentUrl.searchParams.set("filter", "past");
-										} else {
-											currentUrl.searchParams.delete("filter");
-										}
-										currentUrl.searchParams.set("page", "1");
-										/* Clear date and price filters – they don't carry across
-										the upcoming/past boundary and cause empty results. */
-										currentUrl.searchParams.delete("startDate");
-										currentUrl.searchParams.delete("endDate");
-										currentUrl.searchParams.delete("minPrice");
-										currentUrl.searchParams.delete("maxPrice");
-										window.location.href = currentUrl.toString();
-									});
-								});
-							});
-						</script>
-
-						</html>
+							</html>

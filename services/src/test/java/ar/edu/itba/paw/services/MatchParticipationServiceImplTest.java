@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
@@ -36,7 +39,6 @@ public class MatchParticipationServiceImplTest {
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
-    @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchParticipationServiceImpl matchParticipationService;
@@ -46,6 +48,14 @@ public class MatchParticipationServiceImplTest {
     @BeforeEach
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
+        final StaticMessageSource messageSource = new StaticMessageSource();
+        final MatchNotificationService matchNotificationService =
+                new MatchNotificationServiceImpl(
+                        matchParticipantDao,
+                        mailDispatchService,
+                        templateRenderer,
+                        messageSource,
+                        userService);
         matchParticipationService =
                 new MatchParticipationServiceImpl(
                         matchDao,
@@ -54,7 +64,7 @@ public class MatchParticipationServiceImplTest {
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
                         mailDispatchService,
                         templateRenderer,
-                        new StaticMessageSource(),
+                        messageSource,
                         matchNotificationService);
     }
 
@@ -82,9 +92,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "approval_required",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.APPROVAL_REQUIRED,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
 
         // Exercise
@@ -103,9 +113,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         1,
@@ -131,9 +141,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "private",
-                                        "invite_only",
-                                        "open",
+                                        EventVisibility.PRIVATE,
+                                        EventJoinPolicy.INVITE_ONLY,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         Mockito.when(userService.findByEmail("host@test.com"))
                 .thenReturn(Optional.of(new User(1L, "host@test.com", "host-player")));
@@ -157,9 +167,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "private",
-                                        "invite_only",
-                                        "closed",
+                                        EventVisibility.PRIVATE,
+                                        EventJoinPolicy.INVITE_ONLY,
+                                        EventStatus.CANCELLED,
                                         FIXED_NOW.plusSeconds(3600))));
 
         // Exercise
@@ -180,9 +190,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "direct",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(true);
         Mockito.when(matchParticipantDao.removeParticipant(10L, 20L)).thenReturn(true);
@@ -200,9 +210,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "private",
-                                        "invite_only",
-                                        "open",
+                                        EventVisibility.PRIVATE,
+                                        EventJoinPolicy.INVITE_ONLY,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(true);
         Mockito.when(matchParticipantDao.removeParticipant(10L, 20L)).thenReturn(true);
@@ -220,22 +230,26 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "private",
-                                        "invite_only",
-                                        "open",
+                                        EventVisibility.PRIVATE,
+                                        EventJoinPolicy.INVITE_ONLY,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         final User player =
                 new User(20L, "player@test.com", "player-account", "Jamie", "Rivera", null, null);
+        final User host = new User(1L, "host@test.com", "host-account", "Host", "User", null, null);
+        final MailContent mail = new MailContent("player-left", "<p>left</p>", "left");
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(true);
         Mockito.when(matchParticipantDao.removeParticipant(10L, 20L)).thenReturn(true);
         Mockito.when(userService.findById(20L)).thenReturn(Optional.of(player));
+        Mockito.when(userService.findById(1L)).thenReturn(Optional.of(host));
+        Mockito.when(templateRenderer.renderPlayerLeftNotification(Mockito.any())).thenReturn(mail);
 
         // Exercise
         matchParticipationService.removeParticipant(10L, 20L, 20L);
 
         // Assert
-        Mockito.verify(matchNotificationService)
-                .notifyHostPlayerLeft(Mockito.any(), Mockito.eq(player));
+        Assertions.assertEquals(List.of("host@test.com"), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
     }
 
     @Test
@@ -246,9 +260,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "direct",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.minusSeconds(60))));
 
         // Exercise
@@ -269,9 +283,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "direct",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false);
 
@@ -293,9 +307,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "approval_required",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.APPROVAL_REQUIRED,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
 
         // Exercise
@@ -316,9 +330,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "approval_required",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.APPROVAL_REQUIRED,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         Mockito.when(matchParticipantDao.removeParticipant(10L, 30L)).thenReturn(true);
 
@@ -335,21 +349,24 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "approval_required",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.APPROVAL_REQUIRED,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         final User player =
                 new User(30L, "player@test.com", "player-account", "Alex", "Morgan", null, null);
+        final MailContent mail = new MailContent("removed", "<p>removed</p>", "removed");
         Mockito.when(matchParticipantDao.removeParticipant(10L, 30L)).thenReturn(true);
         Mockito.when(userService.findById(30L)).thenReturn(Optional.of(player));
+        Mockito.when(templateRenderer.renderParticipantRemovedNotification(Mockito.any()))
+                .thenReturn(mail);
 
         // Exercise
         matchParticipationService.removeParticipant(10L, 1L, 30L);
 
         // Assert
-        Mockito.verify(matchNotificationService)
-                .notifyPlayerRemovedByHost(Mockito.any(), Mockito.eq(player));
+        Assertions.assertEquals(List.of("player@test.com"), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
     }
 
     @Test
@@ -359,17 +376,17 @@ public class MatchParticipationServiceImplTest {
                 createMatchWithHost(
                         10L,
                         20L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600));
         final Match otherMatch =
                 createMatchWithHost(
                         11L,
                         1L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200));
         Mockito.when(matchParticipantDao.findPendingMatchIds(20L)).thenReturn(List.of(10L, 11L));
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(hostedMatch));
@@ -387,10 +404,20 @@ public class MatchParticipationServiceImplTest {
         // Arrange
         final Match hostedMatch =
                 createMatchWithHost(
-                        10L, 20L, "private", "invite_only", "open", FIXED_NOW.plusSeconds(3600));
+                        10L,
+                        20L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600));
         final Match otherMatch =
                 createMatchWithHost(
-                        11L, 1L, "private", "invite_only", "open", FIXED_NOW.plusSeconds(7200));
+                        11L,
+                        1L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(7200));
         Mockito.when(matchParticipantDao.findInvitedMatchIds(20L)).thenReturn(List.of(10L, 11L));
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(hostedMatch));
         Mockito.when(matchDao.findMatchById(11L)).thenReturn(Optional.of(otherMatch));
@@ -408,9 +435,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         1,
@@ -419,9 +446,9 @@ public class MatchParticipationServiceImplTest {
         final Match secondOccurrence =
                 createRecurringMatch(
                         11L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200),
                         4,
                         0,
@@ -430,9 +457,9 @@ public class MatchParticipationServiceImplTest {
         final Match pastOccurrence =
                 createRecurringMatch(
                         12L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.minusSeconds(60),
                         4,
                         0,
@@ -462,9 +489,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         4,
@@ -485,9 +512,9 @@ public class MatchParticipationServiceImplTest {
         final Match staleOccurrence =
                 createRecurringMatch(
                         10L,
-                        "public",
-                        "approval_required",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.CANCELLED,
                         FIXED_NOW.minusSeconds(60),
                         4,
                         0,
@@ -508,9 +535,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         1,
@@ -519,9 +546,9 @@ public class MatchParticipationServiceImplTest {
         final Match secondOccurrence =
                 createRecurringMatch(
                         11L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200),
                         4,
                         0,
@@ -530,9 +557,9 @@ public class MatchParticipationServiceImplTest {
         final Match alreadyInvitedOccurrence =
                 createRecurringMatch(
                         12L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(10800),
                         4,
                         1,
@@ -541,9 +568,9 @@ public class MatchParticipationServiceImplTest {
         final Match alreadyJoinedOccurrence =
                 createRecurringMatch(
                         13L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(14400),
                         4,
                         1,
@@ -552,9 +579,9 @@ public class MatchParticipationServiceImplTest {
         final Match fullOccurrence =
                 createRecurringMatch(
                         14L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(18000),
                         4,
                         4,
@@ -563,9 +590,9 @@ public class MatchParticipationServiceImplTest {
         final Match publicOccurrence =
                 createRecurringMatch(
                         15L,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(21600),
                         4,
                         0,
@@ -624,9 +651,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         1,
@@ -635,9 +662,9 @@ public class MatchParticipationServiceImplTest {
         final Match alreadyJoinedOccurrence =
                 createRecurringMatch(
                         11L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200),
                         4,
                         1,
@@ -672,9 +699,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         1,
@@ -704,9 +731,9 @@ public class MatchParticipationServiceImplTest {
         final Match staleOccurrence =
                 createRecurringMatch(
                         10L,
-                        "private",
-                        "invite_only",
-                        "cancelled",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.CANCELLED,
                         FIXED_NOW.minusSeconds(60),
                         4,
                         0,
@@ -736,9 +763,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         1,
@@ -768,9 +795,9 @@ public class MatchParticipationServiceImplTest {
         final Match selectedOccurrence =
                 createRecurringMatch(
                         10L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(3600),
                         4,
                         1,
@@ -779,9 +806,9 @@ public class MatchParticipationServiceImplTest {
         final Match secondOccurrence =
                 createRecurringMatch(
                         11L,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200),
                         4,
                         0,
@@ -817,9 +844,9 @@ public class MatchParticipationServiceImplTest {
                         Optional.of(
                                 createMatch(
                                         10L,
-                                        "public",
-                                        "approval_required",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.APPROVAL_REQUIRED,
+                                        EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
 
         // Exercise
@@ -835,7 +862,12 @@ public class MatchParticipationServiceImplTest {
     @Test
     public void testRequestToJoinFailsIfMatchClosed() {
         final Match match =
-                createMatch(10L, "public", "approval_required", "cancelled", NOW.plusSeconds(3600));
+                createMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.CANCELLED,
+                        NOW.plusSeconds(3600));
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
 
         final MatchParticipationException ex =
@@ -859,9 +891,9 @@ public class MatchParticipationServiceImplTest {
                         null,
                         4,
                         BigDecimal.ZERO,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         4,
                         null);
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
@@ -878,7 +910,12 @@ public class MatchParticipationServiceImplTest {
     @Test
     public void testApproveRequestFailsIfNotHost() {
         final Match match =
-                createMatch(10L, "public", "approval_required", "open", NOW.plusSeconds(3600));
+                createMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
+                        NOW.plusSeconds(3600));
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
 
         final MatchParticipationException ex =
@@ -902,9 +939,9 @@ public class MatchParticipationServiceImplTest {
 
     private static Match createMatch(
             final Long id,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Instant startsAt) {
         return createMatchWithHost(id, 1L, visibility, joinPolicy, status, startsAt);
     }
@@ -912,9 +949,9 @@ public class MatchParticipationServiceImplTest {
     private static Match createMatchWithHost(
             final Long id,
             final Long hostUserId,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Instant startsAt) {
         return new Match(
                 id,
@@ -936,9 +973,9 @@ public class MatchParticipationServiceImplTest {
 
     private static Match createRecurringMatch(
             final Long id,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Instant startsAt,
             final int maxPlayers,
             final int joinedPlayers,

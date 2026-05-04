@@ -16,7 +16,7 @@ import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ShellViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ShellViewModel;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;

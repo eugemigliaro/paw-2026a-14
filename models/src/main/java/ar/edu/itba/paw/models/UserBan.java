@@ -29,4 +29,16 @@ public class UserBan {
     public boolean isActive(final Instant now) {
         return bannedUntil != null && now != null && bannedUntil.isAfter(now);
     }
+
+    @Override
+    public String toString() {
+        return "UserBan{"
+                + "id="
+                + id
+                + ", moderationReportId="
+                + moderationReportId
+                + ", bannedUntil="
+                + bannedUntil
+                + '}';
+    }
 }

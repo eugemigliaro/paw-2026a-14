@@ -155,6 +155,7 @@ Rules:
 - use Spring MVC controllers and JSP views
 - keep views under `webapp/src/main/webapp/WEB-INF/views`
 - use JSTL / EL / `c:url`
+- do not use `${pageContext.request.contextPath}` directly in JSP, JSPF, or tag files; use `<c:url>` for context-relative URLs
 - prefer reusable JSP tags for shared UI primitives
 - reuse existing tags like `button.tag`, `card.tag`, and `textInput.tag` when appropriate
 - keep CSS in the existing `webapp/src/main/webapp/css` structure

@@ -36,4 +36,9 @@ public enum PlayerReviewFilter {
                 .filter(filter -> filter.queryValue.equalsIgnoreCase(queryValue.trim()))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return queryValue;
+    }
 }

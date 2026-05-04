@@ -38,6 +38,23 @@
 	background:
 		linear-gradient(
 			180deg,
+			rgba(25, 92, 110, 0.1),
+			rgba(25, 92, 110, 0.34)
+		),
+		linear-gradient(
+			90deg,
+			transparent 47%,
+			rgba(255, 255, 255, 0.5) 47%,
+			rgba(255, 255, 255, 0.5) 53%,
+			transparent 53%
+		),
+		linear-gradient(135deg, #6bc6d0 0%, #358ba2 100%);
+}
+
+.media-tile--football {
+	background:
+		linear-gradient(
+			180deg,
 			rgba(10, 111, 97, 0.18),
 			rgba(10, 111, 97, 0.04)
 		),
@@ -52,7 +69,7 @@
 		linear-gradient(180deg, #9fc37f 0%, #6eab75 100%);
 }
 
-.media-tile--football {
+.media-tile--tennis {
 	background:
 		linear-gradient(180deg, rgba(92, 48, 25, 0.12), rgba(92, 48, 25, 0.34)),
 		linear-gradient(
@@ -63,23 +80,6 @@
 			transparent 53%
 		),
 		linear-gradient(135deg, #c78a54 0%, #8f5532 100%);
-}
-
-.media-tile--tennis {
-	background:
-		linear-gradient(
-			180deg,
-			rgba(25, 92, 110, 0.1),
-			rgba(25, 92, 110, 0.34)
-		),
-		linear-gradient(
-			90deg,
-			transparent 47%,
-			rgba(255, 255, 255, 0.5) 47%,
-			rgba(255, 255, 255, 0.5) 53%,
-			transparent 53%
-		),
-		linear-gradient(135deg, #6bc6d0 0%, #358ba2 100%);
 }
 
 .media-tile--other,

@@ -24,4 +24,9 @@ public enum EmailActionStatus {
                 .filter(status -> status.dbValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }

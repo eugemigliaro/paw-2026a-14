@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.EventVisibility;
@@ -119,7 +120,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getPricePerPlayer(),
                 request.getSport(),
                 request.getVisibility(),
-                request.getJoinPolicy(),
+                resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                 request.getStatus(),
                 request.getBannerImageId(),
                 request.getLatitude(),
@@ -142,7 +143,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getPricePerPlayer(),
                 request.getSport(),
                 request.getVisibility(),
-                request.getJoinPolicy(),
+                resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                 request.getStatus(),
                 request.getBannerImageId(),
                 request.getLatitude(),
@@ -155,7 +156,8 @@ public class MatchServiceImpl implements MatchService {
             final Long matchId,
             final Long actingUserId,
             final UpdateMatchRequest request,
-            final String status) {
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status) {
         return matchDao.updateMatch(
                 matchId,
                 actingUserId,
@@ -168,11 +170,16 @@ public class MatchServiceImpl implements MatchService {
                 request.getPricePerPlayer(),
                 request.getSport(),
                 request.getVisibility(),
-                request.getJoinPolicy(),
+                joinPolicy,
                 status,
                 request.getBannerImageId(),
                 request.getLatitude(),
                 request.getLongitude());
+    }
+
+    private static EventJoinPolicy resolveJoinPolicy(
+            final EventVisibility visibility, final EventJoinPolicy joinPolicy) {
+        return EventVisibility.PRIVATE == visibility ? EventJoinPolicy.INVITE_ONLY : joinPolicy;
     }
 
     private static boolean hasCoordinates(final Double latitude, final Double longitude) {
@@ -195,8 +202,8 @@ public class MatchServiceImpl implements MatchService {
                     MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
         }
 
-        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())
-                || EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.CANCELLED.equals(match.getStatus())
+                || EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_EDITABLE,
                     message("match.update.error.notEditable"));
@@ -221,8 +228,13 @@ public class MatchServiceImpl implements MatchService {
                     message("match.update.error.capacityBelowConfirmed"));
         }
 
+        final EventJoinPolicy joinPolicy =
+                EventVisibility.PRIVATE == request.getVisibility()
+                        ? EventJoinPolicy.INVITE_ONLY
+                        : request.getJoinPolicy();
+
         final boolean updated =
-                updateStoredMatch(matchId, actingUserId, request, request.getStatus());
+                updateStoredMatch(matchId, actingUserId, request, joinPolicy, request.getStatus());
 
         if (!updated) {
             throw new MatchUpdateException(
@@ -319,7 +331,12 @@ public class MatchServiceImpl implements MatchService {
                             request.getLongitude());
             final boolean updated =
                     updateStoredMatch(
-                            target.getId(), actingUserId, targetRequest, target.getStatus());
+                            target.getId(),
+                            actingUserId,
+                            targetRequest,
+                            resolveJoinPolicy(
+                                    targetRequest.getVisibility(), targetRequest.getJoinPolicy()),
+                            target.getStatus());
             if (!updated) {
                 throw new MatchUpdateException(
                         MatchUpdateFailureReason.FORBIDDEN,
@@ -356,13 +373,13 @@ public class MatchServiceImpl implements MatchService {
                     message("match.cancel.error.forbidden"));
         }
 
-        if (EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
                     message("match.cancel.error.forbidden"));
         }
 
-        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.CANCELLED.equals(match.getStatus())) {
             return match;
         }
 
@@ -488,9 +505,8 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private static boolean isEditableMatch(final Match match) {
-        return EventStatus.fromDbValue(match.getStatus())
-                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
-                .orElse(true);
+        return match.getStatus() != EventStatus.COMPLETED
+                && match.getStatus() != EventStatus.CANCELLED;
     }
 
     @Override

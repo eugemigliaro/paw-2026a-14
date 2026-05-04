@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.Sport;
@@ -59,8 +61,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.TENNIS,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         Assertions.assertNotNull(created.getId());
@@ -105,9 +108,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.TENNIS,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         seriesId,
                         1);
@@ -122,9 +125,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.TENNIS,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         seriesId,
                         2);
@@ -165,9 +168,9 @@ public class MatchJdbcDaoTest {
                                 4,
                                 BigDecimal.ZERO,
                                 Sport.TENNIS,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
                                 seriesId,
                                 null));
@@ -186,8 +189,9 @@ public class MatchJdbcDaoTest {
                 10,
                 BigDecimal.ZERO,
                 Sport.FOOTBALL,
-                "public",
-                "open",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
                 null);
         insertMatch(
                 "Basketball Session",
@@ -217,19 +221,25 @@ public class MatchJdbcDaoTest {
                 10,
                 BigDecimal.ZERO,
                 Sport.FOOTBALL,
-                "public",
-                "approval_required",
-                "open",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.APPROVAL_REQUIRED,
+                EventStatus.OPEN,
                 null);
 
         insertMatchWithStatus(
                 "Legacy Invite Only Match",
-                "open",
+                EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(1),
                 hostUserId,
-                "invite_only");
+                EventVisibility.PRIVATE,
+                EventJoinPolicy.INVITE_ONLY);
         insertMatchWithStatus(
-                "Private Match", "open", ZonedDateTime.now().plusDays(1), hostUserId, "private");
+                "Private Match",
+                EventStatus.OPEN,
+                ZonedDateTime.now().plusDays(1),
+                hostUserId,
+                EventVisibility.PRIVATE,
+                EventJoinPolicy.INVITE_ONLY);
 
         final List<Match> result =
                 matchDao.findPublicMatches(
@@ -426,8 +436,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final Match found = matchDao.findMatchById(created.getId()).orElseThrow();
@@ -494,8 +505,9 @@ public class MatchJdbcDaoTest {
                         2,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "private",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         null);
 
         jdbcTemplate.update(
@@ -509,7 +521,7 @@ public class MatchJdbcDaoTest {
         final Match found = matchDao.findMatchById(created.getId()).orElseThrow();
 
         Assertions.assertEquals(created.getId(), found.getId());
-        Assertions.assertEquals("private", found.getVisibility());
+        Assertions.assertEquals(EventVisibility.PRIVATE, found.getVisibility());
         Assertions.assertEquals(1, found.getJoinedPlayers());
     }
 
@@ -526,8 +538,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final boolean updated =
@@ -542,9 +555,9 @@ public class MatchJdbcDaoTest {
                         10,
                         new BigDecimal("15"),
                         Sport.TENNIS,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         null);
 
         final Match found = matchDao.findById(created.getId()).orElseThrow();
@@ -554,8 +567,8 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals("Updated Title", found.getTitle());
         Assertions.assertEquals("Updated Description", found.getDescription());
         Assertions.assertEquals(Sport.TENNIS, found.getSport());
-        Assertions.assertEquals("private", found.getVisibility());
-        Assertions.assertEquals("invite_only", found.getJoinPolicy());
+        Assertions.assertEquals(EventVisibility.PRIVATE, found.getVisibility());
+        Assertions.assertEquals(EventJoinPolicy.INVITE_ONLY, found.getJoinPolicy());
         Assertions.assertEquals(10, found.getMaxPlayers());
         Assertions.assertEquals(new BigDecimal("15.00"), found.getPricePerPlayer());
     }
@@ -573,8 +586,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         jdbcTemplate.update(
@@ -593,8 +607,9 @@ public class MatchJdbcDaoTest {
                         10,
                         new BigDecimal("15"),
                         Sport.TENNIS,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final Match found = matchDao.findById(created.getId()).orElseThrow();
@@ -619,8 +634,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final boolean cancelled = matchDao.cancelMatch(created.getId(), hostUserId);
@@ -628,7 +644,7 @@ public class MatchJdbcDaoTest {
         final Match found = matchDao.findById(created.getId()).orElseThrow();
 
         Assertions.assertTrue(cancelled);
-        Assertions.assertEquals("cancelled", found.getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, found.getStatus());
     }
 
     @Test
@@ -656,9 +672,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         seriesId,
                         1);
@@ -673,9 +689,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         seriesId,
                         2);
@@ -687,9 +703,9 @@ public class MatchJdbcDaoTest {
         final List<Match> occurrences = matchDao.findSeriesOccurrences(seriesId);
         Assertions.assertTrue(cancelled);
         Assertions.assertEquals(firstOccurrence.getId(), occurrences.get(0).getId());
-        Assertions.assertEquals("open", occurrences.get(0).getStatus());
+        Assertions.assertEquals(EventStatus.OPEN, occurrences.get(0).getStatus());
         Assertions.assertEquals(secondOccurrence.getId(), occurrences.get(1).getId());
-        Assertions.assertEquals("cancelled", occurrences.get(1).getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, occurrences.get(1).getStatus());
     }
 
     @Test
@@ -705,8 +721,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         jdbcTemplate.update(
@@ -718,7 +735,7 @@ public class MatchJdbcDaoTest {
         final Match found = matchDao.findById(created.getId()).orElseThrow();
 
         Assertions.assertFalse(cancelled);
-        Assertions.assertEquals("open", found.getStatus());
+        Assertions.assertEquals(EventStatus.OPEN, found.getStatus());
     }
 
     @Test
@@ -734,8 +751,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         jdbcTemplate.update(
@@ -765,15 +783,26 @@ public class MatchJdbcDaoTest {
     @Test
     public void testFindHostedMatchesReturnsAllStatusesOrderedBySoonest() {
         insertMatchWithStatus(
-                "Host Draft", "draft", ZonedDateTime.now().plusDays(2), hostUserId, "private");
+                "Host Draft",
+                EventStatus.DRAFT,
+                ZonedDateTime.now().plusDays(2),
+                hostUserId,
+                EventVisibility.PRIVATE,
+                EventJoinPolicy.INVITE_ONLY);
         insertMatchWithStatus(
                 "Host Completed",
-                "completed",
+                EventStatus.COMPLETED,
                 ZonedDateTime.now().plusDays(1),
                 hostUserId,
-                "public");
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
         insertMatchWithStatus(
-                "Host Open", "open", ZonedDateTime.now().plusDays(3), hostUserId, "public");
+                "Host Open",
+                EventStatus.OPEN,
+                ZonedDateTime.now().plusDays(3),
+                hostUserId,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
 
         final List<Match> matches =
                 matchDao.findHostedMatches(
@@ -814,20 +843,32 @@ public class MatchJdbcDaoTest {
     public void testFindHostedMatchesFiltersFinishedStatuses() {
         insertMatchWithStatus(
                 "Host Completed",
-                "completed",
+                EventStatus.COMPLETED,
                 ZonedDateTime.now().minusDays(2),
                 hostUserId,
-                "public");
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
         insertMatchWithStatus(
                 "Host Cancelled",
-                "cancelled",
+                EventStatus.CANCELLED,
                 ZonedDateTime.now().minusDays(1),
                 hostUserId,
-                "public");
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
         insertMatchWithStatus(
-                "Host Open Past", "open", ZonedDateTime.now().minusHours(2), hostUserId, "public");
+                "Host Open Past",
+                EventStatus.OPEN,
+                ZonedDateTime.now().minusHours(2),
+                hostUserId,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
         insertMatchWithStatus(
-                "Host Open", "open", ZonedDateTime.now().plusDays(1), hostUserId, "public");
+                "Host Open",
+                EventStatus.OPEN,
+                ZonedDateTime.now().plusDays(1),
+                hostUserId,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
 
         final List<Match> finished =
                 matchDao.findHostedMatches(
@@ -850,12 +891,9 @@ public class MatchJdbcDaoTest {
                 finished.stream()
                         .allMatch(
                                 match ->
-                                        EventStatus.COMPLETED
-                                                        .getValue()
-                                                        .equalsIgnoreCase(match.getStatus())
-                                                || EventStatus.CANCELLED
-                                                        .getValue()
-                                                        .equalsIgnoreCase(match.getStatus())));
+                                        EventStatus.COMPLETED.equals(match.getStatus())
+                                                || EventStatus.CANCELLED.equals(
+                                                        match.getStatus())));
         Assertions.assertTrue(
                 finished.stream().anyMatch(match -> "Host Open Past".equals(match.getTitle())));
         Assertions.assertEquals(
@@ -879,17 +917,19 @@ public class MatchJdbcDaoTest {
         final Match openMatch =
                 insertMatchWithStatus(
                         "Open Future",
-                        "open",
+                        EventStatus.OPEN,
                         ZonedDateTime.now().plusDays(2),
                         hostUserId,
-                        "public");
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
         final Match cancelledMatch =
                 insertMatchWithStatus(
                         "Cancelled Future",
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         ZonedDateTime.now().plusDays(3),
                         hostUserId,
-                        "public");
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
         joinMatch(openMatch.getId(), playerId, "joined");
         joinMatch(cancelledMatch.getId(), playerId, "joined");
 
@@ -912,11 +952,7 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(2, upcoming.size());
         Assertions.assertTrue(
                 upcoming.stream()
-                        .anyMatch(
-                                match ->
-                                        EventStatus.CANCELLED
-                                                .getValue()
-                                                .equals(match.getStatus())));
+                        .anyMatch(match -> EventStatus.CANCELLED.equals(match.getStatus())));
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(
@@ -938,19 +974,26 @@ public class MatchJdbcDaoTest {
         final Match olderPast =
                 insertMatchWithStatus(
                         "Older Past",
-                        "completed",
+                        EventStatus.COMPLETED,
                         ZonedDateTime.now().minusDays(4),
                         hostUserId,
-                        "public");
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
         final Match newerPast =
                 insertMatchWithStatus(
                         "Newer Past",
-                        "open",
+                        EventStatus.OPEN,
                         ZonedDateTime.now().minusDays(2),
                         hostUserId,
-                        "public");
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
         insertMatchWithStatus(
-                "Future Open", "open", ZonedDateTime.now().plusDays(2), hostUserId, "public");
+                "Future Open",
+                EventStatus.OPEN,
+                ZonedDateTime.now().plusDays(2),
+                hostUserId,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
         joinMatch(olderPast.getId(), playerId, "checked_in");
         joinMatch(newerPast.getId(), playerId, "joined");
 
@@ -973,7 +1016,7 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(2, past.size());
         Assertions.assertEquals("Newer Past", past.get(0).getTitle());
         Assertions.assertEquals("Older Past", past.get(1).getTitle());
-        Assertions.assertEquals("completed", past.get(0).getStatus());
+        Assertions.assertEquals(EventStatus.COMPLETED, past.get(0).getStatus());
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(
@@ -993,17 +1036,19 @@ public class MatchJdbcDaoTest {
     public void testFindHostedMatchesAppliesPriceFilter() {
         insertMatchWithStatus(
                 "Hosted Budget",
-                "open",
+                EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(2),
                 hostUserId,
-                "public",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
                 BigDecimal.ZERO);
         insertMatchWithStatus(
                 "Hosted Premium",
-                "open",
+                EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(2),
                 hostUserId,
-                "public",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
                 new BigDecimal("30"));
 
         final List<Match> result =
@@ -1032,18 +1077,20 @@ public class MatchJdbcDaoTest {
         final Match budget =
                 insertMatchWithStatus(
                         "Upcoming Budget",
-                        "open",
+                        EventStatus.OPEN,
                         ZonedDateTime.now().plusDays(2),
                         hostUserId,
-                        "public",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
                         BigDecimal.ZERO);
         final Match premium =
                 insertMatchWithStatus(
                         "Upcoming Premium",
-                        "open",
+                        EventStatus.OPEN,
                         ZonedDateTime.now().plusDays(2),
                         hostUserId,
-                        "public",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
                         new BigDecimal("25"));
         joinMatch(budget.getId(), playerId, "joined");
         joinMatch(premium.getId(), playerId, "joined");
@@ -1082,9 +1129,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         -34.61,
                         -58.38);
@@ -1106,9 +1153,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         -34.5,
                         -58.5);
@@ -1133,8 +1180,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final Match found = matchDao.findById(created.getId()).orElseThrow();
@@ -1160,9 +1208,9 @@ public class MatchJdbcDaoTest {
                                 4,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
                                 -34.61,
                                 null));
@@ -1179,9 +1227,9 @@ public class MatchJdbcDaoTest {
                                 4,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
                                 -91.0,
                                 -58.38));
@@ -1201,9 +1249,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         -34.8,
                         -58.8);
@@ -1218,9 +1266,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         -34.61,
                         -58.39);
@@ -1235,9 +1283,9 @@ public class MatchJdbcDaoTest {
                         4,
                         BigDecimal.ZERO,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null,
                         (Double) null,
                         (Double) null);
@@ -1277,8 +1325,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final long adminId = createUser("admin", "admin@test.com");
@@ -1291,7 +1340,7 @@ public class MatchJdbcDaoTest {
         Assertions.assertEquals(adminId, found.getDeletedByUserId());
         Assertions.assertEquals("Violation", found.getDeleteReason());
         Assertions.assertNotNull(found.getDeletedAt());
-        Assertions.assertEquals("cancelled", found.getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, found.getStatus());
     }
 
     @Test
@@ -1315,8 +1364,9 @@ public class MatchJdbcDaoTest {
                         8,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final long adminId = createUser("admin2", "admin2@test.com");
@@ -1368,8 +1418,9 @@ public class MatchJdbcDaoTest {
                         maxPlayers,
                         pricePerPlayer,
                         Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
 
         final Long matchId = created.getId();
@@ -1403,19 +1454,22 @@ public class MatchJdbcDaoTest {
 
     private Match insertMatchWithStatus(
             final String title,
-            final String status,
+            final EventStatus status,
             final ZonedDateTime startsAt,
             final long hostId,
-            final String visibility) {
-        return insertMatchWithStatus(title, status, startsAt, hostId, visibility, BigDecimal.ZERO);
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy) {
+        return insertMatchWithStatus(
+                title, status, startsAt, hostId, visibility, joinPolicy, BigDecimal.ZERO);
     }
 
     private Match insertMatchWithStatus(
             final String title,
-            final String status,
+            final EventStatus status,
             final ZonedDateTime startsAt,
             final long hostId,
-            final String visibility,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
             final BigDecimal pricePerPlayer) {
         return matchDao.createMatch(
                 hostId,
@@ -1428,6 +1482,7 @@ public class MatchJdbcDaoTest {
                 pricePerPlayer,
                 Sport.FOOTBALL,
                 visibility,
+                joinPolicy,
                 status,
                 null);
     }

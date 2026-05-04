@@ -14,7 +14,7 @@
 <%@ attribute name="ariaLabel" required="false" rtexprvalue="true" %>
 <%@ attribute name="onClick" required="false" rtexprvalue="true" %>
 <%@ attribute name="form" required="false" rtexprvalue="true" %>
-<%@ attribute name="formAction" required="false" rtexprvalue="true" %>
+<%@ attribute name="submitAction" required="false" rtexprvalue="true" %>
 <%@ attribute name="target" required="false" rtexprvalue="true" %>
 <%@ attribute name="rel" required="false" rtexprvalue="true" %>
 <%@ attribute name="fullWidth" required="false" rtexprvalue="true" type="java.lang.Boolean" %>
@@ -70,7 +70,7 @@
       <c:if test="${not empty ariaLabel}">aria-label="${ariaLabel}"</c:if>
       <c:if test="${not empty onClick}">onclick="${onClick}"</c:if>
       <c:if test="${not empty form}">form="${form}"</c:if>
-      <c:if test="${not empty formAction}">formaction="${formAction}"</c:if>
+      <c:if test="${not empty submitAction}">formaction="${submitAction}"</c:if>
       <c:if test="${disabled}">disabled="disabled" aria-disabled="true"</c:if>>
       <c:choose>
         <c:when test="${not empty trimmedBody}">

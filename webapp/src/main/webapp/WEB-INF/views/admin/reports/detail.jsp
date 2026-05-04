@@ -116,14 +116,14 @@
 										<c:if test="${report.targetTypeCode eq 'match' or report.targetTypeCode eq 'review'}">
 											<c:url var="deleteContentHref" value="/admin/reports/${report.id}/delete-content" />
 											<spring:message var="deleteContentLabel" code="admin.reports.action.deleteContent" />
-											<ui:button label="${deleteContentLabel}" type="submit" variant="danger" formAction="${deleteContentHref}" />
+												<ui:button label="${deleteContentLabel}" type="submit" variant="danger" submitAction="${deleteContentHref}" />
 										</c:if>
 
 										<c:if test="${report.targetTypeCode eq 'user'}">
 											<div class="report-section-field__row">
 												<c:url var="banUserHref" value="/admin/reports/${report.id}/ban-user" />
 												<spring:message var="banUserLabel" code="admin.reports.action.banUser" />
-												<ui:button label="${banUserLabel}" type="submit" variant="danger" formAction="${banUserHref}" />
+													<ui:button label="${banUserLabel}" type="submit" variant="danger" submitAction="${banUserHref}" />
 												<label class="field">
 													<span class="detail-label"><spring:message code="admin.reports.ban.days" /></span>
 													<input type="number" name="banDays" min="0" value="7" class="field__control field__control--ban-days" />
@@ -133,7 +133,7 @@
 
 										<c:url var="dismissHref" value="/admin/reports/${report.id}/dismiss" />
 										<spring:message var="dismissLabel" code="admin.reports.action.dismiss" />
-										<ui:button label="${dismissLabel}" type="submit" variant="secondary" formAction="${dismissHref}" />
+											<ui:button label="${dismissLabel}" type="submit" variant="secondary" submitAction="${dismissHref}" />
 									</div>
 								</form>
 							</div>
@@ -203,7 +203,7 @@
 									</div>
 									<div class="report-section-actions">
 										<spring:message var="finalizeAppealLabel" code="admin.reports.appeal.finalize" />
-										<ui:button label="${finalizeAppealLabel}" type="submit" formAction="${finalizeAppealHref}"/>
+											<ui:button label="${finalizeAppealLabel}" type="submit" submitAction="${finalizeAppealHref}"/>
 									</div>
 								</form>
 							</c:when>

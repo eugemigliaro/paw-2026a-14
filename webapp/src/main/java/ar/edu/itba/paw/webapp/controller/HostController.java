@@ -1,6 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
+
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.RecurrenceEndMode;
 import ar.edu.itba.paw.models.RecurrenceFrequency;
@@ -14,8 +18,6 @@ import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,11 +44,6 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class HostController {
 
-    private static final String VISIBILITY_PUBLIC = "public";
-    private static final String VISIBILITY_PRIVATE = "private";
-    private static final String JOIN_POLICY_DIRECT = "direct";
-    private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
-    private static final String JOIN_POLICY_INVITE_ONLY = "invite_only";
     private static final double DEFAULT_MAP_LATITUDE = -34.6037;
     private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
     private static final int DEFAULT_MAP_ZOOM = 14;
@@ -157,11 +154,12 @@ public class HostController {
                     formConfig);
         }
 
-        final String resolvedVisibility = normalize(createEventForm.getVisibility());
-        final String resolvedJoinPolicy =
-                VISIBILITY_PRIVATE.equals(resolvedVisibility)
-                        ? JOIN_POLICY_INVITE_ONLY
-                        : normalize(createEventForm.getJoinPolicy());
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalize(createEventForm.getVisibility()))
+                        .orElse(null);
+        final EventJoinPolicy joinPolicy =
+                EventJoinPolicy.fromDbValue(normalize(createEventForm.getJoinPolicy()))
+                        .orElse(null);
 
         final CreateMatchRequest request =
                 new CreateMatchRequest(
@@ -176,9 +174,9 @@ public class HostController {
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        resolvedVisibility,
-                        resolvedJoinPolicy,
-                        "open",
+                        visibility,
+                        joinPolicy,
+                        EventStatus.OPEN,
                         bannerImageId,
                         toRecurrenceRequest(createEventForm));
 
@@ -244,11 +242,12 @@ public class HostController {
                     formConfig);
         }
 
-        final String resolvedVisibility = normalize(createEventForm.getVisibility());
-        final String resolvedJoinPolicy =
-                VISIBILITY_PRIVATE.equals(resolvedVisibility)
-                        ? JOIN_POLICY_INVITE_ONLY
-                        : normalize(createEventForm.getJoinPolicy());
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalize(createEventForm.getVisibility()))
+                        .orElse(null);
+        final EventJoinPolicy joinPolicy =
+                EventJoinPolicy.fromDbValue(normalize(createEventForm.getJoinPolicy()))
+                        .orElse(null);
 
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
@@ -257,11 +256,11 @@ public class HostController {
                         createEventForm.getDescription(),
                         startsAt,
                         endsAt,
-                        createEventForm.getMaxPlayers(),
+                        createEventForm.getMaxPlayers().intValue(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        resolvedVisibility,
-                        resolvedJoinPolicy,
+                        visibility,
+                        joinPolicy,
                         existingMatch.getStatus(),
                         bannerImageId,
                         parseCoordinate(createEventForm.getLatitude()),
@@ -557,8 +556,8 @@ public class HostController {
         form.setLatitude(match.getLatitude() == null ? "" : match.getLatitude().toString());
         form.setLongitude(match.getLongitude() == null ? "" : match.getLongitude().toString());
         form.setSport(match.getSport().getDbValue());
-        form.setVisibility(match.getVisibility());
-        form.setJoinPolicy(match.getJoinPolicy());
+        form.setVisibility(match.getVisibility().getValue());
+        form.setJoinPolicy(match.getJoinPolicy().getValue());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
         final LocalDateTime endsAt =
@@ -572,23 +571,22 @@ public class HostController {
     }
 
     private UpdateMatchRequest toUpdateRequest(
-            final CreateEventForm form, final String status, final Long bannerImageId) {
-        final String resolvedVisibility = normalize(form.getVisibility());
-        final String resolvedJoinPolicy =
-                VISIBILITY_PRIVATE.equals(resolvedVisibility)
-                        ? JOIN_POLICY_INVITE_ONLY
-                        : normalize(form.getJoinPolicy());
+            final CreateEventForm form, final EventStatus status, final Long bannerImageId) {
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalize(form.getVisibility())).orElse(null);
+        final EventJoinPolicy joinPolicy =
+                EventJoinPolicy.fromDbValue(normalize(form.getJoinPolicy())).orElse(null);
         return new UpdateMatchRequest(
                 form.getAddress(),
                 form.getTitle(),
                 form.getDescription(),
                 toInstant(form.getEventDate(), form.getEventTime(), form.getTz()),
                 toInstant(form.getEndDate(), form.getEndTime(), form.getTz()),
-                form.getMaxPlayers(),
+                form.getMaxPlayers().intValue(),
                 form.getPricePerPlayer(),
                 Sport.fromDbValue(form.getSport()).orElse(Sport.PADEL),
-                resolvedVisibility,
-                resolvedJoinPolicy,
+                visibility,
+                joinPolicy,
                 status,
                 bannerImageId,
                 parseCoordinate(form.getLatitude()),
@@ -616,7 +614,7 @@ public class HostController {
     private Match findOwnedEditableMatchOrThrowNotFound(
             final Long matchId, final Long actingUserId) {
         final Match match = findOwnedMatchOrThrowNotFound(matchId, actingUserId);
-        final EventStatus status = EventStatus.fromDbValue(match.getStatus()).orElse(null);
+        final EventStatus status = match.getStatus();
         if (status == EventStatus.COMPLETED || status == EventStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
@@ -630,12 +628,6 @@ public class HostController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return match;
-    }
-
-    private Long requireAuthenticatedUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static Long parseMatchIdOrThrowNotFound(final String matchId) {
@@ -693,12 +685,11 @@ public class HostController {
             return;
         }
 
-        final String visibility = normalize(form.getVisibility());
+        final String normalizedVisibility = normalize(form.getVisibility());
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalizedVisibility).orElse(null);
 
-        final boolean validVisibility =
-                VISIBILITY_PUBLIC.equals(visibility) || VISIBILITY_PRIVATE.equals(visibility);
-
-        if (!validVisibility) {
+        if (visibility == null) {
             bindingResult.rejectValue(
                     "visibility",
                     "host.validation.visibility.invalid",
@@ -706,7 +697,7 @@ public class HostController {
             return;
         }
 
-        if (VISIBILITY_PRIVATE.equals(visibility)) {
+        if (EventVisibility.PRIVATE == visibility) {
             // Private events are always invite_only; no join policy selection needed.
             return;
         }
@@ -715,16 +706,15 @@ public class HostController {
             return;
         }
 
-        final String joinPolicy = normalize(form.getJoinPolicy());
+        final String normalizedJoinPolicy = normalize(form.getJoinPolicy());
 
-        if (joinPolicy.isEmpty()) {
+        if (normalizedJoinPolicy.isEmpty()) {
             bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.required");
             return;
         }
 
         final boolean validJoinPolicy =
-                JOIN_POLICY_DIRECT.equals(joinPolicy)
-                        || JOIN_POLICY_APPROVAL_REQUIRED.equals(joinPolicy);
+                EventJoinPolicy.fromDbValue(normalizedJoinPolicy).isPresent();
 
         if (!validJoinPolicy) {
             bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.invalid");

@@ -3,14 +3,14 @@ package ar.edu.itba.paw.models;
 import java.util.Arrays;
 import java.util.Optional;
 
-public enum EventVisibility {
-    PUBLIC("public"),
-    PRIVATE("private"),
+public enum EventJoinPolicy {
+    DIRECT("direct"),
+    APPROVAL_REQUIRED("approval_required"),
     INVITE_ONLY("invite_only");
 
     private final String value;
 
-    EventVisibility(String value) {
+    EventJoinPolicy(String value) {
         this.value = value;
     }
 
@@ -18,9 +18,9 @@ public enum EventVisibility {
         return value;
     }
 
-    public static Optional<EventVisibility> fromDbValue(final String value) {
+    public static Optional<EventJoinPolicy> fromDbValue(final String value) {
         return Arrays.stream(values())
-                .filter(visibility -> visibility.value.equalsIgnoreCase(value))
+                .filter(joinPolicy -> joinPolicy.value.equalsIgnoreCase(value))
                 .findFirst();
     }
 

@@ -195,7 +195,7 @@
 											<spring:message code="moderation.reason.other" />
 										</button>
 									</div>
-									<form:select id="report-reason" path="reason" cssStyle="display: none;">
+									<form:select id="report-reason" path="reason"  cssClass="field--hidden">
 										<form:option value="inappropriate_content"><spring:message code="moderation.reason.inappropriate_content" /></form:option>
 										<form:option value="aggressive_language"><spring:message code="moderation.reason.aggressive_language" /></form:option>
 										<form:option value="spam"><spring:message code="moderation.reason.spam" /></form:option>

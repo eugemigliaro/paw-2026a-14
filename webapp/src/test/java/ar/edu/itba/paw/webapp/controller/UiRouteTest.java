@@ -8,7 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
@@ -47,8 +49,8 @@ import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.FeedPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -84,7 +86,7 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
-class PawUiRouteTest {
+class UiRouteTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
@@ -116,6 +118,7 @@ class PawUiRouteTest {
     private AtomicReference<Boolean> currentUserHasSeriesJoinRequest;
     private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
     private AtomicReference<UpdateMatchRequest> lastUpdateMatchRequest;
+    private AtomicReference<Match> lastUpdatedMatch;
 
     @BeforeEach
     void setUp() {
@@ -154,6 +157,7 @@ class PawUiRouteTest {
         currentUserHasSeriesJoinRequest = new AtomicReference<>(false);
         lastCreateMatchRequest = new AtomicReference<>();
         lastUpdateMatchRequest = new AtomicReference<>();
+        lastUpdatedMatch = new AtomicReference<>();
 
         final Match realMatch =
                 new Match(
@@ -169,9 +173,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-06T12:00:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         2,
                         null,
                         null,
@@ -188,8 +192,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-07T20:30:00Z"),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         4,
                         null);
         final Match completedMatch =
@@ -204,8 +209,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-03T21:00:00Z"),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "completed",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.COMPLETED,
                         10,
                         null);
         final Match cancelledFutureMatch =
@@ -220,8 +226,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-08T14:00:00Z"),
                         6,
                         BigDecimal.TEN,
-                        "public",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         2,
                         null);
         final Match privateInviteOnlyMatch =
@@ -236,9 +243,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-10T22:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         2,
                         null);
         final Match recurringMatch =
@@ -253,9 +260,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-09T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         1,
                         null,
                         600L,
@@ -272,9 +279,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-16T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         600L,
@@ -291,9 +298,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-03-26T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         4,
                         null,
                         600L,
@@ -310,9 +317,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-05T01:00:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         4,
                         null,
                         600L,
@@ -329,9 +336,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-23T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         8,
                         null,
                         600L,
@@ -348,9 +355,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-30T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         0,
                         null,
                         600L,
@@ -367,9 +374,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-09T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         1,
                         null,
                         700L,
@@ -386,9 +393,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-04-16T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         0,
                         null,
                         700L,
@@ -405,9 +412,9 @@ class PawUiRouteTest {
                         Instant.parse("2026-03-26T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         4,
                         null,
                         700L,
@@ -424,9 +431,9 @@ class PawUiRouteTest {
                         Instant.parse("2030-04-09T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         1,
                         null);
 
@@ -435,6 +442,10 @@ class PawUiRouteTest {
                     @Override
                     public Match createMatch(final CreateMatchRequest request) {
                         lastCreateMatchRequest.set(request);
+                        final EventJoinPolicy joinPolicy =
+                                EventVisibility.PRIVATE.equals(request.getVisibility())
+                                        ? EventJoinPolicy.INVITE_ONLY
+                                        : request.getJoinPolicy();
                         return new Match(
                                 43L,
                                 request.getSport(),
@@ -447,7 +458,7 @@ class PawUiRouteTest {
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
-                                request.getJoinPolicy(),
+                                joinPolicy,
                                 request.getStatus(),
                                 0,
                                 null,
@@ -561,23 +572,32 @@ class PawUiRouteTest {
                                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
                                     "Capacity too low");
                         }
+
+                        final EventJoinPolicy joinPolicy =
+                                EventVisibility.PRIVATE == request.getVisibility()
+                                        ? EventJoinPolicy.INVITE_ONLY
+                                        : request.getJoinPolicy();
+
                         lastUpdateMatchRequest.set(request);
-                        return new Match(
-                                matchId,
-                                request.getSport(),
-                                actingUserId,
-                                request.getAddress(),
-                                request.getTitle(),
-                                request.getDescription(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
-                                request.getMaxPlayers(),
-                                request.getPricePerPlayer(),
-                                request.getVisibility(),
-                                request.getJoinPolicy(),
-                                request.getStatus(),
-                                0,
-                                request.getBannerImageId());
+                        final Match result =
+                                new Match(
+                                        matchId,
+                                        request.getSport(),
+                                        actingUserId,
+                                        request.getAddress(),
+                                        request.getTitle(),
+                                        request.getDescription(),
+                                        request.getStartsAt(),
+                                        request.getEndsAt(),
+                                        request.getMaxPlayers(),
+                                        request.getPricePerPlayer(),
+                                        request.getVisibility(),
+                                        joinPolicy,
+                                        request.getStatus(),
+                                        0,
+                                        request.getBannerImageId());
+                        lastUpdatedMatch.set(result);
+                        return result;
                     }
 
                     @Override
@@ -601,7 +621,11 @@ class PawUiRouteTest {
                         lastHostSeriesUpdatedMatchId.set(matchId);
                         lastHostSeriesUpdatedUserId.set(actingUserId);
                         lastUpdateMatchRequest.set(request);
-                        return List.of(
+                        final EventJoinPolicy joinPolicy =
+                                EventVisibility.PRIVATE == request.getVisibility()
+                                        ? EventJoinPolicy.INVITE_ONLY
+                                        : request.getJoinPolicy();
+                        final Match result =
                                 new Match(
                                         matchId,
                                         request.getSport(),
@@ -614,12 +638,14 @@ class PawUiRouteTest {
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
-                                        request.getJoinPolicy(),
+                                        joinPolicy,
                                         request.getStatus(),
                                         0,
                                         request.getBannerImageId(),
                                         600L,
-                                        matchId == 46L ? 1 : 2));
+                                        matchId == 46L ? 1 : 2);
+                        lastUpdatedMatch.set(result);
+                        return List.of(result);
                     }
 
                     @Override
@@ -646,9 +672,9 @@ class PawUiRouteTest {
                                 Instant.parse("2026-04-06T12:00:00Z"),
                                 8,
                                 BigDecimal.TEN,
-                                "public",
-                                "direct",
-                                "cancelled",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.CANCELLED,
                                 2,
                                 null,
                                 matchId == 47L ? 600L : null,
@@ -681,9 +707,9 @@ class PawUiRouteTest {
                                         Instant.parse("2026-04-09T19:30:00Z"),
                                         8,
                                         BigDecimal.TEN,
-                                        "public",
-                                        "direct",
-                                        "cancelled",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.CANCELLED,
                                         1,
                                         null,
                                         600L,
@@ -2647,10 +2673,10 @@ class PawUiRouteTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
 
-        final UpdateMatchRequest request = lastUpdateMatchRequest.get();
-        Assertions.assertNotNull(request);
-        Assertions.assertEquals("private", request.getVisibility());
-        Assertions.assertEquals("invite_only", request.getJoinPolicy());
+        final Match updatedMatch = lastUpdatedMatch.get();
+        Assertions.assertNotNull(updatedMatch);
+        Assertions.assertEquals(EventVisibility.PRIVATE, updatedMatch.getVisibility());
+        Assertions.assertEquals(EventJoinPolicy.INVITE_ONLY, updatedMatch.getJoinPolicy());
     }
 
     @Test

@@ -53,8 +53,78 @@
 		});
 	}
 
+	function bindAccountInlineEditor() {
+		var form = document.getElementById("account-edit-form");
+		if (!form) {
+			return;
+		}
+
+		var editableFields = form.querySelectorAll(".account-field--editable");
+		var fileInput = document.getElementById("account-profile-image");
+		var actionsBar = document.getElementById("account-edit-confirm");
+		var cancelButton = document.getElementById("account-cancel-button");
+		var originalValues = new Map();
+		var fileChanged = false;
+
+		if (!editableFields.length || !actionsBar) {
+			return;
+		}
+
+		editableFields.forEach(function(field) {
+			originalValues.set(field, field.value);
+		});
+
+		function enterEditMode() {
+			editableFields.forEach(function(field) {
+				field.removeAttribute("readonly");
+				field.classList.remove("account-readonly-control");
+			});
+		}
+
+		function checkForChanges() {
+			var hasAccountChanges = fileChanged;
+			editableFields.forEach(function(field) {
+				if (field.value !== originalValues.get(field)) {
+					hasAccountChanges = true;
+				}
+			});
+
+			actionsBar.classList.toggle("account-edit-actions__confirm--visible", hasAccountChanges);
+		}
+
+		editableFields.forEach(function(field) {
+			field.addEventListener("focus", enterEditMode);
+			field.addEventListener("click", enterEditMode);
+			field.addEventListener("input", checkForChanges);
+		});
+
+		if (fileInput) {
+			fileInput.addEventListener("change", function() {
+				fileChanged = !!fileInput.value;
+				checkForChanges();
+			});
+		}
+
+		if (cancelButton) {
+			cancelButton.addEventListener("click", function(event) {
+				event.preventDefault();
+				editableFields.forEach(function(field) {
+					field.value = originalValues.get(field);
+					field.setAttribute("readonly", "true");
+					field.classList.add("account-readonly-control");
+				});
+				if (fileInput) {
+					fileInput.value = "";
+				}
+				fileChanged = false;
+				actionsBar.classList.remove("account-edit-actions__confirm--visible");
+			});
+		}
+	}
+
 	document.addEventListener("DOMContentLoaded", function() {
 		var forms = document.querySelectorAll("form[data-account-edit-form='true']");
 		forms.forEach(bindDirtyTracking);
+		bindAccountInlineEditor();
 	});
 })();

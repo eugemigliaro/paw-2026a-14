@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,9 +19,9 @@ public class UpdateMatchRequest {
     private final int maxPlayers;
     private final BigDecimal pricePerPlayer;
     private final Sport sport;
-    private final String visibility;
-    private final String joinPolicy;
-    private final String status;
+    private final EventVisibility visibility;
+    private final EventJoinPolicy joinPolicy;
+    private final EventStatus status;
     private final Long bannerImageId;
 
     public UpdateMatchRequest(
@@ -30,8 +33,8 @@ public class UpdateMatchRequest {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String status,
+            final EventVisibility visibility,
+            final EventStatus status,
             final Long bannerImageId) {
         this(
                 address,
@@ -59,9 +62,9 @@ public class UpdateMatchRequest {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Long bannerImageId) {
         this(
                 address,
@@ -89,9 +92,9 @@ public class UpdateMatchRequest {
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
-            final String visibility,
-            final String joinPolicy,
-            final String status,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
             final Long bannerImageId,
             final Double latitude,
             final Double longitude) {
@@ -111,8 +114,11 @@ public class UpdateMatchRequest {
         this.bannerImageId = bannerImageId;
     }
 
-    private static String defaultJoinPolicyForVisibility(final String visibility) {
-        return "private".equalsIgnoreCase(visibility) ? "invite_only" : "direct";
+    private static EventJoinPolicy defaultJoinPolicyForVisibility(
+            final EventVisibility visibility) {
+        return EventVisibility.PRIVATE.equals(visibility)
+                ? EventJoinPolicy.INVITE_ONLY
+                : EventJoinPolicy.DIRECT;
     }
 
     public String getAddress() {
@@ -155,15 +161,15 @@ public class UpdateMatchRequest {
         return sport;
     }
 
-    public String getVisibility() {
+    public EventVisibility getVisibility() {
         return visibility;
     }
 
-    public String getJoinPolicy() {
+    public EventJoinPolicy getJoinPolicy() {
         return joinPolicy;
     }
 
-    public String getStatus() {
+    public EventStatus getStatus() {
         return status;
     }
 
