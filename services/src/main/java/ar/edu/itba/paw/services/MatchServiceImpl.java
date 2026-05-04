@@ -44,6 +44,7 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final SecurityService securityService;
     private final MatchNotificationService matchNotificationService;
     private final MessageSource messageSource;
     private final Clock clock;
@@ -53,11 +54,13 @@ public class MatchServiceImpl implements MatchService {
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
+            final SecurityService securityService,
             final MessageSource messageSource,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
+        this.securityService = securityService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -481,7 +484,9 @@ public class MatchServiceImpl implements MatchService {
                                                 MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                                 message("match.cancel.error.notFound")));
 
-        if (!match.getHostUserId().equals(actingUserId)) {
+        final Long currentUserId = securityService.currentUserId();
+        if (!match.getHostUserId().equals(actingUserId)
+                && (currentUserId == null || !currentUserId.equals(actingUserId))) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
                     message("match.cancel.error.forbidden"));

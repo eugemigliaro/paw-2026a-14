@@ -48,6 +48,8 @@ public class ModerationReportJdbcDaoTest {
                         + "(2, 'admin', 'admin@test.com', 'Admin', 'User', null,"
                         + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
                         + "(3, 'target', 'target@test.com', 'Target', 'User', null,"
+                        + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
+                        + "(4, 'reporter2', 'rep2@test.com', 'Reporter2', 'User', null,"
                         + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
     }
 
@@ -285,5 +287,163 @@ public class ModerationReportJdbcDaoTest {
         final boolean success =
                 moderationReportDao.finalizeAppeal(report.getId(), 2L, AppealDecision.UPHELD, NOW);
         Assertions.assertFalse(success);
+    }
+
+    @Test
+    public void shouldFindLatestUserBanReportByTargetUserId_WhenReportsExist() {
+        final long targetUserId = 3L;
+
+        final ModerationReport report1 =
+                moderationReportDao.createReport(
+                        1L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "First ban");
+        moderationReportDao.markUnderReview(report1.getId(), 2L, NOW);
+        moderationReportDao.resolveReport(
+                report1.getId(),
+                2L,
+                ReportResolution.USER_BANNED,
+                "Ban details",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final ModerationReport report2 =
+                moderationReportDao.createReport(
+                        2L,
+                        ReportTargetType.USER,
+                        targetUserId,
+                        ReportReason.HARASSMENT,
+                        "Second ban");
+        moderationReportDao.markUnderReview(report2.getId(), 2L, NOW);
+        moderationReportDao.resolveReport(
+                report2.getId(),
+                2L,
+                ReportResolution.USER_BANNED,
+                "Another ban",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final Optional<ModerationReport> latest =
+                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserId);
+
+        Assertions.assertTrue(latest.isPresent());
+        Assertions.assertEquals(report2.getId(), latest.get().getId());
+        Assertions.assertEquals(targetUserId, latest.get().getTargetId());
+        Assertions.assertEquals(ReportStatus.RESOLVED, latest.get().getStatus());
+        Assertions.assertEquals(ReportResolution.USER_BANNED, latest.get().getResolution());
+    }
+
+    @Test
+    public void shouldFindLatestUserBanReportByTargetUserId_WhenNoReportsExist() {
+        final long targetUserWithNoBans = 2L;
+
+        final Optional<ModerationReport> result =
+                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserWithNoBans);
+
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void shouldFindLatestUserBanReportByTargetUserId_OnlyReturnsUserBans() {
+        final long targetUserId = 3L;
+
+        final ModerationReport banReport =
+                moderationReportDao.createReport(
+                        1L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "Ban");
+        moderationReportDao.markUnderReview(banReport.getId(), 2L, NOW);
+        moderationReportDao.resolveReport(
+                banReport.getId(),
+                2L,
+                ReportResolution.USER_BANNED,
+                "Banned",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final ModerationReport dismissedReport =
+                moderationReportDao.createReport(
+                        2L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "Dismissed");
+        moderationReportDao.markUnderReview(dismissedReport.getId(), 2L, NOW);
+        moderationReportDao.resolveReport(
+                dismissedReport.getId(),
+                2L,
+                ReportResolution.DISMISSED,
+                "No violation",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final Optional<ModerationReport> result =
+                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserId);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(banReport.getId(), result.get().getId());
+        Assertions.assertEquals(ReportResolution.USER_BANNED, result.get().getResolution());
+    }
+
+    @Test
+    public void shouldFindLatestUserBanReportByTargetUserId_IgnoresPendingReports() {
+        final long targetUserId = 3L;
+
+        final ModerationReport resolvedBan =
+                moderationReportDao.createReport(
+                        1L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "Resolved ban");
+        moderationReportDao.markUnderReview(resolvedBan.getId(), 2L, NOW);
+        moderationReportDao.resolveReport(
+                resolvedBan.getId(),
+                2L,
+                ReportResolution.USER_BANNED,
+                "Banned",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        moderationReportDao.createReport(
+                2L, ReportTargetType.USER, targetUserId, ReportReason.HARASSMENT, "Pending ban");
+
+        final Optional<ModerationReport> result =
+                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserId);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(resolvedBan.getId(), result.get().getId());
+        Assertions.assertEquals(ReportStatus.RESOLVED, result.get().getStatus());
+    }
+
+    @Test
+    public void shouldFindLatestUserBanReportByTargetUserId_IsolatedPerUser() {
+        final long user1 = 2L;
+        final long user2 = 3L;
+
+        final ModerationReport ban1 =
+                moderationReportDao.createReport(
+                        1L, ReportTargetType.USER, user1, ReportReason.SPAM, "Ban user1");
+        moderationReportDao.markUnderReview(ban1.getId(), 2L, NOW);
+        moderationReportDao.resolveReport(
+                ban1.getId(),
+                2L,
+                ReportResolution.USER_BANNED,
+                "Banned",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final ModerationReport ban2 =
+                moderationReportDao.createReport(
+                        2L, ReportTargetType.USER, user2, ReportReason.HARASSMENT, "Ban user2");
+        moderationReportDao.markUnderReview(ban2.getId(), 2L, NOW);
+        moderationReportDao.resolveReport(
+                ban2.getId(),
+                2L,
+                ReportResolution.USER_BANNED,
+                "Banned",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final Optional<ModerationReport> result1 =
+                moderationReportDao.findLatestUserBanReportByTargetUserId(user1);
+        final Optional<ModerationReport> result2 =
+                moderationReportDao.findLatestUserBanReportByTargetUserId(user2);
+
+        Assertions.assertTrue(result1.isPresent());
+        Assertions.assertEquals(ban1.getId(), result1.get().getId());
+
+        Assertions.assertTrue(result2.isPresent());
+        Assertions.assertEquals(ban2.getId(), result2.get().getId());
+
+        Assertions.assertNotEquals(result1.get().getId(), result2.get().getId());
     }
 }

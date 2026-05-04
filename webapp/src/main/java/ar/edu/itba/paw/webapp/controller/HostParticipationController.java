@@ -25,6 +25,7 @@ import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -122,53 +123,49 @@ public class HostParticipationController {
         return mav;
     }
 
-    @PostMapping("/host/matches/{matchId}/requests/{userId}/approve")
+    @PostMapping("/host/matches/{matchId:\\d+}/requests/{userId:\\d+}/approve")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView approveRequest(
-            @PathVariable("matchId") final String matchId,
-            @PathVariable("userId") final String userId,
-            final RedirectAttributes redirectAttributes,
+            @PathVariable("matchId") final Long matchId,
+            @PathVariable("userId") final Long userId,
             final Locale locale) {
         final long hostUserId = requireAuthenticatedUserId();
-        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
-        final long targetUserId = parseUserIdOrThrow(userId);
-        final Match match = requireHostMatch(resolvedMatchId, hostUserId);
+        final Match match = requireHostMatch(matchId, hostUserId);
 
         if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         try {
-            matchParticipationService.approveRequest(resolvedMatchId, hostUserId, targetUserId);
-            redirectAttributes.addFlashAttribute("action", "approved");
-            return new ModelAndView("redirect:/host/matches/" + resolvedMatchId + "/requests");
+            matchParticipationService.approveRequest(matchId, hostUserId, userId);
+            return new ModelAndView(
+                    "redirect:/host/matches/" + matchId + "/requests?action=approved");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
-                    "redirect:/host/matches/" + resolvedMatchId + "/requests?error=" + e.getCode());
+                    "redirect:/host/matches/" + matchId + "/requests?error=" + e.getCode());
         }
     }
 
-    @PostMapping("/host/matches/{matchId}/requests/{userId}/reject")
+    @PostMapping("/host/matches/{matchId:\\d+}/requests/{userId:\\d+}/reject")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView rejectRequest(
-            @PathVariable("matchId") final String matchId,
-            @PathVariable("userId") final String userId,
-            final RedirectAttributes redirectAttributes,
+            @PathVariable("matchId") final Long matchId,
+            @PathVariable("userId") final Long userId,
             final Locale locale) {
         final long hostUserId = requireAuthenticatedUserId();
-        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
-        final long targetUserId = parseUserIdOrThrow(userId);
-        final Match match = requireHostMatch(resolvedMatchId, hostUserId);
+        final Match match = requireHostMatch(matchId, hostUserId);
 
         if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         try {
-            matchParticipationService.rejectRequest(resolvedMatchId, hostUserId, targetUserId);
-            redirectAttributes.addFlashAttribute("action", "rejected");
-            return new ModelAndView("redirect:/host/matches/" + resolvedMatchId + "/requests");
+            matchParticipationService.rejectRequest(matchId, hostUserId, userId);
+            return new ModelAndView(
+                    "redirect:/host/matches/" + matchId + "/requests?action=rejected");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
-                    "redirect:/host/matches/" + resolvedMatchId + "/requests?error=" + e.getCode());
+                    "redirect:/host/matches/" + matchId + "/requests?error=" + e.getCode());
         }
     }
 
@@ -191,37 +188,38 @@ public class HostParticipationController {
         return buildInviteView(match, resolvedMatchId, hostUserId, new InviteForm(), null, locale);
     }
 
-    @PostMapping("/host/matches/{matchId}/invites")
+    @PostMapping("/host/matches/{matchId:\\d+}/invites")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView sendInvite(
-            @PathVariable("matchId") final String matchId,
+            @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("inviteForm") final InviteForm inviteForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final long hostUserId = requireAuthenticatedUserId();
-        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
-        final Match match = requireHostMatch(resolvedMatchId, hostUserId);
+        final Match match = requireHostMatch(matchId, hostUserId);
 
         if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         if (bindingResult.hasErrors()) {
-            return buildInviteView(match, resolvedMatchId, hostUserId, inviteForm, null, locale);
+            return buildInviteView(match, matchId, hostUserId, inviteForm, null, locale);
         }
 
         try {
             final boolean includeSeries =
                     inviteForm.isInviteSeries() && match.getSeriesId() != null;
             matchParticipationService.inviteUser(
-                    resolvedMatchId, hostUserId, inviteForm.getEmail(), includeSeries);
-            redirectAttributes.addFlashAttribute(
-                    "action", includeSeries ? "seriesInvited" : "invited");
-            return new ModelAndView("redirect:/host/matches/" + resolvedMatchId + "/invites");
+                    matchId, hostUserId, inviteForm.getEmail(), includeSeries);
+            return new ModelAndView(
+                    "redirect:/host/matches/"
+                            + matchId
+                            + "/invites?action="
+                            + (includeSeries ? "seriesInvited" : "invited"));
         } catch (final MatchParticipationException e) {
             final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
-            return buildInviteView(
-                    match, resolvedMatchId, hostUserId, inviteForm, errorMsg, locale);
+            return buildInviteView(match, matchId, hostUserId, inviteForm, errorMsg, locale);
         }
     }
 
@@ -306,26 +304,21 @@ public class HostParticipationController {
         }
     }
 
-    @PostMapping("/host/matches/{matchId}/participants/{userId}/remove")
+    @PostMapping("/host/matches/{matchId:\\d+}/participants/{userId:\\d+}/remove")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView removeParticipant(
-            @PathVariable("matchId") final String matchId,
-            @PathVariable("userId") final String userId,
-            final RedirectAttributes redirectAttributes,
+            @PathVariable("matchId") final Long matchId,
+            @PathVariable("userId") final Long userId,
             final Locale locale) {
         final long hostUserId = requireAuthenticatedUserId();
-        final long resolvedMatchId = parseMatchIdOrThrow(matchId);
-        final long targetUserId = parseUserIdOrThrow(userId);
 
         try {
-            matchParticipationService.removeParticipant(resolvedMatchId, hostUserId, targetUserId);
-            redirectAttributes.addFlashAttribute("action", "removed");
-            return new ModelAndView("redirect:/host/matches/" + resolvedMatchId + "/participants");
+            matchParticipationService.removeParticipant(matchId, hostUserId, userId);
+            return new ModelAndView(
+                    "redirect:/host/matches/" + matchId + "/participants?action=removed");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
-                    "redirect:/host/matches/"
-                            + resolvedMatchId
-                            + "/participants?error="
-                            + e.getCode());
+                    "redirect:/host/matches/" + matchId + "/participants?error=" + e.getCode());
         }
     }
 
@@ -427,14 +420,6 @@ public class HostParticipationController {
             return Long.parseLong(raw);
         } catch (final NumberFormatException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    private static long parseUserIdOrThrow(final String raw) {
-        try {
-            return Long.parseLong(raw);
-        } catch (final NumberFormatException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
     }
 

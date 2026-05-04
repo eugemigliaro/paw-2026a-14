@@ -162,17 +162,11 @@ class ViewTemplateAssetsTest {
 
     @Test
     void mapPickerUsesCommittedTileDefaults() throws IOException {
-        final String local = read("../config/local.example.properties");
-        final String pampero = read("../config/pampero.example.properties");
+        final Properties local = properties("../config/local.example.properties");
+        final Properties pampero = properties("../config/pampero.example.properties");
 
-        assertTrue(local.contains("map.picker.enabled=true"));
-        assertTrue(local.contains("map.tiles.urlTemplate=/assets/tiles/{z}/{x}/{y}.png"));
-        assertTrue(local.contains("map.tiles.attribution=Local Buenos Aires map tiles"));
-        assertTrue(local.contains("map.default.zoom=14"));
-        assertTrue(pampero.contains("map.picker.enabled=true"));
-        assertTrue(pampero.contains("map.tiles.urlTemplate=/assets/tiles/{z}/{x}/{y}.png"));
-        assertTrue(pampero.contains("map.tiles.attribution=Local Buenos Aires map tiles"));
-        assertTrue(pampero.contains("map.default.zoom=14"));
+        assertMapPickerDefaults(local);
+        assertMapPickerDefaults(pampero);
     }
 
     @Test
@@ -465,6 +459,17 @@ class ViewTemplateAssetsTest {
             properties.load(reader);
         }
         return properties;
+    }
+
+    private static void assertMapPickerDefaults(final Properties properties) {
+        assertEquals("true", properties.getProperty("map.picker.enabled"));
+        assertEquals(
+                "/assets/tiles/{z}/{x}/{y}.png", properties.getProperty("map.tiles.urlTemplate"));
+        assertNotNull(properties.getProperty("map.tiles.attribution"));
+        assertFalse(properties.getProperty("map.tiles.attribution").isBlank());
+        assertEquals("-34.6037", properties.getProperty("map.default.latitude"));
+        assertEquals("-58.3816", properties.getProperty("map.default.longitude"));
+        assertEquals("14", properties.getProperty("map.default.zoom"));
     }
 
     private static int countOccurrences(final String input, final String token) {
