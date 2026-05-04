@@ -32,7 +32,7 @@
 						</c:if>
 					</div>
 					<div class="public-profile-hero">
-						<article class="panel public-profile-avatar-panel">
+						<div class="public-profile-avatar-panel">
 							<div class="public-profile-avatar-panel__content">
 								<c:url var="profileImageSrc" value="${profilePage.profileImageUrl}" />
 								<img
@@ -42,7 +42,7 @@
 									loading="eager"
 									decoding="async" />
 							</div>
-						</article>
+						</div>
 
 						<div class="public-profile-summary">
 							<c:if test="${profileBanned}">
@@ -357,14 +357,7 @@
 					<c:choose>
 						<c:when test="${empty profileReviews}">
 							<p class="public-profile-reviews__empty">
-								<c:choose>
-									<c:when test="${selectedReviewFilter ne 'both'}">
-										<spring:message code="profile.reviews.emptyFiltered" />
-									</c:when>
-									<c:otherwise>
-										<spring:message code="profile.reviews.empty" />
-									</c:otherwise>
-								</c:choose>
+								<spring:message code="profile.reviews.emptyState" />
 							</p>
 						</c:when>
 						<c:otherwise>

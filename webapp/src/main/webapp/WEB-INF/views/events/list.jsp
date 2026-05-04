@@ -181,7 +181,7 @@
 																		<ui:button label="${clearFilterLabel}" href="${clearFilterUrl}"
 																			variant="secondary" size="sm"
 																			className="filter-dropdown__action" />
-																		<ui:button label="${seeResultsLabel}" type="button"
+																			<ui:button label="${seeResultsLabel}" type="button"
 																			variant="primary" size="sm"
 																			className="filter-dropdown__action filter-dropdown__close" />
 																	</div>

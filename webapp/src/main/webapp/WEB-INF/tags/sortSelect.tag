@@ -8,30 +8,44 @@
 <c:set var="resolvedId" value="${empty id ? 'sort-select' : id}" />
 
 <c:if test="${not empty options}">
-	<form class="sort-panel" aria-label="${ariaLabel}">
-		<label class="field sort-panel__field" for="${resolvedId}">
-			<span class="field__label"><c:out value="${label}" /></span>
-			<select
-				id="${resolvedId}"
-				class="field__control field__control--select sort-panel__select"
-				data-browser-timezone-url-options="true"
-				data-sort-select="true">
-			<c:forEach var="option" items="${options}">
-				<c:url var="optionHref" value="${option.href}" />
-				<c:choose>
-					<c:when test="${option.selected}">
-						<option value="${optionHref}" selected="selected">
+	<c:set var="selectedLabel" value="" />
+	<c:forEach var="option" items="${options}" varStatus="status">
+		<c:if test="${option.selected or (empty selectedLabel and status.first)}">
+			<c:set var="selectedLabel" value="${option.label}" />
+		</c:if>
+	</c:forEach>
+	<div class="sort-panel" aria-label="${ariaLabel}">
+		<div class="field sort-panel__field">
+			<span class="field__label" id="${resolvedId}-label"><c:out value="${label}" /></span>
+			<div class="filter-dropdown sort-panel__dropdown" data-filter-name="${resolvedId}">
+				<button
+					type="button"
+					class="filter-dropdown__toggle sort-panel__toggle"
+					id="${resolvedId}"
+					aria-expanded="false"
+					aria-labelledby="${resolvedId}-label ${resolvedId}">
+					<span class="filter-dropdown__icon sort-panel__icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24">
+							<path d="M3 7h18" />
+							<path d="M6 12h12" />
+							<path d="M10 17h4" />
+						</svg>
+					</span>
+					<span class="sort-panel__toggle-label"><c:out value="${selectedLabel}" /></span>
+				</button>
+				<div class="filter-dropdown__panel sort-panel__panel" aria-labelledby="${resolvedId}-label">
+					<c:forEach var="option" items="${options}">
+						<c:url var="optionHref" value="${option.href}" />
+						<a
+							href="${optionHref}"
+							class="filter-dropdown__item sort-panel__item ${option.selected ? 'filter-dropdown__item--active sort-panel__item--active' : ''}"
+							aria-current="${option.selected ? 'true' : 'false'}"
+							data-browser-timezone-url-link="true">
 							<c:out value="${option.label}" />
-						</option>
-					</c:when>
-					<c:otherwise>
-						<option value="${optionHref}">
-							<c:out value="${option.label}" />
-						</option>
-					</c:otherwise>
-				</c:choose>
-			</c:forEach>
-			</select>
-		</label>
-	</form>
+						</a>
+					</c:forEach>
+				</div>
+			</div>
+		</div>
+	</div>
 </c:if>

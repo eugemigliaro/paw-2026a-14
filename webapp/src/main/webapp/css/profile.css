@@ -30,9 +30,7 @@
 
 .public-profile-avatar-panel {
 	display: grid;
-	gap: 1.5rem;
 	flex: 0 0 auto;
-	padding: 1.5rem;
 	width: fit-content;
 }
 
@@ -398,6 +396,7 @@
 
 	.public-profile-avatar-panel {
 		flex-basis: auto;
+		justify-self: center;
 	}
 
 	.public-profile-review-stats {
@@ -426,10 +425,6 @@
 	}
 }
 
-
-.account-profile-media__image {
-	max-width: 90px;
-}
 
 .account-summary__name-row {
 	display: grid;
