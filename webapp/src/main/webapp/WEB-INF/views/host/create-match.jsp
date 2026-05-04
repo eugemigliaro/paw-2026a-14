@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 	<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+	<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 		<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 			<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 				<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
@@ -182,10 +183,13 @@
 													<form:errors path="latitude" cssClass="field__error" element="span" />
 													<form:errors path="longitude" cssClass="field__error" element="span" />
 													<c:if test="${mapPickerEnabled}">
+														<c:url var="appRootUrl" value="/" />
+														<c:set var="contextAwareMapTileUrlTemplate"
+															value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
 														<section
 															class="location-picker"
 															data-location-picker="true"
-															data-tile-url-template="${mapTileUrlTemplate}"
+															data-tile-url-template="${contextAwareMapTileUrlTemplate}"
 															data-attribution="${mapAttribution}"
 															data-default-latitude="${mapDefaultLatitude}"
 															data-default-longitude="${mapDefaultLongitude}"
