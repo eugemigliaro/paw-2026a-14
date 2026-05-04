@@ -40,6 +40,7 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -107,6 +108,7 @@ public class EventController {
     }
 
     @PostMapping("/matches/{eventId}/reservations")
+    @PreAuthorize("isAuthenticated()")
     public ModelAndView requestReservation(
             @PathVariable("eventId") final String eventId, final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
@@ -133,6 +135,7 @@ public class EventController {
     }
 
     @PostMapping("/matches/{eventId}/reservations/cancel")
+    @PreAuthorize("isAuthenticated()")
     public ModelAndView cancelReservation(
             @PathVariable("eventId") final String eventId, final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
@@ -168,6 +171,7 @@ public class EventController {
         "/matches/{eventId}/recurring-reservations",
         "/matches/{eventId}/series-reservations"
     })
+    @PreAuthorize("isAuthenticated()")
     public ModelAndView requestSeriesReservation(
             @PathVariable("eventId") final String eventId, final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);

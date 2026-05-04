@@ -46,6 +46,7 @@ public class MatchServiceImplTest {
     @Mock private Clock clock;
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private UserService userService;
+    @Mock private SecurityService securityService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchServiceImpl matchService;
@@ -67,6 +68,7 @@ public class MatchServiceImplTest {
                         matchDao,
                         matchParticipantDao,
                         matchNotificationService,
+                        securityService,
                         messageSource,
                         clock);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);

@@ -31,6 +31,7 @@ import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,6 +42,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 
 @Controller
+@PreAuthorize("isAuthenticated()")
 public class HostController {
 
     private final MatchService matchService;
@@ -145,6 +147,7 @@ public class HostController {
     }
 
     @GetMapping("/host/matches/{matchId}/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditEvent(
             @PathVariable("matchId") final String matchId, final Locale locale) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
@@ -154,6 +157,7 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId}/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateEvent(
             @PathVariable("matchId") final String matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
@@ -261,6 +265,7 @@ public class HostController {
     }
 
     @GetMapping("/host/matches/{matchId}/series/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditSeries(
             @PathVariable("matchId") final String matchId, final Locale locale) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
@@ -271,6 +276,7 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId}/series/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateSeries(
             @PathVariable("matchId") final String matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
@@ -349,6 +355,7 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId}/cancel")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView cancelEvent(@PathVariable("matchId") final String matchId) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();
@@ -362,6 +369,7 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId}/series/cancel")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView cancelSeries(@PathVariable("matchId") final String matchId) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();

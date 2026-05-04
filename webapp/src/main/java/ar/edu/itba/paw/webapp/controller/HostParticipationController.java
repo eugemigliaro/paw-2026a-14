@@ -25,6 +25,7 @@ import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -122,6 +123,7 @@ public class HostParticipationController {
     }
 
     @PostMapping("/host/matches/{matchId}/requests/{userId}/approve")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView approveRequest(
             @PathVariable("matchId") final String matchId,
             @PathVariable("userId") final String userId,
@@ -146,6 +148,7 @@ public class HostParticipationController {
     }
 
     @PostMapping("/host/matches/{matchId}/requests/{userId}/reject")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView rejectRequest(
             @PathVariable("matchId") final String matchId,
             @PathVariable("userId") final String userId,
@@ -189,6 +192,7 @@ public class HostParticipationController {
     }
 
     @PostMapping("/host/matches/{matchId}/invites")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView sendInvite(
             @PathVariable("matchId") final String matchId,
             @Valid @ModelAttribute("inviteForm") final InviteForm inviteForm,
@@ -305,6 +309,7 @@ public class HostParticipationController {
     }
 
     @PostMapping("/host/matches/{matchId}/participants/{userId}/remove")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView removeParticipant(
             @PathVariable("matchId") final String matchId,
             @PathVariable("userId") final String userId,

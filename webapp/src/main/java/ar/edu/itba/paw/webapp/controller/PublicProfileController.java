@@ -32,6 +32,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -153,6 +154,7 @@ public class PublicProfileController {
     }
 
     @PostMapping("/users/{username}/reviews")
+    @PreAuthorize("isAuthenticated()")
     public ModelAndView submitReview(
             @PathVariable("username") final String username,
             @RequestParam("reaction") final String reactionValue,
@@ -175,6 +177,7 @@ public class PublicProfileController {
     }
 
     @PostMapping("/users/{username}/reviews/delete")
+    @PreAuthorize("isAuthenticated() and @securityService.hasReviewed(#username)")
     public ModelAndView deleteReview(@PathVariable("username") final String username) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
