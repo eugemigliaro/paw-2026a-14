@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
 
 import ar.edu.itba.paw.models.EventJoinPolicy;
@@ -446,6 +447,7 @@ public class HostController {
         mav.addObject("submitButtonId", formConfig.submitButtonId());
         mav.addObject("isEditMode", formConfig.editMode());
         mav.addObject("isSeriesEditMode", formConfig.seriesEditMode());
+        mav.addObject("currentBannerImageUrl", formConfig.bannerImageUrl());
         mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
         mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
         mav.addObject("mapAttribution", mapAttribution);
@@ -512,6 +514,7 @@ public class HostController {
                 messageSource.getMessage("host.form.submit", null, locale),
                 messageSource.getMessage("host.form.submitting", null, locale),
                 "publish-match-button",
+                null,
                 false,
                 false);
     }
@@ -527,6 +530,7 @@ public class HostController {
                 messageSource.getMessage("host.edit.form.submit", null, locale),
                 messageSource.getMessage("host.edit.form.submitting", null, locale),
                 "update-match-button",
+                bannerUrlFor(match),
                 true,
                 false);
     }
@@ -542,6 +546,7 @@ public class HostController {
                 messageSource.getMessage("host.seriesEdit.form.submit", null, locale),
                 messageSource.getMessage("host.seriesEdit.form.submitting", null, locale),
                 "update-series-button",
+                bannerUrlFor(match),
                 true,
                 true);
     }
@@ -784,6 +789,7 @@ public class HostController {
             String submitLabel,
             String submitLoadingLabel,
             String submitButtonId,
+            String bannerImageUrl,
             boolean editMode,
             boolean seriesEditMode) {}
 }

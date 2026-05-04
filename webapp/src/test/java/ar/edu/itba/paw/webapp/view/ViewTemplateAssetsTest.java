@@ -20,6 +20,7 @@ class ViewTemplateAssetsTest {
         assertTrue(head.contains("/js/timezone-field.js"));
         assertTrue(head.contains("/css/auth.css"));
         assertTrue(head.contains("/js/overflow-menu.js"));
+        assertTrue(head.contains("/js/host-create-match.js"));
         assertTrue(head.contains("/js/recurrence-schedule.js"));
         assertTrue(head.contains("/js/event-map.js"));
     }
@@ -55,6 +56,17 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void hostCreateMatchUsesExternalScriptInsteadOfInlineBehavior() throws IOException {
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String hostCreateMatchScript = read("src/main/webapp/js/host-create-match.js");
+
+        assertFalse(hostCreateMatch.contains("<script>"));
+        assertTrue(Files.exists(Path.of("src/main/webapp/js/host-create-match.js")));
+        assertTrue(hostCreateMatchScript.contains("function initializeSegmentedToggle"));
+        assertTrue(hostCreateMatchScript.contains("function initRecurrenceFields"));
+    }
+
+    @Test
     void hostCreateMatchDoesNotWrapCustomVisibilityTogglesInBrokenLabels() throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
 
@@ -70,8 +82,18 @@ class ViewTemplateAssetsTest {
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
         assertTrue(hostCreateMatch.contains("path=\"recurrenceFrequency\""));
+        assertTrue(hostCreateMatch.contains("name=\"recurrenceFrequency\""));
+        assertTrue(hostCreateMatch.contains("value=\"${selectedRecurrenceFrequency}\""));
+        assertFalse(
+                hostCreateMatch.contains(
+                        "value=\"<c:out value='${selectedRecurrenceFrequency}' />\""));
         assertTrue(hostCreateMatch.contains("host.form.recurrence.frequency"));
         assertTrue(hostCreateMatch.contains("path=\"recurrenceEndMode\""));
+        assertTrue(hostCreateMatch.contains("name=\"recurrenceEndMode\""));
+        assertTrue(hostCreateMatch.contains("value=\"${selectedRecurrenceEndMode}\""));
+        assertFalse(
+                hostCreateMatch.contains(
+                        "value=\"<c:out value='${selectedRecurrenceEndMode}' />\""));
         assertTrue(hostCreateMatch.contains("path=\"recurrenceUntilDate\""));
         assertTrue(hostCreateMatch.contains("path=\"recurrenceOccurrenceCount\""));
         assertTrue(hostCreateMatch.contains("host.form.recurrence.endMode"));
@@ -93,9 +115,14 @@ class ViewTemplateAssetsTest {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
 
-        assertTrue(sortSelectTag.contains("data-browser-timezone-url-options=\"true\""));
-        assertTrue(sortSelectTag.contains("data-sort-select=\"true\""));
-        assertTrue(timezoneScript.contains("data-browser-timezone-url-options"));
+        assertTrue(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
+        assertTrue(sortSelectTag.contains("aria-expanded=\"false\""));
+        assertTrue(sortSelectTag.contains("aria-current="));
+        assertFalse(sortSelectTag.contains("aria-haspopup=\"listbox\""));
+        assertFalse(sortSelectTag.contains("role=\"listbox\""));
+        assertFalse(sortSelectTag.contains("role=\"option\""));
+        assertTrue(timezoneScript.contains("data-browser-timezone-url-link"));
+        assertFalse(timezoneScript.contains("data-browser-timezone-url-options"));
         assertTrue(timezoneScript.contains("searchParams.set('tz', timezone)"));
     }
 

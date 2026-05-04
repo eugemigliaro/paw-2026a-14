@@ -155,13 +155,6 @@ public class AccountController {
                 messageSource.getMessage(
                         "account.profileImage.title", null, "Profile picture", locale));
         mav.addObject(
-                "accountProfileImageDescription",
-                messageSource.getMessage(
-                        "account.profileImage.description",
-                        null,
-                        "Upload a photo shown on your account and public profile.",
-                        locale));
-        mav.addObject(
                 "accountProfileImageHint",
                 messageSource.getMessage(
                         "account.profileImage.hint",
