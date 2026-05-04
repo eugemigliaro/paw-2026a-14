@@ -76,10 +76,76 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                                 null,
                                 java.util.List.of()));
 
-        mockMvc.perform(get("/ping").param("lang", "es")).andExpect(status().isOk());
+        mockMvc.perform(get("/ping").param("lang", "es").param("persistLang", "true"))
+                .andExpect(status().isOk());
 
         Assertions.assertEquals(12L, capturedUserId.get());
         Assertions.assertEquals(UserLanguages.SPANISH, capturedLanguage.get());
+    }
+
+    @Test
+    void authenticatedPreservedLangParameterDoesNotPersistLanguage() throws Exception {
+        final AtomicLong capturedUserId = new AtomicLong(-1L);
+        Mockito.doAnswer(
+                        invocation -> {
+                            capturedUserId.set(invocation.getArgument(0));
+                            return null;
+                        })
+                .when(userService)
+                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new UsernamePasswordAuthenticationToken(
+                                new AuthenticatedUserPrincipal(
+                                        new User(
+                                                12L,
+                                                "player@test.com",
+                                                "player",
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                UserLanguages.ENGLISH),
+                                        UserRole.USER),
+                                null,
+                                java.util.List.of()));
+
+        mockMvc.perform(get("/ping").param("lang", "es")).andExpect(status().isOk());
+
+        Assertions.assertEquals(-1L, capturedUserId.get());
+    }
+
+    @Test
+    void unsupportedLangSwitchDoesNotPersistDefaultLanguage() throws Exception {
+        final AtomicLong capturedUserId = new AtomicLong(-1L);
+        Mockito.doAnswer(
+                        invocation -> {
+                            capturedUserId.set(invocation.getArgument(0));
+                            return null;
+                        })
+                .when(userService)
+                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new UsernamePasswordAuthenticationToken(
+                                new AuthenticatedUserPrincipal(
+                                        new User(
+                                                12L,
+                                                "player@test.com",
+                                                "player",
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                UserLanguages.SPANISH),
+                                        UserRole.USER),
+                                null,
+                                java.util.List.of()));
+
+        mockMvc.perform(get("/ping").param("lang", "fr").param("persistLang", "true"))
+                .andExpect(status().isOk());
+
+        Assertions.assertEquals(-1L, capturedUserId.get());
     }
 
     @Test

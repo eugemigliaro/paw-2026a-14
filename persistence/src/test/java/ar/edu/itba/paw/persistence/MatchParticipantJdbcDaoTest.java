@@ -822,6 +822,7 @@ public class MatchParticipantJdbcDaoTest {
 
     @Test
     public void testFindConfirmedParticipantsReturnsJoinedUsersInJoinOrder() {
+        jdbcTemplate.update("UPDATE users SET preferred_language = 'es' WHERE id = 2");
         jdbcTemplate.update(
                 "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
                         + " VALUES (10, 1, 'joined', TIMESTAMP '2026-04-06 10:00:00')");
@@ -840,6 +841,7 @@ public class MatchParticipantJdbcDaoTest {
         Assertions.assertEquals("User", participants.get(0).getLastName());
         Assertions.assertEquals("+1 555 123 4567", participants.get(0).getPhone());
         Assertions.assertEquals(20L, participants.get(0).getProfileImageId());
+        Assertions.assertEquals("es", participants.get(0).getPreferredLanguage());
         Assertions.assertEquals(1L, participants.get(1).getId());
         Assertions.assertEquals(3L, participants.get(2).getId());
     }

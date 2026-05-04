@@ -29,23 +29,25 @@
 </c:if>
 <c:url var="englishHref" value="${currentPath}">
   <c:forEach var="queryParam" items="${pageContext.request.parameterMap}">
-    <c:if test="${queryParam.key ne 'lang'}">
+    <c:if test="${queryParam.key ne 'lang' and queryParam.key ne 'persistLang'}">
       <c:forEach var="queryParamValue" items="${queryParam.value}">
         <c:param name="${queryParam.key}" value="${queryParamValue}" />
       </c:forEach>
     </c:if>
   </c:forEach>
   <c:param name="lang" value="en" />
+  <c:param name="persistLang" value="true" />
 </c:url>
 <c:url var="spanishHref" value="${currentPath}">
   <c:forEach var="queryParam" items="${pageContext.request.parameterMap}">
-    <c:if test="${queryParam.key ne 'lang'}">
+    <c:if test="${queryParam.key ne 'lang' and queryParam.key ne 'persistLang'}">
       <c:forEach var="queryParamValue" items="${queryParam.value}">
         <c:param name="${queryParam.key}" value="${queryParamValue}" />
       </c:forEach>
     </c:if>
   </c:forEach>
   <c:param name="lang" value="es" />
+  <c:param name="persistLang" value="true" />
 </c:url>
 <header class="site-header">
   <div class="site-header__inner">

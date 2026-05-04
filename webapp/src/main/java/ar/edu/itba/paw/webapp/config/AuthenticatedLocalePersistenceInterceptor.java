@@ -12,6 +12,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 public class AuthenticatedLocalePersistenceInterceptor implements HandlerInterceptor {
 
+    static final String PERSIST_LANGUAGE_PARAMETER = "persistLang";
     private final UserService userService;
 
     public AuthenticatedLocalePersistenceInterceptor(final UserService userService) {
@@ -24,20 +25,26 @@ public class AuthenticatedLocalePersistenceInterceptor implements HandlerInterce
             final HttpServletResponse response,
             final Object handler) {
         final String language = request.getParameter("lang");
-        if (language == null || language.isBlank()) {
+        if (!"true".equals(request.getParameter(PERSIST_LANGUAGE_PARAMETER))
+                || !UserLanguages.isSupportedLanguage(language)) {
             return true;
         }
 
         CurrentAuthenticatedUser.get()
                 .ifPresent(
                         principal -> {
-                            final Locale locale = LocaleContextHolder.getLocale();
+                            final String preferredLanguage = resolvedLanguage(language);
                             userService.updatePreferredLanguage(
-                                    principal.getUserId(),
-                                    locale == null
-                                            ? UserLanguages.normalizeLanguage(language)
-                                            : UserLanguages.fromLocale(locale));
+                                    principal.getUserId(), preferredLanguage);
                         });
         return true;
+    }
+
+    private static String resolvedLanguage(final String language) {
+        final Locale locale = LocaleContextHolder.getLocale();
+        if (locale != null && UserLanguages.isSupportedLanguage(locale.getLanguage())) {
+            return UserLanguages.fromLocale(locale);
+        }
+        return UserLanguages.normalizeLanguage(language);
     }
 }

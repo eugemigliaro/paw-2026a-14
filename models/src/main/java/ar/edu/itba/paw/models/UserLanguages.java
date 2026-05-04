@@ -15,11 +15,16 @@ public final class UserLanguages {
             return DEFAULT_LANGUAGE;
         }
 
-        final String normalized = language.trim().toLowerCase(Locale.ROOT);
-        if (normalized.startsWith(SPANISH)) {
+        final String normalized = primaryLanguage(language);
+        if (SPANISH.equals(normalized)) {
             return SPANISH;
         }
         return ENGLISH;
+    }
+
+    public static boolean isSupportedLanguage(final String language) {
+        final String normalized = primaryLanguage(language);
+        return ENGLISH.equals(normalized) || SPANISH.equals(normalized);
     }
 
     public static String fromLocale(final Locale locale) {
@@ -31,5 +36,14 @@ public final class UserLanguages {
 
     public static Locale toLocale(final String language) {
         return Locale.forLanguageTag(normalizeLanguage(language));
+    }
+
+    private static String primaryLanguage(final String language) {
+        if (language == null || language.isBlank()) {
+            return "";
+        }
+        final String normalized = language.trim().toLowerCase(Locale.ROOT).replace('_', '-');
+        final int separator = normalized.indexOf('-');
+        return separator < 0 ? normalized : normalized.substring(0, separator);
     }
 }
