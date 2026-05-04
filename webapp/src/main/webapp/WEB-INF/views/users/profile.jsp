@@ -340,17 +340,46 @@
 						<spring:message var="reviewFilterAria" code="profile.reviews.filter.aria" />
 						<nav class="public-profile-review-filter" aria-label="${reviewFilterAria}">
 							<span class="public-profile-review-filter__label"><spring:message code="profile.reviews.filter.label" /></span>
-							<div class="public-profile-review-filter__options">
-								<c:forEach var="option" items="${reviewFilterOptions}">
-									<c:url var="reviewFilterHref" value="${option.href}" />
-									<a
-										class="public-profile-review-filter__option ${option.active ? 'is-active' : ''}"
-										href="${reviewFilterHref}"
-										aria-current="${option.active ? 'true' : 'false'}">
-										<c:out value="${option.label}" />
-									</a>
-								</c:forEach>
-							</div>
+							<c:set var="reviewFilterCurrentValue" value="both" />
+							<c:forEach var="option" items="${reviewFilterOptions}" varStatus="optionStatus">
+								<c:choose>
+									<c:when test="${optionStatus.index eq 0}">
+										<c:set var="reviewFilterLeftLabel" value="${option.label}" />
+										<c:set var="reviewFilterLeftHref" value="${option.href}" />
+										<c:if test="${option.active}">
+											<c:set var="reviewFilterCurrentValue" value="both" />
+										</c:if>
+									</c:when>
+									<c:when test="${optionStatus.index eq 1}">
+										<c:set var="reviewFilterRightLabel" value="${option.label}" />
+										<c:set var="reviewFilterRightHref" value="${option.href}" />
+										<c:if test="${option.active}">
+											<c:set var="reviewFilterCurrentValue" value="positive" />
+										</c:if>
+									</c:when>
+									<c:when test="${optionStatus.index eq 2}">
+										<c:set var="reviewFilterThirdLabel" value="${option.label}" />
+										<c:set var="reviewFilterThirdHref" value="${option.href}" />
+										<c:if test="${option.active}">
+											<c:set var="reviewFilterCurrentValue" value="bad" />
+										</c:if>
+									</c:when>
+								</c:choose>
+							</c:forEach>
+							<ui:eventsFilterToggle
+								id="profile-review-filter-toggle"
+								className="public-profile-review-filter__toggle"
+								currentValue="${reviewFilterCurrentValue}"
+								leftValue="both"
+								rightValue="positive"
+								thirdValue="bad"
+								leftLabel="${reviewFilterLeftLabel}"
+								rightLabel="${reviewFilterRightLabel}"
+								thirdLabel="${reviewFilterThirdLabel}"
+								leftHref="${reviewFilterLeftHref}"
+								rightHref="${reviewFilterRightHref}"
+								thirdHref="${reviewFilterThirdHref}"
+								forceLeftOnEmpty="${false}" />
 						</nav>
 					</c:if>
 

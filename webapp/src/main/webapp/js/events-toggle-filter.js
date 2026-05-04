@@ -12,7 +12,7 @@
 		}
 
 		eventsButtons.forEach(function(button) {
-			button.addEventListener("click", function() {
+			button.addEventListener("click", function(event) {
 				var value = button.dataset.value;
 				var isPast = value === "past";
 				var currentUrl = new URL(window.location);
@@ -20,8 +20,20 @@
 				eventsSlider.classList.toggle("right", isPast);
 				eventsButtons.forEach(function(otherButton) {
 					otherButton.classList.remove("active");
+					otherButton.setAttribute("aria-current", "false");
 				});
 				button.classList.add("active");
+				button.setAttribute("aria-current", "true");
+				toggleRoot.style.setProperty(
+					"--events-toggle-index",
+					String(Array.prototype.indexOf.call(eventsButtons, button))
+				);
+
+				if (button.href) {
+					return;
+				}
+
+				event.preventDefault();
 
 				if (isPast) {
 					currentUrl.searchParams.set("filter", "past");

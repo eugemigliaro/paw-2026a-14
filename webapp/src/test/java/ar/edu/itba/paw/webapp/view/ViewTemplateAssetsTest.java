@@ -477,9 +477,18 @@ class ViewTemplateAssetsTest {
     void eventsListUsesReusableEventsToggleTag() throws IOException {
         final Path toggleTagPath = Path.of("src/main/webapp/WEB-INF/tags/eventsFilterToggle.tag");
         final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+        final String profile = read("src/main/webapp/WEB-INF/views/users/profile.jsp");
+        final String toggleTag = read("src/main/webapp/WEB-INF/tags/eventsFilterToggle.tag");
 
         assertTrue(Files.exists(toggleTagPath));
         assertTrue(eventsList.contains("<ui:eventsFilterToggle"));
+        assertTrue(profile.contains("<ui:eventsFilterToggle"));
+        assertTrue(profile.contains("id=\"profile-review-filter-toggle\""));
+        assertFalse(profile.contains("public-profile-review-filter__options"));
+        assertFalse(profile.contains("public-profile-review-filter__option"));
+        assertTrue(toggleTag.contains("thirdValue"));
+        assertTrue(toggleTag.contains("leftHref"));
+        assertTrue(toggleTag.contains("data-events-toggle-options"));
     }
 
     @Test
