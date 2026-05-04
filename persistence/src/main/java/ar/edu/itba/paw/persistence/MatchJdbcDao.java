@@ -43,6 +43,7 @@ public class MatchJdbcDao implements MatchDao {
 
     private static final String MATCH_SELECT_WITH_JOINED_PLAYERS =
             "SELECT m.id, m.sport, m.host_user_id, m.address, m.title, m.description,"
+                    + " m.latitude, m.longitude,"
                     + " m.starts_at, m.ends_at, m.max_players, m.price_per_player,"
                     + " m.visibility, m.join_policy, m.series_id, m.series_occurrence_index, "
                     + DERIVED_STATUS_SQL
@@ -70,6 +71,8 @@ public class MatchJdbcDao implements MatchDao {
                         Sport.fromDbValue(rs.getString("sport")).orElse(Sport.FOOTBALL),
                         rs.getLong("host_user_id"),
                         rs.getString("address"),
+                        rs.getObject("latitude") == null ? null : rs.getDouble("latitude"),
+                        rs.getObject("longitude") == null ? null : rs.getDouble("longitude"),
                         rs.getString("title"),
                         rs.getString("description"),
                         startsAt.toInstant(),
@@ -129,11 +132,15 @@ public class MatchJdbcDao implements MatchDao {
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
             final Long bannerImageId,
+            final Double latitude,
+            final Double longitude,
             final Long seriesId,
             final Integer seriesOccurrenceIndex) {
         final Map<String, Object> values = new HashMap<>();
         values.put("host_user_id", hostUserId);
         values.put("address", address);
+        values.put("latitude", latitude);
+        values.put("longitude", longitude);
         values.put("title", title);
         values.put("description", description);
         values.put("starts_at", Timestamp.from(startsAt));
@@ -158,6 +165,8 @@ public class MatchJdbcDao implements MatchDao {
                 sport,
                 hostUserId,
                 address,
+                latitude,
+                longitude,
                 title,
                 description,
                 startsAt,
@@ -211,13 +220,16 @@ public class MatchJdbcDao implements MatchDao {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final Long bannerImageId) {
+            final Long bannerImageId,
+            final Double latitude,
+            final Double longitude) {
         final int updatedRows =
                 jdbcTemplate.update(
                         "UPDATE matches"
                                 + " SET address = ?, title = ?, description = ?, starts_at = ?,"
                                 + " ends_at = ?, max_players = ?, price_per_player = ?, sport = ?,"
                                 + " visibility = ?, join_policy = ?, status = ?, banner_image_id = ?,"
+                                + " latitude = ?, longitude = ?,"
                                 + " updated_at = CURRENT_TIMESTAMP"
                                 + " WHERE id = ? AND host_user_id = ?",
                         address,
@@ -232,6 +244,8 @@ public class MatchJdbcDao implements MatchDao {
                         new SqlParameterValue(Types.OTHER, joinPolicy.getValue()),
                         new SqlParameterValue(Types.OTHER, status.getValue()),
                         bannerImageId,
+                        latitude,
+                        longitude,
                         matchId,
                         hostUserId);
 
@@ -353,7 +367,52 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(" AND m.deleted = FALSE");
         sql.append(BASE_GROUP_BY);
         appendOpenSpotsConstraint(sql);
-        appendSort(sql, sort);
+        appendSort(sql, params, sort, null, null);
+        sql.append(" LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        return jdbcTemplate.query(sql.toString(), MATCH_ROW_MAPPER, params.toArray());
+    }
+
+    @Override
+    public List<Match> findPublicMatches(
+            final String query,
+            final List<Sport> sports,
+            final EventTimeFilter timeFilter,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final MatchSort sort,
+            final ZoneId zoneId,
+            final Double latitude,
+            final Double longitude,
+            final int offset,
+            final int limit) {
+        final StringBuilder sql = new StringBuilder();
+        final List<Object> params = new ArrayList<>();
+
+        sql.append(MATCH_SELECT_WITH_JOINED_PLAYERS);
+        sql.append(BASE_FROM);
+        sql.append(" WHERE 1=1");
+        appendFilters(
+                sql,
+                params,
+                query,
+                sports,
+                timeFilter,
+                startsAtFrom,
+                startsAtTo,
+                zoneId,
+                minPrice,
+                maxPrice,
+                List.of(EventVisibility.PUBLIC),
+                List.of(EventStatus.OPEN),
+                Boolean.TRUE);
+        sql.append(BASE_GROUP_BY);
+        appendOpenSpotsConstraint(sql);
+        appendSort(sql, params, sort, latitude, longitude);
         sql.append(" LIMIT ? OFFSET ?");
         params.add(limit);
         params.add(offset);
@@ -659,10 +718,34 @@ public class MatchJdbcDao implements MatchDao {
         sql.append(")");
     }
 
-    private static void appendSort(final StringBuilder sql, final MatchSort sort) {
+    private static void appendSort(
+            final StringBuilder sql,
+            final List<Object> params,
+            final MatchSort sort,
+            final Double latitude,
+            final Double longitude) {
         final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
 
         switch (safeSort) {
+            case DISTANCE:
+                if (latitude != null && longitude != null) {
+                    final double cosLatitude = Math.cos(Math.toRadians(latitude));
+                    sql.append(" ORDER BY CASE WHEN m.latitude IS NULL OR m.longitude IS NULL")
+                            .append(" THEN 1 ELSE 0 END ASC,")
+                            .append(" CASE WHEN m.latitude IS NULL OR m.longitude IS NULL")
+                            .append(" THEN 0 ELSE ((m.latitude - ?) * (m.latitude - ?))")
+                            .append(" + ((m.longitude - ?) * ? * (m.longitude - ?) * ?)")
+                            .append(" END ASC, m.starts_at ASC, m.id ASC");
+                    params.add(latitude);
+                    params.add(latitude);
+                    params.add(longitude);
+                    params.add(cosLatitude);
+                    params.add(longitude);
+                    params.add(cosLatitude);
+                    break;
+                }
+                sql.append(" ORDER BY m.starts_at ASC, m.id ASC");
+                break;
             case PRICE_LOW:
                 sql.append(
                         " ORDER BY COALESCE(m.price_per_player, 0) ASC, m.starts_at ASC, m.id ASC");
@@ -682,7 +765,7 @@ public class MatchJdbcDao implements MatchDao {
     private static void appendSort(
             final StringBuilder sql, final MatchSort sort, final Boolean upcoming) {
         if (upcoming == null || upcoming) {
-            appendSort(sql, sort);
+            appendSort(sql, new ArrayList<>(), sort, null, null);
             return;
         }
 

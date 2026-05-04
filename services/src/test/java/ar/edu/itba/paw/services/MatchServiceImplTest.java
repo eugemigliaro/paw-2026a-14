@@ -97,6 +97,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 10,
                                 10))
                 .thenReturn(List.of(match));
@@ -146,6 +148,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(match));
@@ -185,6 +189,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(footballMatch, tennisMatch));
@@ -234,6 +240,8 @@ public class MatchServiceImplTest {
                                 maxPrice,
                                 MatchSort.PRICE_LOW,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(match));
@@ -282,6 +290,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 12,
                                 12))
                 .thenReturn(List.of(match));
@@ -314,7 +324,9 @@ public class MatchServiceImplTest {
                                 EventVisibility.PUBLIC,
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
-                                null))
+                                null,
+                                (Double) null,
+                                (Double) null))
                 .thenReturn(expectedMatch);
 
         final Match result =
@@ -417,6 +429,8 @@ public class MatchServiceImplTest {
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 1))
                 .thenReturn(firstOccurrence);
@@ -435,6 +449,8 @@ public class MatchServiceImplTest {
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 2))
                 .thenReturn(secondOccurrence);
@@ -453,6 +469,8 @@ public class MatchServiceImplTest {
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 3))
                 .thenReturn(thirdOccurrence);
@@ -551,6 +569,8 @@ public class MatchServiceImplTest {
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 88L,
                                 1))
                 .thenReturn(firstOccurrence);
@@ -569,6 +589,8 @@ public class MatchServiceImplTest {
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 88L,
                                 2))
                 .thenReturn(secondOccurrence);
@@ -958,6 +980,8 @@ public class MatchServiceImplTest {
                                 EventVisibility.PUBLIC,
                                 EventJoinPolicy.APPROVAL_REQUIRED,
                                 EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1005,6 +1029,8 @@ public class MatchServiceImplTest {
                                 EventVisibility.PUBLIC,
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(false);
 
@@ -1267,6 +1293,8 @@ public class MatchServiceImplTest {
                                 EventVisibility.PUBLIC,
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
         Mockito.when(
@@ -1284,6 +1312,8 @@ public class MatchServiceImplTest {
                                 EventVisibility.PUBLIC,
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1619,6 +1649,8 @@ public class MatchServiceImplTest {
                                 EventVisibility.PUBLIC,
                                 EventJoinPolicy.DIRECT,
                                 EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 

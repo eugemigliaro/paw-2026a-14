@@ -29,6 +29,7 @@ import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -43,21 +44,63 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class HostController {
 
+    private static final double DEFAULT_MAP_LATITUDE = -34.6037;
+    private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
+    private static final int DEFAULT_MAP_ZOOM = 14;
+
     private final MatchService matchService;
     private final ImageService imageService;
     private final Clock clock;
     private final MessageSource messageSource;
+    private final boolean mapPickerEnabled;
+    private final String mapTileUrlTemplate;
+    private final String mapAttribution;
+    private final double mapDefaultLatitude;
+    private final double mapDefaultLongitude;
+    private final int mapDefaultZoom;
 
     @Autowired
     public HostController(
             final MatchService matchService,
             final ImageService imageService,
             final Clock clock,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
+            @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
+            @Value("${map.tiles.attribution:}") final String mapAttribution,
+            @Value("${map.default.latitude:" + DEFAULT_MAP_LATITUDE + "}")
+                    final double mapDefaultLatitude,
+            @Value("${map.default.longitude:" + DEFAULT_MAP_LONGITUDE + "}")
+                    final double mapDefaultLongitude,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
         this.imageService = imageService;
         this.clock = clock;
         this.messageSource = messageSource;
+        this.mapPickerEnabled = mapPickerEnabled;
+        this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
+        this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
+        this.mapDefaultLatitude = mapDefaultLatitude;
+        this.mapDefaultLongitude = mapDefaultLongitude;
+        this.mapDefaultZoom = mapDefaultZoom;
+    }
+
+    public HostController(
+            final MatchService matchService,
+            final ImageService imageService,
+            final Clock clock,
+            final MessageSource messageSource) {
+        this(
+                matchService,
+                imageService,
+                clock,
+                messageSource,
+                false,
+                "",
+                "",
+                DEFAULT_MAP_LATITUDE,
+                DEFAULT_MAP_LONGITUDE,
+                DEFAULT_MAP_ZOOM);
     }
 
     @ModelAttribute("createEventForm")
@@ -81,6 +124,7 @@ public class HostController {
 
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
+        validateCoordinates(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -121,6 +165,8 @@ public class HostController {
                 new CreateMatchRequest(
                         actingUserId,
                         createEventForm.getAddress(),
+                        parseCoordinate(createEventForm.getLatitude()),
+                        parseCoordinate(createEventForm.getLongitude()),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
                         startsAt,
@@ -166,6 +212,7 @@ public class HostController {
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
+        validateCoordinates(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -215,7 +262,9 @@ public class HostController {
                         visibility,
                         joinPolicy,
                         existingMatch.getStatus(),
-                        bannerImageId);
+                        bannerImageId,
+                        parseCoordinate(createEventForm.getLatitude()),
+                        parseCoordinate(createEventForm.getLongitude()));
 
         try {
             matchService.updateMatch(parsedMatchId, actingUserId, request);
@@ -283,6 +332,7 @@ public class HostController {
         final HostFormConfig formConfig = seriesEditFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
+        validateCoordinates(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -396,6 +446,12 @@ public class HostController {
         mav.addObject("submitButtonId", formConfig.submitButtonId());
         mav.addObject("isEditMode", formConfig.editMode());
         mav.addObject("isSeriesEditMode", formConfig.seriesEditMode());
+        mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
+        mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
+        mav.addObject("mapAttribution", mapAttribution);
+        mav.addObject("mapDefaultLatitude", mapDefaultLatitude);
+        mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
+        mav.addObject("mapDefaultZoom", mapDefaultZoom);
         return mav;
     }
 
@@ -497,6 +553,8 @@ public class HostController {
         form.setTitle(match.getTitle());
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
+        form.setLatitude(match.getLatitude() == null ? "" : match.getLatitude().toString());
+        form.setLongitude(match.getLongitude() == null ? "" : match.getLongitude().toString());
         form.setSport(match.getSport().getDbValue());
         form.setVisibility(match.getVisibility().getValue());
         form.setJoinPolicy(match.getJoinPolicy().getValue());
@@ -530,7 +588,9 @@ public class HostController {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageId);
+                bannerImageId,
+                parseCoordinate(form.getLatitude()),
+                parseCoordinate(form.getLongitude()));
     }
 
     private Instant resolveEndsAt(final Match match) {
@@ -659,6 +719,56 @@ public class HostController {
         if (!validJoinPolicy) {
             bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.invalid");
         }
+    }
+
+    private void validateCoordinates(
+            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
+        final String latitude = normalizeBlank(form.getLatitude());
+        final String longitude = normalizeBlank(form.getLongitude());
+        final boolean hasLatitude = !latitude.isEmpty();
+        final boolean hasLongitude = !longitude.isEmpty();
+
+        if (hasLatitude != hasLongitude) {
+            bindingResult.rejectValue(
+                    hasLatitude ? "longitude" : "latitude",
+                    "CreateEventForm.coordinates.Pair",
+                    messageSource.getMessage("CreateEventForm.coordinates.Pair", null, locale));
+            return;
+        }
+        if (!hasLatitude) {
+            return;
+        }
+
+        final Double parsedLatitude = parseCoordinate(latitude);
+        final Double parsedLongitude = parseCoordinate(longitude);
+        if (parsedLatitude == null || parsedLatitude < -90 || parsedLatitude > 90) {
+            bindingResult.rejectValue(
+                    "latitude",
+                    "CreateEventForm.coordinates.Invalid",
+                    messageSource.getMessage("CreateEventForm.coordinates.Invalid", null, locale));
+        }
+        if (parsedLongitude == null || parsedLongitude < -180 || parsedLongitude > 180) {
+            bindingResult.rejectValue(
+                    "longitude",
+                    "CreateEventForm.coordinates.Invalid",
+                    messageSource.getMessage("CreateEventForm.coordinates.Invalid", null, locale));
+        }
+    }
+
+    private static Double parseCoordinate(final String value) {
+        final String normalized = normalizeBlank(value);
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        try {
+            return Double.valueOf(normalized);
+        } catch (final NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private static String normalizeBlank(final String value) {
+        return value == null ? "" : value.trim();
     }
 
     private static String normalize(final String value) {

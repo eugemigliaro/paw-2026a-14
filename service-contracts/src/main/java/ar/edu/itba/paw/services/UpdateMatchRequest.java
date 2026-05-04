@@ -10,6 +10,8 @@ import java.time.Instant;
 public class UpdateMatchRequest {
 
     private final String address;
+    private final Double latitude;
+    private final Double longitude;
     private final String title;
     private final String description;
     private final Instant startsAt;
@@ -46,7 +48,9 @@ public class UpdateMatchRequest {
                 visibility,
                 defaultJoinPolicyForVisibility(visibility),
                 status,
-                bannerImageId);
+                bannerImageId,
+                null,
+                null);
     }
 
     public UpdateMatchRequest(
@@ -62,7 +66,41 @@ public class UpdateMatchRequest {
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
             final Long bannerImageId) {
+        this(
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                null,
+                null);
+    }
+
+    public UpdateMatchRequest(
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
+            final Long bannerImageId,
+            final Double latitude,
+            final Double longitude) {
         this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.title = title;
         this.description = description;
         this.startsAt = startsAt;
@@ -85,6 +123,14 @@ public class UpdateMatchRequest {
 
     public String getAddress() {
         return address;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
     }
 
     public String getTitle() {

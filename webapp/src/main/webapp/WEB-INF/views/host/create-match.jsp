@@ -16,6 +16,7 @@
 								<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
 								<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
 								<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
+								<spring:message var="locationMapAria" code="host.form.location.map.aria" />
 								<spring:message var="sportPadel" code="sport.padel" />
 								<spring:message var="sportFootball" code="sport.football" />
 								<spring:message var="sportTennis" code="sport.tennis" />
@@ -180,6 +181,44 @@
 														<form:errors path="address" cssClass="field__error"
 															element="span" />
 													</label>
+													<form:hidden path="latitude" id="match-location-latitude" />
+													<form:hidden path="longitude" id="match-location-longitude" />
+													<form:errors path="latitude" cssClass="field__error" element="span" />
+													<form:errors path="longitude" cssClass="field__error" element="span" />
+													<c:if test="${mapPickerEnabled}">
+														<section
+															class="location-picker"
+															data-location-picker="true"
+															data-tile-url-template="${mapTileUrlTemplate}"
+															data-attribution="${mapAttribution}"
+															data-default-latitude="${mapDefaultLatitude}"
+															data-default-longitude="${mapDefaultLongitude}"
+															data-default-zoom="${mapDefaultZoom}">
+															<div class="location-picker__header">
+																<div>
+																	<span class="field__label"><spring:message code="host.form.location.map" /></span>
+																</div>
+																<div class="location-picker__actions">
+																	<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
+																		<spring:message code="host.form.location.zoomOut" />
+																	</button>
+																	<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
+																		<spring:message code="host.form.location.zoomIn" />
+																	</button>
+																	<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
+																		<spring:message code="host.form.location.current" />
+																	</button>
+																	<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
+																		<spring:message code="host.form.location.clear" />
+																	</button>
+																</div>
+															</div>
+															<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
+															<c:if test="${not empty mapAttribution}">
+																<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
+															</c:if>
+														</section>
+													</c:if>
 													<div class="form-card__grid form-card__grid--datetime">
 														<label class="field" for="match-date">
 															<span class="field__label">

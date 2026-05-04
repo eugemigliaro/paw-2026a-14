@@ -9,6 +9,8 @@ public class Match {
     private final Sport sport;
     private final Long hostUserId;
     private final String address;
+    private final Double latitude;
+    private final Double longitude;
     private final String title;
     private final String description;
     private final Instant startsAt;
@@ -48,6 +50,8 @@ public class Match {
                 sport,
                 hostUserId,
                 address,
+                null,
+                null,
                 title,
                 description,
                 startsAt,
@@ -90,6 +94,8 @@ public class Match {
                 sport,
                 hostUserId,
                 address,
+                null,
+                null,
                 title,
                 description,
                 startsAt,
@@ -114,6 +120,54 @@ public class Match {
             final Sport sport,
             final Long hostUserId,
             final String address,
+            final Double latitude,
+            final Double longitude,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
+            final int joinedPlayers,
+            final Long bannerImageId,
+            final Long seriesId,
+            final Integer seriesOccurrenceIndex) {
+        this(
+                id,
+                sport,
+                hostUserId,
+                address,
+                latitude,
+                longitude,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                visibility,
+                joinPolicy,
+                status,
+                joinedPlayers,
+                bannerImageId,
+                seriesId,
+                seriesOccurrenceIndex,
+                false,
+                null,
+                null,
+                null);
+    }
+
+    public Match(
+            final Long id,
+            final Sport sport,
+            final Long hostUserId,
+            final String address,
+            final Double latitude,
+            final Double longitude,
             final String title,
             final String description,
             final Instant startsAt,
@@ -135,6 +189,8 @@ public class Match {
         this.sport = sport;
         this.hostUserId = hostUserId;
         this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.title = title;
         this.description = description;
         this.startsAt = startsAt;
@@ -168,6 +224,18 @@ public class Match {
 
     public String getAddress() {
         return address;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public boolean hasCoordinates() {
+        return latitude != null && longitude != null;
     }
 
     public String getTitle() {
@@ -271,15 +339,12 @@ public class Match {
                 + getAvailableSpots()
                 + ", pricePerPlayer="
                 + pricePerPlayer
-                + ", visibility='"
+                + ", visibility="
                 + visibility
-                + '\''
-                + ", joinPolicy='"
+                + ", joinPolicy="
                 + joinPolicy
-                + '\''
-                + ", status='"
+                + ", status="
                 + status
-                + '\''
                 + ", bannerImageId="
                 + bannerImageId
                 + ", seriesId="

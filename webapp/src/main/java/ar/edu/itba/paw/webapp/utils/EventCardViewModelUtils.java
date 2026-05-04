@@ -39,6 +39,30 @@ public final class EventCardViewModelUtils {
             final UserService userService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService) {
+        return toCard(
+                match,
+                zoneId,
+                locale,
+                currentUserId,
+                badge,
+                null,
+                messageSource,
+                userService,
+                matchParticipationService,
+                matchReservationService);
+    }
+
+    public static EventCardViewModel toCard(
+            final Match match,
+            final ZoneId zoneId,
+            final Locale locale,
+            final Long currentUserId,
+            final String badge,
+            final String distanceLabel,
+            final MessageSource messageSource,
+            final UserService userService,
+            final MatchParticipationService matchParticipationService,
+            final MatchReservationService matchReservationService) {
         final Locale resolvedLocale = resolvedLocale(locale);
         final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
         final List<EventRelationshipBadgeViewModel> relationshipBadges =
@@ -67,6 +91,7 @@ public final class EventCardViewModelUtils {
                 relationshipBadges,
                 recurringLabel(match, locale, messageSource),
                 null,
+                distanceLabel,
                 mediaClassFor(match.getSport()),
                 bannerUrlFor(match));
     }
