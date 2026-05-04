@@ -25,6 +25,7 @@ class ViewTemplateAssetsTest {
     @Test
     void hostCreateMatchUsesSharedTimezoneScriptInsteadOfLegacyPageScript() throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String buttonTag = read("src/main/webapp/WEB-INF/tags/button.tag");
 
         assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
@@ -32,6 +33,8 @@ class ViewTemplateAssetsTest {
                 hostCreateMatch.contains(
                         "<c:url var=\"resolvedFormAction\" value=\"${formAction}\""));
         assertFalse(hostCreateMatch.contains("${pageContext.request.contextPath}${formAction}"));
+        assertFalse(buttonTag.contains("name=\"formAction\""));
+        assertTrue(buttonTag.contains("name=\"submitAction\""));
     }
 
     @Test
