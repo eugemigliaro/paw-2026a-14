@@ -40,6 +40,10 @@ public class MatchServiceImpl implements MatchService {
     private static final int MAX_PLAYERS_PER_MATCH = 1000;
     private static final int MIN_RECURRING_OCCURRENCES = 2;
     private static final int MAX_RECURRING_OCCURRENCES = 52;
+    private static final String VISIBILITY_PUBLIC = "public";
+    private static final String VISIBILITY_PRIVATE = "private";
+    private static final String JOIN_POLICY_DIRECT = "direct";
+    private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
@@ -177,6 +181,8 @@ public class MatchServiceImpl implements MatchService {
                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
                     message("match.update.error.capacityBelowConfirmed"));
         }
+        final ParticipationPolicyTransition participationPolicyTransition =
+                validateAndPlanParticipationPolicyTransition(match, request, confirmedParticipants);
 
         final boolean updated =
                 matchDao.updateMatch(
@@ -207,8 +213,120 @@ public class MatchServiceImpl implements MatchService {
                                         new MatchUpdateException(
                                                 MatchUpdateFailureReason.MATCH_NOT_FOUND,
                                                 message("match.update.error.notFound")));
+        applyParticipationPolicyTransition(updatedMatch, participationPolicyTransition);
         matchNotificationService.notifyMatchUpdated(updatedMatch);
         return updatedMatch;
+    }
+
+    private ParticipationPolicyTransition validateAndPlanParticipationPolicyTransition(
+            final Match match, final UpdateMatchRequest request, final int confirmedParticipants) {
+        if (wasPrivate(match) && isPublic(request)) {
+            return ParticipationPolicyTransition.cancelInvitations(
+                    matchParticipantDao.findInvitedUsers(match.getId()));
+        }
+        if (wasApprovalRequired(match) && isPrivate(request)) {
+            return ParticipationPolicyTransition.cancelPendingRequests(
+                    matchParticipantDao.findPendingRequests(match.getId()));
+        }
+        if (wasApprovalRequired(match) && isDirectPublic(request)) {
+            final int pendingRequests = matchParticipantDao.countPendingRequests(match.getId());
+            final int availableSpots = request.getMaxPlayers() - confirmedParticipants;
+            if (pendingRequests > availableSpots) {
+                throw new MatchUpdateException(
+                        MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE,
+                        message("match.update.error.pendingRequestsExceedAvailable"));
+            }
+            return ParticipationPolicyTransition.approvePendingRequests(
+                    matchParticipantDao.findPendingRequests(match.getId()));
+        }
+        return ParticipationPolicyTransition.none();
+    }
+
+    private void applyParticipationPolicyTransition(
+            final Match updatedMatch, final ParticipationPolicyTransition transition) {
+        if (transition.isEmpty()) {
+            return;
+        }
+        if (transition.type() == ParticipationPolicyTransitionType.CANCEL_INVITATIONS) {
+            matchNotificationService.notifyInvitationOpenedToPublic(
+                    updatedMatch, transition.affectedUsers());
+            matchParticipantDao.cancelPendingInvitations(updatedMatch.getId());
+            return;
+        }
+        if (transition.type() == ParticipationPolicyTransitionType.CANCEL_PENDING_REQUESTS) {
+            matchNotificationService.notifyPendingRequestClosedByPrivacyChange(
+                    updatedMatch, transition.affectedUsers());
+            matchParticipantDao.cancelPendingRequests(updatedMatch.getId());
+            return;
+        }
+        matchParticipantDao.approveAllPendingRequests(updatedMatch.getId());
+        for (final User user : transition.affectedUsers()) {
+            matchNotificationService.notifyPlayerRequestApproved(updatedMatch, user);
+        }
+    }
+
+    private static boolean wasPrivate(final Match match) {
+        return VISIBILITY_PRIVATE.equalsIgnoreCase(match.getVisibility());
+    }
+
+    private static boolean wasApprovalRequired(final Match match) {
+        return VISIBILITY_PUBLIC.equalsIgnoreCase(match.getVisibility())
+                && JOIN_POLICY_APPROVAL_REQUIRED.equalsIgnoreCase(match.getJoinPolicy());
+    }
+
+    private static boolean isPublic(final UpdateMatchRequest request) {
+        return VISIBILITY_PUBLIC.equalsIgnoreCase(request.getVisibility());
+    }
+
+    private static boolean isPrivate(final UpdateMatchRequest request) {
+        return VISIBILITY_PRIVATE.equalsIgnoreCase(request.getVisibility());
+    }
+
+    private static boolean isDirectPublic(final UpdateMatchRequest request) {
+        return isPublic(request) && JOIN_POLICY_DIRECT.equalsIgnoreCase(request.getJoinPolicy());
+    }
+
+    private enum ParticipationPolicyTransitionType {
+        NONE,
+        CANCEL_INVITATIONS,
+        CANCEL_PENDING_REQUESTS,
+        APPROVE_PENDING_REQUESTS
+    }
+
+    private record ParticipationPolicyTransition(
+            ParticipationPolicyTransitionType type, List<User> affectedUsers) {
+
+        private static ParticipationPolicyTransition none() {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.NONE, List.of());
+        }
+
+        private static ParticipationPolicyTransition cancelInvitations(final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.CANCEL_INVITATIONS, safeUsers(users));
+        }
+
+        private static ParticipationPolicyTransition cancelPendingRequests(final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.CANCEL_PENDING_REQUESTS, safeUsers(users));
+        }
+
+        private static ParticipationPolicyTransition approvePendingRequests(
+                final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.APPROVE_PENDING_REQUESTS, safeUsers(users));
+        }
+
+        private boolean isEmpty() {
+            return type == ParticipationPolicyTransitionType.NONE || affectedUsers.isEmpty();
+        }
+
+        private static List<User> safeUsers(final List<User> users) {
+            if (users == null || users.isEmpty()) {
+                return List.of();
+            }
+            return List.copyOf(users);
+        }
     }
 
     @Override

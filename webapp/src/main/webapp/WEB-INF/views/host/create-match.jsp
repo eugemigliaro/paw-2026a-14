@@ -266,7 +266,7 @@
 															<spring:message code="host.form.visibility" />
 														</span>
 														<c:choose>
-															<c:when test="${isEditMode}">
+															<c:when test="${isSeriesEditMode}">
 																<div class="account-locked-field">
 																	<input type="text"
 																		class="field__control account-readonly-control account-readonly-control--muted"
@@ -303,7 +303,7 @@
 															<spring:message code="host.form.joinPolicy" />
 														</span>
 														<c:choose>
-															<c:when test="${isEditMode}">
+															<c:when test="${isSeriesEditMode}">
 																<div class="account-locked-field">
 																	<input type="text"
 																		class="field__control account-readonly-control account-readonly-control--muted"

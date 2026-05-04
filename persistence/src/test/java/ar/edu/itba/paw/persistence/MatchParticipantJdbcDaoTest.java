@@ -883,6 +883,54 @@ public class MatchParticipantJdbcDaoTest {
         Assertions.assertEquals(1, pendingRows);
     }
 
+    @Test
+    public void testCancelPendingInvitationsCancelsOnlyInvitedRows() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'invited', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int updatedRows = matchParticipantDao.cancelPendingInvitations(10L);
+
+        Assertions.assertEquals(1, updatedRows);
+        Assertions.assertEquals("cancelled", participantStatus(10L, 2L));
+        Assertions.assertEquals("joined", participantStatus(10L, 3L));
+    }
+
+    @Test
+    public void testCancelPendingRequestsCancelsOnlyPendingApprovalRows() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'pending_approval', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int updatedRows = matchParticipantDao.cancelPendingRequests(10L);
+
+        Assertions.assertEquals(1, updatedRows);
+        Assertions.assertEquals("cancelled", participantStatus(10L, 2L));
+        Assertions.assertEquals("joined", participantStatus(10L, 3L));
+    }
+
+    @Test
+    public void testApproveAllPendingRequestsJoinsOnlyPendingApprovalRows() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'pending_approval', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'invited', CURRENT_TIMESTAMP)");
+
+        final int updatedRows = matchParticipantDao.approveAllPendingRequests(10L);
+
+        Assertions.assertEquals(1, updatedRows);
+        Assertions.assertEquals("joined", participantStatus(10L, 2L));
+        Assertions.assertEquals("invited", participantStatus(10L, 3L));
+    }
+
     private String participantStatus(final Long matchId, final Long userId) {
         return jdbcTemplate.queryForObject(
                 "SELECT status FROM match_participants WHERE match_id = ? AND user_id = ?",

@@ -21,6 +21,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -961,6 +963,259 @@ public class MatchServiceImplTest {
         Assertions.assertEquals("Updated Address", result.getAddress());
         Assertions.assertEquals("approval_required", result.getJoinPolicy());
         Mockito.verify(matchNotificationService).notifyMatchUpdated(updatedMatch);
+    }
+
+    @Test
+    public void testUpdateMatchFromPrivateToPublicCancelsPendingInvitations() {
+        // 1. Arrange
+        final Match existingMatch =
+                createTestMatch(18L, "Private Match", "football", "private", "invite_only");
+        final Match updatedMatch =
+                createTestMatch(18L, "Private Match", "football", "public", "direct");
+        final List<User> invitedUsers = List.of(new User(2L, "invited@test.com", "invited"));
+        final AtomicBoolean invitationsCancelled = new AtomicBoolean(false);
+        final AtomicBoolean notificationSent = new AtomicBoolean(false);
+        Mockito.when(matchDao.findById(18L))
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(updatedMatch));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(18L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDao.findInvitedUsers(18L)).thenReturn(invitedUsers);
+        Mockito.when(matchParticipantDao.cancelPendingInvitations(18L))
+                .thenAnswer(
+                        invocation -> {
+                            invitationsCancelled.set(true);
+                            return 1;
+                        });
+        Mockito.doAnswer(
+                        invocation -> {
+                            notificationSent.set(true);
+                            return null;
+                        })
+                .when(matchNotificationService)
+                .notifyInvitationOpenedToPublic(updatedMatch, invitedUsers);
+        Mockito.when(
+                        matchDao.updateMatch(
+                                18L,
+                                1L,
+                                "Test Address",
+                                "Private Match",
+                                "Test Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                "public",
+                                "direct",
+                                "open",
+                                null))
+                .thenReturn(true);
+
+        // 2. Exercise
+        matchService.updateMatch(
+                18L,
+                1L,
+                new UpdateMatchRequest(
+                        "Test Address",
+                        "Private Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        10,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "direct",
+                        "open",
+                        null));
+
+        // 3. Assert
+        Assertions.assertTrue(notificationSent.get());
+        Assertions.assertTrue(invitationsCancelled.get());
+    }
+
+    @Test
+    public void testUpdateMatchFromRequestOnlyToPrivateCancelsPendingRequests() {
+        // 1. Arrange
+        final Match existingMatch =
+                createTestMatch(19L, "Request Match", "football", "public", "approval_required");
+        final Match updatedMatch =
+                createTestMatch(19L, "Request Match", "football", "private", "invite_only");
+        final List<User> pendingUsers = List.of(new User(2L, "pending@test.com", "pending"));
+        final AtomicBoolean requestsCancelled = new AtomicBoolean(false);
+        final AtomicBoolean notificationSent = new AtomicBoolean(false);
+        Mockito.when(matchDao.findById(19L))
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(updatedMatch));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(19L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDao.findPendingRequests(19L)).thenReturn(pendingUsers);
+        Mockito.when(matchParticipantDao.cancelPendingRequests(19L))
+                .thenAnswer(
+                        invocation -> {
+                            requestsCancelled.set(true);
+                            return 1;
+                        });
+        Mockito.doAnswer(
+                        invocation -> {
+                            notificationSent.set(true);
+                            return null;
+                        })
+                .when(matchNotificationService)
+                .notifyPendingRequestClosedByPrivacyChange(updatedMatch, pendingUsers);
+        Mockito.when(
+                        matchDao.updateMatch(
+                                19L,
+                                1L,
+                                "Test Address",
+                                "Request Match",
+                                "Test Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                "private",
+                                "invite_only",
+                                "open",
+                                null))
+                .thenReturn(true);
+
+        // 2. Exercise
+        matchService.updateMatch(
+                19L,
+                1L,
+                new UpdateMatchRequest(
+                        "Test Address",
+                        "Request Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        10,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "private",
+                        "invite_only",
+                        "open",
+                        null));
+
+        // 3. Assert
+        Assertions.assertTrue(notificationSent.get());
+        Assertions.assertTrue(requestsCancelled.get());
+    }
+
+    @Test
+    public void testUpdateMatchFromRequestOnlyToOpenRejectsWhenPendingRequestsExceedSpots() {
+        // 1. Arrange
+        final Match existingMatch =
+                createTestMatch(20L, "Request Match", "football", "public", "approval_required");
+        Mockito.when(matchDao.findById(20L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(20L))
+                .thenReturn(
+                        List.of(
+                                new User(2L, "confirmed@test.com", "confirmed"),
+                                new User(3L, "second@test.com", "second")));
+        Mockito.when(matchParticipantDao.countPendingRequests(20L)).thenReturn(2);
+
+        // 2. Exercise
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        20L,
+                                        1L,
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Request Match",
+                                                "Test Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                3,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                "public",
+                                                "direct",
+                                                "open",
+                                                null)));
+
+        // 3. Assert
+        Assertions.assertEquals(
+                MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE, exception.getReason());
+        Assertions.assertEquals(
+                "match.update.error.pendingRequestsExceedAvailable", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateMatchFromRequestOnlyToOpenApprovesPendingRequestsWhenThereIsSpace() {
+        // 1. Arrange
+        final Match existingMatch =
+                createTestMatch(24L, "Request Match", "football", "public", "approval_required");
+        final Match updatedMatch =
+                createTestMatch(24L, "Request Match", "football", "public", "direct");
+        final List<User> pendingUsers =
+                List.of(
+                        new User(2L, "first@test.com", "first"),
+                        new User(3L, "second@test.com", "second"));
+        final AtomicBoolean requestsApproved = new AtomicBoolean(false);
+        final AtomicInteger approvalNotifications = new AtomicInteger(0);
+        Mockito.when(matchDao.findById(24L))
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(updatedMatch));
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(24L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDao.countPendingRequests(24L)).thenReturn(2);
+        Mockito.when(matchParticipantDao.findPendingRequests(24L)).thenReturn(pendingUsers);
+        Mockito.when(matchParticipantDao.approveAllPendingRequests(24L))
+                .thenAnswer(
+                        invocation -> {
+                            requestsApproved.set(true);
+                            return 2;
+                        });
+        Mockito.doAnswer(
+                        invocation -> {
+                            approvalNotifications.incrementAndGet();
+                            return null;
+                        })
+                .when(matchNotificationService)
+                .notifyPlayerRequestApproved(Mockito.eq(updatedMatch), Mockito.any(User.class));
+        Mockito.when(
+                        matchDao.updateMatch(
+                                24L,
+                                1L,
+                                "Test Address",
+                                "Request Match",
+                                "Test Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                4,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                "public",
+                                "direct",
+                                "open",
+                                null))
+                .thenReturn(true);
+
+        // 2. Exercise
+        matchService.updateMatch(
+                24L,
+                1L,
+                new UpdateMatchRequest(
+                        "Test Address",
+                        "Request Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        "public",
+                        "direct",
+                        "open",
+                        null));
+
+        // 3. Assert
+        Assertions.assertTrue(requestsApproved.get());
+        Assertions.assertEquals(2, approvalNotifications.get());
     }
 
     @Test
@@ -1963,6 +2218,15 @@ public class MatchServiceImplTest {
     }
 
     private Match createTestMatch(final Long id, final String title, final String sport) {
+        return createTestMatch(id, title, sport, "public", "direct");
+    }
+
+    private Match createTestMatch(
+            final Long id,
+            final String title,
+            final String sport,
+            final String visibility,
+            final String joinPolicy) {
         return new Match(
                 id,
                 Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
@@ -1974,7 +2238,8 @@ public class MatchServiceImplTest {
                 null,
                 10,
                 BigDecimal.ZERO,
-                "public",
+                visibility,
+                joinPolicy,
                 "open",
                 0,
                 null);

@@ -22,6 +22,10 @@ public interface MatchNotificationService {
 
     void notifyPlayerRequestRejected(Match match, User player);
 
+    void notifyPendingRequestClosedByPrivacyChange(Match match, List<User> players);
+
+    void notifyInvitationOpenedToPublic(Match match, List<User> players);
+
     void notifyHostInviteAccepted(Match match, User player);
 
     void notifyHostInviteDeclined(Match match, User player);

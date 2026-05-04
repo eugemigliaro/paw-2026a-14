@@ -153,6 +153,30 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
     }
 
     @Override
+    public void notifyPendingRequestClosedByPrivacyChange(
+            final Match match, final List<User> players) {
+        for (final User player : safeUsers(players)) {
+            final MatchLifecycleMailTemplateData templateData =
+                    buildTemplateData(player, match, null);
+            final MailContent content =
+                    templateRenderer.renderPendingRequestClosedByPrivacyChangeNotification(
+                            templateData);
+            mailDispatchService.dispatch(player.getEmail(), content);
+        }
+    }
+
+    @Override
+    public void notifyInvitationOpenedToPublic(final Match match, final List<User> players) {
+        for (final User player : safeUsers(players)) {
+            final MatchLifecycleMailTemplateData templateData =
+                    buildTemplateData(player, match, null);
+            final MailContent content =
+                    templateRenderer.renderInvitationOpenedToPublicNotification(templateData);
+            mailDispatchService.dispatch(player.getEmail(), content);
+        }
+    }
+
+    @Override
     public void notifyHostInviteAccepted(final Match match, final User player) {
         userService
                 .findById(match.getHostUserId())
@@ -242,6 +266,13 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return List.of();
         }
         return matches.stream().filter(match -> match != null).toList();
+    }
+
+    private static List<User> safeUsers(final List<User> users) {
+        if (users == null || users.isEmpty()) {
+            return List.of();
+        }
+        return users.stream().filter(user -> user != null && user.getEmail() != null).toList();
     }
 
     private record AffectedRecurringParticipant(
