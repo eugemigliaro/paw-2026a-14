@@ -42,6 +42,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @PreAuthorize("isAuthenticated()")
@@ -208,7 +209,8 @@ public class HostController {
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
-            final Locale locale) {
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
         final Match existingMatch = findOwnedEditableMatchOrThrowNotFound(matchId, actingUserId);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
@@ -314,7 +316,8 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        return new ModelAndView("redirect:/matches/" + matchId + "?hostAction=updated");
+        redirectAttributes.addFlashAttribute("hostAction", "updated");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
@@ -332,7 +335,8 @@ public class HostController {
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
-            final Locale locale) {
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
         final Match existingMatch =
                 findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUserId);
@@ -408,12 +412,15 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        return new ModelAndView("redirect:/matches/" + matchId + "?hostAction=seriesUpdated");
+        redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/cancel")
     @PreAuthorize("@securityService.isHost(#matchId)")
-    public ModelAndView cancelEvent(@PathVariable("matchId") final Long matchId) {
+    public ModelAndView cancelEvent(
+            @PathVariable("matchId") final Long matchId,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
         findOwnedMatchOrThrowNotFound(matchId, actingUserId);
         try {
@@ -421,12 +428,15 @@ public class HostController {
         } catch (final MatchCancellationException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return new ModelAndView("redirect:/matches/" + matchId + "?hostAction=cancelled");
+        redirectAttributes.addFlashAttribute("hostAction", "cancelled");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/series/cancel")
     @PreAuthorize("@securityService.isHost(#matchId)")
-    public ModelAndView cancelSeries(@PathVariable("matchId") final Long matchId) {
+    public ModelAndView cancelSeries(
+            @PathVariable("matchId") final Long matchId,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
         findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUserId);
         try {
@@ -434,7 +444,8 @@ public class HostController {
         } catch (final MatchCancellationException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return new ModelAndView("redirect:/matches/" + matchId + "?hostAction=seriesCancelled");
+        redirectAttributes.addFlashAttribute("hostAction", "seriesCancelled");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
     private ModelAndView hostFormView(

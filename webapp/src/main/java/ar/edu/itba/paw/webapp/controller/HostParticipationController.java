@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class HostParticipationController {
@@ -127,7 +128,8 @@ public class HostParticipationController {
     public ModelAndView approveRequest(
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
-            final Locale locale) {
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final long hostUserId = requireAuthenticatedUserId();
         final Match match = requireHostMatch(matchId, hostUserId);
 
@@ -137,8 +139,8 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.approveRequest(matchId, hostUserId, userId);
-            return new ModelAndView(
-                    "redirect:/host/matches/" + matchId + "/requests?action=approved");
+            redirectAttributes.addFlashAttribute("action", "approved");
+            return new ModelAndView("redirect:/host/matches/" + matchId + "/requests");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/host/matches/" + matchId + "/requests?error=" + e.getCode());
@@ -150,7 +152,8 @@ public class HostParticipationController {
     public ModelAndView rejectRequest(
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
-            final Locale locale) {
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final long hostUserId = requireAuthenticatedUserId();
         final Match match = requireHostMatch(matchId, hostUserId);
 
@@ -160,8 +163,8 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.rejectRequest(matchId, hostUserId, userId);
-            return new ModelAndView(
-                    "redirect:/host/matches/" + matchId + "/requests?action=rejected");
+            redirectAttributes.addFlashAttribute("action", "rejected");
+            return new ModelAndView("redirect:/host/matches/" + matchId + "/requests");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/host/matches/" + matchId + "/requests?error=" + e.getCode());
@@ -193,7 +196,8 @@ public class HostParticipationController {
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("inviteForm") final InviteForm inviteForm,
             final BindingResult bindingResult,
-            final Locale locale) {
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final long hostUserId = requireAuthenticatedUserId();
         final Match match = requireHostMatch(matchId, hostUserId);
 
@@ -210,11 +214,9 @@ public class HostParticipationController {
                     inviteForm.isInviteSeries() && match.getSeriesId() != null;
             matchParticipationService.inviteUser(
                     matchId, hostUserId, inviteForm.getEmail(), includeSeries);
-            return new ModelAndView(
-                    "redirect:/host/matches/"
-                            + matchId
-                            + "/invites?action="
-                            + (includeSeries ? "seriesInvited" : "invited"));
+            redirectAttributes.addFlashAttribute(
+                    "action", includeSeries ? "seriesInvited" : "invited");
+            return new ModelAndView("redirect:/host/matches/" + matchId + "/invites");
         } catch (final MatchParticipationException e) {
             final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
             return buildInviteView(match, matchId, hostUserId, inviteForm, errorMsg, locale);
@@ -307,13 +309,14 @@ public class HostParticipationController {
     public ModelAndView removeParticipant(
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
-            final Locale locale) {
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final long hostUserId = requireAuthenticatedUserId();
 
         try {
             matchParticipationService.removeParticipant(matchId, hostUserId, userId);
-            return new ModelAndView(
-                    "redirect:/host/matches/" + matchId + "/participants?action=removed");
+            redirectAttributes.addFlashAttribute("action", "removed");
+            return new ModelAndView("redirect:/host/matches/" + matchId + "/participants");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/host/matches/" + matchId + "/participants?error=" + e.getCode());
