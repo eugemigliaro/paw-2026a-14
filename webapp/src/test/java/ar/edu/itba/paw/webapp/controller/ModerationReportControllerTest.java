@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -91,7 +92,8 @@ class ModerationReportControllerTest {
                                 .param("reason", "harassment")
                                 .param("details", "Bad behavior"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/reports/users/target?report=sent"));
+                .andExpect(redirectedUrl("/reports/users/target"))
+                .andExpect(flash().attribute("reportSent", true));
     }
 
     @Test
@@ -159,7 +161,8 @@ class ModerationReportControllerTest {
 
         mockMvc.perform(post("/reports/matches/42").param("reason", "harassment"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/reports/matches/42?report=sent"));
+                .andExpect(redirectedUrl("/reports/matches/42"))
+                .andExpect(flash().attribute("reportSent", true));
     }
 
     private static void authenticateUser(final Long userId) {

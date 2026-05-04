@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -100,7 +101,8 @@ class ModerationAdminControllerTest {
 
         mockMvc.perform(post("/admin/reports/17/finalize-appeal").param("appealDecision", "upheld"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/reports?action=appeal_upheld"));
+                .andExpect(redirectedUrl("/admin/reports"))
+                .andExpect(flash().attribute("action", "appeal_upheld"));
     }
 
     @Test

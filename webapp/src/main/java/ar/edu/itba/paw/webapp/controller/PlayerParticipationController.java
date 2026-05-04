@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class PlayerParticipationController {
@@ -25,13 +26,16 @@ public class PlayerParticipationController {
     }
 
     @PostMapping("/matches/{matchId}/join-requests")
-    public ModelAndView requestToJoin(@PathVariable("matchId") final String matchId) {
+    public ModelAndView requestToJoin(
+            @PathVariable("matchId") final String matchId,
+            final RedirectAttributes redirectAttributes) {
         final long userId = requireAuthenticatedUserId();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
             matchParticipationService.requestToJoin(resolvedMatchId, userId);
-            return new ModelAndView("redirect:/matches/" + resolvedMatchId + "?join=requested");
+            redirectAttributes.addFlashAttribute("joinRequested", true);
+            return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/matches/" + resolvedMatchId + "?joinError=" + e.getCode());
@@ -42,14 +46,16 @@ public class PlayerParticipationController {
         "/matches/{matchId}/recurring-join-requests",
         "/matches/{matchId}/series-join-requests"
     })
-    public ModelAndView requestToJoinSeries(@PathVariable("matchId") final String matchId) {
+    public ModelAndView requestToJoinSeries(
+            @PathVariable("matchId") final String matchId,
+            final RedirectAttributes redirectAttributes) {
         final long userId = requireAuthenticatedUserId();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
             matchParticipationService.requestToJoinSeries(resolvedMatchId, userId);
-            return new ModelAndView(
-                    "redirect:/matches/" + resolvedMatchId + "?join=recurringRequested");
+            redirectAttributes.addFlashAttribute("seriesJoinRequested", true);
+            return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/matches/" + resolvedMatchId + "?joinError=" + e.getCode());
@@ -57,13 +63,16 @@ public class PlayerParticipationController {
     }
 
     @PostMapping("/matches/{matchId}/join-requests/cancel")
-    public ModelAndView cancelJoinRequest(@PathVariable("matchId") final String matchId) {
+    public ModelAndView cancelJoinRequest(
+            @PathVariable("matchId") final String matchId,
+            final RedirectAttributes redirectAttributes) {
         final long userId = requireAuthenticatedUserId();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
             matchParticipationService.cancelJoinRequest(resolvedMatchId, userId);
-            return new ModelAndView("redirect:/matches/" + resolvedMatchId + "?join=cancelled");
+            redirectAttributes.addFlashAttribute("joinStatus", "cancelled");
+            return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/matches/" + resolvedMatchId + "?joinError=" + e.getCode());
@@ -71,13 +80,16 @@ public class PlayerParticipationController {
     }
 
     @PostMapping("/matches/{matchId}/invites/accept")
-    public ModelAndView acceptInvite(@PathVariable("matchId") final String matchId) {
+    public ModelAndView acceptInvite(
+            @PathVariable("matchId") final String matchId,
+            final RedirectAttributes redirectAttributes) {
         final long userId = requireAuthenticatedUserId();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
             matchParticipationService.acceptInvite(resolvedMatchId, userId);
-            return new ModelAndView("redirect:/matches/" + resolvedMatchId + "?invite=accepted");
+            redirectAttributes.addFlashAttribute("inviteStatus", "accepted");
+            return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
             return new ModelAndView(
                     "redirect:/matches/" + resolvedMatchId + "?inviteError=" + e.getCode());

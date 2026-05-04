@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class HostController {
@@ -161,6 +162,7 @@ public class HostController {
             @PathVariable("matchId") final String matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();
@@ -265,7 +267,8 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=updated");
+        redirectAttributes.addFlashAttribute("hostAction", "updated");
+        return new ModelAndView("redirect:/matches/" + parsedMatchId);
     }
 
     @GetMapping("/host/matches/{matchId}/series/edit")
@@ -283,6 +286,7 @@ public class HostController {
             @PathVariable("matchId") final String matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();
@@ -359,11 +363,14 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=seriesUpdated");
+        redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
+        return new ModelAndView("redirect:/matches/" + parsedMatchId);
     }
 
     @PostMapping("/host/matches/{matchId}/cancel")
-    public ModelAndView cancelEvent(@PathVariable("matchId") final String matchId) {
+    public ModelAndView cancelEvent(
+            @PathVariable("matchId") final String matchId,
+            final RedirectAttributes redirectAttributes) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();
         findOwnedMatchOrThrowNotFound(parsedMatchId, actingUserId);
@@ -372,11 +379,14 @@ public class HostController {
         } catch (final MatchCancellationException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=cancelled");
+        redirectAttributes.addFlashAttribute("hostAction", "cancelled");
+        return new ModelAndView("redirect:/matches/" + parsedMatchId);
     }
 
     @PostMapping("/host/matches/{matchId}/series/cancel")
-    public ModelAndView cancelSeries(@PathVariable("matchId") final String matchId) {
+    public ModelAndView cancelSeries(
+            @PathVariable("matchId") final String matchId,
+            final RedirectAttributes redirectAttributes) {
         final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
         final Long actingUserId = requireAuthenticatedUserId();
         findOwnedEditableRecurringMatchOrThrowNotFound(parsedMatchId, actingUserId);
@@ -385,8 +395,8 @@ public class HostController {
         } catch (final MatchCancellationException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return new ModelAndView(
-                "redirect:/matches/" + parsedMatchId + "?hostAction=seriesCancelled");
+        redirectAttributes.addFlashAttribute("hostAction", "seriesCancelled");
+        return new ModelAndView("redirect:/matches/" + parsedMatchId);
     }
 
     private ModelAndView hostFormView(

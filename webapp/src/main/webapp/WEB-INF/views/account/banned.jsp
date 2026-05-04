@@ -18,10 +18,10 @@
 						<c:out value="${banDescription}" />
 					</p>
 
-					<c:if test="${param.action eq 'appealed'}">
-						<p class="auth-notice auth-notice--success">
-							<spring:message code="account.ban.appeal.sent" />
-						</p>
+						<c:if test="${action eq 'appealed'}">
+							<p class="auth-notice auth-notice--success">
+								<spring:message code="account.ban.appeal.sent" />
+							</p>
 					</c:if>
 					<c:if test="${not empty param.error}">
 						<p class="auth-notice auth-notice--error">

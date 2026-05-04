@@ -18,9 +18,9 @@
 					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>
 				</header>
 
-				<c:if test="${param.action eq 'appealed'}">
-					<div class="notice notice--success"><spring:message code="reports.mine.action.appealed" /></div>
-				</c:if>
+					<c:if test="${action eq 'appealed'}">
+						<div class="notice notice--success"><spring:message code="reports.mine.action.appealed" /></div>
+					</c:if>
 				<c:if test="${not empty param.error}">
 					<div class="notice notice--error">
 						<c:choose>

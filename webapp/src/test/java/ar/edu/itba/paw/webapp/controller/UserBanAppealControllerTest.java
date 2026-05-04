@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -78,7 +79,8 @@ class UserBanAppealControllerTest {
 
         mockMvc.perform(post("/account/ban/appeal").param("appealReason", "Please review"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/account/ban?action=appealed"));
+                .andExpect(redirectedUrl("/account/ban"))
+                .andExpect(flash().attribute("action", "appealed"));
     }
 
     private static UserBan sampleBan() {

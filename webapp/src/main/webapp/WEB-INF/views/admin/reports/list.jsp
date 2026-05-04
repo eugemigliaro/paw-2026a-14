@@ -18,20 +18,20 @@
 					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>
 				</header>
 
-				<c:if test="${not empty param.action}">
-					<div class="notice notice--success">
-						<c:choose>
-							<c:when test="${param.action eq 'reviewed'}"><spring:message code="admin.reports.action.reviewed" /></c:when>
-							<c:when test="${param.action eq 'dismissed'}"><spring:message code="admin.reports.action.dismissed" /></c:when>
-							<c:when test="${param.action eq 'warned'}"><spring:message code="admin.reports.action.warned" /></c:when>
-							<c:when test="${param.action eq 'deleted'}"><spring:message code="admin.reports.action.deleted" /></c:when>
-							<c:when test="${param.action eq 'banned'}"><spring:message code="admin.reports.action.banned" /></c:when>
-							<c:when test="${param.action eq 'ban_appeal_resolved'}"><spring:message code="admin.reports.action.ban_appeal_resolved" /></c:when>
-							<c:when test="${param.action eq 'appeal_upheld'}"><spring:message code="admin.reports.action.appeal_upheld" /></c:when>
-							<c:when test="${param.action eq 'appeal_lifted'}"><spring:message code="admin.reports.action.appeal_lifted" /></c:when>
-						</c:choose>
-					</div>
-				</c:if>
+					<c:if test="${not empty action}">
+						<div class="notice notice--success">
+							<c:choose>
+								<c:when test="${action eq 'reviewed'}"><spring:message code="admin.reports.action.reviewed" /></c:when>
+								<c:when test="${action eq 'dismissed'}"><spring:message code="admin.reports.action.dismissed" /></c:when>
+								<c:when test="${action eq 'warned'}"><spring:message code="admin.reports.action.warned" /></c:when>
+								<c:when test="${action eq 'deleted'}"><spring:message code="admin.reports.action.deleted" /></c:when>
+								<c:when test="${action eq 'banned'}"><spring:message code="admin.reports.action.banned" /></c:when>
+								<c:when test="${action eq 'ban_appeal_resolved'}"><spring:message code="admin.reports.action.ban_appeal_resolved" /></c:when>
+								<c:when test="${action eq 'appeal_upheld'}"><spring:message code="admin.reports.action.appeal_upheld" /></c:when>
+								<c:when test="${action eq 'appeal_lifted'}"><spring:message code="admin.reports.action.appeal_lifted" /></c:when>
+							</c:choose>
+						</div>
+					</c:if>
 				<c:if test="${not empty param.error}">
 					<div class="notice notice--error">
 						<c:choose>
