@@ -1,7 +1,13 @@
-document.getElementById('report-filter-form')
-    .querySelectorAll('input[type="checkbox"]')
-    .forEach(function (cb) {
+(function() {
+    var form = document.getElementById('report-filter-form');
+
+    if (!form) {
+        return;
+    }
+
+    form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
         cb.addEventListener('change', function () {
-            document.getElementById('report-filter-form').submit();
+            form.submit();
         });
     });
+}) ();
