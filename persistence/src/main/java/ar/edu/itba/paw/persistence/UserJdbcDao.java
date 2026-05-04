@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -35,7 +36,8 @@ public class UserJdbcDao implements UserDao {
                             rs.getString("phone"),
                             rs.getObject("profile_image_id") == null
                                     ? null
-                                    : rs.getLong("profile_image_id"));
+                                    : rs.getLong("profile_image_id"),
+                            rs.getString("preferred_language"));
 
     @NonNull
     private static final RowMapper<UserAccount> USER_ACCOUNT_ROW_MAPPER =
@@ -53,7 +55,8 @@ public class UserJdbcDao implements UserDao {
                                 : rs.getLong("profile_image_id"),
                         rs.getString("password_hash"),
                         UserRole.fromDbValue(rs.getString("role")).orElse(UserRole.USER),
-                        emailVerifiedAt == null ? null : emailVerifiedAt.toInstant());
+                        emailVerifiedAt == null ? null : emailVerifiedAt.toInstant(),
+                        rs.getString("preferred_language"));
             };
 
     private final JdbcTemplate jdbcTemplate;
@@ -77,6 +80,7 @@ public class UserJdbcDao implements UserDao {
         values.put("email", email);
         values.put("username", username);
         values.put("role", UserRole.USER.getDbValue());
+        values.put("preferred_language", UserLanguages.DEFAULT_LANGUAGE);
         values.put("email_verified_at", Timestamp.from(now));
         values.put("created_at", Timestamp.from(now));
         values.put("updated_at", Timestamp.from(now));
@@ -93,6 +97,7 @@ public class UserJdbcDao implements UserDao {
             final String name,
             final String lastName,
             final String phone,
+            final String preferredLanguage,
             final String passwordHash,
             final UserRole role,
             final Instant emailVerifiedAt) {
@@ -103,6 +108,7 @@ public class UserJdbcDao implements UserDao {
         values.put("name", name);
         values.put("last_name", lastName);
         values.put("phone", phone);
+        values.put("preferred_language", UserLanguages.normalizeLanguage(preferredLanguage));
         values.put("password_hash", passwordHash);
         values.put("role", role.getDbValue());
         values.put(
@@ -123,7 +129,8 @@ public class UserJdbcDao implements UserDao {
                 null,
                 passwordHash,
                 role,
-                emailVerifiedAt);
+                emailVerifiedAt,
+                preferredLanguage);
     }
 
     @Override
@@ -217,6 +224,15 @@ public class UserJdbcDao implements UserDao {
         jdbcTemplate.update(
                 "UPDATE users SET email_verified_at = ?, updated_at = ? WHERE id = ?",
                 Timestamp.from(emailVerifiedAt),
+                Timestamp.from(Instant.now()),
+                id);
+    }
+
+    @Override
+    public void updatePreferredLanguage(final Long id, final String preferredLanguage) {
+        jdbcTemplate.update(
+                "UPDATE users SET preferred_language = ?, updated_at = ? WHERE id = ?",
+                UserLanguages.normalizeLanguage(preferredLanguage),
                 Timestamp.from(Instant.now()),
                 id);
     }

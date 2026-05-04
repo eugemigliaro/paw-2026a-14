@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
@@ -13,7 +14,6 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -286,7 +286,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
     private MatchLifecycleMailTemplateData buildTemplateData(
             final User recipient, final Match match, final String actorName) {
-        final Locale locale = LocaleContextHolder.getLocale();
+        final Locale locale = UserLanguages.toLocale(recipient.getPreferredLanguage());
         final String sportLabel =
                 messageSource.getMessage(
                         "sport." + match.getSport().getDbValue(),

@@ -154,6 +154,16 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void languageSwitcherMarksOnlyExplicitLanguageSwitchesForPersistence() throws IOException {
+        final String siteHeader = read("src/main/webapp/WEB-INF/views/includes/site-header.jspf");
+
+        assertTrue(siteHeader.contains("<c:param name=\"persistLang\" value=\"true\" />"));
+        assertTrue(
+                siteHeader.contains(
+                        "queryParam.key ne 'lang' and queryParam.key ne 'persistLang'"));
+    }
+
+    @Test
     void hostCreateMatchUsesHiddenCoordinateFieldsWithoutVisibleCoordinateCopy()
             throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");

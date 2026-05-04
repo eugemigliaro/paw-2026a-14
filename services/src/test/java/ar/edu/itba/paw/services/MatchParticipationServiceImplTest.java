@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -643,6 +645,48 @@ public class MatchParticipationServiceImplTest {
         Assertions.assertEquals(
                 "Series invitation", mailDispatchService.contents.get(0).getSubject());
         Assertions.assertEquals(2, mailOccurrenceCount.get());
+    }
+
+    @Test
+    public void testInviteUserUsesRecipientPreferredLanguageForMail() {
+        final Match match =
+                createMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600));
+        final User target =
+                new User(
+                        20L,
+                        "player@test.com",
+                        "player",
+                        "Jamie",
+                        "Rivera",
+                        null,
+                        null,
+                        UserLanguages.SPANISH);
+        final AtomicReference<java.util.Locale> capturedLocale = new AtomicReference<>();
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(userService.findByEmail("player@test.com")).thenReturn(Optional.of(target));
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, 20L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.hasInvitation(10L, 20L)).thenReturn(false);
+        Mockito.when(matchParticipantDao.inviteUser(10L, 20L)).thenReturn(true);
+        Mockito.when(templateRenderer.renderMatchInvitationNotification(Mockito.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedLocale.set(
+                                    invocation
+                                            .<ar.edu.itba.paw.services.mail
+                                                            .MatchLifecycleMailTemplateData>
+                                                    getArgument(0)
+                                            .getLocale());
+                            return new MailContent("invitation", "<p>invite</p>", "invite");
+                        });
+
+        matchParticipationService.inviteUser(10L, 1L, "player@test.com");
+
+        Assertions.assertEquals(java.util.Locale.of("es"), capturedLocale.get());
     }
 
     @Test

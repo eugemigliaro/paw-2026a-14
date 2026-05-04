@@ -1134,6 +1134,21 @@ class UiRouteTest {
                                         500L);
                         return currentUser;
                     }
+
+                    @Override
+                    public void updatePreferredLanguage(
+                            final Long id, final String preferredLanguage) {
+                        currentUser =
+                                new User(
+                                        currentUser.getId(),
+                                        currentUser.getEmail(),
+                                        currentUser.getUsername(),
+                                        currentUser.getName(),
+                                        currentUser.getLastName(),
+                                        currentUser.getPhone(),
+                                        currentUser.getProfileImageId(),
+                                        preferredLanguage);
+                    }
                 };
 
         final PlayerReviewService playerReviewService =

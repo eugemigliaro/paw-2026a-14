@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
@@ -22,7 +23,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -627,7 +627,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     private MatchLifecycleMailTemplateData buildInvitationTemplateData(
             final User recipient, final Match match) {
-        final Locale locale = LocaleContextHolder.getLocale();
+        final Locale locale = UserLanguages.toLocale(recipient.getPreferredLanguage());
         final String sportLabel =
                 messageSource.getMessage(
                         "sport." + match.getSport().getDbValue(),

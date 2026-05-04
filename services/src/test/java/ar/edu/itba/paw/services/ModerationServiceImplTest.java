@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.ReportStatus;
 import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
@@ -512,14 +513,25 @@ public class ModerationServiceImplTest {
     }
 
     @Test
-    public void finalizeReportAppeal_propagatesActiveLocaleToUnbanEmailTemplate() {
+    public void finalizeReportAppeal_usesStoredUserLocaleForUnbanEmailTemplate() {
         final Long userId = 88L;
         final Locale spanishLocale = Locale.of("es");
         final UserAccount account =
-                new UserAccount(userId, "test@test.com", "test", "hash", UserRole.USER, FIXED_NOW);
+                new UserAccount(
+                        userId,
+                        "test@test.com",
+                        "test",
+                        null,
+                        null,
+                        null,
+                        null,
+                        "hash",
+                        UserRole.USER,
+                        FIXED_NOW,
+                        UserLanguages.SPANISH);
         final AtomicReference<Locale> capturedLocale = new AtomicReference<>();
 
-        org.springframework.context.i18n.LocaleContextHolder.setLocale(spanishLocale);
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(Locale.ENGLISH);
         try {
             Mockito.when(userDao.findAccountById(userId)).thenReturn(Optional.of(account));
             Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://test.com");
@@ -568,7 +580,7 @@ public class ModerationServiceImplTest {
             Assertions.assertEquals(
                     spanishLocale,
                     capturedLocale.get(),
-                    "The locale active during the call must be used when rendering the unban email");
+                    "The stored user locale must be used when rendering the unban email");
         } finally {
             org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
         }

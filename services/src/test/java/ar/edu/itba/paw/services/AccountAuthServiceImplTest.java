@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.EmailActionRequest;
 import ar.edu.itba.paw.models.EmailActionStatus;
 import ar.edu.itba.paw.models.EmailActionType;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
@@ -86,7 +87,17 @@ public class AccountAuthServiceImplTest {
                 new AtomicReference<>();
         final UserAccount createdAccount =
                 new UserAccount(
-                        9L, "new@test.com", "new_user", "{bcrypt}hash", UserRole.USER, null);
+                        9L,
+                        "new@test.com",
+                        "new_user",
+                        null,
+                        null,
+                        null,
+                        null,
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        null,
+                        UserLanguages.ENGLISH);
 
         Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
         Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
@@ -97,12 +108,13 @@ public class AccountAuthServiceImplTest {
                                 ArgumentMatchers.eq("Jamie"),
                                 ArgumentMatchers.eq("Rivera"),
                                 ArgumentMatchers.eq("+1 555 123 4567"),
+                                ArgumentMatchers.eq(UserLanguages.ENGLISH),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq(UserRole.USER),
                                 ArgumentMatchers.isNull()))
                 .thenAnswer(
                         invocation -> {
-                            capturedPasswordHash.set(invocation.getArgument(5));
+                            capturedPasswordHash.set(invocation.getArgument(6));
                             return createdAccount;
                         });
         Mockito.when(
@@ -150,6 +162,7 @@ public class AccountAuthServiceImplTest {
         Assertions.assertNotNull(capturedTemplateData.get());
         Assertions.assertTrue(
                 capturedTemplateData.get().getConfirmationUrl().contains("/verifications/"));
+        Assertions.assertEquals(Locale.ENGLISH, capturedTemplateData.get().getLocale());
     }
 
     @Test
@@ -161,9 +174,14 @@ public class AccountAuthServiceImplTest {
                                         1L,
                                         "player@test.com",
                                         "player",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW.minusSeconds(300))));
+                                        FIXED_NOW.minusSeconds(300),
+                                        UserLanguages.ENGLISH)));
 
         final AccountRegistrationException exception =
                 Assertions.assertThrows(
@@ -190,9 +208,14 @@ public class AccountAuthServiceImplTest {
                                         2L,
                                         "pending@test.com",
                                         "pending",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        null)));
+                                        null,
+                                        UserLanguages.ENGLISH)));
 
         final AccountRegistrationException exception =
                 Assertions.assertThrows(
@@ -239,7 +262,17 @@ public class AccountAuthServiceImplTest {
     public void testRegisterAllowsMissingPhone() {
         final UserAccount createdAccount =
                 new UserAccount(
-                        9L, "new@test.com", "new_user", "{bcrypt}hash", UserRole.USER, null);
+                        9L,
+                        "new@test.com",
+                        "new_user",
+                        null,
+                        null,
+                        null,
+                        null,
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        null,
+                        UserLanguages.ENGLISH);
 
         Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
         Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
@@ -250,6 +283,7 @@ public class AccountAuthServiceImplTest {
                                 ArgumentMatchers.eq("Jamie"),
                                 ArgumentMatchers.eq("Rivera"),
                                 ArgumentMatchers.isNull(),
+                                ArgumentMatchers.eq(UserLanguages.ENGLISH),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq(UserRole.USER),
                                 ArgumentMatchers.isNull()))
@@ -295,9 +329,14 @@ public class AccountAuthServiceImplTest {
                                         3L,
                                         "verified@test.com",
                                         "verified",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW.minusSeconds(120))));
+                                        FIXED_NOW.minusSeconds(120),
+                                        UserLanguages.ENGLISH)));
 
         final Optional<VerificationRequestResult> result =
                 accountAuthService.resendVerification("verified@test.com");
@@ -307,9 +346,21 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testResendVerificationCreatesFreshTokenForUnverifiedAccount() {
+        final AtomicReference<VerificationMailTemplateData> capturedTemplateData =
+                new AtomicReference<>();
         final UserAccount pendingAccount =
                 new UserAccount(
-                        4L, "pending@test.com", "pending", "{bcrypt}hash", UserRole.USER, null);
+                        4L,
+                        "pending@test.com",
+                        "pending",
+                        null,
+                        null,
+                        null,
+                        null,
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        null,
+                        UserLanguages.SPANISH);
         Mockito.when(userDao.findAccountByEmail("pending@test.com"))
                 .thenReturn(Optional.of(pendingAccount));
         Mockito.when(
@@ -334,13 +385,18 @@ public class AccountAuthServiceImplTest {
                                 FIXED_NOW,
                                 FIXED_NOW));
         Mockito.when(templateRenderer.renderActionMail(ArgumentMatchers.any()))
-                .thenReturn(new MailContent("subject", "<p>html</p>", "text"));
+                .thenAnswer(
+                        invocation -> {
+                            capturedTemplateData.set(invocation.getArgument(0));
+                            return new MailContent("subject", "<p>html</p>", "text");
+                        });
 
         final Optional<VerificationRequestResult> result =
                 accountAuthService.resendVerification("pending@test.com");
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals("pending@test.com", result.orElseThrow().getEmail());
+        Assertions.assertEquals(Locale.of("es"), capturedTemplateData.get().getLocale());
     }
 
     @Test
@@ -406,7 +462,18 @@ public class AccountAuthServiceImplTest {
         final AtomicReference<VerificationMailTemplateData> capturedTemplateData =
                 new AtomicReference<>();
         final UserAccount account =
-                new UserAccount(6L, "legacy@test.com", "legacy", null, UserRole.USER, FIXED_NOW);
+                new UserAccount(
+                        6L,
+                        "legacy@test.com",
+                        "legacy",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        UserRole.USER,
+                        FIXED_NOW,
+                        UserLanguages.SPANISH);
 
         Mockito.when(userDao.findAccountByEmail("legacy@test.com"))
                 .thenReturn(Optional.of(account));
@@ -445,6 +512,7 @@ public class AccountAuthServiceImplTest {
         Assertions.assertNotNull(capturedTemplateData.get());
         Assertions.assertTrue(
                 capturedTemplateData.get().getConfirmationUrl().contains("/password-reset/"));
+        Assertions.assertEquals(Locale.of("es"), capturedTemplateData.get().getLocale());
     }
 
     @Test

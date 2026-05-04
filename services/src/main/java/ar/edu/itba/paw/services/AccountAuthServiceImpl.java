@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.EmailActionRequest;
 import ar.edu.itba.paw.models.EmailActionStatus;
 import ar.edu.itba.paw.models.EmailActionType;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
@@ -109,6 +110,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                             normalizedName,
                             normalizedLastName,
                             normalizedPhone,
+                            UserLanguages.fromLocale(locale),
                             passwordEncoder.encode(request.getPassword()),
                             UserRole.USER,
                             null);
@@ -134,7 +136,9 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         if (account.isEmpty() || account.get().isEmailVerified()) {
             return Optional.empty();
         }
-        return Optional.of(createAccountVerificationRequest(account.get(), locale));
+        return Optional.of(
+                createAccountVerificationRequest(
+                        account.get(), recipientLocale(account.get(), locale)));
     }
 
     @Override
@@ -194,7 +198,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         if (account.isEmpty() || !account.get().isEmailVerified()) {
             return Optional.empty();
         }
-        return Optional.of(createPasswordResetRequest(account.get(), locale));
+        return Optional.of(
+                createPasswordResetRequest(account.get(), recipientLocale(account.get(), locale)));
     }
 
     @Override
@@ -487,6 +492,13 @@ public class AccountAuthServiceImpl implements AccountAuthService {
 
     private static Locale currentLocale() {
         return resolvedLocale(LocaleContextHolder.getLocale());
+    }
+
+    private static Locale recipientLocale(final UserAccount account, final Locale fallbackLocale) {
+        if (account == null) {
+            return resolvedLocale(fallbackLocale);
+        }
+        return UserLanguages.toLocale(account.getPreferredLanguage());
     }
 
     private static Locale resolvedLocale(final Locale locale) {
