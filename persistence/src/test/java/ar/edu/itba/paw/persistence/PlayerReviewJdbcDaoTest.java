@@ -317,6 +317,86 @@ public class PlayerReviewJdbcDaoTest {
         Assertions.assertEquals(Set.of(3L, 4L), reviewableUserIds);
     }
 
+    @Test
+    public void shouldUpsertReview_WithNullComment_WhenDislikeReaction() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+
+        final PlayerReview review =
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, null);
+
+        final String commentInDb =
+                jdbcTemplate.queryForObject(
+                        "SELECT comment FROM player_reviews WHERE id = ?",
+                        String.class,
+                        review.getId());
+        Assertions.assertNull(
+                commentInDb, "NULL comment should be persisted for DISLIKE reactions");
+    }
+
+    @Test
+    public void shouldFindReviewableUserIds_WhenNoSharedMatches() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(11L, 3L, "joined");
+        joinMatch(12L, 4L, "joined");
+
+        final List<Long> reviewableUserIds = playerReviewDao.findReviewableUserIds(2L);
+
+        Assertions.assertTrue(
+                reviewableUserIds.isEmpty(),
+                "User with no shared completed matches should have no reviewable users");
+    }
+
+    @Test
+    public void shouldSoftDeleteReview_ExcludesReviewFromQueries() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+        final PlayerReview review =
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Good");
+
+        Assertions.assertFalse(
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 0).isEmpty());
+
+        final boolean deleted = playerReviewDao.softDeleteReview(2L, 3L);
+
+        Assertions.assertTrue(deleted);
+
+        final java.sql.Timestamp deletedAtAfter =
+                jdbcTemplate.queryForObject(
+                        "SELECT deleted_at FROM player_reviews WHERE id = ?",
+                        java.sql.Timestamp.class,
+                        review.getId());
+        Assertions.assertNotNull(deletedAtAfter, "deleted_at should be set after soft delete");
+
+        final List<PlayerReview> reviewsAfterDelete =
+                playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 0);
+        Assertions.assertTrue(
+                reviewsAfterDelete.isEmpty(),
+                "Soft-deleted review should be excluded from queries");
+    }
+
+    @Test
+    public void shouldUpsertReview_UpdatesExistingReviewIdempotently() {
+        joinMatch(10L, 2L, "joined");
+        joinMatch(10L, 3L, "joined");
+
+        final PlayerReview first =
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, "Great");
+
+        final PlayerReview second =
+                playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, null);
+
+        Assertions.assertEquals(first.getId(), second.getId());
+        Assertions.assertEquals(PlayerReviewReaction.DISLIKE, second.getReaction());
+
+        final Integer countInDb =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM player_reviews WHERE reviewer_user_id = 2 AND reviewed_user_id = 3 AND deleted_at IS NULL",
+                        Integer.class);
+        Assertions.assertEquals(
+                1, countInDb, "Should have exactly one review record after upsert update");
+    }
+
     private void insertMatch(final Long id, final String status, final Instant startsAt) {
         jdbcTemplate.update(
                 "INSERT INTO matches "
