@@ -425,6 +425,18 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
     }
 
     @Override
+    public int countPendingRequests(final Long matchId) {
+        final Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE match_id = ?"
+                                + " AND status = 'pending_approval'",
+                        Integer.class,
+                        matchId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public List<PendingJoinRequest> findPendingRequestsForHost(final Long hostUserId) {
         return jdbcTemplate.query(
                 "SELECT m.id, m.sport, m.host_user_id, m.address, m.title, m.description,"
@@ -468,6 +480,17 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         matchId,
                         userId);
         return rows == 1;
+    }
+
+    @Override
+    public int approveAllPendingRequests(final Long matchId) {
+        return jdbcTemplate.update(
+                "UPDATE match_participants"
+                        + " SET status = 'joined', series_request = FALSE,"
+                        + " joined_at = CURRENT_TIMESTAMP"
+                        + " WHERE match_id = ?"
+                        + " AND status = 'pending_approval'",
+                matchId);
     }
 
     @Override
@@ -606,6 +629,16 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         matchId,
                         userId);
         return rows == 1;
+    }
+
+    @Override
+    public int cancelPendingRequests(final Long matchId) {
+        return jdbcTemplate.update(
+                "UPDATE match_participants"
+                        + " SET status = 'cancelled', series_request = FALSE"
+                        + " WHERE match_id = ?"
+                        + " AND status = 'pending_approval'",
+                matchId);
     }
 
     @Override
@@ -779,6 +812,16 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                         + " ORDER BY mp.joined_at ASC, u.username ASC",
                 (rs, rowNum) ->
                         new User(rs.getLong("id"), rs.getString("email"), rs.getString("username")),
+                matchId);
+    }
+
+    @Override
+    public int cancelPendingInvitations(final Long matchId) {
+        return jdbcTemplate.update(
+                "UPDATE match_participants"
+                        + " SET status = 'cancelled', series_request = FALSE"
+                        + " WHERE match_id = ?"
+                        + " AND status = 'invited'",
                 matchId);
     }
 

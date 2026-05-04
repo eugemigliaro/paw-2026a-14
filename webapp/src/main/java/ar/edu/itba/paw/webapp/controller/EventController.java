@@ -43,12 +43,14 @@ import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class EventController {
@@ -127,18 +129,25 @@ public class EventController {
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
             @RequestParam(value = "invite", required = false) final String inviteStatus,
             @RequestParam(value = "inviteError", required = false) final String inviteErrorCode,
+            final Model model,
             final Locale locale) {
+        final String resolvedReservationStatus =
+                flashString(model, "reservationStatus").orElse(reservationStatus);
+        final String resolvedJoinStatus = flashString(model, "joinStatus").orElse(joinStatus);
+        final String resolvedInviteStatus = flashString(model, "inviteStatus").orElse(inviteStatus);
         return showRealEventDetails(
                 parseEventIdOrThrowNotFound(eventId),
-                reservationStatus,
-                hostAction,
+                resolvedReservationStatus,
+                flashString(model, "hostAction").orElse(hostAction),
                 reservationError,
                 seriesReservationErrorCode == null
                         ? null
                         : reservationErrorMessage(seriesReservationErrorCode, locale),
-                joinStatus,
+                resolvedJoinStatus,
+                Boolean.TRUE.equals(model.asMap().get("joinRequested")),
+                Boolean.TRUE.equals(model.asMap().get("seriesJoinRequested")),
                 joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
-                inviteStatus,
+                resolvedInviteStatus,
                 inviteErrorCode == null ? null : inviteErrorMessage(inviteErrorCode, locale),
                 locale);
     }
@@ -146,7 +155,9 @@ public class EventController {
     @PostMapping("/matches/{eventId}/reservations")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView requestReservation(
-            @PathVariable("eventId") final String eventId, final Locale locale) {
+            @PathVariable("eventId") final String eventId,
+            final RedirectAttributes redirectAttributes,
+            final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
         final AuthenticatedUserPrincipal currentUser =
                 CurrentAuthenticatedUser.get()
@@ -154,7 +165,8 @@ public class EventController {
 
         try {
             matchReservationService.reserveSpot(matchId, currentUser.getUserId());
-            return new ModelAndView("redirect:/matches/" + matchId + "?reservation=confirmed");
+            redirectAttributes.addFlashAttribute("reservationStatus", "confirmed");
+            return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
                     matchId,
@@ -163,6 +175,8 @@ public class EventController {
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     null,
+                    false,
+                    false,
                     null,
                     null,
                     null,
@@ -173,7 +187,9 @@ public class EventController {
     @PostMapping("/matches/{eventId}/reservations/cancel")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView cancelReservation(
-            @PathVariable("eventId") final String eventId, final Locale locale) {
+            @PathVariable("eventId") final String eventId,
+            final RedirectAttributes redirectAttributes,
+            final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
         final AuthenticatedUserPrincipal currentUser =
                 CurrentAuthenticatedUser.get()
@@ -187,7 +203,8 @@ public class EventController {
                     cancellationContext, currentUser.getUserId())) {
                 return new ModelAndView("redirect:/events");
             }
-            return new ModelAndView("redirect:/matches/" + matchId + "?reservation=cancelled");
+            redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
+            return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchParticipationException exception) {
             return showRealEventDetails(
                     matchId,
@@ -196,6 +213,8 @@ public class EventController {
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     null,
+                    false,
+                    false,
                     null,
                     null,
                     null,
@@ -209,7 +228,9 @@ public class EventController {
     })
     @PreAuthorize("isAuthenticated()")
     public ModelAndView requestSeriesReservation(
-            @PathVariable("eventId") final String eventId, final Locale locale) {
+            @PathVariable("eventId") final String eventId,
+            final RedirectAttributes redirectAttributes,
+            final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
         final AuthenticatedUserPrincipal currentUser =
                 CurrentAuthenticatedUser.get()
@@ -217,8 +238,8 @@ public class EventController {
 
         try {
             matchReservationService.reserveSeries(matchId, currentUser.getUserId());
-            return new ModelAndView(
-                    "redirect:/matches/" + matchId + "?reservation=recurringConfirmed");
+            redirectAttributes.addFlashAttribute("reservationStatus", "recurringConfirmed");
+            return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
                     matchId,
@@ -227,6 +248,8 @@ public class EventController {
                     null,
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
+                    false,
+                    false,
                     null,
                     null,
                     null,
@@ -239,7 +262,9 @@ public class EventController {
         "/matches/{eventId}/series-reservations/cancel"
     })
     public ModelAndView cancelSeriesReservations(
-            @PathVariable("eventId") final String eventId, final Locale locale) {
+            @PathVariable("eventId") final String eventId,
+            final RedirectAttributes redirectAttributes,
+            final Locale locale) {
         final Long matchId = parseEventIdOrThrowNotFound(eventId);
         final AuthenticatedUserPrincipal currentUser =
                 CurrentAuthenticatedUser.get()
@@ -247,8 +272,8 @@ public class EventController {
 
         try {
             matchReservationService.cancelSeriesReservations(matchId, currentUser.getUserId());
-            return new ModelAndView(
-                    "redirect:/matches/" + matchId + "?reservation=recurringCancelled");
+            redirectAttributes.addFlashAttribute("reservationStatus", "recurringCancelled");
+            return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
             return showRealEventDetails(
                     matchId,
@@ -257,6 +282,8 @@ public class EventController {
                     null,
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
+                    false,
+                    false,
                     null,
                     null,
                     null,
@@ -271,6 +298,8 @@ public class EventController {
             final String reservationError,
             final String seriesReservationError,
             final String joinStatus,
+            final boolean joinRequestedFlash,
+            final boolean seriesJoinRequestedFlash,
             final String joinError,
             final String inviteStatus,
             final String inviteError,
@@ -322,6 +351,8 @@ public class EventController {
                 isHostViewer
                         ? new SeriesJoinRequestUiState(false, false)
                         : buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUserId);
+        final boolean suppressReservationErrors =
+                hasPendingRequest || seriesJoinRequestState.pending();
         final ModelAndView mav = new ModelAndView("matches/detail");
         final boolean hostCanManage = isHost(match, currentUserId);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
@@ -340,8 +371,10 @@ public class EventController {
         mav.addObject(
                 "reservationCancellationEnabled",
                 isConfirmedParticipant && canCancelReservation(match));
-        mav.addObject("reservationError", reservationError);
-        mav.addObject("reservationConfirmed", "confirmed".equalsIgnoreCase(reservationStatus));
+        mav.addObject("reservationError", suppressReservationErrors ? null : reservationError);
+        mav.addObject(
+                "reservationConfirmed",
+                isConfirmedParticipant && "confirmed".equalsIgnoreCase(reservationStatus));
         mav.addObject("reservationCancelled", "cancelled".equalsIgnoreCase(reservationStatus));
         mav.addObject("seriesReservationPath", "/matches/" + eventId + "/recurring-reservations");
         mav.addObject(
@@ -353,13 +386,16 @@ public class EventController {
         mav.addObject("seriesReservationRequiresLogin", currentUserId == null);
         mav.addObject(
                 "seriesReservationConfirmed",
-                "recurringConfirmed".equalsIgnoreCase(reservationStatus)
-                        || "seriesConfirmed".equalsIgnoreCase(reservationStatus));
+                seriesReservationState.joined()
+                        && ("recurringConfirmed".equalsIgnoreCase(reservationStatus)
+                                || "seriesConfirmed".equalsIgnoreCase(reservationStatus)));
         mav.addObject(
                 "seriesReservationCancelled",
                 "recurringCancelled".equalsIgnoreCase(reservationStatus)
                         || "seriesCancelled".equalsIgnoreCase(reservationStatus));
-        mav.addObject("seriesReservationError", seriesReservationError);
+        mav.addObject(
+                "seriesReservationError",
+                suppressReservationErrors ? null : seriesReservationError);
         mav.addObject("eventStateNotice", eventStateNotice(match, locale));
 
         mav.addObject(
@@ -373,8 +409,11 @@ public class EventController {
         mav.addObject("cancelJoinRequestPath", "/matches/" + eventId + "/join-requests/cancel");
         mav.addObject(
                 "hasPendingJoinRequest", hasPendingRequest && !seriesJoinRequestState.pending());
-        mav.addObject("joinRequested", "requested".equalsIgnoreCase(joinStatus));
-        mav.addObject("seriesJoinRequested", "recurringRequested".equalsIgnoreCase(joinStatus));
+        mav.addObject(
+                "joinRequested", joinRequestedFlash || "requested".equalsIgnoreCase(joinStatus));
+        mav.addObject(
+                "seriesJoinRequested",
+                seriesJoinRequestedFlash || "recurringRequested".equalsIgnoreCase(joinStatus));
         mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
         mav.addObject("joinError", joinError);
 
@@ -985,6 +1024,11 @@ public class EventController {
             default:
                 return messageSource.getMessage("invite.error.notFound", null, locale);
         }
+    }
+
+    private static Optional<String> flashString(final Model model, final String name) {
+        final Object value = model.asMap().get(name);
+        return value instanceof String ? Optional.of((String) value) : Optional.empty();
     }
 
     private String hostActionNotice(final String hostAction, final Locale locale) {

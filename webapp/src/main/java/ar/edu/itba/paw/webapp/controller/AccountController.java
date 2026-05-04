@@ -20,12 +20,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @PreAuthorize("isAuthenticated()")
@@ -44,16 +46,15 @@ public class AccountController {
         return new AccountProfileForm();
     }
 
-    @GetMapping(value = "/account", params = "!updated")
-    public ModelAndView showAccount(final Locale locale) {
+    @GetMapping("/account")
+    public ModelAndView showAccount(final Model model, final Locale locale) {
         final User user = requiredAuthenticatedUser();
-        return accountView(user, locale, false, accountProfileFormFrom(user), null);
-    }
-
-    @GetMapping(value = "/account", params = "updated=1")
-    public ModelAndView showUpdatedAccount(final Locale locale) {
-        final User user = requiredAuthenticatedUser();
-        return accountView(user, locale, true, accountProfileFormFrom(user), null);
+        return accountView(
+                user,
+                locale,
+                Boolean.TRUE.equals(model.asMap().get("accountUpdated")),
+                accountProfileFormFrom(user),
+                null);
     }
 
     @PostMapping("/account/edit")
@@ -61,6 +62,7 @@ public class AccountController {
             @Valid @ModelAttribute("accountProfileForm")
                     final AccountProfileForm accountProfileForm,
             final BindingResult bindingResult,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
@@ -97,7 +99,8 @@ public class AccountController {
                                             updatedUser, principal.getRole()),
                                     authentication.getCredentials(),
                                     authentication.getAuthorities()));
-            return new ModelAndView("redirect:/account?updated=1");
+            redirectAttributes.addFlashAttribute("accountUpdated", true);
+            return new ModelAndView("redirect:/account");
         } catch (final AccountRegistrationException exception) {
             applyProfileUpdateError(bindingResult, exception);
             return accountView(currentUser, locale, false, accountProfileForm, null);

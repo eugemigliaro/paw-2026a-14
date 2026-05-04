@@ -19,6 +19,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
@@ -111,7 +113,7 @@ public class UserModerationReportController {
 
     @GetMapping("/{reportId:\\d+}")
     public ModelAndView showMyReportDetail(
-            @PathVariable("reportId") final Long reportId, final Locale locale) {
+            @PathVariable("reportId") final Long reportId, final Model model, final Locale locale) {
         final long userId = currentUserId();
         final ModerationReport report =
                 moderationService
@@ -135,6 +137,7 @@ public class UserModerationReportController {
                 "appealAllowed",
                 report.getStatus() == ReportStatus.RESOLVED && report.getAppealCount() < 1);
         mav.addObject("report", toViewModel(report, locale));
+        mav.addObject("action", model.asMap().get("action"));
         return mav;
     }
 
@@ -142,10 +145,12 @@ public class UserModerationReportController {
     public ModelAndView appealReport(
             @PathVariable("reportId") final Long reportId,
             @RequestParam("appealReason") final String appealReason,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         try {
             moderationService.appealReport(reportId, appealReason);
-            return new ModelAndView("redirect:/reports/mine/" + reportId + "?action=appealed");
+            redirectAttributes.addFlashAttribute("action", "appealed");
+            return new ModelAndView("redirect:/reports/mine/" + reportId);
         } catch (final ModerationException exception) {
             return new ModelAndView(
                     "redirect:/reports/mine/" + reportId + "?error=" + exception.getCode());

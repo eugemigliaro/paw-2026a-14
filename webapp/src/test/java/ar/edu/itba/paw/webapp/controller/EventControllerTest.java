@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -104,7 +105,8 @@ class EventControllerTest {
 
         mockMvc.perform(post("/matches/42/reservations"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?reservation=confirmed"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("reservationStatus", "confirmed"));
     }
 
     private static void authenticateUser(final Long userId) {

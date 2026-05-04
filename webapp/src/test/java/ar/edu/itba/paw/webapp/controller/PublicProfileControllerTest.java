@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -123,7 +124,8 @@ class PublicProfileControllerTest {
                                 .param("reaction", "like")
                                 .param("comment", "Great player"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/target?review=saved#reviews"));
+                .andExpect(redirectedUrl("/users/target#reviews"))
+                .andExpect(flash().attribute("reviewStatus", "saved"));
     }
 
     @Test
@@ -134,7 +136,8 @@ class PublicProfileControllerTest {
 
         mockMvc.perform(post("/users/target/reviews/delete"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/target?review=deleted#reviews"));
+                .andExpect(redirectedUrl("/users/target#reviews"))
+                .andExpect(flash().attribute("reviewStatus", "deleted"));
     }
 
     private static void authenticateUser(final Long userId) {

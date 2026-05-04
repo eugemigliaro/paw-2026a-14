@@ -419,7 +419,7 @@
 										</p>
 									</c:if>
 									<c:if test="${reservationCancelled}">
-										<p class="booking-panel__notice booking-panel__notice--info">
+										<p class="booking-panel__notice booking-panel__notice--success">
 											<c:choose>
 												<c:when test="${not empty eventPage.occurrences}">
 													<spring:message code="event.booking.occurrenceCancelled" />

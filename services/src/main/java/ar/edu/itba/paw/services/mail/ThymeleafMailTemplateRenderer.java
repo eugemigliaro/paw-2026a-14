@@ -151,6 +151,55 @@ public class ThymeleafMailTemplateRenderer {
                 textMailTemplateEngine.process("match-updated", context));
     }
 
+    public MailContent renderPendingRequestClosedByPrivacyChangeNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow", message("mail.participation.requestClosedPrivate.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.requestClosedPrivate.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary", message("mail.participation.requestClosedPrivate.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.requestClosedPrivate.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
+    public MailContent renderInvitationOpenedToPublicNotification(
+            final MatchLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildMatchLifecycleContext(templateData, locale, null);
+        context.setVariable(
+                "mailEyebrow",
+                message("mail.participation.invitationOpenedPublic.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.participation.invitationOpenedPublic.title",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale));
+        context.setVariable(
+                "summary", message("mail.participation.invitationOpenedPublic.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.participation.invitationOpenedPublic.subject",
+                        new Object[] {templateData.getMatchTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("match-updated", context),
+                textMailTemplateEngine.process("match-updated", context));
+    }
+
     public MailContent renderInviteAcceptedNotification(
             final MatchLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
