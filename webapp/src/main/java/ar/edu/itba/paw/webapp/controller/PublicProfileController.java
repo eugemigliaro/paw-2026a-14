@@ -32,13 +32,16 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
@@ -68,6 +71,7 @@ public class PublicProfileController {
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
             @RequestParam(value = "reviewFilter", required = false) final String reviewFilter,
             @RequestParam(value = "reviewPage", defaultValue = "1") final String reviewPage,
+            final Model model,
             final Locale locale) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final User user =
@@ -76,6 +80,8 @@ public class PublicProfileController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         final ModelAndView mav = new ModelAndView("users/profile");
+        mav.addObject("reviewStatus", model.asMap().get("reviewStatus"));
+        mav.addObject("reportStatus", model.asMap().get("reportStatus"));
         mav.addObject(
                 "pageTitle",
                 messageSource.getMessage(
@@ -153,10 +159,12 @@ public class PublicProfileController {
     }
 
     @PostMapping("/users/{username}/reviews")
+    @PreAuthorize("isAuthenticated()")
     public ModelAndView submitReview(
             @PathVariable("username") final String username,
             @RequestParam("reaction") final String reactionValue,
-            @RequestParam(value = "comment", required = false) final String comment) {
+            @RequestParam(value = "comment", required = false) final String comment,
+            final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
         final Optional<PlayerReviewReaction> reaction =
@@ -168,20 +176,23 @@ public class PublicProfileController {
         try {
             playerReviewService.submitReview(
                     currentUser.getUserId(), reviewedUser.getId(), reaction.get(), comment);
-            return redirectToProfile(username, null, "saved");
+            return redirectToProfile(username, null, "saved", redirectAttributes);
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
         }
     }
 
     @PostMapping("/users/{username}/reviews/delete")
-    public ModelAndView deleteReview(@PathVariable("username") final String username) {
+    @PreAuthorize("isAuthenticated() and @securityService.hasReviewed(#username)")
+    public ModelAndView deleteReview(
+            @PathVariable("username") final String username,
+            final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
 
         try {
             playerReviewService.deleteReview(currentUser.getUserId(), reviewedUser.getId());
-            return redirectToProfile(username, null, "deleted");
+            return redirectToProfile(username, null, "deleted", redirectAttributes);
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
         }
@@ -438,5 +449,17 @@ public class PublicProfileController {
         }
         redirect.append("#reviews");
         return new ModelAndView(redirect.toString());
+    }
+
+    private static ModelAndView redirectToProfile(
+            final String username,
+            final String errorCode,
+            final String status,
+            final RedirectAttributes redirectAttributes) {
+        if (status != null) {
+            redirectAttributes.addFlashAttribute("reviewStatus", status);
+            return new ModelAndView("redirect:/users/" + username + "#reviews");
+        }
+        return redirectToProfile(username, errorCode, null);
     }
 }

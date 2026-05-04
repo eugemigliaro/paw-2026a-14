@@ -32,7 +32,7 @@
 						</c:if>
 					</div>
 					<div class="public-profile-hero">
-						<article class="panel public-profile-avatar-panel">
+						<div class="public-profile-avatar-panel">
 							<div class="public-profile-avatar-panel__content">
 								<c:url var="profileImageSrc" value="${profilePage.profileImageUrl}" />
 								<img
@@ -42,7 +42,7 @@
 									loading="eager"
 									decoding="async" />
 							</div>
-						</article>
+						</div>
 
 						<div class="public-profile-summary">
 							<c:if test="${profileBanned}">
@@ -111,16 +111,16 @@
 						</p>
 					</header>
 
-					<c:if test="${param.review eq 'saved'}">
-						<div class="notice notice--success">
-							<spring:message code="profile.reviews.saved" />
-						</div>
-					</c:if>
-					<c:if test="${param.review eq 'deleted'}">
-						<div class="notice notice--info">
-							<spring:message code="profile.reviews.deleted" />
-						</div>
-					</c:if>
+						<c:if test="${reviewStatus eq 'saved'}">
+							<div class="notice notice--success">
+								<spring:message code="profile.reviews.saved" />
+							</div>
+						</c:if>
+						<c:if test="${reviewStatus eq 'deleted'}">
+							<div class="notice notice--info">
+								<spring:message code="profile.reviews.deleted" />
+							</div>
+						</c:if>
 						<c:if test="${not empty param.reviewError}">
 							<div class="notice notice--error">
 							<c:choose>
@@ -142,11 +142,11 @@
 							</c:choose>
 							</div>
 						</c:if>
-						<c:if test="${param.report eq 'sent'}">
-							<div class="notice notice--success">
-								<spring:message code="moderation.report.sent" />
-							</div>
-						</c:if>
+							<c:if test="${reportStatus eq 'sent'}">
+								<div class="notice notice--success">
+									<spring:message code="moderation.report.sent" />
+								</div>
+							</c:if>
 
 
 					<spring:message var="reviewSummaryAria" code="profile.reviews.summaryAria" />
@@ -357,14 +357,7 @@
 					<c:choose>
 						<c:when test="${empty profileReviews}">
 							<p class="public-profile-reviews__empty">
-								<c:choose>
-									<c:when test="${selectedReviewFilter ne 'both'}">
-										<spring:message code="profile.reviews.emptyFiltered" />
-									</c:when>
-									<c:otherwise>
-										<spring:message code="profile.reviews.empty" />
-									</c:otherwise>
-								</c:choose>
+								<spring:message code="profile.reviews.emptyState" />
 							</p>
 						</c:when>
 						<c:otherwise>

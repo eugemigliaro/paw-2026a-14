@@ -16,6 +16,7 @@
 								<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
 								<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
 								<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
+								<spring:message var="locationMapAria" code="host.form.location.map.aria" />
 								<spring:message var="sportPadel" code="sport.padel" />
 								<spring:message var="sportFootball" code="sport.football" />
 								<spring:message var="sportTennis" code="sport.tennis" />
@@ -31,13 +32,9 @@
 								<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
 								<spring:message var="durationCustom" code="host.form.duration.custom" />
 								<spring:message var="durationLabel" code="host.form.duration" />
-								<spring:message var="recurrenceFrequencyPlaceholder"
-									code="host.form.recurrence.frequency.placeholder" />
 								<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
 								<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
 								<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
-								<spring:message var="recurrenceEndModePlaceholder"
-									code="host.form.recurrence.endMode.placeholder" />
 								<spring:message var="recurrenceEndUntilDate"
 									code="host.form.recurrence.endMode.untilDate" />
 								<spring:message var="recurrenceEndOccurrenceCount"
@@ -180,6 +177,44 @@
 														<form:errors path="address" cssClass="field__error"
 															element="span" />
 													</label>
+													<form:hidden path="latitude" id="match-location-latitude" />
+													<form:hidden path="longitude" id="match-location-longitude" />
+													<form:errors path="latitude" cssClass="field__error" element="span" />
+													<form:errors path="longitude" cssClass="field__error" element="span" />
+													<c:if test="${mapPickerEnabled}">
+														<section
+															class="location-picker"
+															data-location-picker="true"
+															data-tile-url-template="${mapTileUrlTemplate}"
+															data-attribution="${mapAttribution}"
+															data-default-latitude="${mapDefaultLatitude}"
+															data-default-longitude="${mapDefaultLongitude}"
+															data-default-zoom="${mapDefaultZoom}">
+															<div class="location-picker__header">
+																<div>
+																	<span class="field__label"><spring:message code="host.form.location.map" /></span>
+																</div>
+																<div class="location-picker__actions">
+																	<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
+																		<spring:message code="host.form.location.zoomOut" />
+																	</button>
+																	<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
+																		<spring:message code="host.form.location.zoomIn" />
+																	</button>
+																	<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
+																		<spring:message code="host.form.location.current" />
+																	</button>
+																	<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
+																		<spring:message code="host.form.location.clear" />
+																	</button>
+																</div>
+															</div>
+															<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
+															<c:if test="${not empty mapAttribution}">
+																<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
+															</c:if>
+														</section>
+													</c:if>
 													<div class="form-card__grid form-card__grid--datetime">
 														<label class="field" for="match-date">
 															<span class="field__label">
@@ -266,7 +301,7 @@
 															<spring:message code="host.form.visibility" />
 														</span>
 														<c:choose>
-															<c:when test="${isEditMode}">
+															<c:when test="${isSeriesEditMode}">
 																<div class="account-locked-field">
 																	<input type="text"
 																		class="field__control account-readonly-control account-readonly-control--muted"
@@ -303,7 +338,7 @@
 															<spring:message code="host.form.joinPolicy" />
 														</span>
 														<c:choose>
-															<c:when test="${isEditMode}">
+															<c:when test="${isSeriesEditMode}">
 																<div class="account-locked-field">
 																	<input type="text"
 																		class="field__control account-readonly-control account-readonly-control--muted"
@@ -370,7 +405,7 @@
 											</article>
 
 											<c:if test="${not isEditMode}">
-												<article class="panel form-card recurrence-card">
+												<article class="panel form-card">
 													<span class="detail-label">
 														<spring:message code="host.section.recurrence" />
 													</span>
@@ -381,6 +416,9 @@
 														<label class="recurrence-toggle" for="match-recurring">
 															<form:checkbox path="recurring" id="match-recurring"
 																cssClass="recurrence-toggle__input" />
+															<span class="recurrence-toggle__switch" aria-hidden="true">
+																<span class="recurrence-toggle__knob"></span>
+															</span>
 															<span class="recurrence-toggle__copy">
 																<span class="recurrence-toggle__title">
 																	<spring:message
@@ -395,49 +433,80 @@
 
 														<div class="create-stack recurrence-settings"
 															id="recurrence-settings">
-															<label class="field" for="match-recurrence-frequency">
-																<span class="field__label">
+															<div class="field">
+																<span class="field__label" id="match-recurrence-frequency-label">
 																	<spring:message
 																		code="host.form.recurrence.frequency" />
 																</span>
-																<span class="field__select-wrap">
-																	<form:select path="recurrenceFrequency"
+																<c:set var="selectedRecurrenceFrequency"
+																	value="${empty createEventForm.recurrenceFrequency ? 'daily' : createEventForm.recurrenceFrequency}" />
+																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--three"
+																	id="match-recurrence-frequency-toggle"
+																	data-events-toggle="true"
+																	aria-labelledby="match-recurrence-frequency-label">
+																	<input type="hidden" name="recurrenceFrequency"
 																		id="match-recurrence-frequency"
-																		cssClass="field__control field__control--select">
-																		<form:option value=""
-																			label="${recurrenceFrequencyPlaceholder}" />
-																		<form:option value="daily"
-																			label="${recurrenceDaily}" />
-																		<form:option value="weekly"
-																			label="${recurrenceWeekly}" />
-																		<form:option value="monthly"
-																			label="${recurrenceMonthly}" />
-																	</form:select>
-																</span>
+																		value="${selectedRecurrenceFrequency}"
+																		data-events-toggle-input="true" />
+																	<div class="events-toggle-slider"
+																		data-events-toggle-slider="true"></div>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceFrequency eq 'daily' ? 'active' : ''}"
+																		data-value="daily"
+																		aria-pressed="${selectedRecurrenceFrequency eq 'daily' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceDaily}" />
+																	</button>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceFrequency eq 'weekly' ? 'active' : ''}"
+																		data-value="weekly"
+																		aria-pressed="${selectedRecurrenceFrequency eq 'weekly' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceWeekly}" />
+																	</button>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceFrequency eq 'monthly' ? 'active' : ''}"
+																		data-value="monthly"
+																		aria-pressed="${selectedRecurrenceFrequency eq 'monthly' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceMonthly}" />
+																	</button>
+																</div>
 																<form:errors path="recurrenceFrequency"
 																	cssClass="field__error" element="span" />
-															</label>
+															</div>
 
-															<label class="field" for="match-recurrence-end-mode">
-																<span class="field__label">
+															<div class="field">
+																<span class="field__label" id="match-recurrence-end-mode-label">
 																	<spring:message
 																		code="host.form.recurrence.endMode" />
 																</span>
-																<span class="field__select-wrap">
-																	<form:select path="recurrenceEndMode"
+																<c:set var="selectedRecurrenceEndMode"
+																	value="${empty createEventForm.recurrenceEndMode ? 'until_date' : createEventForm.recurrenceEndMode}" />
+																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--two"
+																	id="match-recurrence-end-mode-toggle"
+																	data-events-toggle="true"
+																	data-events-toggle-right-value="occurrence_count"
+																	aria-labelledby="match-recurrence-end-mode-label">
+																	<input type="hidden" name="recurrenceEndMode"
 																		id="match-recurrence-end-mode"
-																		cssClass="field__control field__control--select">
-																		<form:option value=""
-																			label="${recurrenceEndModePlaceholder}" />
-																		<form:option value="until_date"
-																			label="${recurrenceEndUntilDate}" />
-																		<form:option value="occurrence_count"
-																			label="${recurrenceEndOccurrenceCount}" />
-																	</form:select>
-																</span>
+																		value="${selectedRecurrenceEndMode}"
+																		data-events-toggle-input="true" />
+																	<div class="events-toggle-slider ${selectedRecurrenceEndMode eq 'occurrence_count' ? 'right' : ''}"
+																		data-events-toggle-slider="true"></div>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceEndMode eq 'until_date' ? 'active' : ''}"
+																		data-value="until_date"
+																		aria-pressed="${selectedRecurrenceEndMode eq 'until_date' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceEndUntilDate}" />
+																	</button>
+																	<button type="button"
+																		class="events-toggle-btn ${selectedRecurrenceEndMode eq 'occurrence_count' ? 'active' : ''}"
+																		data-value="occurrence_count"
+																		aria-pressed="${selectedRecurrenceEndMode eq 'occurrence_count' ? 'true' : 'false'}">
+																		<c:out value="${recurrenceEndOccurrenceCount}" />
+																	</button>
+																</div>
 																<form:errors path="recurrenceEndMode"
 																	cssClass="field__error" element="span" />
-															</label>
+															</div>
 
 															<label class="field" for="match-recurrence-until-date"
 																id="recurrence-until-date-field">
@@ -486,28 +555,41 @@
 												<h2 class="form-card__title">
 													<spring:message code="host.section.banner.subtitle" />
 												</h2>
-												<label class="field" for="match-banner-image">
+												<c:if test="${not empty currentBannerImageUrl}">
+													<c:url var="currentBannerSrc" value="${currentBannerImageUrl}" />
+													<div class="upload-card__preview">
+														<span class="upload-card__preview-label">
+															<spring:message code="host.form.bannerImage.current" />
+														</span>
+														<img class="upload-card__preview-image" src="${currentBannerSrc}" alt="" loading="lazy" decoding="async" />
+													</div>
+												</c:if>
+												<label class="field upload-card__field" for="match-banner-image">
 													<span class="field__label">
 														<spring:message code="host.form.bannerImage" />
 													</span>
-													<form:input path="bannerImage" id="match-banner-image" type="file"
-														accept="image/png,image/jpeg,image/webp,image/gif"
-														cssClass="field__control upload-card__file-input" />
-													<span class="field__hint">
-														<spring:message code="host.form.bannerImage.hint" />
+													<span class="upload-card__dropzone">
+														<span class="upload-card__dropzone-icon" aria-hidden="true">
+															<svg viewBox="0 0 24 24" focusable="false">
+																<path d="M4 17.5V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5Z" />
+																<path d="m8 14 2.2-2.2a1.2 1.2 0 0 1 1.7 0L16 16" />
+																<path d="m13.5 13.5 1.1-1.1a1.2 1.2 0 0 1 1.7 0L20 16" />
+																<circle cx="8.5" cy="8.5" r="1.2" />
+															</svg>
+														</span>
+														<span class="upload-card__dropzone-copy">
+															<span class="upload-card__dropzone-title">
+																<spring:message code="host.form.bannerImage.guidanceTitle" />
+															</span>
+															<span class="field__hint">
+																<spring:message code="host.form.bannerImage.hint" />
+															</span>
+														</span>
+														<form:input path="bannerImage" id="match-banner-image" type="file"
+															accept="image/png,image/jpeg,image/webp,image/gif"
+															cssClass="upload-card__file-input" />
 													</span>
 												</label>
-												<div class="upload-card__guidance" role="note">
-													<p class="upload-card__guidance-title">
-														<spring:message code="host.form.bannerImage.guidanceTitle" />
-													</p>
-													<p class="upload-card__guidance-copy">
-														<spring:message code="host.form.bannerImage.guidanceSize" />
-													</p>
-													<p class="upload-card__guidance-copy">
-														<spring:message code="host.form.bannerImage.guidanceCopy" />
-													</p>
-												</div>
 											</article>
 
 
@@ -519,8 +601,4 @@
 										</form:form>
 									</section>
 								</main>
-						</div>
-
-						</body>
-
-					</html>
+						</div

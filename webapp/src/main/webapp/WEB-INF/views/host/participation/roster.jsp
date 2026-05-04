@@ -59,10 +59,10 @@
 					</div>
 				</header>
 
-				<c:if test="${param.action eq 'removed'}">
-					<div class="notice notice--success">
-						<spring:message code="host.roster.removed" />
-					</div>
+					<c:if test="${action eq 'removed'}">
+						<div class="notice notice--success">
+							<spring:message code="host.roster.removed" />
+						</div>
 				</c:if>
 				<c:if test="${not empty param.error}">
 					<div class="notice notice--error">

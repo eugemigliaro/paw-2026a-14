@@ -3,12 +3,15 @@ package ar.edu.itba.paw.webapp.controller;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
@@ -48,6 +51,7 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -89,6 +93,8 @@ class UiRouteTest {
 
     private MockMvc mockMvc;
     private AtomicReference<String> lastSportsFilter;
+    private AtomicReference<Double> lastSearchLatitude;
+    private AtomicReference<Double> lastSearchLongitude;
     private AtomicReference<Long> lastReservedMatchId;
     private AtomicReference<Long> lastReservedUserId;
     private AtomicReference<Long> lastCancelledReservationMatchId;
@@ -110,9 +116,11 @@ class UiRouteTest {
     private AtomicReference<MatchParticipationException> seriesJoinRequestFailure;
     private AtomicReference<Boolean> currentUserHasReservation;
     private AtomicReference<Boolean> currentUserHasSeriesReservation;
+    private AtomicReference<Boolean> currentUserHasJoinRequest;
     private AtomicReference<Boolean> currentUserHasSeriesJoinRequest;
     private AtomicReference<CreateMatchRequest> lastCreateMatchRequest;
     private AtomicReference<UpdateMatchRequest> lastUpdateMatchRequest;
+    private AtomicReference<Match> lastUpdatedMatch;
 
     @BeforeEach
     void setUp() {
@@ -125,6 +133,8 @@ class UiRouteTest {
         final LocalValidatorFactoryBean validator = validator(messageSource);
 
         lastSportsFilter = new AtomicReference<>();
+        lastSearchLatitude = new AtomicReference<>();
+        lastSearchLongitude = new AtomicReference<>();
         lastReservedMatchId = new AtomicReference<>();
         lastReservedUserId = new AtomicReference<>();
         lastCancelledReservationMatchId = new AtomicReference<>();
@@ -146,9 +156,11 @@ class UiRouteTest {
         seriesJoinRequestFailure = new AtomicReference<>();
         currentUserHasReservation = new AtomicReference<>(false);
         currentUserHasSeriesReservation = new AtomicReference<>(false);
+        currentUserHasJoinRequest = new AtomicReference<>(false);
         currentUserHasSeriesJoinRequest = new AtomicReference<>(false);
         lastCreateMatchRequest = new AtomicReference<>();
         lastUpdateMatchRequest = new AtomicReference<>();
+        lastUpdatedMatch = new AtomicReference<>();
 
         final Match realMatch =
                 new Match(
@@ -156,15 +168,20 @@ class UiRouteTest {
                         Sport.PADEL,
                         7L,
                         "Downtown Club",
+                        -34.61,
+                        -58.38,
                         "Sunrise Padel",
                         "Friendly\\n doubles session",
                         Instant.parse("2026-04-06T10:00:00Z"),
                         Instant.parse("2026-04-06T12:00:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         2,
+                        null,
+                        null,
                         null);
         final Match footballMatch =
                 new Match(
@@ -178,8 +195,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-07T20:30:00Z"),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         4,
                         null);
         final Match completedMatch =
@@ -194,8 +212,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-03T21:00:00Z"),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "completed",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.COMPLETED,
                         10,
                         null);
         final Match cancelledFutureMatch =
@@ -210,8 +229,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-08T14:00:00Z"),
                         6,
                         BigDecimal.TEN,
-                        "public",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         2,
                         null);
         final Match privateInviteOnlyMatch =
@@ -226,9 +246,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-10T22:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "private",
-                        "invite_only",
-                        "open",
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
                         2,
                         null);
         final Match recurringMatch =
@@ -243,9 +263,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-09T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         1,
                         null,
                         600L,
@@ -262,9 +282,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-16T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         600L,
@@ -281,9 +301,9 @@ class UiRouteTest {
                         Instant.parse("2026-03-26T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         4,
                         null,
                         600L,
@@ -300,9 +320,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-05T01:00:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         4,
                         null,
                         600L,
@@ -319,9 +339,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-23T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         8,
                         null,
                         600L,
@@ -338,9 +358,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-30T19:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "direct",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         0,
                         null,
                         600L,
@@ -357,9 +377,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-09T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         1,
                         null,
                         700L,
@@ -376,9 +396,9 @@ class UiRouteTest {
                         Instant.parse("2026-04-16T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         0,
                         null,
                         700L,
@@ -395,9 +415,9 @@ class UiRouteTest {
                         Instant.parse("2026-03-26T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         4,
                         null,
                         700L,
@@ -414,9 +434,9 @@ class UiRouteTest {
                         Instant.parse("2030-04-09T21:30:00Z"),
                         8,
                         BigDecimal.TEN,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         1,
                         null);
 
@@ -425,6 +445,10 @@ class UiRouteTest {
                     @Override
                     public Match createMatch(final CreateMatchRequest request) {
                         lastCreateMatchRequest.set(request);
+                        final EventJoinPolicy joinPolicy =
+                                EventVisibility.PRIVATE.equals(request.getVisibility())
+                                        ? EventJoinPolicy.INVITE_ONLY
+                                        : request.getJoinPolicy();
                         return new Match(
                                 43L,
                                 request.getSport(),
@@ -437,7 +461,7 @@ class UiRouteTest {
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
-                                request.getJoinPolicy(),
+                                joinPolicy,
                                 request.getStatus(),
                                 0,
                                 null,
@@ -551,23 +575,32 @@ class UiRouteTest {
                                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
                                     "Capacity too low");
                         }
+
+                        final EventJoinPolicy joinPolicy =
+                                EventVisibility.PRIVATE == request.getVisibility()
+                                        ? EventJoinPolicy.INVITE_ONLY
+                                        : request.getJoinPolicy();
+
                         lastUpdateMatchRequest.set(request);
-                        return new Match(
-                                matchId,
-                                request.getSport(),
-                                actingUserId,
-                                request.getAddress(),
-                                request.getTitle(),
-                                request.getDescription(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
-                                request.getMaxPlayers(),
-                                request.getPricePerPlayer(),
-                                request.getVisibility(),
-                                request.getJoinPolicy(),
-                                request.getStatus(),
-                                0,
-                                request.getBannerImageId());
+                        final Match result =
+                                new Match(
+                                        matchId,
+                                        request.getSport(),
+                                        actingUserId,
+                                        request.getAddress(),
+                                        request.getTitle(),
+                                        request.getDescription(),
+                                        request.getStartsAt(),
+                                        request.getEndsAt(),
+                                        request.getMaxPlayers(),
+                                        request.getPricePerPlayer(),
+                                        request.getVisibility(),
+                                        joinPolicy,
+                                        request.getStatus(),
+                                        0,
+                                        request.getBannerImageId());
+                        lastUpdatedMatch.set(result);
+                        return result;
                     }
 
                     @Override
@@ -591,7 +624,11 @@ class UiRouteTest {
                         lastHostSeriesUpdatedMatchId.set(matchId);
                         lastHostSeriesUpdatedUserId.set(actingUserId);
                         lastUpdateMatchRequest.set(request);
-                        return List.of(
+                        final EventJoinPolicy joinPolicy =
+                                EventVisibility.PRIVATE == request.getVisibility()
+                                        ? EventJoinPolicy.INVITE_ONLY
+                                        : request.getJoinPolicy();
+                        final Match result =
                                 new Match(
                                         matchId,
                                         request.getSport(),
@@ -604,12 +641,14 @@ class UiRouteTest {
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
-                                        request.getJoinPolicy(),
+                                        joinPolicy,
                                         request.getStatus(),
                                         0,
                                         request.getBannerImageId(),
                                         600L,
-                                        matchId == 46L ? 1 : 2));
+                                        matchId == 46L ? 1 : 2);
+                        lastUpdatedMatch.set(result);
+                        return List.of(result);
                     }
 
                     @Override
@@ -636,9 +675,9 @@ class UiRouteTest {
                                 Instant.parse("2026-04-06T12:00:00Z"),
                                 8,
                                 BigDecimal.TEN,
-                                "public",
-                                "direct",
-                                "cancelled",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.CANCELLED,
                                 2,
                                 null,
                                 matchId == 47L ? 600L : null,
@@ -671,9 +710,9 @@ class UiRouteTest {
                                         Instant.parse("2026-04-09T19:30:00Z"),
                                         8,
                                         BigDecimal.TEN,
-                                        "public",
-                                        "direct",
-                                        "cancelled",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.CANCELLED,
                                         1,
                                         null,
                                         600L,
@@ -737,8 +776,12 @@ class UiRouteTest {
                             final int pageSize,
                             final String timezone,
                             final BigDecimal minPrice,
-                            final BigDecimal maxPrice) {
+                            final BigDecimal maxPrice,
+                            final Double latitude,
+                            final Double longitude) {
                         lastSportsFilter.set(sport);
+                        lastSearchLatitude.set(latitude);
+                        lastSearchLongitude.set(longitude);
                         return new PaginatedResult<>(
                                 List.of(realMatch, footballMatch), 2, 1, pageSize);
                     }
@@ -828,6 +871,11 @@ class UiRouteTest {
 
                     @Override
                     public boolean hasPendingRequest(final Long matchId, final Long userId) {
+                        if (Boolean.TRUE.equals(currentUserHasJoinRequest.get())
+                                && userId == 9L
+                                && matchId == 56L) {
+                            return true;
+                        }
                         return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
                                 && userId == 9L
                                 && (matchId == 52L || matchId == 53L);
@@ -1329,7 +1377,11 @@ class UiRouteTest {
                                         playerReviewService,
                                         userService,
                                         messageSource,
-                                        fixedClock),
+                                        fixedClock,
+                                        true,
+                                        "/assets/tiles/{z}/{x}/{y}.png",
+                                        "Local Buenos Aires map tiles",
+                                        14),
                                 new PublicProfileController(
                                         userService, playerReviewService,
                                         moderationService, messageSource),
@@ -1409,6 +1461,77 @@ class UiRouteTest {
     }
 
     @Test
+    void postExploreLocationStoresValidCoordinatesInSession() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-34.61")
+                                        .param("longitude", "-58.38"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/?sort=distance"))
+                        .andReturn();
+
+        Assertions.assertEquals(
+                -34.61, result.getRequest().getSession().getAttribute("exploreLocationLatitude"));
+        Assertions.assertEquals(
+                -58.38, result.getRequest().getSession().getAttribute("exploreLocationLongitude"));
+    }
+
+    @Test
+    void postExploreLocationIgnoresInvalidCoordinates() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-91")
+                                        .param("longitude", "-58.38"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/?sort=distance"))
+                        .andReturn();
+
+        Assertions.assertNull(
+                result.getRequest().getSession().getAttribute("exploreLocationLatitude"));
+        Assertions.assertNull(
+                result.getRequest().getSession().getAttribute("exploreLocationLongitude"));
+    }
+
+    @Test
+    void getFeedRouteShowsNearMeSortOptionBeforeLocationIsStored() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "sortOptions",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "href",
+                                                        Matchers.containsString(
+                                                                "sort=distance")))));
+    }
+
+    @Test
+    void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
+        final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+    }
+
+    @Test
+    void getFeedRouteIncludesDistanceLabelWithStoredLocation() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/").sessionAttr("exploreLocationLatitude", -34.60)
+                                        .sessionAttr("exploreLocationLongitude", -58.38))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNotNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+    }
+
+    @Test
     void getFeedRouteWithMinAndMaxPricePropagatesToModel() throws Exception {
         mockMvc.perform(get("/").param("minPrice", "5").param("maxPrice", "25"))
                 .andExpect(status().isOk())
@@ -1446,6 +1569,22 @@ class UiRouteTest {
                                         "eventPage",
                                         Matchers.hasProperty(
                                                 "hostProfileImageUrl", Matchers.is("/images/88"))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.allOf(
+                                                Matchers.hasProperty(
+                                                        "mapAvailable", Matchers.is(true)),
+                                                Matchers.hasProperty(
+                                                        "mapTileUrlTemplate",
+                                                        Matchers.is(
+                                                                "/assets/tiles/{z}/{x}/{y}.png")),
+                                                Matchers.hasProperty(
+                                                        "mapLatitude",
+                                                        Matchers.closeTo(-34.61, 0.000001)),
+                                                Matchers.hasProperty(
+                                                        "mapLongitude",
+                                                        Matchers.closeTo(-58.38, 0.000001)))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1649,6 +1788,45 @@ class UiRouteTest {
     }
 
     @Test
+    void getRecurringApprovalRequiredMatchDetailsRouteHidesReservationErrorWhenJoinRequestPending()
+            throws Exception {
+        currentUserHasSeriesJoinRequest.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/52").param("reservationError", "closed"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("reservationError", Matchers.nullValue()))
+                .andExpect(model().attribute("seriesJoinRequestPending", true));
+    }
+
+    @Test
+    void getApprovalRequiredMatchDetailsRouteShowsOneTimeJoinRequestedNoticeFromFlash()
+            throws Exception {
+        currentUserHasJoinRequest.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/56").flashAttr("joinRequested", true))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("joinRequested", true))
+                .andExpect(model().attribute("hasPendingJoinRequest", true));
+    }
+
+    @Test
+    void getApprovalRequiredMatchDetailsRouteHidesJoinRequestedNoticeAfterRefresh()
+            throws Exception {
+        currentUserHasJoinRequest.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/56"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("joinRequested", false))
+                .andExpect(model().attribute("hasPendingJoinRequest", true));
+    }
+
+    @Test
     void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1688,6 +1866,46 @@ class UiRouteTest {
                         model().attribute(
                                         "seriesReservationCancelPath",
                                         "/matches/46/recurring-reservations/cancel"));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteHidesStaleReservationConfirmedNoticeWhenUserWasRemoved()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/42").param("reservation", "confirmed"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", false))
+                .andExpect(model().attribute("reservationConfirmed", false))
+                .andExpect(model().attribute("reservationEnabled", true));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteShowsReservationConfirmedNoticeWhenUserIsStillJoined()
+            throws Exception {
+        currentUserHasReservation.set(true);
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/42").param("reservation", "confirmed"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("reservationConfirmed", true))
+                .andExpect(model().attribute("reservationEnabled", true));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteHidesStaleSeriesReservationConfirmedNoticeWhenUserWasRemoved()
+            throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/46").param("reservation", "recurringConfirmed"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("seriesReservationJoined", false))
+                .andExpect(model().attribute("seriesReservationConfirmed", false))
+                .andExpect(model().attribute("seriesReservationEnabled", true));
     }
 
     @Test
@@ -1763,7 +1981,7 @@ class UiRouteTest {
     void getRealMatchDetailsRouteWithSpanishHostActionLocalizesNotice() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/42").param("hostAction", "updated").param("lang", "es"))
+        mockMvc.perform(get("/matches/42").flashAttr("hostAction", "updated").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
@@ -1775,13 +1993,25 @@ class UiRouteTest {
     void getRealMatchDetailsRouteWithSpanishSeriesHostActionLocalizesNotice() throws Exception {
         authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/46").param("hostAction", "seriesUpdated").param("lang", "es"))
+        mockMvc.perform(
+                        get("/matches/46")
+                                .flashAttr("hostAction", "seriesUpdated")
+                                .param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
                                         "hostActionNotice",
                                         "Las pr\u00f3ximas fechas recurrentes "
                                                 + "fueron actualizadas correctamente."));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteHidesUpdatedNoticeAfterRefresh() throws Exception {
+        authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostActionNotice", Matchers.nullValue()));
     }
 
     @Test
@@ -1795,7 +2025,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/matches/42/reservations"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?reservation=confirmed"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("reservationStatus", "confirmed"));
 
         Assertions.assertEquals(42L, lastReservedMatchId.get());
         Assertions.assertEquals(9L, lastReservedUserId.get());
@@ -1828,7 +2059,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/matches/42/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?reservation=cancelled"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("reservationStatus", "cancelled"));
 
         Assertions.assertEquals(42L, lastCancelledReservationMatchId.get());
         Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
@@ -1841,7 +2073,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/matches/46/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/46?reservation=cancelled"));
+                .andExpect(redirectedUrl("/matches/46"))
+                .andExpect(flash().attribute("reservationStatus", "cancelled"));
 
         Assertions.assertEquals(46L, lastCancelledReservationMatchId.get());
         Assertions.assertEquals(9L, lastCancelledReservationUserId.get());
@@ -1899,7 +2132,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/matches/46/recurring-reservations"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/46?reservation=recurringConfirmed"));
+                .andExpect(redirectedUrl("/matches/46"))
+                .andExpect(flash().attribute("reservationStatus", "recurringConfirmed"));
 
         Assertions.assertEquals(46L, lastReservedMatchId.get());
         Assertions.assertEquals(9L, lastReservedUserId.get());
@@ -1935,7 +2169,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/46?reservation=recurringCancelled"));
+                .andExpect(redirectedUrl("/matches/46"))
+                .andExpect(flash().attribute("reservationStatus", "recurringCancelled"));
 
         Assertions.assertEquals(46L, lastCancelledSeriesMatchId.get());
         Assertions.assertEquals(9L, lastCancelledSeriesUserId.get());
@@ -1957,6 +2192,16 @@ class UiRouteTest {
     }
 
     @Test
+    void postJoinRequestAsAuthenticatedUserRedirectsWithOneTimeNotice() throws Exception {
+        authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(post("/matches/56/join-requests"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/56"))
+                .andExpect(flash().attribute("joinRequested", true));
+    }
+
+    @Test
     void postSeriesJoinRequestWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(post("/matches/52/recurring-join-requests"))
                 .andExpect(status().isUnauthorized());
@@ -1969,7 +2214,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/matches/52/recurring-join-requests"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/52?join=recurringRequested"));
+                .andExpect(redirectedUrl("/matches/52"))
+                .andExpect(flash().attribute("seriesJoinRequested", true));
 
         Assertions.assertEquals(52L, lastSeriesJoinRequestMatchId.get());
         Assertions.assertEquals(9L, lastSeriesJoinRequestUserId.get());
@@ -2098,6 +2344,87 @@ class UiRouteTest {
 
         Assertions.assertNotNull(lastCreateMatchRequest.get());
         Assertions.assertFalse(lastCreateMatchRequest.get().isRecurring());
+    }
+
+    @Test
+    void postHostPublishPassesValidCoordinatesToService() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-34.61")
+                                .param("longitude", "-58.38")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        Assertions.assertNotNull(lastCreateMatchRequest.get());
+        Assertions.assertEquals(-34.61, lastCreateMatchRequest.get().getLatitude());
+        Assertions.assertEquals(-58.38, lastCreateMatchRequest.get().getLongitude());
+    }
+
+    @Test
+    void postHostPublishRejectsPartialCoordinates() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-34.61")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "longitude"));
+
+        Assertions.assertNull(lastCreateMatchRequest.get());
+    }
+
+    @Test
+    void postHostPublishRejectsOutOfRangeCoordinates() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-91")
+                                .param("longitude", "-58.38")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "latitude"));
+
+        Assertions.assertNull(lastCreateMatchRequest.get());
     }
 
     @Test
@@ -2411,7 +2738,8 @@ class UiRouteTest {
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostAction", "updated"));
     }
 
     @Test
@@ -2433,7 +2761,8 @@ class UiRouteTest {
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/47?hostAction=seriesUpdated"));
+                .andExpect(redirectedUrl("/matches/47"))
+                .andExpect(flash().attribute("hostAction", "seriesUpdated"));
 
         Assertions.assertEquals(47L, lastHostSeriesUpdatedMatchId.get());
         Assertions.assertEquals(7L, lastHostSeriesUpdatedUserId.get());
@@ -2459,12 +2788,13 @@ class UiRouteTest {
                                 .param("maxPlayers", "8")
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?hostAction=updated"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostAction", "updated"));
 
-        final UpdateMatchRequest request = lastUpdateMatchRequest.get();
-        Assertions.assertNotNull(request);
-        Assertions.assertEquals("private", request.getVisibility());
-        Assertions.assertEquals("invite_only", request.getJoinPolicy());
+        final Match updatedMatch = lastUpdatedMatch.get();
+        Assertions.assertNotNull(updatedMatch);
+        Assertions.assertEquals(EventVisibility.PRIVATE, updatedMatch.getVisibility());
+        Assertions.assertEquals(EventJoinPolicy.INVITE_ONLY, updatedMatch.getJoinPolicy());
     }
 
     @Test
@@ -2588,7 +2918,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/host/matches/42/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?hostAction=cancelled"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostAction", "cancelled"));
     }
 
     @Test
@@ -2599,7 +2930,8 @@ class UiRouteTest {
         // Exercise and Assert
         mockMvc.perform(post("/host/matches/47/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/47?hostAction=cancelled"));
+                .andExpect(redirectedUrl("/matches/47"))
+                .andExpect(flash().attribute("hostAction", "cancelled"));
         Assertions.assertEquals(47L, lastHostCancelledMatchId.get());
         Assertions.assertEquals(7L, lastHostCancelledUserId.get());
     }
@@ -2610,7 +2942,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/host/matches/47/series/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/47?hostAction=seriesCancelled"));
+                .andExpect(redirectedUrl("/matches/47"))
+                .andExpect(flash().attribute("hostAction", "seriesCancelled"));
 
         Assertions.assertEquals(47L, lastHostSeriesCancelledMatchId.get());
         Assertions.assertEquals(7L, lastHostSeriesCancelledUserId.get());
@@ -2763,7 +3096,8 @@ class UiRouteTest {
                                 .param("lastName", "Morgan")
                                 .param("phone", ""))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/account?updated=1"));
+                .andExpect(redirectedUrl("/account"))
+                .andExpect(flash().attribute("accountUpdated", true));
     }
 
     @Test
@@ -2783,7 +3117,8 @@ class UiRouteTest {
                                 .param("lastName", "Rivera")
                                 .param("phone", "+1 555 123 4567"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/account?updated=1"));
+                .andExpect(redirectedUrl("/account"))
+                .andExpect(flash().attribute("accountUpdated", true));
     }
 
     @Test
@@ -2975,7 +3310,8 @@ class UiRouteTest {
                                 .param("reaction", "dislike")
                                 .param("comment", "Arrived late"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/second-player?review=saved#reviews"));
+                .andExpect(redirectedUrl("/users/second-player#reviews"))
+                .andExpect(flash().attribute("reviewStatus", "saved"));
     }
 
     @Test
@@ -2984,7 +3320,8 @@ class UiRouteTest {
 
         mockMvc.perform(post("/users/second-player/reviews/delete"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/second-player?review=deleted#reviews"));
+                .andExpect(redirectedUrl("/users/second-player#reviews"))
+                .andExpect(flash().attribute("reviewStatus", "deleted"));
     }
 
     @Test

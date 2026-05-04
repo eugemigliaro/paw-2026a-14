@@ -23,4 +23,9 @@ public enum ReportResolution {
                 .filter(resolution -> resolution.dbValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }

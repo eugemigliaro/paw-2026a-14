@@ -2,11 +2,15 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewReaction;
@@ -91,7 +95,8 @@ class ModerationReportControllerTest {
                                 .param("reason", "harassment")
                                 .param("details", "Bad behavior"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/reports/users/target?report=sent"));
+                .andExpect(redirectedUrl("/reports/users/target"))
+                .andExpect(flash().attribute("reportSent", true));
     }
 
     @Test
@@ -151,15 +156,17 @@ class ModerationReportControllerTest {
                         Instant.parse("2026-04-10T12:00:00Z"),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null);
         Mockito.when(matchService.findMatchById(42L)).thenReturn(Optional.of(match));
 
         mockMvc.perform(post("/reports/matches/42").param("reason", "harassment"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/reports/matches/42?report=sent"));
+                .andExpect(redirectedUrl("/reports/matches/42"))
+                .andExpect(flash().attribute("reportSent", true));
     }
 
     private static void authenticateUser(final Long userId) {

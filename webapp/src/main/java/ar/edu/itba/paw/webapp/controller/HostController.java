@@ -1,6 +1,11 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
+import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
+
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.RecurrenceEndMode;
 import ar.edu.itba.paw.models.RecurrenceFrequency;
@@ -14,8 +19,6 @@ import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,8 +30,10 @@ import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,31 +42,69 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
+@PreAuthorize("isAuthenticated()")
 public class HostController {
 
-    private static final String VISIBILITY_PUBLIC = "public";
-    private static final String VISIBILITY_PRIVATE = "private";
-    private static final String JOIN_POLICY_DIRECT = "direct";
-    private static final String JOIN_POLICY_APPROVAL_REQUIRED = "approval_required";
-    private static final String JOIN_POLICY_INVITE_ONLY = "invite_only";
+    private static final double DEFAULT_MAP_LATITUDE = -34.6037;
+    private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
+    private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final MatchService matchService;
     private final ImageService imageService;
     private final Clock clock;
     private final MessageSource messageSource;
+    private final boolean mapPickerEnabled;
+    private final String mapTileUrlTemplate;
+    private final String mapAttribution;
+    private final double mapDefaultLatitude;
+    private final double mapDefaultLongitude;
+    private final int mapDefaultZoom;
 
     @Autowired
     public HostController(
             final MatchService matchService,
             final ImageService imageService,
             final Clock clock,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
+            @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
+            @Value("${map.tiles.attribution:}") final String mapAttribution,
+            @Value("${map.default.latitude:" + DEFAULT_MAP_LATITUDE + "}")
+                    final double mapDefaultLatitude,
+            @Value("${map.default.longitude:" + DEFAULT_MAP_LONGITUDE + "}")
+                    final double mapDefaultLongitude,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
         this.imageService = imageService;
         this.clock = clock;
         this.messageSource = messageSource;
+        this.mapPickerEnabled = mapPickerEnabled;
+        this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
+        this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
+        this.mapDefaultLatitude = mapDefaultLatitude;
+        this.mapDefaultLongitude = mapDefaultLongitude;
+        this.mapDefaultZoom = mapDefaultZoom;
+    }
+
+    public HostController(
+            final MatchService matchService,
+            final ImageService imageService,
+            final Clock clock,
+            final MessageSource messageSource) {
+        this(
+                matchService,
+                imageService,
+                clock,
+                messageSource,
+                false,
+                "",
+                "",
+                DEFAULT_MAP_LATITUDE,
+                DEFAULT_MAP_LONGITUDE,
+                DEFAULT_MAP_ZOOM);
     }
 
     @ModelAttribute("createEventForm")
@@ -85,6 +128,7 @@ public class HostController {
 
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
+        validateCoordinates(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -114,16 +158,19 @@ public class HostController {
                     formConfig);
         }
 
-        final String resolvedVisibility = normalize(createEventForm.getVisibility());
-        final String resolvedJoinPolicy =
-                VISIBILITY_PRIVATE.equals(resolvedVisibility)
-                        ? JOIN_POLICY_INVITE_ONLY
-                        : normalize(createEventForm.getJoinPolicy());
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalize(createEventForm.getVisibility()))
+                        .orElse(null);
+        final EventJoinPolicy joinPolicy =
+                EventJoinPolicy.fromDbValue(normalize(createEventForm.getJoinPolicy()))
+                        .orElse(null);
 
         final CreateMatchRequest request =
                 new CreateMatchRequest(
                         actingUserId,
                         createEventForm.getAddress(),
+                        parseCoordinate(createEventForm.getLatitude()),
+                        parseCoordinate(createEventForm.getLongitude()),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
                         startsAt,
@@ -131,9 +178,9 @@ public class HostController {
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        resolvedVisibility,
-                        resolvedJoinPolicy,
-                        "open",
+                        visibility,
+                        joinPolicy,
+                        EventStatus.OPEN,
                         bannerImageId,
                         toRecurrenceRequest(createEventForm));
 
@@ -147,28 +194,29 @@ public class HostController {
         return new ModelAndView("redirect:/matches/" + createdMatch.getId());
     }
 
-    @GetMapping("/host/matches/{matchId}/edit")
+    @GetMapping("/host/matches/{matchId:\\d+}/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditEvent(
-            @PathVariable("matchId") final String matchId, final Locale locale) {
-        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+            @PathVariable("matchId") final Long matchId, final Locale locale) {
         final Long actingUserId = requireAuthenticatedUserId();
-        final Match match = findOwnedEditableMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        final Match match = findOwnedEditableMatchOrThrowNotFound(matchId, actingUserId);
         return hostFormView(toForm(match), null, locale, editFormConfig(match, locale));
     }
 
-    @PostMapping("/host/matches/{matchId}/edit")
+    @PostMapping("/host/matches/{matchId:\\d+}/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateEvent(
-            @PathVariable("matchId") final String matchId,
+            @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
-            final Locale locale) {
-        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
-        final Match existingMatch =
-                findOwnedEditableMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        final Match existingMatch = findOwnedEditableMatchOrThrowNotFound(matchId, actingUserId);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
+        validateCoordinates(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -198,11 +246,12 @@ public class HostController {
                     formConfig);
         }
 
-        final String resolvedVisibility = normalize(createEventForm.getVisibility());
-        final String resolvedJoinPolicy =
-                VISIBILITY_PRIVATE.equals(resolvedVisibility)
-                        ? JOIN_POLICY_INVITE_ONLY
-                        : normalize(createEventForm.getJoinPolicy());
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalize(createEventForm.getVisibility()))
+                        .orElse(null);
+        final EventJoinPolicy joinPolicy =
+                EventJoinPolicy.fromDbValue(normalize(createEventForm.getJoinPolicy()))
+                        .orElse(null);
 
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
@@ -211,16 +260,18 @@ public class HostController {
                         createEventForm.getDescription(),
                         startsAt,
                         endsAt,
-                        createEventForm.getMaxPlayers(),
+                        createEventForm.getMaxPlayers().intValue(),
                         createEventForm.getPricePerPlayer(),
                         Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
-                        resolvedVisibility,
-                        resolvedJoinPolicy,
+                        visibility,
+                        joinPolicy,
                         existingMatch.getStatus(),
-                        bannerImageId);
+                        bannerImageId,
+                        parseCoordinate(createEventForm.getLatitude()),
+                        parseCoordinate(createEventForm.getLongitude()));
 
         try {
-            matchService.updateMatch(parsedMatchId, actingUserId, request);
+            matchService.updateMatch(matchId, actingUserId, request);
         } catch (final MatchUpdateException exception) {
             if (exception.getReason() == MatchUpdateFailureReason.MATCH_NOT_FOUND
                     || exception.getReason() == MatchUpdateFailureReason.FORBIDDEN) {
@@ -235,6 +286,12 @@ public class HostController {
                 bindingResult.rejectValue(
                         "maxPlayers",
                         "match.update.error.capacityAboveMax",
+                        exception.getMessage());
+            } else if (exception.getReason()
+                    == MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE) {
+                bindingResult.rejectValue(
+                        "joinPolicy",
+                        "match.update.error.pendingRequestsExceedAvailable",
                         exception.getMessage());
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
@@ -259,32 +316,34 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=updated");
+        redirectAttributes.addFlashAttribute("hostAction", "updated");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
-    @GetMapping("/host/matches/{matchId}/series/edit")
+    @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditSeries(
-            @PathVariable("matchId") final String matchId, final Locale locale) {
-        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+            @PathVariable("matchId") final Long matchId, final Locale locale) {
         final Long actingUserId = requireAuthenticatedUserId();
-        final Match match =
-                findOwnedEditableRecurringMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        final Match match = findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUserId);
         return hostFormView(toForm(match), null, locale, seriesEditFormConfig(match, locale));
     }
 
-    @PostMapping("/host/matches/{matchId}/series/edit")
+    @PostMapping("/host/matches/{matchId:\\d+}/series/edit")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateSeries(
-            @PathVariable("matchId") final String matchId,
+            @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
-            final Locale locale) {
-        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
         final Match existingMatch =
-                findOwnedEditableRecurringMatchOrThrowNotFound(parsedMatchId, actingUserId);
+                findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUserId);
         final HostFormConfig formConfig = seriesEditFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
+        validateCoordinates(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
@@ -307,7 +366,7 @@ public class HostController {
                 toUpdateRequest(createEventForm, existingMatch.getStatus(), bannerImageId);
 
         try {
-            matchService.updateSeriesFromOccurrence(parsedMatchId, actingUserId, request);
+            matchService.updateSeriesFromOccurrence(matchId, actingUserId, request);
         } catch (final MatchUpdateException exception) {
             if (exception.getReason() == MatchUpdateFailureReason.MATCH_NOT_FOUND
                     || exception.getReason() == MatchUpdateFailureReason.FORBIDDEN
@@ -323,6 +382,12 @@ public class HostController {
                 bindingResult.rejectValue(
                         "maxPlayers",
                         "match.update.error.capacityAboveMax",
+                        exception.getMessage());
+            } else if (exception.getReason()
+                    == MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE) {
+                bindingResult.rejectValue(
+                        "joinPolicy",
+                        "match.update.error.pendingRequestsExceedAvailable",
                         exception.getMessage());
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
@@ -347,34 +412,40 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=seriesUpdated");
+        redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
-    @PostMapping("/host/matches/{matchId}/cancel")
-    public ModelAndView cancelEvent(@PathVariable("matchId") final String matchId) {
-        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+    @PostMapping("/host/matches/{matchId:\\d+}/cancel")
+    @PreAuthorize("@securityService.isHost(#matchId)")
+    public ModelAndView cancelEvent(
+            @PathVariable("matchId") final Long matchId,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
-        findOwnedMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        findOwnedMatchOrThrowNotFound(matchId, actingUserId);
         try {
-            matchService.cancelMatch(parsedMatchId, actingUserId);
+            matchService.cancelMatch(matchId, actingUserId);
         } catch (final MatchCancellationException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return new ModelAndView("redirect:/matches/" + parsedMatchId + "?hostAction=cancelled");
+        redirectAttributes.addFlashAttribute("hostAction", "cancelled");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
-    @PostMapping("/host/matches/{matchId}/series/cancel")
-    public ModelAndView cancelSeries(@PathVariable("matchId") final String matchId) {
-        final Long parsedMatchId = parseMatchIdOrThrowNotFound(matchId);
+    @PostMapping("/host/matches/{matchId:\\d+}/series/cancel")
+    @PreAuthorize("@securityService.isHost(#matchId)")
+    public ModelAndView cancelSeries(
+            @PathVariable("matchId") final Long matchId,
+            final RedirectAttributes redirectAttributes) {
         final Long actingUserId = requireAuthenticatedUserId();
-        findOwnedEditableRecurringMatchOrThrowNotFound(parsedMatchId, actingUserId);
+        findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUserId);
         try {
-            matchService.cancelSeriesFromOccurrence(parsedMatchId, actingUserId);
+            matchService.cancelSeriesFromOccurrence(matchId, actingUserId);
         } catch (final MatchCancellationException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return new ModelAndView(
-                "redirect:/matches/" + parsedMatchId + "?hostAction=seriesCancelled");
+        redirectAttributes.addFlashAttribute("hostAction", "seriesCancelled");
+        return new ModelAndView("redirect:/matches/" + matchId);
     }
 
     private ModelAndView hostFormView(
@@ -398,6 +469,13 @@ public class HostController {
         mav.addObject("submitButtonId", formConfig.submitButtonId());
         mav.addObject("isEditMode", formConfig.editMode());
         mav.addObject("isSeriesEditMode", formConfig.seriesEditMode());
+        mav.addObject("currentBannerImageUrl", formConfig.bannerImageUrl());
+        mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
+        mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
+        mav.addObject("mapAttribution", mapAttribution);
+        mav.addObject("mapDefaultLatitude", mapDefaultLatitude);
+        mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
+        mav.addObject("mapDefaultZoom", mapDefaultZoom);
         return mav;
     }
 
@@ -458,6 +536,7 @@ public class HostController {
                 messageSource.getMessage("host.form.submit", null, locale),
                 messageSource.getMessage("host.form.submitting", null, locale),
                 "publish-match-button",
+                null,
                 false,
                 false);
     }
@@ -473,6 +552,7 @@ public class HostController {
                 messageSource.getMessage("host.edit.form.submit", null, locale),
                 messageSource.getMessage("host.edit.form.submitting", null, locale),
                 "update-match-button",
+                bannerUrlFor(match),
                 true,
                 false);
     }
@@ -488,6 +568,7 @@ public class HostController {
                 messageSource.getMessage("host.seriesEdit.form.submit", null, locale),
                 messageSource.getMessage("host.seriesEdit.form.submitting", null, locale),
                 "update-series-button",
+                bannerUrlFor(match),
                 true,
                 true);
     }
@@ -499,9 +580,11 @@ public class HostController {
         form.setTitle(match.getTitle());
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
+        form.setLatitude(match.getLatitude() == null ? "" : match.getLatitude().toString());
+        form.setLongitude(match.getLongitude() == null ? "" : match.getLongitude().toString());
         form.setSport(match.getSport().getDbValue());
-        form.setVisibility(match.getVisibility());
-        form.setJoinPolicy(match.getJoinPolicy());
+        form.setVisibility(match.getVisibility().getValue());
+        form.setJoinPolicy(match.getJoinPolicy().getValue());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
         final LocalDateTime endsAt =
@@ -515,25 +598,26 @@ public class HostController {
     }
 
     private UpdateMatchRequest toUpdateRequest(
-            final CreateEventForm form, final String status, final Long bannerImageId) {
-        final String resolvedVisibility = normalize(form.getVisibility());
-        final String resolvedJoinPolicy =
-                VISIBILITY_PRIVATE.equals(resolvedVisibility)
-                        ? JOIN_POLICY_INVITE_ONLY
-                        : normalize(form.getJoinPolicy());
+            final CreateEventForm form, final EventStatus status, final Long bannerImageId) {
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalize(form.getVisibility())).orElse(null);
+        final EventJoinPolicy joinPolicy =
+                EventJoinPolicy.fromDbValue(normalize(form.getJoinPolicy())).orElse(null);
         return new UpdateMatchRequest(
                 form.getAddress(),
                 form.getTitle(),
                 form.getDescription(),
                 toInstant(form.getEventDate(), form.getEventTime(), form.getTz()),
                 toInstant(form.getEndDate(), form.getEndTime(), form.getTz()),
-                form.getMaxPlayers(),
+                form.getMaxPlayers().intValue(),
                 form.getPricePerPlayer(),
                 Sport.fromDbValue(form.getSport()).orElse(Sport.PADEL),
-                resolvedVisibility,
-                resolvedJoinPolicy,
+                visibility,
+                joinPolicy,
                 status,
-                bannerImageId);
+                bannerImageId,
+                parseCoordinate(form.getLatitude()),
+                parseCoordinate(form.getLongitude()));
     }
 
     private Instant resolveEndsAt(final Match match) {
@@ -557,7 +641,7 @@ public class HostController {
     private Match findOwnedEditableMatchOrThrowNotFound(
             final Long matchId, final Long actingUserId) {
         final Match match = findOwnedMatchOrThrowNotFound(matchId, actingUserId);
-        final EventStatus status = EventStatus.fromDbValue(match.getStatus()).orElse(null);
+        final EventStatus status = match.getStatus();
         if (status == EventStatus.COMPLETED || status == EventStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
@@ -571,23 +655,6 @@ public class HostController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return match;
-    }
-
-    private Long requireAuthenticatedUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-    }
-
-    private static Long parseMatchIdOrThrowNotFound(final String matchId) {
-        if (matchId == null || !matchId.matches("\\d+")) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        try {
-            return Long.valueOf(matchId);
-        } catch (final NumberFormatException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
     }
 
     private static Instant toInstant(
@@ -634,12 +701,11 @@ public class HostController {
             return;
         }
 
-        final String visibility = normalize(form.getVisibility());
+        final String normalizedVisibility = normalize(form.getVisibility());
+        final EventVisibility visibility =
+                EventVisibility.fromDbValue(normalizedVisibility).orElse(null);
 
-        final boolean validVisibility =
-                VISIBILITY_PUBLIC.equals(visibility) || VISIBILITY_PRIVATE.equals(visibility);
-
-        if (!validVisibility) {
+        if (visibility == null) {
             bindingResult.rejectValue(
                     "visibility",
                     "host.validation.visibility.invalid",
@@ -647,7 +713,7 @@ public class HostController {
             return;
         }
 
-        if (VISIBILITY_PRIVATE.equals(visibility)) {
+        if (EventVisibility.PRIVATE == visibility) {
             // Private events are always invite_only; no join policy selection needed.
             return;
         }
@@ -656,20 +722,69 @@ public class HostController {
             return;
         }
 
-        final String joinPolicy = normalize(form.getJoinPolicy());
+        final String normalizedJoinPolicy = normalize(form.getJoinPolicy());
 
-        if (joinPolicy.isEmpty()) {
+        if (normalizedJoinPolicy.isEmpty()) {
             bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.required");
             return;
         }
 
         final boolean validJoinPolicy =
-                JOIN_POLICY_DIRECT.equals(joinPolicy)
-                        || JOIN_POLICY_APPROVAL_REQUIRED.equals(joinPolicy);
+                EventJoinPolicy.fromDbValue(normalizedJoinPolicy).isPresent();
 
         if (!validJoinPolicy) {
             bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.invalid");
         }
+    }
+
+    private void validateCoordinates(
+            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
+        final String latitude = normalizeBlank(form.getLatitude());
+        final String longitude = normalizeBlank(form.getLongitude());
+        final boolean hasLatitude = !latitude.isEmpty();
+        final boolean hasLongitude = !longitude.isEmpty();
+
+        if (hasLatitude != hasLongitude) {
+            bindingResult.rejectValue(
+                    hasLatitude ? "longitude" : "latitude",
+                    "CreateEventForm.coordinates.Pair",
+                    messageSource.getMessage("CreateEventForm.coordinates.Pair", null, locale));
+            return;
+        }
+        if (!hasLatitude) {
+            return;
+        }
+
+        final Double parsedLatitude = parseCoordinate(latitude);
+        final Double parsedLongitude = parseCoordinate(longitude);
+        if (parsedLatitude == null || parsedLatitude < -90 || parsedLatitude > 90) {
+            bindingResult.rejectValue(
+                    "latitude",
+                    "CreateEventForm.coordinates.Invalid",
+                    messageSource.getMessage("CreateEventForm.coordinates.Invalid", null, locale));
+        }
+        if (parsedLongitude == null || parsedLongitude < -180 || parsedLongitude > 180) {
+            bindingResult.rejectValue(
+                    "longitude",
+                    "CreateEventForm.coordinates.Invalid",
+                    messageSource.getMessage("CreateEventForm.coordinates.Invalid", null, locale));
+        }
+    }
+
+    private static Double parseCoordinate(final String value) {
+        final String normalized = normalizeBlank(value);
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        try {
+            return Double.valueOf(normalized);
+        } catch (final NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private static String normalizeBlank(final String value) {
+        return value == null ? "" : value.trim();
     }
 
     private static String normalize(final String value) {
@@ -685,6 +800,7 @@ public class HostController {
             String submitLabel,
             String submitLoadingLabel,
             String submitButtonId,
+            String bannerImageUrl,
             boolean editMode,
             boolean seriesEditMode) {}
 }

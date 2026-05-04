@@ -24,4 +24,9 @@ public enum EventStatus {
                 .filter(status -> status.value.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

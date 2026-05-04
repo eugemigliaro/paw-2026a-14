@@ -23,4 +23,9 @@ public enum EventVisibility {
                 .filter(visibility -> visibility.value.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

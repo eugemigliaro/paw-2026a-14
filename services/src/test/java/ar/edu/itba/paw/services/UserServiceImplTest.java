@@ -185,13 +185,9 @@ public class UserServiceImplTest {
                         new ByteArrayInputStream(new byte[10]));
 
         Assertions.assertEquals(100L, result.getProfileImageId());
-        Mockito.verify(userDao)
-                .updateProfile(
-                        Mockito.eq(1L),
-                        Mockito.any(),
-                        Mockito.any(),
-                        Mockito.any(),
-                        Mockito.any(),
-                        Mockito.eq(100L));
+        Assertions.assertEquals(1L, result.getId());
+        Assertions.assertEquals("valid", result.getUsername());
+        Assertions.assertEquals("Name", result.getName());
+        Assertions.assertEquals("Last", result.getLastName());
     }
 }

@@ -41,7 +41,7 @@
 	margin: 0;
 	max-width: none;
 	position: relative;
-	width: 150px;
+	width: 14.75rem;
 }
 
 .matches-search-sort-panel .sort-panel__field .field__label {
@@ -57,14 +57,22 @@
 	white-space: nowrap;
 }
 
-.matches-search-sort-panel .sort-panel__select {
-	border: 1px solid #d1d5db;
-	border-radius: 12px;
-	font-size: 0.86rem;
-	height: 38px;
-	line-height: 1.1;
-	min-height: 38px;
-	padding: 0.55rem 2.2rem 0.55rem 0.85rem;
+.matches-search-sort-panel .sort-panel__dropdown {
+	margin-bottom: 0;
+	width: 100%;
+}
+
+.matches-search-sort-panel .sort-panel__toggle {
+	width: 100%;
+}
+
+.matches-search-sort-panel .sort-panel__panel {
+	min-width: 100%;
+	width: 100%;
+}
+
+.matches-search-sort-panel .sort-panel__item {
+	white-space: normal;
 }
 
 .matches-search-panel {

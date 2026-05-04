@@ -31,9 +31,13 @@ public interface MatchParticipantDao {
 
     List<User> findPendingRequests(Long matchId);
 
+    int countPendingRequests(Long matchId);
+
     List<PendingJoinRequest> findPendingRequestsForHost(Long hostUserId);
 
     boolean approveRequest(Long matchId, Long userId);
+
+    int approveAllPendingRequests(Long matchId);
 
     int approveSeriesJoinRequest(Long seriesId, Long userId, Instant startsAfter);
 
@@ -46,6 +50,8 @@ public interface MatchParticipantDao {
     boolean removeParticipant(Long matchId, Long userId);
 
     boolean cancelJoinRequest(Long matchId, Long userId);
+
+    int cancelPendingRequests(Long matchId);
 
     List<Long> findPendingMatchIds(Long userId);
 
@@ -68,6 +74,8 @@ public interface MatchParticipantDao {
     int declineSeriesInvite(Long seriesId, Long userId);
 
     List<User> findInvitedUsers(Long matchId);
+
+    int cancelPendingInvitations(Long matchId);
 
     List<User> findDeclinedInvitees(Long matchId);
 

@@ -88,4 +88,32 @@ public class EmailActionRequest {
     public boolean isExpired(final Instant now) {
         return expiresAt.isBefore(now) || expiresAt.equals(now);
     }
+
+    @Override
+    public String toString() {
+        return "EmailActionRequest{"
+                + "id="
+                + id
+                + ", actionType="
+                + actionType
+                + ", userId="
+                + userId
+                + ", status="
+                + status
+                + ", expiresAt="
+                + expiresAt
+                + ", consumedAt="
+                + consumedAt
+                + ", createdAt="
+                + createdAt
+                + ", updatedAt="
+                + updatedAt
+                + ", hasEmail="
+                + (email != null && !email.isBlank())
+                + ", hasTokenHash="
+                + (tokenHash != null && !tokenHash.isBlank())
+                + ", hasPayload="
+                + (payloadJson != null && !payloadJson.isBlank())
+                + '}';
+    }
 }

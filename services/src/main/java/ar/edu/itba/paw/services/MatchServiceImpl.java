@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.EventVisibility;
@@ -43,6 +44,7 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final SecurityService securityService;
     private final MatchNotificationService matchNotificationService;
     private final MessageSource messageSource;
     private final Clock clock;
@@ -52,11 +54,13 @@ public class MatchServiceImpl implements MatchService {
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
+            final SecurityService securityService,
             final MessageSource messageSource,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
+        this.securityService = securityService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -75,20 +79,7 @@ public class MatchServiceImpl implements MatchService {
             return createRecurringMatch(request);
         }
 
-        return matchDao.createMatch(
-                request.getHostUserId(),
-                request.getAddress(),
-                request.getTitle(),
-                request.getDescription(),
-                request.getStartsAt(),
-                request.getEndsAt(),
-                request.getMaxPlayers(),
-                request.getPricePerPlayer(),
-                request.getSport(),
-                request.getVisibility(),
-                request.getJoinPolicy(),
-                request.getStatus(),
-                request.getBannerImageId());
+        return createSingleMatch(request);
     }
 
     private Match createRecurringMatch(final CreateMatchRequest request) {
@@ -111,29 +102,91 @@ public class MatchServiceImpl implements MatchService {
         Match firstOccurrence = null;
         for (int i = 0; i < occurrences.size(); i++) {
             final OccurrenceWindow occurrence = occurrences.get(i);
-            final Match created =
-                    matchDao.createMatch(
-                            request.getHostUserId(),
-                            request.getAddress(),
-                            request.getTitle(),
-                            request.getDescription(),
-                            occurrence.startsAt(),
-                            occurrence.endsAt(),
-                            request.getMaxPlayers(),
-                            request.getPricePerPlayer(),
-                            request.getSport(),
-                            request.getVisibility(),
-                            request.getJoinPolicy(),
-                            request.getStatus(),
-                            request.getBannerImageId(),
-                            seriesId,
-                            i + 1);
+            final Match created = createSeriesOccurrence(request, occurrence, seriesId, i + 1);
             if (firstOccurrence == null) {
                 firstOccurrence = created;
             }
         }
 
         return firstOccurrence;
+    }
+
+    private Match createSingleMatch(final CreateMatchRequest request) {
+        return matchDao.createMatch(
+                request.getHostUserId(),
+                request.getAddress(),
+                request.getTitle(),
+                request.getDescription(),
+                request.getStartsAt(),
+                request.getEndsAt(),
+                request.getMaxPlayers(),
+                request.getPricePerPlayer(),
+                request.getSport(),
+                request.getVisibility(),
+                resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
+                request.getStatus(),
+                request.getBannerImageId(),
+                request.getLatitude(),
+                request.getLongitude());
+    }
+
+    private Match createSeriesOccurrence(
+            final CreateMatchRequest request,
+            final OccurrenceWindow occurrence,
+            final Long seriesId,
+            final int seriesOccurrenceIndex) {
+        return matchDao.createMatch(
+                request.getHostUserId(),
+                request.getAddress(),
+                request.getTitle(),
+                request.getDescription(),
+                occurrence.startsAt(),
+                occurrence.endsAt(),
+                request.getMaxPlayers(),
+                request.getPricePerPlayer(),
+                request.getSport(),
+                request.getVisibility(),
+                resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
+                request.getStatus(),
+                request.getBannerImageId(),
+                request.getLatitude(),
+                request.getLongitude(),
+                seriesId,
+                seriesOccurrenceIndex);
+    }
+
+    private boolean updateStoredMatch(
+            final Long matchId,
+            final Long actingUserId,
+            final UpdateMatchRequest request,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status) {
+        return matchDao.updateMatch(
+                matchId,
+                actingUserId,
+                request.getAddress(),
+                request.getTitle(),
+                request.getDescription(),
+                request.getStartsAt(),
+                request.getEndsAt(),
+                request.getMaxPlayers(),
+                request.getPricePerPlayer(),
+                request.getSport(),
+                request.getVisibility(),
+                joinPolicy,
+                status,
+                request.getBannerImageId(),
+                request.getLatitude(),
+                request.getLongitude());
+    }
+
+    private static EventJoinPolicy resolveJoinPolicy(
+            final EventVisibility visibility, final EventJoinPolicy joinPolicy) {
+        return EventVisibility.PRIVATE == visibility ? EventJoinPolicy.INVITE_ONLY : joinPolicy;
+    }
+
+    private static boolean hasCoordinates(final Double latitude, final Double longitude) {
+        return latitude != null && longitude != null;
     }
 
     @Override
@@ -152,8 +205,8 @@ public class MatchServiceImpl implements MatchService {
                     MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
         }
 
-        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())
-                || EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.CANCELLED.equals(match.getStatus())
+                || EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_EDITABLE,
                     message("match.update.error.notEditable"));
@@ -177,23 +230,16 @@ public class MatchServiceImpl implements MatchService {
                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
                     message("match.update.error.capacityBelowConfirmed"));
         }
+        final ParticipationPolicyTransition participationPolicyTransition =
+                validateAndPlanParticipationPolicyTransition(match, request, confirmedParticipants);
+
+        final EventJoinPolicy joinPolicy =
+                EventVisibility.PRIVATE == request.getVisibility()
+                        ? EventJoinPolicy.INVITE_ONLY
+                        : request.getJoinPolicy();
 
         final boolean updated =
-                matchDao.updateMatch(
-                        matchId,
-                        actingUserId,
-                        request.getAddress(),
-                        request.getTitle(),
-                        request.getDescription(),
-                        request.getStartsAt(),
-                        request.getEndsAt(),
-                        request.getMaxPlayers(),
-                        request.getPricePerPlayer(),
-                        request.getSport(),
-                        request.getVisibility(),
-                        request.getJoinPolicy(),
-                        request.getStatus(),
-                        request.getBannerImageId());
+                updateStoredMatch(matchId, actingUserId, request, joinPolicy, request.getStatus());
 
         if (!updated) {
             throw new MatchUpdateException(
@@ -207,8 +253,120 @@ public class MatchServiceImpl implements MatchService {
                                         new MatchUpdateException(
                                                 MatchUpdateFailureReason.MATCH_NOT_FOUND,
                                                 message("match.update.error.notFound")));
+        applyParticipationPolicyTransition(updatedMatch, participationPolicyTransition);
         matchNotificationService.notifyMatchUpdated(updatedMatch);
         return updatedMatch;
+    }
+
+    private ParticipationPolicyTransition validateAndPlanParticipationPolicyTransition(
+            final Match match, final UpdateMatchRequest request, final int confirmedParticipants) {
+        if (wasPrivate(match) && isPublic(request)) {
+            return ParticipationPolicyTransition.cancelInvitations(
+                    matchParticipantDao.findInvitedUsers(match.getId()));
+        }
+        if (wasApprovalRequired(match) && isPrivate(request)) {
+            return ParticipationPolicyTransition.cancelPendingRequests(
+                    matchParticipantDao.findPendingRequests(match.getId()));
+        }
+        if (wasApprovalRequired(match) && isDirectPublic(request)) {
+            final int pendingRequests = matchParticipantDao.countPendingRequests(match.getId());
+            final int availableSpots = request.getMaxPlayers() - confirmedParticipants;
+            if (pendingRequests > availableSpots) {
+                throw new MatchUpdateException(
+                        MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE,
+                        message("match.update.error.pendingRequestsExceedAvailable"));
+            }
+            return ParticipationPolicyTransition.approvePendingRequests(
+                    matchParticipantDao.findPendingRequests(match.getId()));
+        }
+        return ParticipationPolicyTransition.none();
+    }
+
+    private void applyParticipationPolicyTransition(
+            final Match updatedMatch, final ParticipationPolicyTransition transition) {
+        if (transition.isEmpty()) {
+            return;
+        }
+        if (transition.type() == ParticipationPolicyTransitionType.CANCEL_INVITATIONS) {
+            matchNotificationService.notifyInvitationOpenedToPublic(
+                    updatedMatch, transition.affectedUsers());
+            matchParticipantDao.cancelPendingInvitations(updatedMatch.getId());
+            return;
+        }
+        if (transition.type() == ParticipationPolicyTransitionType.CANCEL_PENDING_REQUESTS) {
+            matchNotificationService.notifyPendingRequestClosedByPrivacyChange(
+                    updatedMatch, transition.affectedUsers());
+            matchParticipantDao.cancelPendingRequests(updatedMatch.getId());
+            return;
+        }
+        matchParticipantDao.approveAllPendingRequests(updatedMatch.getId());
+        for (final User user : transition.affectedUsers()) {
+            matchNotificationService.notifyPlayerRequestApproved(updatedMatch, user);
+        }
+    }
+
+    private static boolean wasPrivate(final Match match) {
+        return EventVisibility.PRIVATE == match.getVisibility();
+    }
+
+    private static boolean wasApprovalRequired(final Match match) {
+        return EventVisibility.PUBLIC == match.getVisibility()
+                && EventJoinPolicy.APPROVAL_REQUIRED == match.getJoinPolicy();
+    }
+
+    private static boolean isPublic(final UpdateMatchRequest request) {
+        return EventVisibility.PUBLIC == request.getVisibility();
+    }
+
+    private static boolean isPrivate(final UpdateMatchRequest request) {
+        return EventVisibility.PRIVATE == request.getVisibility();
+    }
+
+    private static boolean isDirectPublic(final UpdateMatchRequest request) {
+        return isPublic(request) && EventJoinPolicy.DIRECT == request.getJoinPolicy();
+    }
+
+    private enum ParticipationPolicyTransitionType {
+        NONE,
+        CANCEL_INVITATIONS,
+        CANCEL_PENDING_REQUESTS,
+        APPROVE_PENDING_REQUESTS
+    }
+
+    private record ParticipationPolicyTransition(
+            ParticipationPolicyTransitionType type, List<User> affectedUsers) {
+
+        private static ParticipationPolicyTransition none() {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.NONE, List.of());
+        }
+
+        private static ParticipationPolicyTransition cancelInvitations(final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.CANCEL_INVITATIONS, safeUsers(users));
+        }
+
+        private static ParticipationPolicyTransition cancelPendingRequests(final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.CANCEL_PENDING_REQUESTS, safeUsers(users));
+        }
+
+        private static ParticipationPolicyTransition approvePendingRequests(
+                final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.APPROVE_PENDING_REQUESTS, safeUsers(users));
+        }
+
+        private boolean isEmpty() {
+            return type == ParticipationPolicyTransitionType.NONE || affectedUsers.isEmpty();
+        }
+
+        private static List<User> safeUsers(final List<User> users) {
+            if (users == null || users.isEmpty()) {
+                return List.of();
+            }
+            return List.copyOf(users);
+        }
     }
 
     @Override
@@ -272,10 +430,8 @@ public class MatchServiceImpl implements MatchService {
                     new MatchUpdateException(
                             MatchUpdateFailureReason.INVALID_SCHEDULE,
                             message("match.schedule.error.endBeforeStart")));
-            final boolean updated =
-                    matchDao.updateMatch(
-                            target.getId(),
-                            actingUserId,
+            final UpdateMatchRequest targetRequest =
+                    new UpdateMatchRequest(
                             request.getAddress(),
                             request.getTitle(),
                             request.getDescription(),
@@ -287,7 +443,17 @@ public class MatchServiceImpl implements MatchService {
                             request.getVisibility(),
                             request.getJoinPolicy(),
                             target.getStatus(),
-                            request.getBannerImageId());
+                            request.getBannerImageId(),
+                            request.getLatitude(),
+                            request.getLongitude());
+            final boolean updated =
+                    updateStoredMatch(
+                            target.getId(),
+                            actingUserId,
+                            targetRequest,
+                            resolveJoinPolicy(
+                                    targetRequest.getVisibility(), targetRequest.getJoinPolicy()),
+                            target.getStatus());
             if (!updated) {
                 throw new MatchUpdateException(
                         MatchUpdateFailureReason.FORBIDDEN,
@@ -318,19 +484,21 @@ public class MatchServiceImpl implements MatchService {
                                                 MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                                 message("match.cancel.error.notFound")));
 
-        if (!match.getHostUserId().equals(actingUserId)) {
+        final Long currentUserId = securityService.currentUserId();
+        if (!match.getHostUserId().equals(actingUserId)
+                && (currentUserId == null || !currentUserId.equals(actingUserId))) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
                     message("match.cancel.error.forbidden"));
         }
 
-        if (EventStatus.COMPLETED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
                     message("match.cancel.error.forbidden"));
         }
 
-        if (EventStatus.CANCELLED.getValue().equalsIgnoreCase(match.getStatus())) {
+        if (EventStatus.CANCELLED.equals(match.getStatus())) {
             return match;
         }
 
@@ -456,9 +624,8 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private static boolean isEditableMatch(final Match match) {
-        return EventStatus.fromDbValue(match.getStatus())
-                .map(status -> status != EventStatus.COMPLETED && status != EventStatus.CANCELLED)
-                .orElse(true);
+        return match.getStatus() != EventStatus.COMPLETED
+                && match.getStatus() != EventStatus.CANCELLED;
     }
 
     @Override
@@ -614,8 +781,30 @@ public class MatchServiceImpl implements MatchService {
             final String timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
+        return searchPublicMatches(
+                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
+                maxPrice, null, null);
+    }
+
+    @Override
+    public PaginatedResult<Match> searchPublicMatches(
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final Double latitude,
+            final Double longitude) {
         final List<Sport> sportFilters = parseSports(sport);
-        final MatchSort sortFilter = parseSort(sort);
+        final MatchSort sortFilter =
+                hasCoordinates(latitude, longitude)
+                        ? parseSort(sort)
+                        : withoutDistance(parseSort(sort));
         final ZoneId zoneId = parseZone(timezone);
         final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
 
@@ -644,8 +833,14 @@ public class MatchServiceImpl implements MatchService {
                                 maxPrice,
                                 sortFilter,
                                 zoneId,
+                                latitude,
+                                longitude,
                                 offset,
                                 safePageSize));
+    }
+
+    private static MatchSort withoutDistance(final MatchSort sort) {
+        return sort == MatchSort.DISTANCE ? MatchSort.SOONEST : sort;
     }
 
     private static List<Sport> parseSports(final String rawSports) {

@@ -2,9 +2,13 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
+import ar.edu.itba.paw.models.EventStatus;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.UserAccount;
@@ -92,15 +96,17 @@ class EventControllerTest {
                         Instant.now().plusSeconds(4600),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null);
         Mockito.when(matchService.findMatchById(42L)).thenReturn(Optional.of(match));
 
         mockMvc.perform(post("/matches/42/reservations"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/42?reservation=confirmed"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("reservationStatus", "confirmed"));
     }
 
     private static void authenticateUser(final Long userId) {

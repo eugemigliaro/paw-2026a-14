@@ -31,4 +31,9 @@ public enum Sport {
                 .filter(sport -> sport.dbValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }

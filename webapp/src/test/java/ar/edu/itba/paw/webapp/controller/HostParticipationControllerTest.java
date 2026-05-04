@@ -2,9 +2,11 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserRole;
@@ -55,12 +57,13 @@ class HostParticipationControllerTest {
         authenticateUser(1L); // Host user
         Match mockMatch = Mockito.mock(Match.class);
         when(mockMatch.getHostUserId()).thenReturn(1L);
-        when(mockMatch.getJoinPolicy()).thenReturn("approval_required");
+        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
 
         mockMvc.perform(post("/host/matches/42/requests/9/approve"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/requests?action=approved"));
+                .andExpect(redirectedUrl("/host/matches/42/requests"))
+                .andExpect(flash().attribute("action", "approved"));
     }
 
     @Test
@@ -68,12 +71,13 @@ class HostParticipationControllerTest {
         authenticateUser(1L);
         Match mockMatch = Mockito.mock(Match.class);
         when(mockMatch.getHostUserId()).thenReturn(1L);
-        when(mockMatch.getJoinPolicy()).thenReturn("approval_required");
+        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
 
         mockMvc.perform(post("/host/matches/42/requests/9/reject"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/requests?action=rejected"));
+                .andExpect(redirectedUrl("/host/matches/42/requests"))
+                .andExpect(flash().attribute("action", "rejected"));
     }
 
     @Test
@@ -81,12 +85,13 @@ class HostParticipationControllerTest {
         authenticateUser(1L);
         Match mockMatch = Mockito.mock(Match.class);
         when(mockMatch.getHostUserId()).thenReturn(1L);
-        when(mockMatch.getJoinPolicy()).thenReturn("invite_only");
+        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.INVITE_ONLY);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
 
         mockMvc.perform(post("/host/matches/42/invites").param("email", "test@test.com"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/invites?action=invited"));
+                .andExpect(redirectedUrl("/host/matches/42/invites"))
+                .andExpect(flash().attribute("action", "invited"));
     }
 
     @Test
@@ -95,7 +100,8 @@ class HostParticipationControllerTest {
 
         mockMvc.perform(post("/host/matches/42/participants/9/remove"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/participants?action=removed"));
+                .andExpect(redirectedUrl("/host/matches/42/participants"))
+                .andExpect(flash().attribute("action", "removed"));
     }
 
     private static void authenticateUser(final Long userId) {

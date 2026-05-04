@@ -68,15 +68,15 @@
 					</c:choose>
 				</header>
 
-				<c:if test="${param.action eq 'approved'}">
-					<div class="notice notice--success">
-						<spring:message code="host.requests.approved" />
-					</div>
-				</c:if>
-				<c:if test="${param.action eq 'rejected'}">
-					<div class="notice notice--info">
-						<spring:message code="host.requests.rejected" />
-					</div>
+					<c:if test="${action eq 'approved'}">
+						<div class="notice notice--success">
+							<spring:message code="host.requests.approved" />
+						</div>
+					</c:if>
+					<c:if test="${action eq 'rejected'}">
+						<div class="notice notice--info">
+							<spring:message code="host.requests.rejected" />
+						</div>
 				</c:if>
 				<c:if test="${not empty param.error}">
 					<div class="notice notice--error">

@@ -50,4 +50,20 @@ public class PaginatedResult<T> {
     public boolean hasNext() {
         return page < getTotalPages();
     }
+
+    @Override
+    public String toString() {
+        return "PaginatedResult{"
+                + "itemCount="
+                + (items == null ? 0 : items.size())
+                + ", totalCount="
+                + totalCount
+                + ", page="
+                + page
+                + ", pageSize="
+                + pageSize
+                + ", totalPages="
+                + getTotalPages()
+                + '}';
+    }
 }

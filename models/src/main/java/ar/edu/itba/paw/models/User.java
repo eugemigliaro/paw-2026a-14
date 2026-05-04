@@ -62,27 +62,21 @@ public class User {
     @Override
     public String toString() {
         return "User{"
-                + "email='"
-                + email
-                + '\''
+                + "id="
+                + id
                 + ", username='"
                 + username
                 + '\''
-                + ", name='"
-                + name
-                + '\''
-                + ", lastName='"
-                + lastName
-                + '\''
-                + ", phone='"
-                + phone
-                + '\''
-                + ", profileImageId='"
+                + ", profileImageId="
                 + profileImageId
-                + '\''
-                + ", id='"
-                + id
-                + '\''
+                + ", hasEmail="
+                + (email != null && !email.isBlank())
+                + ", hasName="
+                + (name != null && !name.isBlank())
+                + ", hasLastName="
+                + (lastName != null && !lastName.isBlank())
+                + ", hasPhone="
+                + (phone != null && !phone.isBlank())
                 + '}';
     }
 }

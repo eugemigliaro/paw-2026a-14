@@ -883,6 +883,54 @@ public class MatchParticipantJdbcDaoTest {
         Assertions.assertEquals(1, pendingRows);
     }
 
+    @Test
+    public void testCancelPendingInvitationsCancelsOnlyInvitedRows() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'invited', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int updatedRows = matchParticipantDao.cancelPendingInvitations(10L);
+
+        Assertions.assertEquals(1, updatedRows);
+        Assertions.assertEquals("cancelled", participantStatus(10L, 2L));
+        Assertions.assertEquals("joined", participantStatus(10L, 3L));
+    }
+
+    @Test
+    public void testCancelPendingRequestsCancelsOnlyPendingApprovalRows() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'pending_approval', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'joined', CURRENT_TIMESTAMP)");
+
+        final int updatedRows = matchParticipantDao.cancelPendingRequests(10L);
+
+        Assertions.assertEquals(1, updatedRows);
+        Assertions.assertEquals("cancelled", participantStatus(10L, 2L));
+        Assertions.assertEquals("joined", participantStatus(10L, 3L));
+    }
+
+    @Test
+    public void testApproveAllPendingRequestsJoinsOnlyPendingApprovalRows() {
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 2, 'pending_approval', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update(
+                "INSERT INTO match_participants (match_id, user_id, status, joined_at)"
+                        + " VALUES (10, 3, 'invited', CURRENT_TIMESTAMP)");
+
+        final int updatedRows = matchParticipantDao.approveAllPendingRequests(10L);
+
+        Assertions.assertEquals(1, updatedRows);
+        Assertions.assertEquals("joined", participantStatus(10L, 2L));
+        Assertions.assertEquals("invited", participantStatus(10L, 3L));
+    }
+
     private String participantStatus(final Long matchId, final Long userId) {
         return jdbcTemplate.queryForObject(
                 "SELECT status FROM match_participants WHERE match_id = ? AND user_id = ?",
@@ -935,5 +983,237 @@ public class MatchParticipantJdbcDaoTest {
                 status,
                 seriesId,
                 occurrenceIndex);
+    }
+
+    @Test
+    public void shouldHasPendingRequest_WhenRequestExists() {
+        matchParticipantDao.createJoinRequest(10L, 2L);
+
+        final boolean hasPending = matchParticipantDao.hasPendingRequest(10L, 2L);
+
+        Assertions.assertTrue(hasPending);
+
+        final Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2 AND status = 'pending_approval'",
+                        Integer.class);
+        Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    public void shouldHasPendingRequest_WhenNoRequestExists() {
+        final boolean hasPending = matchParticipantDao.hasPendingRequest(10L, 2L);
+
+        Assertions.assertFalse(hasPending);
+    }
+
+    @Test
+    public void shouldHasPendingRequest_WhenRequestApproved() {
+        matchParticipantDao.createJoinRequest(10L, 2L);
+        matchParticipantDao.approveRequest(10L, 2L);
+
+        final boolean hasPending = matchParticipantDao.hasPendingRequest(10L, 2L);
+
+        Assertions.assertFalse(hasPending, "Approved request should not count as pending");
+    }
+
+    @Test
+    public void shouldCreateJoinRequest_WhenValidDataProvided() {
+        final boolean created = matchParticipantDao.createJoinRequest(10L, 2L);
+
+        Assertions.assertTrue(created);
+
+        final Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2 AND status = 'pending_approval'",
+                        Integer.class);
+        Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    public void shouldCreateJoinRequest_WhenDuplicateRequestIsRejected() {
+        matchParticipantDao.createJoinRequest(10L, 2L);
+
+        final boolean created = matchParticipantDao.createJoinRequest(10L, 2L);
+
+        Assertions.assertFalse(created, "Duplicate request should be rejected");
+
+        final Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2 AND status = 'pending_approval'",
+                        Integer.class);
+        Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    public void shouldApproveRequest_WhenPendingRequestExists() {
+        matchParticipantDao.createJoinRequest(10L, 2L);
+
+        final boolean approved = matchParticipantDao.approveRequest(10L, 2L);
+
+        Assertions.assertTrue(approved);
+
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals("joined", status);
+    }
+
+    @Test
+    public void shouldApproveRequest_WhenNoPendingRequest() {
+        final boolean approved = matchParticipantDao.approveRequest(10L, 2L);
+
+        Assertions.assertFalse(approved, "Approve should fail without pending request");
+    }
+
+    @Test
+    public void shouldRejectRequest_WhenPendingRequestExists() {
+        matchParticipantDao.createJoinRequest(10L, 2L);
+
+        final boolean rejected = matchParticipantDao.rejectRequest(10L, 2L);
+
+        Assertions.assertTrue(rejected);
+
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals(
+                "cancelled", status, "Rejected request should set status to cancelled");
+    }
+
+    @Test
+    public void shouldRejectRequest_WhenNoPendingRequest() {
+        final boolean rejected = matchParticipantDao.rejectRequest(10L, 2L);
+
+        Assertions.assertFalse(rejected, "Reject should fail without pending request");
+    }
+
+    @Test
+    public void shouldFindPendingMatchIds_WhenUserHasPendingRequests() {
+        final Long match11 = 11L;
+        final Long match12 = 12L;
+        insertMatch(match11);
+        insertMatch(match12);
+        matchParticipantDao.createJoinRequest(10L, 2L);
+        matchParticipantDao.createJoinRequest(match11, 2L);
+        matchParticipantDao.createJoinRequest(match12, 2L);
+        matchParticipantDao.approveRequest(10L, 2L);
+
+        final List<Long> pending = matchParticipantDao.findPendingMatchIds(2L);
+
+        Assertions.assertEquals(2, pending.size());
+        Assertions.assertTrue(pending.contains(match11), "Match11 should be in pending");
+        Assertions.assertTrue(pending.contains(match12), "Match12 should be in pending");
+        Assertions.assertFalse(pending.contains(10L), "Approved request should not be in pending");
+    }
+
+    @Test
+    public void shouldFindPendingMatchIds_WhenNoRequests() {
+        final List<Long> pending = matchParticipantDao.findPendingMatchIds(2L);
+
+        Assertions.assertTrue(pending.isEmpty());
+    }
+
+    @Test
+    public void shouldInviteUser_WhenValidDataProvided() {
+        final boolean invited = matchParticipantDao.inviteUser(10L, 2L);
+
+        Assertions.assertTrue(invited);
+
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals("invited", status);
+    }
+
+    @Test
+    public void shouldInviteUser_WhenDuplicateInviteIsRejected() {
+        matchParticipantDao.inviteUser(10L, 2L);
+
+        final boolean invited = matchParticipantDao.inviteUser(10L, 2L);
+
+        Assertions.assertFalse(invited, "Duplicate invite should be rejected");
+
+        final Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2 AND status = 'invited'",
+                        Integer.class);
+        Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    public void shouldAcceptInvite_WhenInvitationExists() {
+        matchParticipantDao.inviteUser(10L, 2L);
+
+        final boolean accepted = matchParticipantDao.acceptInvite(10L, 2L);
+
+        Assertions.assertTrue(accepted);
+
+        final String status =
+                jdbcTemplate.queryForObject(
+                        "SELECT status FROM match_participants"
+                                + " WHERE match_id = 10 AND user_id = 2",
+                        String.class);
+        Assertions.assertEquals("joined", status);
+    }
+
+    @Test
+    public void shouldAcceptInvite_WhenNoInvitation() {
+        final boolean accepted = matchParticipantDao.acceptInvite(10L, 2L);
+
+        Assertions.assertFalse(accepted, "Accept should fail without invitation");
+    }
+
+    @Test
+    public void shouldFindInvitedUsers_WhenUsersAreInvited() {
+        matchParticipantDao.inviteUser(10L, 2L);
+        matchParticipantDao.inviteUser(10L, 3L);
+
+        final List<User> invited = matchParticipantDao.findInvitedUsers(10L);
+
+        Assertions.assertEquals(2, invited.size());
+        final var userIds = invited.stream().map(User::getId).toList();
+        Assertions.assertTrue(userIds.contains(2L));
+        Assertions.assertTrue(userIds.contains(3L));
+    }
+
+    @Test
+    public void shouldFindInvitedUsers_WhenNoInvitations() {
+        final List<User> invited = matchParticipantDao.findInvitedUsers(10L);
+
+        Assertions.assertTrue(invited.isEmpty());
+    }
+
+    @Test
+    public void shouldFindInvitedUsers_ExcludesAcceptedInvitations() {
+        matchParticipantDao.inviteUser(10L, 2L);
+        matchParticipantDao.inviteUser(10L, 3L);
+        matchParticipantDao.acceptInvite(10L, 2L);
+
+        final List<User> invited = matchParticipantDao.findInvitedUsers(10L);
+
+        Assertions.assertEquals(1, invited.size());
+        Assertions.assertEquals(3L, invited.get(0).getId());
+    }
+
+    private void insertMatch(final Long matchId) {
+        jdbcTemplate.update(
+                "INSERT INTO matches "
+                        + "(id, host_user_id, address, title, description, starts_at, max_players, "
+                        + "price_per_player, visibility, status, sport, created_at, updated_at) "
+                        + "VALUES (?, 1, 'Address', 'Match', 'Description', ?, 4, 0, 'public', "
+                        + "'open', 'football', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                matchId,
+                java.sql.Timestamp.from(Instant.now().plusSeconds(86400)));
     }
 }

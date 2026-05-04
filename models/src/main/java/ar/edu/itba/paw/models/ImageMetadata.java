@@ -23,4 +23,17 @@ public class ImageMetadata {
     public long getContentLength() {
         return contentLength;
     }
+
+    @Override
+    public String toString() {
+        return "ImageMetadata{"
+                + "id="
+                + id
+                + ", contentType='"
+                + contentType
+                + '\''
+                + ", contentLength="
+                + contentLength
+                + '}';
+    }
 }
