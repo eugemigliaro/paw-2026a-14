@@ -50,6 +50,7 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -91,6 +92,8 @@ class UiRouteTest {
 
     private MockMvc mockMvc;
     private AtomicReference<String> lastSportsFilter;
+    private AtomicReference<Double> lastSearchLatitude;
+    private AtomicReference<Double> lastSearchLongitude;
     private AtomicReference<Long> lastReservedMatchId;
     private AtomicReference<Long> lastReservedUserId;
     private AtomicReference<Long> lastCancelledReservationMatchId;
@@ -128,6 +131,8 @@ class UiRouteTest {
         final LocalValidatorFactoryBean validator = validator(messageSource);
 
         lastSportsFilter = new AtomicReference<>();
+        lastSearchLatitude = new AtomicReference<>();
+        lastSearchLongitude = new AtomicReference<>();
         lastReservedMatchId = new AtomicReference<>();
         lastReservedUserId = new AtomicReference<>();
         lastCancelledReservationMatchId = new AtomicReference<>();
@@ -160,6 +165,8 @@ class UiRouteTest {
                         Sport.PADEL,
                         7L,
                         "Downtown Club",
+                        -34.61,
+                        -58.38,
                         "Sunrise Padel",
                         "Friendly\\n doubles session",
                         Instant.parse("2026-04-06T10:00:00Z"),
@@ -170,6 +177,8 @@ class UiRouteTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         2,
+                        null,
+                        null,
                         null);
         final Match footballMatch =
                 new Match(
@@ -764,8 +773,12 @@ class UiRouteTest {
                             final int pageSize,
                             final String timezone,
                             final BigDecimal minPrice,
-                            final BigDecimal maxPrice) {
+                            final BigDecimal maxPrice,
+                            final Double latitude,
+                            final Double longitude) {
                         lastSportsFilter.set(sport);
+                        lastSearchLatitude.set(latitude);
+                        lastSearchLongitude.set(longitude);
                         return new PaginatedResult<>(
                                 List.of(realMatch, footballMatch), 2, 1, pageSize);
                     }
@@ -1356,7 +1369,11 @@ class UiRouteTest {
                                         playerReviewService,
                                         userService,
                                         messageSource,
-                                        fixedClock),
+                                        fixedClock,
+                                        true,
+                                        "/assets/tiles/{z}/{x}/{y}.png",
+                                        "Local Buenos Aires map tiles",
+                                        14),
                                 new PublicProfileController(
                                         userService, playerReviewService,
                                         moderationService, messageSource),
@@ -1436,6 +1453,77 @@ class UiRouteTest {
     }
 
     @Test
+    void postExploreLocationStoresValidCoordinatesInSession() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-34.61")
+                                        .param("longitude", "-58.38"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/?sort=distance"))
+                        .andReturn();
+
+        Assertions.assertEquals(
+                -34.61, result.getRequest().getSession().getAttribute("exploreLocationLatitude"));
+        Assertions.assertEquals(
+                -58.38, result.getRequest().getSession().getAttribute("exploreLocationLongitude"));
+    }
+
+    @Test
+    void postExploreLocationIgnoresInvalidCoordinates() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-91")
+                                        .param("longitude", "-58.38"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/?sort=distance"))
+                        .andReturn();
+
+        Assertions.assertNull(
+                result.getRequest().getSession().getAttribute("exploreLocationLatitude"));
+        Assertions.assertNull(
+                result.getRequest().getSession().getAttribute("exploreLocationLongitude"));
+    }
+
+    @Test
+    void getFeedRouteShowsNearMeSortOptionBeforeLocationIsStored() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "sortOptions",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "href",
+                                                        Matchers.containsString(
+                                                                "sort=distance")))));
+    }
+
+    @Test
+    void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
+        final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+    }
+
+    @Test
+    void getFeedRouteIncludesDistanceLabelWithStoredLocation() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/").sessionAttr("exploreLocationLatitude", -34.60)
+                                        .sessionAttr("exploreLocationLongitude", -58.38))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNotNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+    }
+
+    @Test
     void getFeedRouteWithMinAndMaxPricePropagatesToModel() throws Exception {
         mockMvc.perform(get("/").param("minPrice", "5").param("maxPrice", "25"))
                 .andExpect(status().isOk())
@@ -1473,6 +1561,22 @@ class UiRouteTest {
                                         "eventPage",
                                         Matchers.hasProperty(
                                                 "hostProfileImageUrl", Matchers.is("/images/88"))))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.allOf(
+                                                Matchers.hasProperty(
+                                                        "mapAvailable", Matchers.is(true)),
+                                                Matchers.hasProperty(
+                                                        "mapTileUrlTemplate",
+                                                        Matchers.is(
+                                                                "/assets/tiles/{z}/{x}/{y}.png")),
+                                                Matchers.hasProperty(
+                                                        "mapLatitude",
+                                                        Matchers.closeTo(-34.61, 0.000001)),
+                                                Matchers.hasProperty(
+                                                        "mapLongitude",
+                                                        Matchers.closeTo(-58.38, 0.000001)))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -2125,6 +2229,87 @@ class UiRouteTest {
 
         Assertions.assertNotNull(lastCreateMatchRequest.get());
         Assertions.assertFalse(lastCreateMatchRequest.get().isRecurring());
+    }
+
+    @Test
+    void postHostPublishPassesValidCoordinatesToService() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-34.61")
+                                .param("longitude", "-58.38")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        Assertions.assertNotNull(lastCreateMatchRequest.get());
+        Assertions.assertEquals(-34.61, lastCreateMatchRequest.get().getLatitude());
+        Assertions.assertEquals(-58.38, lastCreateMatchRequest.get().getLongitude());
+    }
+
+    @Test
+    void postHostPublishRejectsPartialCoordinates() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-34.61")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "longitude"));
+
+        Assertions.assertNull(lastCreateMatchRequest.get());
+    }
+
+    @Test
+    void postHostPublishRejectsOutOfRangeCoordinates() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-91")
+                                .param("longitude", "-58.38")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "latitude"));
+
+        Assertions.assertNull(lastCreateMatchRequest.get());
     }
 
     @Test

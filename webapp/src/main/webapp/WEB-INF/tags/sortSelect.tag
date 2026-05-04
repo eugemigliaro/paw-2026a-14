@@ -15,7 +15,7 @@
 				id="${resolvedId}"
 				class="field__control field__control--select sort-panel__select"
 				data-browser-timezone-url-options="true"
-				onchange="if(this.value){window.location.href=this.value;}">
+				data-sort-select="true">
 			<c:forEach var="option" items="${options}">
 				<c:url var="optionHref" value="${option.href}" />
 				<c:choose>

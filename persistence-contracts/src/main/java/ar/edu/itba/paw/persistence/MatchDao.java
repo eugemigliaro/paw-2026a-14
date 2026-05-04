@@ -45,7 +45,81 @@ public interface MatchDao {
                 status,
                 bannerImageId,
                 null,
+                null,
+                null,
                 null);
+    }
+
+    default Match createMatch(
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId,
+            Double latitude,
+            Double longitude) {
+        return createMatch(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                latitude,
+                longitude,
+                null,
+                null);
+    }
+
+    default Match createMatch(
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId,
+            Long seriesId,
+            Integer seriesOccurrenceIndex) {
+        return createMatch(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                null,
+                null,
+                seriesId,
+                seriesOccurrenceIndex);
     }
 
     Match createMatch(
@@ -62,6 +136,8 @@ public interface MatchDao {
             EventJoinPolicy joinPolicy,
             EventStatus status,
             Long bannerImageId,
+            Double latitude,
+            Double longitude,
             Long seriesId,
             Integer seriesOccurrenceIndex);
 
@@ -73,6 +149,40 @@ public interface MatchDao {
             String timezone,
             LocalDate untilDate,
             Integer occurrenceCount);
+
+    default boolean updateMatch(
+            Long matchId,
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId) {
+        return updateMatch(
+                matchId,
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                null,
+                null);
+    }
 
     boolean updateMatch(
             Long matchId,
@@ -88,7 +198,9 @@ public interface MatchDao {
             EventVisibility visibility,
             EventJoinPolicy joinPolicy,
             EventStatus status,
-            Long bannerImageId);
+            Long bannerImageId,
+            Double latitude,
+            Double longitude);
 
     boolean cancelMatch(Long matchId, Long hostUserId);
 
@@ -116,8 +228,38 @@ public interface MatchDao {
             BigDecimal maxPrice,
             MatchSort sort,
             ZoneId zoneId,
+            Double latitude,
+            Double longitude,
             int offset,
             int limit);
+
+    default List<Match> findPublicMatches(
+            String query,
+            List<Sport> sports,
+            EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            MatchSort sort,
+            ZoneId zoneId,
+            int offset,
+            int limit) {
+        return findPublicMatches(
+                query,
+                sports,
+                timeFilter,
+                startsAtFrom,
+                startsAtTo,
+                minPrice,
+                maxPrice,
+                sort,
+                zoneId,
+                null,
+                null,
+                offset,
+                limit);
+    }
 
     default List<Match> findPublicMatches(
             final String query,

@@ -519,6 +519,54 @@ a.event-info-panel__host-name:hover {
 	text-decoration: underline;
 }
 
+.event-detail-map {
+	background: #dfe8e5;
+	border: 1px solid rgba(15, 74, 67, 0.12);
+	border-radius: 24px;
+	height: 11rem;
+	overflow: hidden;
+	position: relative;
+}
+
+.event-detail-map__pin-icon {
+	background: #0c6f64;
+	border: 3px solid #ffffff;
+	border-radius: 999px;
+	box-shadow: 0 10px 18px rgba(0, 0, 0, 0.22);
+}
+
+.event-detail-map__pin-icon::after {
+	background: rgba(12, 111, 100, 0.18);
+	border-radius: 999px;
+	content: "";
+	height: 2rem;
+	left: 50%;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 2rem;
+	z-index: -1;
+}
+
+.event-detail-map__attribution {
+	background: rgba(255, 255, 255, 0.82);
+	border-radius: 999px;
+	bottom: 0.45rem;
+	color: var(--text-secondary);
+	font-size: 0.68rem;
+	font-weight: 700;
+	line-height: 1;
+	margin: 0;
+	max-width: calc(100% - 0.9rem);
+	overflow: hidden;
+	padding: 0.28rem 0.45rem;
+	position: absolute;
+	right: 0.45rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	z-index: 3;
+}
+
 .host-panel__note {
 	display: grid;
 	gap: 0.28rem;
