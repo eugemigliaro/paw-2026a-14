@@ -44,6 +44,7 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
+    private final SecurityService securityService;
     private final MatchNotificationService matchNotificationService;
     private final MessageSource messageSource;
     private final Clock clock;
@@ -53,11 +54,13 @@ public class MatchServiceImpl implements MatchService {
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
+            final SecurityService securityService,
             final MessageSource messageSource,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
+        this.securityService = securityService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -227,6 +230,8 @@ public class MatchServiceImpl implements MatchService {
                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
                     message("match.update.error.capacityBelowConfirmed"));
         }
+        final ParticipationPolicyTransition participationPolicyTransition =
+                validateAndPlanParticipationPolicyTransition(match, request, confirmedParticipants);
 
         final EventJoinPolicy joinPolicy =
                 EventVisibility.PRIVATE == request.getVisibility()
@@ -248,8 +253,120 @@ public class MatchServiceImpl implements MatchService {
                                         new MatchUpdateException(
                                                 MatchUpdateFailureReason.MATCH_NOT_FOUND,
                                                 message("match.update.error.notFound")));
+        applyParticipationPolicyTransition(updatedMatch, participationPolicyTransition);
         matchNotificationService.notifyMatchUpdated(updatedMatch);
         return updatedMatch;
+    }
+
+    private ParticipationPolicyTransition validateAndPlanParticipationPolicyTransition(
+            final Match match, final UpdateMatchRequest request, final int confirmedParticipants) {
+        if (wasPrivate(match) && isPublic(request)) {
+            return ParticipationPolicyTransition.cancelInvitations(
+                    matchParticipantDao.findInvitedUsers(match.getId()));
+        }
+        if (wasApprovalRequired(match) && isPrivate(request)) {
+            return ParticipationPolicyTransition.cancelPendingRequests(
+                    matchParticipantDao.findPendingRequests(match.getId()));
+        }
+        if (wasApprovalRequired(match) && isDirectPublic(request)) {
+            final int pendingRequests = matchParticipantDao.countPendingRequests(match.getId());
+            final int availableSpots = request.getMaxPlayers() - confirmedParticipants;
+            if (pendingRequests > availableSpots) {
+                throw new MatchUpdateException(
+                        MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE,
+                        message("match.update.error.pendingRequestsExceedAvailable"));
+            }
+            return ParticipationPolicyTransition.approvePendingRequests(
+                    matchParticipantDao.findPendingRequests(match.getId()));
+        }
+        return ParticipationPolicyTransition.none();
+    }
+
+    private void applyParticipationPolicyTransition(
+            final Match updatedMatch, final ParticipationPolicyTransition transition) {
+        if (transition.isEmpty()) {
+            return;
+        }
+        if (transition.type() == ParticipationPolicyTransitionType.CANCEL_INVITATIONS) {
+            matchNotificationService.notifyInvitationOpenedToPublic(
+                    updatedMatch, transition.affectedUsers());
+            matchParticipantDao.cancelPendingInvitations(updatedMatch.getId());
+            return;
+        }
+        if (transition.type() == ParticipationPolicyTransitionType.CANCEL_PENDING_REQUESTS) {
+            matchNotificationService.notifyPendingRequestClosedByPrivacyChange(
+                    updatedMatch, transition.affectedUsers());
+            matchParticipantDao.cancelPendingRequests(updatedMatch.getId());
+            return;
+        }
+        matchParticipantDao.approveAllPendingRequests(updatedMatch.getId());
+        for (final User user : transition.affectedUsers()) {
+            matchNotificationService.notifyPlayerRequestApproved(updatedMatch, user);
+        }
+    }
+
+    private static boolean wasPrivate(final Match match) {
+        return EventVisibility.PRIVATE == match.getVisibility();
+    }
+
+    private static boolean wasApprovalRequired(final Match match) {
+        return EventVisibility.PUBLIC == match.getVisibility()
+                && EventJoinPolicy.APPROVAL_REQUIRED == match.getJoinPolicy();
+    }
+
+    private static boolean isPublic(final UpdateMatchRequest request) {
+        return EventVisibility.PUBLIC == request.getVisibility();
+    }
+
+    private static boolean isPrivate(final UpdateMatchRequest request) {
+        return EventVisibility.PRIVATE == request.getVisibility();
+    }
+
+    private static boolean isDirectPublic(final UpdateMatchRequest request) {
+        return isPublic(request) && EventJoinPolicy.DIRECT == request.getJoinPolicy();
+    }
+
+    private enum ParticipationPolicyTransitionType {
+        NONE,
+        CANCEL_INVITATIONS,
+        CANCEL_PENDING_REQUESTS,
+        APPROVE_PENDING_REQUESTS
+    }
+
+    private record ParticipationPolicyTransition(
+            ParticipationPolicyTransitionType type, List<User> affectedUsers) {
+
+        private static ParticipationPolicyTransition none() {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.NONE, List.of());
+        }
+
+        private static ParticipationPolicyTransition cancelInvitations(final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.CANCEL_INVITATIONS, safeUsers(users));
+        }
+
+        private static ParticipationPolicyTransition cancelPendingRequests(final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.CANCEL_PENDING_REQUESTS, safeUsers(users));
+        }
+
+        private static ParticipationPolicyTransition approvePendingRequests(
+                final List<User> users) {
+            return new ParticipationPolicyTransition(
+                    ParticipationPolicyTransitionType.APPROVE_PENDING_REQUESTS, safeUsers(users));
+        }
+
+        private boolean isEmpty() {
+            return type == ParticipationPolicyTransitionType.NONE || affectedUsers.isEmpty();
+        }
+
+        private static List<User> safeUsers(final List<User> users) {
+            if (users == null || users.isEmpty()) {
+                return List.of();
+            }
+            return List.copyOf(users);
+        }
     }
 
     @Override
@@ -367,7 +484,9 @@ public class MatchServiceImpl implements MatchService {
                                                 MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                                 message("match.cancel.error.notFound")));
 
-        if (!match.getHostUserId().equals(actingUserId)) {
+        final Long currentUserId = securityService.currentUserId();
+        if (!match.getHostUserId().equals(actingUserId)
+                && (currentUserId == null || !currentUserId.equals(actingUserId))) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
                     message("match.cancel.error.forbidden"));

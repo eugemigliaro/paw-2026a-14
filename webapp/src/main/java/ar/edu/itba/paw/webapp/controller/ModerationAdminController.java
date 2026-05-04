@@ -27,6 +27,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
@@ -67,6 +69,7 @@ public class ModerationAdminController {
             @RequestParam(value = "type", required = false) final List<String> typeFilters,
             @RequestParam(value = "status", required = false) final List<String> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
+            final Model model,
             final Locale locale) {
 
         final List<ReportTargetType> selectedTypes =
@@ -97,6 +100,7 @@ public class ModerationAdminController {
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("admin.reports.empty", null, locale));
         mav.addObject("reports", reports);
+        mav.addObject("action", model.asMap().get("action"));
         mav.addObject(
                 "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
@@ -199,10 +203,12 @@ public class ModerationAdminController {
 
     @PostMapping("/{reportId:\\d+}/under-review")
     public ModelAndView markUnderReview(
-            @PathVariable("reportId") final Long reportId, final Locale locale) {
+            @PathVariable("reportId") final Long reportId,
+            final RedirectAttributes redirectAttributes,
+            final Locale locale) {
         try {
             moderationService.markReportUnderReview(reportId, currentAdminUserId());
-            return redirectToReports("reviewed");
+            return redirectToReports("reviewed", redirectAttributes);
         } catch (final ModerationException ex) {
             return redirectToReportsError("report_not_found");
         }
@@ -212,12 +218,14 @@ public class ModerationAdminController {
     public ModelAndView dismissReport(
             @PathVariable("reportId") final Long reportId,
             @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         return resolveReport(
                 reportId,
                 ReportResolution.DISMISSED,
                 "dismissed",
                 form.getResolutionDetails(),
+                redirectAttributes,
                 locale);
     }
 
@@ -225,12 +233,14 @@ public class ModerationAdminController {
     public ModelAndView deleteContent(
             @PathVariable("reportId") final Long reportId,
             @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         return resolveReport(
                 reportId,
                 ReportResolution.CONTENT_DELETED,
                 "deleted",
                 form.getResolutionDetails(),
+                redirectAttributes,
                 locale);
     }
 
@@ -240,6 +250,7 @@ public class ModerationAdminController {
             @RequestParam(value = "banDays", required = false, defaultValue = "7")
                     final int banDays,
             @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         try {
             return resolveReport(
@@ -247,6 +258,7 @@ public class ModerationAdminController {
                     ReportResolution.USER_BANNED,
                     "banned",
                     form.getResolutionDetails(),
+                    redirectAttributes,
                     locale);
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
@@ -257,6 +269,7 @@ public class ModerationAdminController {
     public ModelAndView finalizeAppeal(
             @PathVariable("reportId") final Long reportId,
             @RequestParam("appealDecision") final String appealResolution,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
 
         final AppealDecision parsedAppealDecision =
@@ -272,7 +285,7 @@ public class ModerationAdminController {
                             ? "appeal_upheld"
                             : "appeal_lifted";
 
-            return redirectToReports(action);
+            return redirectToReports(action, redirectAttributes);
 
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
@@ -284,6 +297,7 @@ public class ModerationAdminController {
             final ReportResolution resolution,
             final String actionCode,
             final String resolutionDetails,
+            final RedirectAttributes redirectAttributes,
             final Locale locale) {
         try {
             final ModerationReport report =
@@ -296,14 +310,16 @@ public class ModerationAdminController {
             if (report == null) {
                 return redirectToReportsError("report_not_found");
             }
-            return redirectToReports(actionCode);
+            return redirectToReports(actionCode, redirectAttributes);
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
         }
     }
 
-    private ModelAndView redirectToReports(final String actionCode) {
-        return new ModelAndView("redirect:/admin/reports?action=" + actionCode);
+    private ModelAndView redirectToReports(
+            final String actionCode, final RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("action", actionCode);
+        return new ModelAndView("redirect:/admin/reports");
     }
 
     private ModelAndView redirectToReportsError(final String errorCode) {

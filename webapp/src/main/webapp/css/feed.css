@@ -900,7 +900,7 @@
 	margin-bottom: 24px;
 	position: relative;
 	width: 100%;
-	z-index: 20;
+	z-index: 5;
 }
 
 .horizontal-filters-bar .filter-rail__main-title,

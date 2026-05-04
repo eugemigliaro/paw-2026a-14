@@ -60,15 +60,15 @@
 					</div>
 				</header>
 
-				<c:if test="${param.action eq 'invited'}">
-					<div class="notice notice--success">
-						<spring:message code="host.invites.sent" />
-					</div>
-				</c:if>
-				<c:if test="${param.action eq 'seriesInvited'}">
-					<div class="notice notice--success">
-						<spring:message code="host.invites.seriesSent" />
-					</div>
+					<c:if test="${action eq 'invited'}">
+						<div class="notice notice--success">
+							<spring:message code="host.invites.sent" />
+						</div>
+					</c:if>
+					<c:if test="${action eq 'seriesInvited'}">
+						<div class="notice notice--success">
+							<spring:message code="host.invites.seriesSent" />
+						</div>
 				</c:if>
 
 				<div class="participation-layout">

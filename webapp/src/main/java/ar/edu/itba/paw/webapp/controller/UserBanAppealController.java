@@ -14,12 +14,14 @@ import java.util.Locale;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/account/ban")
@@ -35,7 +37,7 @@ public class UserBanAppealController {
     }
 
     @GetMapping
-    public ModelAndView showBanPage(final Locale locale) {
+    public ModelAndView showBanPage(final Model model, final Locale locale) {
         final long userId = currentUserId();
         final UserBan activeBan =
                 moderationService
@@ -68,12 +70,15 @@ public class UserBanAppealController {
         mav.addObject("banReason", report.getReason());
         mav.addObject("appealReason", report.getAppealReason());
         mav.addObject("appealAllowed", report.getAppealCount() < 1);
+        mav.addObject("action", model.asMap().get("action"));
         return mav;
     }
 
     @PostMapping("/appeal")
     public ModelAndView appealBan(
-            @RequestParam("appealReason") final String appealReason, final Locale locale) {
+            @RequestParam("appealReason") final String appealReason,
+            final RedirectAttributes redirectAttributes,
+            final Locale locale) {
         final long userId = currentUserId();
         final UserBan activeBan =
                 moderationService
@@ -81,7 +86,8 @@ public class UserBanAppealController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         try {
             moderationService.appealReport(activeBan.getModerationReportId(), appealReason);
-            return new ModelAndView("redirect:/account/ban?action=appealed");
+            redirectAttributes.addFlashAttribute("action", "appealed");
+            return new ModelAndView("redirect:/account/ban");
         } catch (final ModerationException exception) {
             return new ModelAndView("redirect:/account/ban?error=" + exception.getCode());
         }

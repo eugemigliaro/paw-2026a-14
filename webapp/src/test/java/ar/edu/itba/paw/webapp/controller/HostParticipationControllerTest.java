@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -61,7 +62,8 @@ class HostParticipationControllerTest {
 
         mockMvc.perform(post("/host/matches/42/requests/9/approve"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/requests?action=approved"));
+                .andExpect(redirectedUrl("/host/matches/42/requests"))
+                .andExpect(flash().attribute("action", "approved"));
     }
 
     @Test
@@ -74,7 +76,8 @@ class HostParticipationControllerTest {
 
         mockMvc.perform(post("/host/matches/42/requests/9/reject"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/requests?action=rejected"));
+                .andExpect(redirectedUrl("/host/matches/42/requests"))
+                .andExpect(flash().attribute("action", "rejected"));
     }
 
     @Test
@@ -87,7 +90,8 @@ class HostParticipationControllerTest {
 
         mockMvc.perform(post("/host/matches/42/invites").param("email", "test@test.com"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/invites?action=invited"));
+                .andExpect(redirectedUrl("/host/matches/42/invites"))
+                .andExpect(flash().attribute("action", "invited"));
     }
 
     @Test
@@ -96,7 +100,8 @@ class HostParticipationControllerTest {
 
         mockMvc.perform(post("/host/matches/42/participants/9/remove"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/participants?action=removed"));
+                .andExpect(redirectedUrl("/host/matches/42/participants"))
+                .andExpect(flash().attribute("action", "removed"));
     }
 
     private static void authenticateUser(final Long userId) {

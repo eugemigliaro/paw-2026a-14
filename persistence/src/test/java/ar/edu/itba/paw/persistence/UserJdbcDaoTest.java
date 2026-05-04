@@ -218,4 +218,124 @@ public class UserJdbcDaoTest {
                                 user.getId())
                         != null);
     }
+
+    @Test
+    public void shouldFindByEmail_WhenUserExists() {
+        final String email = "findme@test.com";
+        final User created = userDao.createUser(email, "findme_user");
+
+        final var result = userDao.findByEmail(email);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(created.getId(), result.get().getId());
+        Assertions.assertEquals(email, result.get().getEmail());
+
+        final Long countInDb =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM users WHERE email = ?", Long.class, email);
+        Assertions.assertEquals(1L, countInDb, "User should exist in database with exact email");
+    }
+
+    @Test
+    public void shouldFindByEmail_WhenUserNotFound() {
+        final String nonExistentEmail = "notfound@test.com";
+
+        final var result = userDao.findByEmail(nonExistentEmail);
+
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void shouldFindByEmail_IsCaseSensitive() {
+        final String email = "CaseSensitive@test.com";
+        userDao.createUser(email, "case_user");
+
+        final var resultExact = userDao.findByEmail(email);
+        userDao.findByEmail(email.toLowerCase());
+        userDao.findByEmail(email.toUpperCase());
+
+        Assertions.assertTrue(resultExact.isPresent(), "Exact case match should find user");
+    }
+
+    @Test
+    public void shouldFindById_WhenUserExists() {
+        final User created = userDao.createUser("byid@test.com", "byid_user");
+
+        final var result = userDao.findById(created.getId());
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(created.getId(), result.get().getId());
+        Assertions.assertEquals(created.getEmail(), result.get().getEmail());
+        Assertions.assertEquals(created.getUsername(), result.get().getUsername());
+
+        final Long countInDb =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM users WHERE id = ?", Long.class, created.getId());
+        Assertions.assertEquals(1L, countInDb, "User should exist in database");
+    }
+
+    @Test
+    public void shouldFindById_WhenUserNotFound() {
+        final Long nonExistentId = 999999L;
+
+        final var result = userDao.findById(nonExistentId);
+
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void shouldFindById_WithMultipleUsers_ReturnsExactUser() {
+        final User user1 = userDao.createUser("user1@test.com", "user1");
+        final User user2 = userDao.createUser("user2@test.com", "user2");
+        final User user3 = userDao.createUser("user3@test.com", "user3");
+
+        final var result = userDao.findById(user2.getId());
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(user2.getId(), result.get().getId());
+        Assertions.assertEquals("user2@test.com", result.get().getEmail());
+        Assertions.assertNotEquals(user1.getId(), result.get().getId());
+        Assertions.assertNotEquals(user3.getId(), result.get().getId());
+    }
+
+    @Test
+    public void shouldFindByUsername_WhenUserExists() {
+        final String username = "findbyname";
+        final User created = userDao.createUser("byname@test.com", username);
+
+        final var result = userDao.findByUsername(username);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(created.getId(), result.get().getId());
+        Assertions.assertEquals(username, result.get().getUsername());
+
+        final Long countInDb =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM users WHERE username = ?", Long.class, username);
+        Assertions.assertEquals(1L, countInDb, "User should exist in database with exact username");
+    }
+
+    @Test
+    public void shouldFindByUsername_WhenUserNotFound() {
+        final String nonExistentUsername = "notexist";
+
+        final var result = userDao.findByUsername(nonExistentUsername);
+
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void shouldFindByUsername_WithMultipleUsers_ReturnsExactUser() {
+        final User user1 = userDao.createUser("u1@test.com", "alice");
+        final User user2 = userDao.createUser("u2@test.com", "bob");
+        final User user3 = userDao.createUser("u3@test.com", "charlie");
+
+        final var result = userDao.findByUsername("bob");
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(user2.getId(), result.get().getId());
+        Assertions.assertEquals("bob", result.get().getUsername());
+        Assertions.assertNotEquals(user1.getId(), result.get().getId());
+        Assertions.assertNotEquals(user3.getId(), result.get().getId());
+    }
 }

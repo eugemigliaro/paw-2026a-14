@@ -111,16 +111,16 @@
 						</p>
 					</header>
 
-					<c:if test="${param.review eq 'saved'}">
-						<div class="notice notice--success">
-							<spring:message code="profile.reviews.saved" />
-						</div>
-					</c:if>
-					<c:if test="${param.review eq 'deleted'}">
-						<div class="notice notice--info">
-							<spring:message code="profile.reviews.deleted" />
-						</div>
-					</c:if>
+						<c:if test="${reviewStatus eq 'saved'}">
+							<div class="notice notice--success">
+								<spring:message code="profile.reviews.saved" />
+							</div>
+						</c:if>
+						<c:if test="${reviewStatus eq 'deleted'}">
+							<div class="notice notice--info">
+								<spring:message code="profile.reviews.deleted" />
+							</div>
+						</c:if>
 						<c:if test="${not empty param.reviewError}">
 							<div class="notice notice--error">
 							<c:choose>
@@ -142,11 +142,11 @@
 							</c:choose>
 							</div>
 						</c:if>
-						<c:if test="${param.report eq 'sent'}">
-							<div class="notice notice--success">
-								<spring:message code="moderation.report.sent" />
-							</div>
-						</c:if>
+							<c:if test="${reportStatus eq 'sent'}">
+								<div class="notice notice--success">
+									<spring:message code="moderation.report.sent" />
+								</div>
+							</c:if>
 
 
 					<spring:message var="reviewSummaryAria" code="profile.reviews.summaryAria" />
