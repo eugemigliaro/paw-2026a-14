@@ -202,8 +202,8 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("data-location-zoom-out=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-current=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-clear=\"true\""));
-        assertTrue(hostCreateMatch.contains("data-location-unavailable-message"));
-        assertTrue(hostCreateMatch.contains("data-location-current-status"));
+        assertFalse(hostCreateMatch.contains("data-location-unavailable-message"));
+        assertFalse(hostCreateMatch.contains("data-location-current-status"));
         assertFalse(hostCreateMatch.contains("latitude.placeholder"));
         assertFalse(hostCreateMatch.contains("longitude.placeholder"));
         assertNotNull(english.getProperty("feed.nearMe"));
@@ -239,6 +239,9 @@ class ViewTemplateAssetsTest {
         assertTrue(script.contains("L.marker"));
         assertTrue(script.contains("L.divIcon"));
         assertTrue(script.contains("isSecureContext"));
+        assertTrue(script.contains("window.MatchPointLocationPicker"));
+        assertTrue(script.contains("data-latitude-input"));
+        assertTrue(script.contains("location-picker:change"));
         assertTrue(script.contains("data-location-zoom-in"));
         assertTrue(script.contains("data-location-zoom-out"));
         assertTrue(script.contains("data-location-picker"));
@@ -267,11 +270,19 @@ class ViewTemplateAssetsTest {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final Path scriptPath = Path.of("src/main/webapp/js/explore-location.js");
         final String script = Files.readString(scriptPath);
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
         assertTrue(feedIndex.contains("/explore/location"));
         assertTrue(sortSelectTag.contains("data-sort-select=\"true\""));
         assertTrue(feedIndex.contains("data-explore-location-form=\"true\""));
-        assertTrue(feedIndex.contains("data-location-unavailable-message"));
+        assertTrue(feedIndex.contains("data-explore-location-modal=\"true\""));
+        assertTrue(feedIndex.contains("data-explore-location-confirm=\"true\""));
+        assertTrue(feedIndex.contains("data-location-picker-deferred=\"true\""));
+        assertTrue(feedIndex.contains("data-latitude-input=\"#explore-location-latitude\""));
+        assertTrue(feedIndex.contains("feed.locationPicker.title"));
+        assertFalse(feedIndex.contains("data-location-unavailable-message"));
+        assertFalse(feedIndex.contains("location.current.unavailable"));
         assertTrue(feedIndex.contains("near-me-panel--hidden"));
         assertFalse(feedIndex.contains("data-explore-location-submit=\"true\""));
         assertTrue(feedIndex.contains("event.distanceLabel"));
@@ -279,8 +290,14 @@ class ViewTemplateAssetsTest {
         assertTrue(Files.exists(scriptPath));
         assertTrue(script.contains("navigator.geolocation"));
         assertTrue(script.contains("isSecureContext"));
+        assertTrue(script.contains("PERMISSION_DENIED"));
+        assertTrue(script.contains("openManualPicker"));
         assertTrue(script.contains(".sort-panel__item"));
-        assertTrue(script.contains("locationAvailable !== 'true'"));
+        assertTrue(script.contains("locationAvailable === 'true'"));
+        assertNotNull(english.getProperty("feed.locationPicker.title"));
+        assertNotNull(spanish.getProperty("feed.locationPicker.title"));
+        assertFalse(english.containsKey("location.current.unavailable"));
+        assertFalse(spanish.containsKey("location.current.unavailable"));
     }
 
     @Test

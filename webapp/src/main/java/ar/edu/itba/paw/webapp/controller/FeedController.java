@@ -31,6 +31,7 @@ import java.util.Locale;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -47,12 +48,21 @@ public class FeedController {
     private static final int PAGE_SIZE = 12;
     private static final String SESSION_EXPLORE_LATITUDE = "exploreLocationLatitude";
     private static final String SESSION_EXPLORE_LONGITUDE = "exploreLocationLongitude";
+    private static final double DEFAULT_MAP_LATITUDE = -34.6037;
+    private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
+    private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
     private final UserService userService;
     private final MessageSource messageSource;
+    private final boolean mapPickerEnabled;
+    private final String mapTileUrlTemplate;
+    private final String mapAttribution;
+    private final double mapDefaultLatitude;
+    private final double mapDefaultLongitude;
+    private final int mapDefaultZoom;
 
     @Autowired
     public FeedController(
@@ -60,12 +70,46 @@ public class FeedController {
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
             final UserService userService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
+            @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
+            @Value("${map.tiles.attribution:}") final String mapAttribution,
+            @Value("${map.default.latitude:" + DEFAULT_MAP_LATITUDE + "}")
+                    final double mapDefaultLatitude,
+            @Value("${map.default.longitude:" + DEFAULT_MAP_LONGITUDE + "}")
+                    final double mapDefaultLongitude,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
         this.userService = userService;
         this.messageSource = messageSource;
+        this.mapPickerEnabled = mapPickerEnabled;
+        this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
+        this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
+        this.mapDefaultLatitude = mapDefaultLatitude;
+        this.mapDefaultLongitude = mapDefaultLongitude;
+        this.mapDefaultZoom = mapDefaultZoom;
+    }
+
+    public FeedController(
+            final MatchService matchService,
+            final MatchParticipationService matchParticipationService,
+            final MatchReservationService matchReservationService,
+            final UserService userService,
+            final MessageSource messageSource) {
+        this(
+                matchService,
+                matchParticipationService,
+                matchReservationService,
+                userService,
+                messageSource,
+                false,
+                "",
+                "",
+                DEFAULT_MAP_LATITUDE,
+                DEFAULT_MAP_LONGITUDE,
+                DEFAULT_MAP_ZOOM);
     }
 
     @GetMapping("/")
@@ -117,6 +161,12 @@ public class FeedController {
                 "feedPage",
                 buildFeedPageViewModel(query, filters, result, locale, email, exploreLocation));
         mav.addObject("nearMeAvailable", exploreLocation != null);
+        mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
+        mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
+        mav.addObject("mapAttribution", mapAttribution);
+        mav.addObject("mapDefaultLatitude", mapDefaultLatitude);
+        mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
+        mav.addObject("mapDefaultZoom", mapDefaultZoom);
         return mav;
     }
 

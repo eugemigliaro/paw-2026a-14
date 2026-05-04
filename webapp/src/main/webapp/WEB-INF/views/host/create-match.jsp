@@ -183,14 +183,12 @@
 													<form:errors path="latitude" cssClass="field__error" element="span" />
 													<form:errors path="longitude" cssClass="field__error" element="span" />
 													<c:if test="${mapPickerEnabled}">
-														<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 														<c:url var="appRootUrl" value="/" />
 														<c:set var="contextAwareMapTileUrlTemplate"
 															value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
 														<section
 															class="location-picker"
 															data-location-picker="true"
-															data-location-unavailable-message="${locationUnavailableMessage}"
 															data-tile-url-template="${contextAwareMapTileUrlTemplate}"
 															data-attribution="${mapAttribution}"
 															data-default-latitude="${mapDefaultLatitude}"
@@ -207,12 +205,9 @@
 																	<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
 																		<spring:message code="host.form.location.zoomIn" />
 																	</button>
-																	<div class="location-picker__current-location">
-																		<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
-																			<spring:message code="host.form.location.current" />
-																		</button>
-																		<p class="location-picker__status" data-location-current-status="true" role="status"></p>
-																	</div>
+																	<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
+																		<spring:message code="host.form.location.current" />
+																	</button>
 																	<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
 																		<spring:message code="host.form.location.clear" />
 																	</button>
