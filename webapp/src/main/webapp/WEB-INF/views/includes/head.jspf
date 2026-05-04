@@ -29,8 +29,14 @@
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
 <c:url var="overflowMenuHref" value="/js/overflow-menu.js" />
 <c:url var="filterDropdownsHref" value="/js/filter-dropdowns.js" />
+<c:url var="eventsToggleFilterHref" value="/js/events-toggle-filter.js" />
 <c:url var="hostCreateMatchHref" value="/js/host-create-match.js" />
 <c:url var="recurrenceScheduleHref" value="/js/recurrence-schedule.js?v=20260428" />
+<c:url var="exploreLocationHref" value="/js/explore-location.js" />
+<c:url var="leafletCssHref" value="/css/vendor/leaflet.css" />
+<c:url var="leafletJsHref" value="/js/vendor/leaflet.js" />
+<c:url var="locationPickerHref" value="/js/location-picker.js" />
+<c:url var="eventMapHref" value="/js/event-map.js" />
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
 <c:url var="reportFiltersHref" value="/js/report-filters.js" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
@@ -48,6 +54,8 @@
 <link rel="stylesheet" href="${cssProfileHref}" />
 <link rel="stylesheet" href="${cssEventPageHref}" />
 <link rel="stylesheet" href="${cssReportsHref}" />
+<link rel="stylesheet" href="${leafletCssHref}" />
+<script defer src="${leafletJsHref}"></script>
 <script defer src="${formSubmitGuardHref}"></script>
 <script defer src="${accountEditFormHref}"></script>
 <script defer src="${passwordToggleHref}"></script>
@@ -55,7 +63,11 @@
 <script defer src="${hostJoinPolicyGuardHref}"></script>
 <script defer src="${overflowMenuHref}"></script>
 <script defer src="${filterDropdownsHref}"></script>
+<script defer src="${eventsToggleFilterHref}"></script>
 <script defer src="${hostCreateMatchHref}"></script>
 <script defer src="${recurrenceScheduleHref}"></script>
+<script defer src="${exploreLocationHref}"></script>
+<script defer src="${locationPickerHref}"></script>
+<script defer src="${eventMapHref}"></script>
 <script defer src="${reportDropdownsHref}"></script>
 <script defer src="${reportFiltersHref}"></script>

@@ -23,4 +23,16 @@ public class PendingJoinRequest {
     public boolean isSeriesRequest() {
         return seriesRequest;
     }
+
+    @Override
+    public String toString() {
+        return "PendingJoinRequest{"
+                + "matchId="
+                + (match == null ? null : match.getId())
+                + ", userId="
+                + (user == null ? null : user.getId())
+                + ", seriesRequest="
+                + seriesRequest
+                + '}';
+    }
 }

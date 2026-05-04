@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
 import ar.edu.itba.paw.models.EventVisibility;
@@ -8,6 +9,7 @@ import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -24,11 +26,147 @@ public interface MatchDao {
             int maxPlayers,
             BigDecimal pricePerPlayer,
             Sport sport,
-            String visibility,
-            String joinPolicy,
-            String status,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
             Long bannerImageId) {
         return createMatch(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                null,
+                null,
+                null,
+                null);
+    }
+
+    default Match createMatch(
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId,
+            Double latitude,
+            Double longitude) {
+        return createMatch(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                latitude,
+                longitude,
+                null,
+                null);
+    }
+
+    default Match createMatch(
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId,
+            Long seriesId,
+            Integer seriesOccurrenceIndex) {
+        return createMatch(
+                hostUserId,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageId,
+                null,
+                null,
+                seriesId,
+                seriesOccurrenceIndex);
+    }
+
+    Match createMatch(
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId,
+            Double latitude,
+            Double longitude,
+            Long seriesId,
+            Integer seriesOccurrenceIndex);
+
+    Long createMatchSeries(
+            Long hostUserId,
+            String frequency,
+            Instant startsAt,
+            Instant endsAt,
+            String timezone,
+            LocalDate untilDate,
+            Integer occurrenceCount);
+
+    default boolean updateMatch(
+            Long matchId,
+            Long hostUserId,
+            String address,
+            String title,
+            String description,
+            Instant startsAt,
+            Instant endsAt,
+            int maxPlayers,
+            BigDecimal pricePerPlayer,
+            Sport sport,
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId) {
+        return updateMatch(
+                matchId,
                 hostUserId,
                 address,
                 title,
@@ -46,96 +184,6 @@ public interface MatchDao {
                 null);
     }
 
-    Match createMatch(
-            Long hostUserId,
-            String address,
-            String title,
-            String description,
-            Instant startsAt,
-            Instant endsAt,
-            int maxPlayers,
-            BigDecimal pricePerPlayer,
-            Sport sport,
-            String visibility,
-            String joinPolicy,
-            String status,
-            Long bannerImageId,
-            Long seriesId,
-            Integer seriesOccurrenceIndex);
-
-    Long createMatchSeries(
-            Long hostUserId,
-            String frequency,
-            Instant startsAt,
-            Instant endsAt,
-            String timezone,
-            java.time.LocalDate untilDate,
-            Integer occurrenceCount);
-
-    default Match createMatch(
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final Sport sport,
-            final String visibility,
-            final String status,
-            final Long bannerImageId) {
-        final String defaultJoinPolicy =
-                "public".equalsIgnoreCase(visibility) ? "direct" : "approval_required";
-        return createMatch(
-                hostUserId,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                sport,
-                visibility,
-                defaultJoinPolicy,
-                status,
-                bannerImageId);
-    }
-
-    default boolean updateMatch(
-            final Long matchId,
-            final Long hostUserId,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final Sport sport,
-            final String visibility,
-            final String status,
-            final Long bannerImageId) {
-        final String defaultJoinPolicy =
-                "private".equalsIgnoreCase(visibility) ? "invite_only" : "direct";
-        return updateMatch(
-                matchId,
-                hostUserId,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                sport,
-                visibility,
-                defaultJoinPolicy,
-                status,
-                bannerImageId);
-    }
-
     boolean updateMatch(
             Long matchId,
             Long hostUserId,
@@ -147,10 +195,12 @@ public interface MatchDao {
             int maxPlayers,
             BigDecimal pricePerPlayer,
             Sport sport,
-            String visibility,
-            String joinPolicy,
-            String status,
-            Long bannerImageId);
+            EventVisibility visibility,
+            EventJoinPolicy joinPolicy,
+            EventStatus status,
+            Long bannerImageId,
+            Double latitude,
+            Double longitude);
 
     boolean cancelMatch(Long matchId, Long hostUserId);
 
@@ -178,8 +228,38 @@ public interface MatchDao {
             BigDecimal maxPrice,
             MatchSort sort,
             ZoneId zoneId,
+            Double latitude,
+            Double longitude,
             int offset,
             int limit);
+
+    default List<Match> findPublicMatches(
+            String query,
+            List<Sport> sports,
+            EventTimeFilter timeFilter,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            MatchSort sort,
+            ZoneId zoneId,
+            int offset,
+            int limit) {
+        return findPublicMatches(
+                query,
+                sports,
+                timeFilter,
+                startsAtFrom,
+                startsAtTo,
+                minPrice,
+                maxPrice,
+                sort,
+                zoneId,
+                null,
+                null,
+                offset,
+                limit);
+    }
 
     default List<Match> findPublicMatches(
             final String query,

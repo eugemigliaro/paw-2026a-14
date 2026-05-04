@@ -27,4 +27,9 @@ public enum RecurrenceEndMode {
                 .filter(mode -> mode.value.equalsIgnoreCase(normalized))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

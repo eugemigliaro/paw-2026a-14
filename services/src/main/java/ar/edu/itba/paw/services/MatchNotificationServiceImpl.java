@@ -264,7 +264,10 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
                         locale);
         final String statusLabel =
                 messageSource.getMessage(
-                        "match.status." + match.getStatus(), null, match.getStatus(), locale);
+                        "match.status." + match.getStatus().getValue(),
+                        null,
+                        match.getStatus().getValue(),
+                        locale);
 
         return new MatchLifecycleMailTemplateData(
                 recipient.getEmail(),

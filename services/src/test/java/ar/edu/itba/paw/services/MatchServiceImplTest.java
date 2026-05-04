@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.EventStatus;
 import ar.edu.itba.paw.models.EventTimeFilter;
+import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -13,11 +15,15 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.mail.MailContent;
+import ar.edu.itba.paw.services.mail.MailDispatchService;
+import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -26,7 +32,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,18 +40,35 @@ import org.springframework.context.MessageSource;
 @ExtendWith(MockitoExtension.class)
 public class MatchServiceImplTest {
 
-    @InjectMocks private MatchServiceImpl matchService;
-
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
-    @Mock private MatchNotificationService matchNotificationService;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
+    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
+    @Mock private UserService userService;
+
+    private RecordingMailDispatchService mailDispatchService;
+    private MatchServiceImpl matchService;
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @BeforeEach
     public void setUp() {
+        mailDispatchService = new RecordingMailDispatchService();
+        final MatchNotificationService matchNotificationService =
+                new MatchNotificationServiceImpl(
+                        matchParticipantDao,
+                        mailDispatchService,
+                        templateRenderer,
+                        messageSource,
+                        userService);
+        matchService =
+                new MatchServiceImpl(
+                        matchDao,
+                        matchParticipantDao,
+                        matchNotificationService,
+                        messageSource,
+                        clock);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
         Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Mockito.lenient()
@@ -75,6 +97,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 10,
                                 10))
                 .thenReturn(List.of(match));
@@ -124,6 +148,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(match));
@@ -163,6 +189,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(footballMatch, tennisMatch));
@@ -212,6 +240,8 @@ public class MatchServiceImplTest {
                                 maxPrice,
                                 MatchSort.PRICE_LOW,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 0,
                                 12))
                 .thenReturn(List.of(match));
@@ -260,6 +290,8 @@ public class MatchServiceImplTest {
                                 null,
                                 MatchSort.SOONEST,
                                 ZoneId.of("UTC"),
+                                null,
+                                null,
                                 12,
                                 12))
                 .thenReturn(List.of(match));
@@ -289,10 +321,12 @@ public class MatchServiceImplTest {
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
-                                "public",
-                                "direct",
-                                "open",
-                                null))
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                (Double) null,
+                                (Double) null))
                 .thenReturn(expectedMatch);
 
         final Match result =
@@ -307,8 +341,8 @@ public class MatchServiceImplTest {
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
-                                "public",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventStatus.OPEN,
                                 null));
 
         Assertions.assertNotNull(result);
@@ -333,9 +367,9 @@ public class MatchServiceImplTest {
                         endsAt,
                         8,
                         BigDecimal.ZERO,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         77L,
@@ -352,9 +386,9 @@ public class MatchServiceImplTest {
                         Instant.parse("2026-04-17T19:30:00Z"),
                         8,
                         BigDecimal.ZERO,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         77L,
@@ -371,9 +405,9 @@ public class MatchServiceImplTest {
                         Instant.parse("2026-04-24T19:30:00Z"),
                         8,
                         BigDecimal.ZERO,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         77L,
@@ -391,10 +425,12 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 1))
                 .thenReturn(firstOccurrence);
@@ -409,10 +445,12 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 2))
                 .thenReturn(secondOccurrence);
@@ -427,10 +465,12 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 77L,
                                 3))
                 .thenReturn(thirdOccurrence);
@@ -448,9 +488,9 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
                                 new CreateRecurrenceRequest(
                                         RecurrenceFrequency.WEEKLY,
@@ -484,9 +524,9 @@ public class MatchServiceImplTest {
                         endsAt,
                         8,
                         BigDecimal.ZERO,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         88L,
@@ -503,9 +543,9 @@ public class MatchServiceImplTest {
                         Instant.parse("2026-04-17T19:30:00Z"),
                         8,
                         BigDecimal.ZERO,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         88L,
@@ -525,10 +565,12 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 88L,
                                 1))
                 .thenReturn(firstOccurrence);
@@ -543,10 +585,12 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
+                                (Double) null,
+                                (Double) null,
                                 88L,
                                 2))
                 .thenReturn(secondOccurrence);
@@ -564,9 +608,9 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null,
                                 new CreateRecurrenceRequest(
                                         RecurrenceFrequency.WEEKLY,
@@ -603,9 +647,9 @@ public class MatchServiceImplTest {
                                                 8,
                                                 BigDecimal.ZERO,
                                                 Sport.PADEL,
-                                                "public",
-                                                "direct",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventJoinPolicy.DIRECT,
+                                                EventStatus.OPEN,
                                                 null,
                                                 new CreateRecurrenceRequest(
                                                         RecurrenceFrequency.WEEKLY,
@@ -635,8 +679,8 @@ public class MatchServiceImplTest {
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals("match.schedule.error.startsAtPast", exception.getMessage());
@@ -656,8 +700,8 @@ public class MatchServiceImplTest {
                         1001,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventStatus.OPEN,
                         null);
 
         // 2. Exercise
@@ -689,8 +733,8 @@ public class MatchServiceImplTest {
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals(MatchUpdateFailureReason.MATCH_NOT_FOUND, exception.getReason());
@@ -718,8 +762,8 @@ public class MatchServiceImplTest {
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals(MatchUpdateFailureReason.FORBIDDEN, exception.getReason());
@@ -740,8 +784,9 @@ public class MatchServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "completed",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.COMPLETED,
                         0,
                         null);
         Mockito.when(matchDao.findById(17L)).thenReturn(Optional.of(completedMatch));
@@ -762,8 +807,8 @@ public class MatchServiceImplTest {
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals(MatchUpdateFailureReason.NOT_EDITABLE, exception.getReason());
@@ -791,8 +836,8 @@ public class MatchServiceImplTest {
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals(MatchUpdateFailureReason.INVALID_SCHEDULE, exception.getReason());
@@ -820,8 +865,8 @@ public class MatchServiceImplTest {
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals(MatchUpdateFailureReason.INVALID_SCHEDULE, exception.getReason());
@@ -854,8 +899,8 @@ public class MatchServiceImplTest {
                                                 1,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals(
@@ -887,8 +932,8 @@ public class MatchServiceImplTest {
                                                 1001,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         // 3. Assert
@@ -911,9 +956,9 @@ public class MatchServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         12,
                         BigDecimal.ONE,
-                        "public",
-                        "approval_required",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
                         0,
                         null);
         Mockito.when(matchDao.findById(12L))
@@ -932,9 +977,11 @@ public class MatchServiceImplTest {
                                 12,
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
-                                "public",
-                                "approval_required",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.APPROVAL_REQUIRED,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -951,16 +998,15 @@ public class MatchServiceImplTest {
                                 12,
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
-                                "public",
-                                "approval_required",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.APPROVAL_REQUIRED,
+                                EventStatus.OPEN,
                                 null));
 
         Assertions.assertEquals("Updated Title", result.getTitle());
         Assertions.assertEquals(Sport.TENNIS, result.getSport());
         Assertions.assertEquals("Updated Address", result.getAddress());
-        Assertions.assertEquals("approval_required", result.getJoinPolicy());
-        Mockito.verify(matchNotificationService).notifyMatchUpdated(updatedMatch);
+        Assertions.assertEquals(EventJoinPolicy.APPROVAL_REQUIRED, result.getJoinPolicy());
     }
 
     @Test
@@ -980,9 +1026,11 @@ public class MatchServiceImplTest {
                                 12,
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(false);
 
@@ -1002,8 +1050,8 @@ public class MatchServiceImplTest {
                                                 12,
                                                 BigDecimal.ONE,
                                                 Sport.TENNIS,
-                                                "public",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
                                                 null)));
 
         Assertions.assertEquals(MatchUpdateFailureReason.FORBIDDEN, exception.getReason());
@@ -1050,8 +1098,9 @@ public class MatchServiceImplTest {
                         FIXED_NOW.minusSeconds(3600),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "completed",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.COMPLETED,
                         0,
                         null);
         Mockito.when(matchDao.findById(29L)).thenReturn(Optional.of(completedMatch));
@@ -1079,8 +1128,9 @@ public class MatchServiceImplTest {
                         null,
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         0,
                         null);
         Mockito.when(matchDao.findById(23L))
@@ -1090,9 +1140,8 @@ public class MatchServiceImplTest {
 
         final Match result = matchService.cancelMatch(23L, 1L);
 
-        Assertions.assertEquals("cancelled", result.getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(23L, result.getId());
-        Mockito.verify(matchNotificationService).notifyMatchCancelled(cancelledMatch);
     }
 
     @Test
@@ -1110,9 +1159,9 @@ public class MatchServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null,
                         600L,
@@ -1129,9 +1178,9 @@ public class MatchServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "direct",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         0,
                         null,
                         600L,
@@ -1146,7 +1195,7 @@ public class MatchServiceImplTest {
 
         // Assert
         Assertions.assertEquals(47L, result.getId());
-        Assertions.assertEquals("cancelled", result.getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(600L, result.getSeriesId());
         Assertions.assertEquals(2, result.getSeriesOccurrenceIndex());
     }
@@ -1160,7 +1209,7 @@ public class MatchServiceImplTest {
                         "Past Weekly Padel",
                         FIXED_NOW.minusSeconds(604800),
                         FIXED_NOW.minusSeconds(599400),
-                        "open",
+                        EventStatus.OPEN,
                         1);
         final Match pivotOccurrence =
                 recurringMatch(
@@ -1168,7 +1217,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(3600),
                         FIXED_NOW.plusSeconds(7200),
-                        "open",
+                        EventStatus.OPEN,
                         2);
         final Match futureOccurrence =
                 recurringMatch(
@@ -1176,7 +1225,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(608400),
                         FIXED_NOW.plusSeconds(612000),
-                        "open",
+                        EventStatus.OPEN,
                         3);
         final Match cancelledOccurrence =
                 recurringMatch(
@@ -1184,7 +1233,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(1213200),
                         FIXED_NOW.plusSeconds(1216800),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         4);
         final Match updatedPivot =
                 recurringMatch(
@@ -1192,7 +1241,7 @@ public class MatchServiceImplTest {
                         "Updated Weekly Padel",
                         FIXED_NOW.plusSeconds(5400),
                         FIXED_NOW.plusSeconds(9000),
-                        "open",
+                        EventStatus.OPEN,
                         2);
         final Match updatedFuture =
                 recurringMatch(
@@ -1200,7 +1249,7 @@ public class MatchServiceImplTest {
                         "Updated Weekly Padel",
                         FIXED_NOW.plusSeconds(610200),
                         FIXED_NOW.plusSeconds(613800),
-                        "open",
+                        EventStatus.OPEN,
                         3);
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
@@ -1212,9 +1261,9 @@ public class MatchServiceImplTest {
                         8,
                         BigDecimal.ONE,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
         Mockito.when(matchDao.findById(46L))
                 .thenReturn(Optional.of(pivotOccurrence))
@@ -1241,9 +1290,11 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ONE,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
         Mockito.when(
@@ -1258,9 +1309,11 @@ public class MatchServiceImplTest {
                                 8,
                                 BigDecimal.ONE,
                                 Sport.PADEL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1273,7 +1326,6 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(47L, result.get(1).getId());
         Assertions.assertEquals("Updated Weekly Padel", result.get(0).getTitle());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(610200), result.get(1).getStartsAt());
-        Mockito.verify(matchNotificationService).notifyRecurringMatchesUpdated(result);
     }
 
     @Test
@@ -1285,7 +1337,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(3600),
                         FIXED_NOW.plusSeconds(7200),
-                        "open",
+                        EventStatus.OPEN,
                         2);
         final Match inconsistentFutureOccurrence =
                 recurringMatch(
@@ -1293,7 +1345,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(60),
                         FIXED_NOW.plusSeconds(3660),
-                        "open",
+                        EventStatus.OPEN,
                         3);
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
@@ -1305,9 +1357,9 @@ public class MatchServiceImplTest {
                         8,
                         BigDecimal.ONE,
                         Sport.PADEL,
-                        "public",
-                        "direct",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         null);
         Mockito.when(matchDao.findById(46L)).thenReturn(Optional.of(pivotOccurrence));
         Mockito.when(matchDao.findSeriesOccurrences(600L))
@@ -1349,9 +1401,9 @@ public class MatchServiceImplTest {
                                                 8,
                                                 BigDecimal.ONE,
                                                 Sport.PADEL,
-                                                "public",
-                                                "direct",
-                                                "open",
+                                                EventVisibility.PUBLIC,
+                                                EventJoinPolicy.DIRECT,
+                                                EventStatus.OPEN,
                                                 null)));
 
         // 3. Assert
@@ -1367,7 +1419,7 @@ public class MatchServiceImplTest {
                         "Past Weekly Padel",
                         FIXED_NOW.minusSeconds(604800),
                         FIXED_NOW.minusSeconds(599400),
-                        "open",
+                        EventStatus.OPEN,
                         1);
         final Match pivotOccurrence =
                 recurringMatch(
@@ -1375,7 +1427,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(3600),
                         FIXED_NOW.plusSeconds(7200),
-                        "open",
+                        EventStatus.OPEN,
                         2);
         final Match futureOccurrence =
                 recurringMatch(
@@ -1383,7 +1435,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(608400),
                         FIXED_NOW.plusSeconds(612000),
-                        "open",
+                        EventStatus.OPEN,
                         3);
         final Match cancelledOccurrence =
                 recurringMatch(
@@ -1391,7 +1443,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(1213200),
                         FIXED_NOW.plusSeconds(1216800),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         4);
         final Match cancelledPivot =
                 recurringMatch(
@@ -1399,7 +1451,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(3600),
                         FIXED_NOW.plusSeconds(7200),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         2);
         final Match cancelledFuture =
                 recurringMatch(
@@ -1407,7 +1459,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(608400),
                         FIXED_NOW.plusSeconds(612000),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         3);
         Mockito.when(matchDao.findById(46L))
                 .thenReturn(Optional.of(pivotOccurrence))
@@ -1430,9 +1482,8 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(2, result.size());
         Assertions.assertEquals(46L, result.get(0).getId());
         Assertions.assertEquals(47L, result.get(1).getId());
-        Assertions.assertEquals("cancelled", result.get(0).getStatus());
-        Assertions.assertEquals("cancelled", result.get(1).getStatus());
-        Mockito.verify(matchNotificationService).notifyRecurringMatchesCancelled(result);
+        Assertions.assertEquals(EventStatus.CANCELLED, result.get(0).getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, result.get(1).getStatus());
     }
 
     @Test
@@ -1444,7 +1495,7 @@ public class MatchServiceImplTest {
                         "Past Weekly Padel",
                         FIXED_NOW.minusSeconds(604800),
                         FIXED_NOW.minusSeconds(599400),
-                        "open",
+                        EventStatus.OPEN,
                         1);
         final Match earlierFutureOccurrence =
                 recurringMatch(
@@ -1452,7 +1503,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(3600),
                         FIXED_NOW.plusSeconds(7200),
-                        "open",
+                        EventStatus.OPEN,
                         2);
         final Match pivotOccurrence =
                 recurringMatch(
@@ -1460,7 +1511,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(608400),
                         FIXED_NOW.plusSeconds(612000),
-                        "open",
+                        EventStatus.OPEN,
                         3);
         final Match laterFutureOccurrence =
                 recurringMatch(
@@ -1468,7 +1519,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(1213200),
                         FIXED_NOW.plusSeconds(1216800),
-                        "open",
+                        EventStatus.OPEN,
                         4);
         final Match cancelledOccurrence =
                 recurringMatch(
@@ -1476,7 +1527,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(1818000),
                         FIXED_NOW.plusSeconds(1821600),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         5);
         final Match cancelledEarlierFuture =
                 recurringMatch(
@@ -1484,7 +1535,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(3600),
                         FIXED_NOW.plusSeconds(7200),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         2);
         final Match cancelledPivot =
                 recurringMatch(
@@ -1492,7 +1543,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(608400),
                         FIXED_NOW.plusSeconds(612000),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         3);
         final Match cancelledLaterFuture =
                 recurringMatch(
@@ -1500,7 +1551,7 @@ public class MatchServiceImplTest {
                         "Weekly Padel",
                         FIXED_NOW.plusSeconds(1213200),
                         FIXED_NOW.plusSeconds(1216800),
-                        "cancelled",
+                        EventStatus.CANCELLED,
                         4);
         Mockito.when(matchDao.findById(46L))
                 .thenReturn(Optional.of(pivotOccurrence))
@@ -1527,9 +1578,9 @@ public class MatchServiceImplTest {
         Assertions.assertEquals(45L, result.get(0).getId());
         Assertions.assertEquals(46L, result.get(1).getId());
         Assertions.assertEquals(47L, result.get(2).getId());
-        Assertions.assertEquals("cancelled", result.get(0).getStatus());
-        Assertions.assertEquals("cancelled", result.get(1).getStatus());
-        Assertions.assertEquals("cancelled", result.get(2).getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, result.get(0).getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, result.get(1).getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, result.get(2).getStatus());
     }
 
     @Test
@@ -1546,21 +1597,22 @@ public class MatchServiceImplTest {
                         null,
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         0,
                         null);
         Mockito.when(matchDao.findById(24L)).thenReturn(Optional.of(existingMatch));
 
         final Match result = matchService.cancelMatch(24L, 1L);
 
-        Assertions.assertEquals("cancelled", result.getStatus());
+        Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(24L, result.getId());
-        Mockito.verifyNoInteractions(matchNotificationService);
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
-    public void testUpdateMatchWithoutConfirmedParticipantsStillDelegatesNotificationService() {
+    public void testUpdateMatchWithoutConfirmedParticipantsSendsNoMail() {
         final Match existingMatch = createTestMatch(25L, "Old Title", "football");
         final Match updatedMatch =
                 new Match(
@@ -1574,8 +1626,9 @@ public class MatchServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         12,
                         BigDecimal.ONE,
-                        "public",
-                        "open",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
                         0,
                         null);
         Mockito.when(matchDao.findById(25L))
@@ -1593,9 +1646,11 @@ public class MatchServiceImplTest {
                                 12,
                                 BigDecimal.ONE,
                                 Sport.FOOTBALL,
-                                "public",
-                                "direct",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                null,
                                 null))
                 .thenReturn(true);
 
@@ -1612,16 +1667,17 @@ public class MatchServiceImplTest {
                                 12,
                                 BigDecimal.ONE,
                                 Sport.FOOTBALL,
-                                "public",
-                                "open",
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
                                 null));
 
         Assertions.assertEquals(25L, result.getId());
-        Mockito.verify(matchNotificationService).notifyMatchUpdated(updatedMatch);
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
-    public void testCancelMatchWithoutConfirmedParticipantsStillDelegatesNotificationService() {
+    public void testCancelMatchWithoutConfirmedParticipantsSendsNoMail() {
         final Match existingMatch = createTestMatch(26L, "Test Match", "football");
         final Match cancelledMatch =
                 new Match(
@@ -1635,8 +1691,9 @@ public class MatchServiceImplTest {
                         null,
                         10,
                         BigDecimal.ZERO,
-                        "public",
-                        "cancelled",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
                         0,
                         null);
         Mockito.when(matchDao.findById(26L))
@@ -1646,8 +1703,8 @@ public class MatchServiceImplTest {
 
         final Match result = matchService.cancelMatch(26L, 1L);
 
-        Assertions.assertEquals("cancelled", result.getStatus());
-        Mockito.verify(matchNotificationService).notifyMatchCancelled(cancelledMatch);
+        Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -1669,11 +1726,12 @@ public class MatchServiceImplTest {
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
-                                        "public",
-                                        "open",
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.OPEN,
                                         null)));
 
-        Mockito.verifyNoInteractions(matchNotificationService);
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -1683,7 +1741,19 @@ public class MatchServiceImplTest {
         Assertions.assertThrows(
                 MatchCancellationException.class, () -> matchService.cancelMatch(28L, 1L));
 
-        Mockito.verifyNoInteractions(matchNotificationService);
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+    }
+
+    private static class RecordingMailDispatchService implements MailDispatchService {
+
+        private final List<String> recipients = new ArrayList<>();
+        private final List<MailContent> contents = new ArrayList<>();
+
+        @Override
+        public void dispatch(final String recipientEmail, final MailContent content) {
+            recipients.add(recipientEmail);
+            contents.add(content);
+        }
     }
 
     @Test
@@ -1784,8 +1854,9 @@ public class MatchServiceImplTest {
                         null,
                         8,
                         BigDecimal.ZERO,
-                        "public",
-                        "completed",
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.COMPLETED,
                         4,
                         null);
 
@@ -1841,7 +1912,7 @@ public class MatchServiceImplTest {
                         10);
 
         Assertions.assertEquals(1, result.getItems().size());
-        Assertions.assertEquals("completed", result.getItems().get(0).getStatus());
+        Assertions.assertEquals(EventStatus.COMPLETED, result.getItems().get(0).getStatus());
     }
 
     @Test
@@ -1974,8 +2045,9 @@ public class MatchServiceImplTest {
                 null,
                 10,
                 BigDecimal.ZERO,
-                "public",
-                "open",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
                 0,
                 null);
     }
@@ -1985,7 +2057,7 @@ public class MatchServiceImplTest {
             final String title,
             final Instant startsAt,
             final Instant endsAt,
-            final String status,
+            final EventStatus status,
             final Integer occurrenceIndex) {
         return new Match(
                 id,
@@ -1998,8 +2070,8 @@ public class MatchServiceImplTest {
                 endsAt,
                 10,
                 BigDecimal.ZERO,
-                "public",
-                "direct",
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
                 status,
                 0,
                 null,

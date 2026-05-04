@@ -760,42 +760,6 @@
 
 									</main>
 							</div>
-						</body>
-						<script>
-							document.querySelectorAll("[data-events-toggle='true']").forEach(toggleRoot => {
-								const eventsButtons = toggleRoot.querySelectorAll(".events-toggle-btn");
-								const eventsSlider = toggleRoot.querySelector("[data-events-toggle-slider='true']");
+							</body>
 
-								if (!eventsButtons.length || !eventsSlider) {
-									return;
-								}
-
-								eventsButtons.forEach(btn => {
-									btn.addEventListener("click", () => {
-										const value = btn.dataset.value;
-										const isPast = value === "past";
-
-										eventsSlider.classList.toggle("right", isPast);
-										eventsButtons.forEach(b => b.classList.remove("active"));
-										btn.classList.add("active");
-
-										const currentUrl = new URL(window.location);
-										if (isPast) {
-											currentUrl.searchParams.set("filter", "past");
-										} else {
-											currentUrl.searchParams.delete("filter");
-										}
-										currentUrl.searchParams.set("page", "1");
-										/* Clear date and price filters – they don't carry across
-										the upcoming/past boundary and cause empty results. */
-										currentUrl.searchParams.delete("startDate");
-										currentUrl.searchParams.delete("endDate");
-										currentUrl.searchParams.delete("minPrice");
-										currentUrl.searchParams.delete("maxPrice");
-										window.location.href = currentUrl.toString();
-									});
-								});
-							});
-						</script>
-
-						</html>
+							</html>

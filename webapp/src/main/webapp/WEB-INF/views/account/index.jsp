@@ -39,7 +39,7 @@
 				<c:url var="accountProfileImageSrc" value="${accountProfileImageUrl}" />
 
 				<c:url var="logoutAction" value="/logout" />
-				<form id="logout-form" method="post" action="${logoutAction}" style="display: none;">
+				<form id="logout-form" class="field--hidden" method="post" action="${logoutAction}">
 					<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 				</form>
 
@@ -176,75 +176,6 @@
 		</main>
 	</div>
 
-	<script>
-		document.addEventListener('DOMContentLoaded', () => {
-			const form = document.getElementById('account-edit-form');
-			const editableFields = form.querySelectorAll('.account-field--editable');
-			const fileInput = document.getElementById('account-profile-image');
-			const actionsBar = document.getElementById('account-edit-confirm');
-			const cancelButton = document.getElementById('account-cancel-button');
-
-			// Store original values
-			const originalValues = new Map();
-			editableFields.forEach(field => {
-				originalValues.set(field, field.value);
-			});
-			let fileChanged = false;
-
-			// Enter edit mode
-			function enterEditMode() {
-				editableFields.forEach(field => {
-					field.removeAttribute('readonly');
-					field.classList.remove('account-readonly-control');
-				});
-			}
-
-			function checkForChanges() {
-				let hasChanges = fileChanged;
-				editableFields.forEach(field => {
-					if (field.value !== originalValues.get(field)) {
-						hasChanges = true;
-					}
-				});
-
-				if (hasChanges) {
-					actionsBar.classList.add('account-edit-actions__confirm--visible');
-				} else {
-					actionsBar.classList.remove('account-edit-actions__confirm--visible');
-				}
-			}
-
-			editableFields.forEach(field => {
-				field.addEventListener('focus', enterEditMode);
-				field.addEventListener('click', enterEditMode);
-				field.addEventListener('input', checkForChanges);
-			});
-
-			if (fileInput) {
-				fileInput.addEventListener('change', () => {
-					fileChanged = !!fileInput.value;
-					checkForChanges();
-				});
-			}
-
-			if (cancelButton) {
-				cancelButton.addEventListener('click', (e) => {
-					e.preventDefault();
-					// Restore original values
-					editableFields.forEach(field => {
-						field.value = originalValues.get(field);
-						field.setAttribute('readonly', 'true');
-						field.classList.add('account-readonly-control');
-					});
-					if (fileInput) {
-						fileInput.value = '';
-					}
-					fileChanged = false;
-					actionsBar.classList.remove('account-edit-actions__confirm--visible');
-				});
-			}
-		});
-	</script>
 </body>
 
 </html>

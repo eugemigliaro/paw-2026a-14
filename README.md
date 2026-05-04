@@ -1,52 +1,51 @@
-## Setup and Instalation Instructions
+# PAW Grupo 14
 
-After cloning the repository, run:
+Runbook for local development and packaging.
+
+## Requirements
+
+- Java 21
+- Maven
+- PostgreSQL
+
+## First-Time Setup
+
+After cloning the repository, install the project git hooks:
 
 ```sh
 sh scripts/setup-git-hooks.sh
+```
+
+If you need the faculty/Bitbucket remote configured too, run:
+
+```sh
 sh scripts/setup-remotes.sh
 ```
 
-### Database migrations (Flyway)
+## Local Configuration
 
-Database schema is managed with Flyway.
+Create the local config file from the example:
 
-- Main migrations: `persistence/src/main/resources/db/migration`
-- Test migrations: `persistence/src/test/resources/db/testmigration`
+```sh
+cp config/local.example.properties config/local.properties
+```
 
-Flyway automatically runs migrations on application startup and during persistence tests.
+Edit `config/local.properties` with your local PostgreSQL credentials.
 
-### Runtime configuration
-
-This project uses a committed Spring `application.properties` file whose values are filled by Maven resource filtering from gitignored profile files.
-
-Local development uses:
+Do not commit real local or deployment credentials. The real files are gitignored:
 
 - `config/local.properties`
-
-Pampero deployment packaging uses:
-
 - `config/pampero.properties`
 
-The repository includes example files for both environments:
+## Database
 
-- `config/local.example.properties`
-- `config/pampero.example.properties`
+Database schema is managed by Flyway. Migrations run automatically on application startup and during persistence tests.
 
-Do not commit the real `config/local.properties` or `config/pampero.properties` files.
+For local development, make sure the database configured in `config/local.properties` exists before starting Jetty.
 
-### Logging
+## Run Locally
 
-This repository uses **SLF4J + Logback** for application logging.
-
-- Runtime Logback config: `webapp/src/main/resources/logback.xml`
-- Test Logback config: `webapp/src/test/resources/logback-test.xml`
-- Logging rules and examples: `docs/logging.md`
-
-### Run locally
-
-Create `config/local.properties` from `config/local.example.properties`, then install the current
-multi-module snapshots and run the webapp:
+Install the current multi-module snapshots and start the webapp:
 
 ```sh
 mvn clean install
@@ -54,14 +53,37 @@ cd webapp
 mvn jetty:run
 ```
 
-`mvn jetty:run` uses the default `local` Maven profile, so no extra `source` or environment export is needed.
-Run `mvn install -DskipTests` again after changing classes in `models`, `service-contracts`,
-`persistence-contracts`, `persistence`, or `services`; otherwise Jetty may load stale
-`1.0-SNAPSHOT` jars from the local Maven repository.
+`mvn jetty:run` uses the default `local` Maven profile.
 
-### Build For Pampero
+After changing code in `models`, `service-contracts`, `persistence-contracts`, `persistence`, or `services`, run the install step again so Jetty does not load stale `1.0-SNAPSHOT` jars:
 
-Create `config/pampero.properties` with the faculty DB credentials, then package the WAR with:
+```sh
+mvn install -DskipTests
+```
+
+## Tests and Formatting
+
+Run the test suite:
+
+```sh
+mvn test
+```
+
+Apply formatting:
+
+```sh
+mvn spotless:apply
+```
+
+Check formatting without changing files:
+
+```sh
+mvn spotless:check
+```
+
+## Build WAR
+
+Create `config/pampero.properties` with the faculty DB credentials, then package the deployable WAR:
 
 ```sh
 mvn -Ppampero clean package
@@ -73,62 +95,16 @@ The generated WAR is:
 webapp/target/webapp.war
 ```
 
-Upload that file as `web/app.war` through the faculty SFTP flow.
+## Users
 
-## Daily Workflow
+| User    | email                          | password           |
+| ------- | ------------------------------ | ------------------ |
+| Admin   | matchpointpawapp@gmail.com<br> | _matchPointAdmin14 |
+| Regular | matchpointuser@gmail.com       | 12345678           |
 
-## Branch Policy
+## More Docs
 
-- `main` contains deployed content.
-- `dev` contains the sprint work in progress.
-- Do not push directly to `main`; use branches and Pull Requests.
-
-1. Create a branch:
-
-```sh
-git checkout -b feature/my-feature
-```
-
-2. Work and commit:
-
-```sh
-git add .
-git commit -m "feat(module): short description"
-```
-
-3. Push your branch:
-
-```sh
-git push origin my-branch
-```
-
-4. Open a Pull Request → **do not push directly to `main`**
-
----
-
-## Delivery (Bitbucket)
-
-When submitting:
-
-```sh
-git push bitbucket --all
-git push bitbucket --tags
-```
-
----
-
-## If something fails
-
-- Formatting:
-
-```sh
-mvn spotless:apply
-```
-
-- Hooks not running:
-
-```sh
-git config --get core.hooksPath
-```
-
-(should return `.githooks`)
+- Repository structure: `docs/repo-structure.md`
+- Product requirements: `docs/prd.md`
+- Design direction: `docs/design.md`
+- Logging rules: `docs/logging.md`

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlayerReview;
@@ -15,16 +16,12 @@ import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ReportMatchViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ReportPageViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ReportReviewViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.PawUiViewModels.ReportUserViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportReviewViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportUserViewModel;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Locale;
 import java.util.function.Supplier;
 import javax.validation.Valid;
@@ -500,16 +497,6 @@ public class ModerationReportController {
                         "We could not submit the report.",
                         locale);
         }
-    }
-
-    private static String formatInstant(final Instant instant, final Locale locale) {
-        if (instant == null) {
-            return "";
-        }
-        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
-                .withLocale(locale == null ? Locale.ENGLISH : locale)
-                .withZone(ZoneId.systemDefault())
-                .format(instant);
     }
 
     private static String normalizedDescription(final String description) {

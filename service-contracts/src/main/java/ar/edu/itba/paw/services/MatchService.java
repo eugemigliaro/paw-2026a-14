@@ -61,14 +61,32 @@ public interface MatchService {
             int pageSize);
 
     PaginatedResult<Match> searchPublicMatches(
-            String query,
-            String sport,
-            String startDate,
-            String endDate,
-            String sort,
-            int page,
-            int pageSize,
-            String timezone,
-            BigDecimal minPrice,
-            BigDecimal maxPrice);
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final Double latitude,
+            final Double longitude);
+
+    default PaginatedResult<Match> searchPublicMatches(
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        return searchPublicMatches(
+                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
+                maxPrice, null, null);
+    }
 }

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -21,15 +22,37 @@ class ViewTemplateAssetsTest {
         assertTrue(head.contains("/js/overflow-menu.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
         assertTrue(head.contains("/js/recurrence-schedule.js"));
+        assertTrue(head.contains("/js/event-map.js"));
     }
 
     @Test
     void hostCreateMatchUsesSharedTimezoneScriptInsteadOfLegacyPageScript() throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String buttonTag = read("src/main/webapp/WEB-INF/tags/button.tag");
 
         assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
-        assertTrue(hostCreateMatch.contains("${pageContext.request.contextPath}${formAction}"));
+        assertTrue(
+                hostCreateMatch.contains(
+                        "<c:url var=\"resolvedFormAction\" value=\"${formAction}\""));
+        assertFalse(hostCreateMatch.contains("${pageContext.request.contextPath}${formAction}"));
+        assertFalse(buttonTag.contains("name=\"formAction\""));
+        assertTrue(buttonTag.contains("name=\"submitAction\""));
+    }
+
+    @Test
+    void pageSpecificBehaviorUsesExternalScriptsInsteadOfInlineScripts() throws IOException {
+        final String accountIndex = read("src/main/webapp/WEB-INF/views/account/index.jsp");
+        final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
+
+        assertFalse(accountIndex.contains("<script>"));
+        assertFalse(eventsList.contains("<script>"));
+        assertFalse(hostCreateMatch.contains("<script>"));
+        assertTrue(head.contains("/js/account-edit-form.js"));
+        assertTrue(head.contains("/js/events-toggle-filter.js"));
+        assertTrue(head.contains("/js/host-create-match.js"));
     }
 
     @Test
@@ -112,11 +135,115 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void hostCreateMatchUsesHiddenCoordinateFieldsWithoutVisibleCoordinateCopy()
+            throws IOException {
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(hostCreateMatch.contains("path=\"latitude\""));
+        assertTrue(hostCreateMatch.contains("path=\"longitude\""));
+        assertTrue(hostCreateMatch.contains("data-location-picker=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-zoom-in=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-zoom-out=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-current=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-location-clear=\"true\""));
+        assertFalse(hostCreateMatch.contains("latitude.placeholder"));
+        assertFalse(hostCreateMatch.contains("longitude.placeholder"));
+        assertNotNull(english.getProperty("feed.nearMe"));
+        assertNotNull(spanish.getProperty("feed.nearMe"));
+        assertNotNull(english.getProperty("host.form.location.map"));
+        assertNotNull(spanish.getProperty("host.form.location.map"));
+        assertNotNull(english.getProperty("host.form.location.zoomIn"));
+        assertNotNull(english.getProperty("host.form.location.zoomOut"));
+        assertNotNull(spanish.getProperty("host.form.location.zoomIn"));
+        assertNotNull(spanish.getProperty("host.form.location.zoomOut"));
+    }
+
+    @Test
+    void mapPickerUsesCommittedTileDefaults() throws IOException {
+        final String local = read("../config/local.example.properties");
+        final String pampero = read("../config/pampero.example.properties");
+
+        assertTrue(local.contains("map.picker.enabled=true"));
+        assertTrue(local.contains("map.tiles.urlTemplate=/assets/tiles/{z}/{x}/{y}.png"));
+        assertTrue(local.contains("map.tiles.attribution=Local Buenos Aires map tiles"));
+        assertTrue(local.contains("map.default.zoom=14"));
+        assertTrue(pampero.contains("map.picker.enabled=true"));
+        assertTrue(pampero.contains("map.tiles.urlTemplate=/assets/tiles/{z}/{x}/{y}.png"));
+        assertTrue(pampero.contains("map.tiles.attribution=Local Buenos Aires map tiles"));
+        assertTrue(pampero.contains("map.default.zoom=14"));
+    }
+
+    @Test
+    void locationPickerUsesLeafletWithCabaBoundsAndZoomControls() throws IOException {
+        final String script = read("src/main/webapp/js/location-picker.js");
+        final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
+
+        assertTrue(script.contains("MIN_ZOOM = 12"));
+        assertTrue(script.contains("MAX_ZOOM = 16"));
+        assertTrue(script.contains("CABA_BOUNDS"));
+        assertTrue(script.contains("maxBoundsViscosity"));
+        assertTrue(script.contains("L.map"));
+        assertTrue(script.contains("L.tileLayer"));
+        assertTrue(script.contains("L.marker"));
+        assertTrue(script.contains("L.divIcon"));
+        assertTrue(script.contains("data-location-zoom-in"));
+        assertTrue(script.contains("data-location-zoom-out"));
+        assertTrue(script.contains("data-location-picker"));
+        assertTrue(head.contains("/js/vendor/leaflet.js"));
+        assertTrue(head.contains("/css/vendor/leaflet.css"));
+    }
+
+    @Test
+    void committedTilesIncludeEverySupportedPickerZoom() {
+        for (int zoom = 12; zoom <= 16; zoom++) {
+            final Path zoomPath = Path.of("src/main/webapp/assets/tiles", String.valueOf(zoom));
+
+            assertTrue(Files.exists(zoomPath), "Missing tile zoom directory " + zoom);
+            try (var tiles =
+                    Files.find(zoomPath, 3, (path, attrs) -> path.toString().endsWith(".png"))) {
+                assertTrue(tiles.findAny().isPresent(), "Missing PNG tiles for zoom " + zoom);
+            } catch (final IOException e) {
+                throw new AssertionError("Could not inspect tile zoom directory " + zoom, e);
+            }
+        }
+    }
+
+    @Test
+    void feedIncludesNearMeGeolocationPostWithoutUrlCoordinates() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final Path scriptPath = Path.of("src/main/webapp/js/explore-location.js");
+        final String script = Files.readString(scriptPath);
+
+        assertTrue(feedIndex.contains("/explore/location"));
+        assertTrue(feedIndex.contains("data-explore-location-form=\"true\""));
+        assertTrue(feedIndex.contains("near-me-panel--hidden"));
+        assertFalse(feedIndex.contains("data-explore-location-submit=\"true\""));
+        assertTrue(feedIndex.contains("event.distanceLabel"));
+        assertTrue(feedIndex.contains("sortOptions"));
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(script.contains("navigator.geolocation"));
+        assertTrue(script.contains("sort') === 'distance'"));
+    }
+
+    @Test
     void overflowMenuScriptExistsAndTargetsOverflowMenuHook() throws IOException {
         final Path scriptPath = Path.of("src/main/webapp/js/overflow-menu.js");
 
         assertTrue(Files.exists(scriptPath));
         assertTrue(Files.readString(scriptPath).contains("data-overflow-menu"));
+    }
+
+    @Test
+    void reportFiltersScriptExistsAndTargetsFilterFormHook() throws IOException {
+        final Path scriptPath = Path.of("src/main/webapp/js/report-filters.js");
+        final String script = Files.readString(scriptPath);
+
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(script.contains("report-filter-form"));
+        assertTrue(script.contains("input[type=\"checkbox\"]"));
+        assertTrue(script.contains(".submit()"));
     }
 
     @Test
@@ -142,6 +269,30 @@ class ViewTemplateAssetsTest {
         assertEquals(
                 "Cancelar todas las fechas recurrentes pr\u00f3ximas",
                 spanish.getProperty("host.manage.cancelSeries"));
+    }
+
+    @Test
+    void matchDetailIncludesPinnedLocationMapWhenCoordinatesExist() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+        final Path scriptPath = Path.of("src/main/webapp/js/event-map.js");
+        final String script = Files.readString(scriptPath);
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(detailView.contains("eventPage.mapAvailable"));
+        assertTrue(detailView.contains("data-event-map=\"true\""));
+        assertTrue(detailView.contains("data-tile-url-template"));
+        assertTrue(detailView.contains("data-latitude"));
+        assertTrue(detailView.contains("data-longitude"));
+        assertTrue(detailView.contains("event.detail.locationMap.aria"));
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(script.contains("data-event-map"));
+        assertTrue(script.contains("L.map"));
+        assertTrue(script.contains("L.tileLayer"));
+        assertTrue(script.contains("L.marker"));
+        assertTrue(script.contains("CABA_BOUNDS"));
+        assertNotNull(english.getProperty("event.detail.locationMap.aria"));
+        assertNotNull(spanish.getProperty("event.detail.locationMap.aria"));
     }
 
     @Test

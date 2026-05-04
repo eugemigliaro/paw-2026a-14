@@ -22,4 +22,9 @@ public enum AppealDecision {
                 .filter(decision -> decision.dbValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }

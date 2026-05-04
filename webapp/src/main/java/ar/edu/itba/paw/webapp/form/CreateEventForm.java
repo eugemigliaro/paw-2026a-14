@@ -28,6 +28,10 @@ public class CreateEventForm {
     @Size(max = 255, message = "{CreateEventForm.address.Size}")
     private String address = "";
 
+    private String latitude = "";
+
+    private String longitude = "";
+
     @NotBlank(message = "{CreateEventForm.sport.NotBlank}")
     private String sport = "padel";
 
@@ -102,6 +106,22 @@ public class CreateEventForm {
 
     public void setAddress(final String address) {
         this.address = address;
+    }
+
+    public String getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(final String latitude) {
+        this.latitude = latitude;
+    }
+
+    public String getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(final String longitude) {
+        this.longitude = longitude;
     }
 
     public String getSport() {

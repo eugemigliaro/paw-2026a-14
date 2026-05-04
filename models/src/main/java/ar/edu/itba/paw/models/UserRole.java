@@ -26,4 +26,9 @@ public enum UserRole {
                 .filter(role -> role.dbValue.equalsIgnoreCase(value))
                 .findFirst();
     }
+
+    @Override
+    public String toString() {
+        return dbValue;
+    }
 }

@@ -68,6 +68,7 @@ scripts/*.sql
 # Application specific
 application-local.properties
 application-local.yml
+.claude/
 config/local.properties
 config/pampero.properties
 webapp/tmp/
