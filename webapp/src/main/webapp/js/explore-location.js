@@ -9,7 +9,9 @@
 	var longitudeInput = form ? form.querySelector('[data-explore-location-longitude]') : null;
 	var status = form ? form.querySelector('[data-explore-location-status]') : null;
 	var submitButton = form ? form.querySelector('[data-explore-location-submit]') : null;
+	var unavailableMessage = form ? form.dataset.locationUnavailableMessage || '' : '';
 	var originalLabel = submitButton ? submitButton.textContent : '';
+	var geolocationAvailable = window.isSecureContext && !!navigator.geolocation;
 
 	function setLoading(loading) {
 		if (submitButton) {
@@ -23,11 +25,24 @@
 		});
 	}
 
+	function showUnavailableMessage() {
+		if (status && unavailableMessage) {
+			status.textContent = unavailableMessage;
+		}
+	}
+
 	function requestExploreLocation(event) {
-		if (!navigator.geolocation || !latitudeInput || !longitudeInput) {
+		if (!geolocationAvailable || !latitudeInput || !longitudeInput) {
+			if (event) {
+				event.preventDefault();
+			}
+			showUnavailableMessage();
 			return;
 		}
-		event.preventDefault();
+
+		if (event) {
+			event.preventDefault();
+		}
 		setLoading(true);
 
 		navigator.geolocation.getCurrentPosition(
@@ -37,9 +52,7 @@
 				form.submit();
 			},
 			function () {
-				if (status) {
-					status.textContent = '';
-				}
+				showUnavailableMessage();
 				setLoading(false);
 			},
 			{ enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
@@ -54,16 +67,25 @@
 		select.querySelectorAll('.sort-panel__item').forEach(function (option) {
 			option.addEventListener('click', function (event) {
 				var url = new URL(option.href, window.location.href);
+				if (url.searchParams.get('sort') !== 'distance') {
+					return;
+				}
+
 				if (
-					url.searchParams.get('sort') === 'distance' &&
 					form &&
 					form.dataset.locationAvailable !== 'true' &&
-					navigator.geolocation &&
+					geolocationAvailable &&
 					latitudeInput &&
 					longitudeInput
 				) {
 					event.preventDefault();
 					requestExploreLocation(event);
+					return;
+				}
+
+				if (form && !geolocationAvailable) {
+					event.preventDefault();
+					showUnavailableMessage();
 				}
 			});
 		});

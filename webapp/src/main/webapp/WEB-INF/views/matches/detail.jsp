@@ -340,10 +340,13 @@
 								</article>
 								<c:if test="${eventPage.mapAvailable}">
 									<spring:message var="eventMapAria" code="event.detail.locationMap.aria" />
+									<c:url var="appRootUrl" value="/" />
+									<c:set var="contextAwareMapTileUrlTemplate"
+										value="${appRootUrl}${fn:substring(eventPage.mapTileUrlTemplate, 1, fn:length(eventPage.mapTileUrlTemplate))}" />
 									<div
 										class="event-detail-map"
 										data-event-map="true"
-										data-tile-url-template="${eventPage.mapTileUrlTemplate}"
+										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
 										data-attribution="${eventPage.mapAttribution}"
 										data-latitude="${eventPage.mapLatitude}"
 										data-longitude="${eventPage.mapLongitude}"

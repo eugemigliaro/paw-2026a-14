@@ -16,11 +16,15 @@
 	}
 
 	var tileTemplate = container.dataset.tileUrlTemplate || '';
+	var unavailableMessage = container.dataset.locationUnavailableMessage || '';
 	var defaultLat = Number(container.dataset.defaultLatitude || -34.6037);
 	var defaultLon = Number(container.dataset.defaultLongitude || -58.3816);
 	var defaultZoom = Math.min(Math.max(Number(container.dataset.defaultZoom || 14), MIN_ZOOM), MAX_ZOOM);
 	var initialLat = latInput.value ? Number(latInput.value) : null;
 	var initialLon = lonInput.value ? Number(lonInput.value) : null;
+	var currentStatus = container.querySelector('[data-location-current-status]');
+	var currentBtn = container.querySelector('[data-location-current]');
+	var geolocationAvailable = window.isSecureContext && !!navigator.geolocation;
 
 	var map = L.map(mapEl, {
 		minZoom: MIN_ZOOM,
@@ -63,6 +67,12 @@
 		lonInput.value = latlng.lng.toFixed(7);
 	}
 
+	function showUnavailableMessage() {
+		if (currentStatus && unavailableMessage) {
+			currentStatus.textContent = unavailableMessage;
+		}
+	}
+
 	if (initialLat !== null && initialLon !== null) {
 		placeMarker(L.latLng(initialLat, initialLon));
 	}
@@ -87,7 +97,6 @@
 
 	var zoomInBtn = container.querySelector('[data-location-zoom-in]');
 	var zoomOutBtn = container.querySelector('[data-location-zoom-out]');
-	var currentBtn = container.querySelector('[data-location-current]');
 	var clearBtn = container.querySelector('[data-location-clear]');
 
 	if (zoomInBtn) {
@@ -97,11 +106,20 @@
 		zoomOutBtn.addEventListener('click', function () { map.zoomOut(); });
 	}
 	if (currentBtn) {
+		if (!geolocationAvailable) {
+			currentBtn.disabled = true;
+			currentBtn.title = unavailableMessage;
+			showUnavailableMessage();
+		} else {
 		currentBtn.addEventListener('click', function () {
 			map.locate({ setView: true, maxZoom: MAX_ZOOM });
 		});
+		}
 		map.on('locationfound', function (e) {
 			placeMarker(e.latlng);
+		});
+		map.on('locationerror', function () {
+			showUnavailableMessage();
 		});
 	}
 	if (clearBtn) {
