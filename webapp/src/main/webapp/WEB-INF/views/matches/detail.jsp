@@ -350,8 +350,6 @@
 										data-zoom="${eventPage.mapZoom}"
 										role="img"
 										aria-label="${eventMapAria}">
-										<div class="event-detail-map__tiles" data-event-map-tiles="true"></div>
-										<div class="event-detail-map__pin" aria-hidden="true"></div>
 										<c:if test="${not empty eventPage.mapAttribution}">
 											<p class="event-detail-map__attribution"><c:out value="${eventPage.mapAttribution}" /></p>
 										</c:if>
@@ -735,8 +733,6 @@
 										data-zoom="${eventPage.mapZoom}"
 										role="img"
 										aria-label="${eventMapAria}">
-										<div class="event-detail-map__tiles" data-event-map-tiles="true"></div>
-										<div class="event-detail-map__pin" aria-hidden="true"></div>
 										<c:if test="${not empty eventPage.mapAttribution}">
 											<p class="event-detail-map__attribution"><c:out value="${eventPage.mapAttribution}" /></p>
 										</c:if>

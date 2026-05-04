@@ -31,6 +31,8 @@
 <c:url var="filterDropdownsHref" value="/js/filter-dropdowns.js" />
 <c:url var="recurrenceScheduleHref" value="/js/recurrence-schedule.js?v=20260428" />
 <c:url var="exploreLocationHref" value="/js/explore-location.js" />
+<c:url var="leafletCssHref" value="/css/vendor/leaflet.css" />
+<c:url var="leafletJsHref" value="/js/vendor/leaflet.js" />
 <c:url var="locationPickerHref" value="/js/location-picker.js" />
 <c:url var="eventMapHref" value="/js/event-map.js" />
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
@@ -50,6 +52,8 @@
 <link rel="stylesheet" href="${cssProfileHref}" />
 <link rel="stylesheet" href="${cssEventPageHref}" />
 <link rel="stylesheet" href="${cssReportsHref}" />
+<link rel="stylesheet" href="${leafletCssHref}" />
+<script defer src="${leafletJsHref}"></script>
 <script defer src="${formSubmitGuardHref}"></script>
 <script defer src="${accountEditFormHref}"></script>
 <script defer src="${passwordToggleHref}"></script>

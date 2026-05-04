@@ -118,22 +118,23 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void locationPickerUsesWebMercatorTilesAndBoundedZoomControls() throws IOException {
+    void locationPickerUsesLeafletWithCabaBoundsAndZoomControls() throws IOException {
         final String script = read("src/main/webapp/js/location-picker.js");
+        final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
 
         assertTrue(script.contains("MIN_ZOOM = 12"));
         assertTrue(script.contains("MAX_ZOOM = 16"));
-        assertTrue(script.contains("longitudeToWorldPixelX"));
-        assertTrue(script.contains("latitudeToWorldPixelY"));
-        assertTrue(script.contains("worldPixelXToLongitude"));
-        assertTrue(script.contains("worldPixelYToLatitude"));
+        assertTrue(script.contains("CABA_BOUNDS"));
+        assertTrue(script.contains("maxBoundsViscosity"));
+        assertTrue(script.contains("L.map"));
+        assertTrue(script.contains("L.tileLayer"));
+        assertTrue(script.contains("L.marker"));
+        assertTrue(script.contains("L.divIcon"));
         assertTrue(script.contains("data-location-zoom-in"));
         assertTrue(script.contains("data-location-zoom-out"));
-        assertTrue(script.contains("translateDuringDrag"));
-        assertTrue(script.contains("finalizeDrag"));
-        assertTrue(script.contains("img.draggable = false"));
-        assertTrue(script.contains("dragstart"));
-        assertFalse(script.contains("xRatio * 0.08"));
+        assertTrue(script.contains("data-location-picker"));
+        assertTrue(head.contains("/js/vendor/leaflet.js"));
+        assertTrue(head.contains("/css/vendor/leaflet.css"));
     }
 
     @Test
@@ -228,9 +229,10 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("event.detail.locationMap.aria"));
         assertTrue(Files.exists(scriptPath));
         assertTrue(script.contains("data-event-map"));
-        assertTrue(script.contains("longitudeToWorldPixelX"));
-        assertTrue(script.contains("latitudeToWorldPixelY"));
-        assertTrue(script.contains("event-detail-map__tile--missing"));
+        assertTrue(script.contains("L.map"));
+        assertTrue(script.contains("L.tileLayer"));
+        assertTrue(script.contains("L.marker"));
+        assertTrue(script.contains("CABA_BOUNDS"));
         assertNotNull(english.getProperty("event.detail.locationMap.aria"));
         assertNotNull(spanish.getProperty("event.detail.locationMap.aria"));
     }

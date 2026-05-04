@@ -201,10 +201,7 @@
 																	</button>
 																</div>
 															</div>
-															<div class="location-picker__map" data-location-map="true" role="button" tabindex="0" aria-label="${locationMapAria}">
-																<div class="location-picker__tiles" data-location-tiles="true"></div>
-																<div class="location-picker__pin" data-location-pin="true" hidden="hidden"></div>
-															</div>
+															<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
 															<c:if test="${not empty mapAttribution}">
 																<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
 															</c:if>

@@ -142,53 +142,16 @@
 	background: #dfe8e5;
 	border: 1px solid #c7d6d1;
 	border-radius: 16px;
-	cursor: grab;
 	height: 16rem;
 	overflow: hidden;
 	position: relative;
-	touch-action: none;
-	user-select: none;
 }
 
-.location-picker__map:active {
-	cursor: grabbing;
-}
-
-.location-picker__tiles {
-	height: 100%;
-	position: relative;
-	width: 100%;
-}
-
-.location-picker__tile {
-	background:
-		linear-gradient(135deg, rgba(255, 255, 255, 0.48) 25%, transparent 25%),
-		linear-gradient(225deg, rgba(255, 255, 255, 0.48) 25%, transparent 25%),
-		linear-gradient(45deg, rgba(255, 255, 255, 0.48) 25%, transparent 25%),
-		linear-gradient(315deg, rgba(255, 255, 255, 0.48) 25%, #dce6e2 25%);
-	background-position: 12px 0, 12px 0, 0 0, 0 0;
-	background-size: 24px 24px;
-	height: 256px;
-	object-fit: cover;
-	pointer-events: none;
-	position: absolute;
-	-webkit-user-drag: none;
-	width: 256px;
-}
-
-.location-picker__tile--missing {
-	border: 1px solid rgba(92, 112, 108, 0.16);
-}
-
-.location-picker__pin {
+.location-picker__pin-icon {
 	background: #0c6f64;
 	border: 3px solid #ffffff;
 	border-radius: 999px;
 	box-shadow: 0 10px 18px rgba(0, 0, 0, 0.22);
-	height: 1.2rem;
-	position: absolute;
-	transform: translate(-50%, -50%);
-	width: 1.2rem;
 }
 
 .location-picker__status,
