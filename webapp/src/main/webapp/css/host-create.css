@@ -15,7 +15,9 @@
 }
 
 .location-picker__current-location {
-	justify-content: right;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
 }
 
 .form-card,
