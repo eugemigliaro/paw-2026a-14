@@ -170,6 +170,17 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void reportFiltersScriptExistsAndTargetsFilterFormHook() throws IOException {
+        final Path scriptPath = Path.of("src/main/webapp/js/report-filters.js");
+        final String script = Files.readString(scriptPath);
+
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(script.contains("report-filter-form"));
+        assertTrue(script.contains("input[type=\"checkbox\"]"));
+        assertTrue(script.contains(".submit()"));
+    }
+
+    @Test
     void matchDetailUsesOverflowMenuForHostActions() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");

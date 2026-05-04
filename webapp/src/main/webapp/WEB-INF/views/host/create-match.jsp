@@ -185,7 +185,6 @@
 															<div class="location-picker__header">
 																<div>
 																	<span class="field__label"><spring:message code="host.form.location.map" /></span>
-																	<p class="field__hint"><spring:message code="host.form.location.map.hint" /></p>
 																</div>
 																<div class="location-picker__actions">
 																	<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">

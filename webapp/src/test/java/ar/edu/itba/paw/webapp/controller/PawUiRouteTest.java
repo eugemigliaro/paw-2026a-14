@@ -2143,6 +2143,87 @@ class PawUiRouteTest {
     }
 
     @Test
+    void postHostPublishPassesValidCoordinatesToService() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-34.61")
+                                .param("longitude", "-58.38")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        Assertions.assertNotNull(lastCreateMatchRequest.get());
+        Assertions.assertEquals(-34.61, lastCreateMatchRequest.get().getLatitude());
+        Assertions.assertEquals(-58.38, lastCreateMatchRequest.get().getLongitude());
+    }
+
+    @Test
+    void postHostPublishRejectsPartialCoordinates() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-34.61")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "longitude"));
+
+        Assertions.assertNull(lastCreateMatchRequest.get());
+    }
+
+    @Test
+    void postHostPublishRejectsOutOfRangeCoordinates() throws Exception {
+        authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("latitude", "-91")
+                                .param("longitude", "-58.38")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "latitude"));
+
+        Assertions.assertNull(lastCreateMatchRequest.get());
+    }
+
+    @Test
     void postHostPublishCreatesRecurringMatchWithOccurrenceCount() throws Exception {
         authenticateUser(9L, "host@test.com", "host-player");
 

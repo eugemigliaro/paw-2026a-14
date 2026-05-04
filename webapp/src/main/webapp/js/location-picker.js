@@ -121,6 +121,9 @@
 				img.alt = '';
 				img.className = 'location-picker__tile';
 				img.draggable = false;
+				img.addEventListener('dragstart', function (event) {
+					event.preventDefault();
+				});
 				img.style.left = tileX * TILE_SIZE - topLeft.x + 'px';
 				img.style.top = tileY * TILE_SIZE - topLeft.y + 'px';
 				img.width = TILE_SIZE;

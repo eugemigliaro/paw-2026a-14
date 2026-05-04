@@ -526,10 +526,7 @@ public class EventController {
         if (match == null || match.getHostUserId() == null) {
             return null;
         }
-        return Optional.ofNullable(userService.findById(match.getHostUserId()))
-                .orElse(Optional.empty())
-                .map(User::getUsername)
-                .orElse(null);
+        return userService.findById(match.getHostUserId()).map(User::getUsername).orElse(null);
     }
 
     private List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
