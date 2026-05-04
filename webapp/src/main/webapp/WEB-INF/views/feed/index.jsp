@@ -17,10 +17,12 @@
 					<spring:message var="filtersAriaLabel" code="feed.aria.filters" />
 					<spring:message var="searchAriaLabel" code="feed.aria.search" />
 					<spring:message var="sortAriaLabel" code="feed.aria.sort" />
+					<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 					<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 					<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 					<spring:message var="priceRangeError" code="filter.price.rangeError" />
-					<c:url var="feedFormAction" value="/" />
+					<c:set var="feedPath" value="/" />
+					<c:url var="feedFormAction" value="${feedPath}" />
 				<main class="page-shell page-shell--feed">
 
 
@@ -184,7 +186,7 @@
 											<input id="end-date" name="endDate" type="date" class="field__control" min="<c:out value='${selectedDateMinValue}' />" value="<c:out value='${selectedEndDateValue}' />" />
 										</div>
 
-										<c:url var="clearDateHref" value="${feedFormAction}">
+										<c:url var="clearDateHref" value="${feedPath}">
 											<c:param name="q" value="${feedSearchForm.q}" />
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
@@ -258,7 +260,7 @@
 											</div>
 										</div>
 
-										<c:url var="clearPriceHref" value="${feedFormAction}">
+										<c:url var="clearPriceHref" value="${feedPath}">
 											<c:param name="q" value="${feedSearchForm.q}" />
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
@@ -297,7 +299,7 @@
 									</c:if>
 								</div>
 
-								<c:url var="clearFiltersHref" value="${feedFormAction}" />
+							<c:url var="clearFiltersHref" value="${feedPath}" />
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
 							<spring:message var="locationUnavailableMessage" code="location.current.unavailable" />
 							<ui:button
@@ -311,6 +313,7 @@
 									id="feed-sort-select"
 									label="${sortLabel}"
 									ariaLabel="${sortAriaLabel}"
+									hint="${nearMeAvailable ? '' : locationUnavailableMessage}"
 									options="${sortOptions}" />
 
 								<form

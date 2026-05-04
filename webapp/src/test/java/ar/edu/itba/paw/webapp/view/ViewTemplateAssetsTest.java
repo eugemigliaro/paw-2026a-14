@@ -137,7 +137,9 @@ class ViewTemplateAssetsTest {
 
         assertTrue(clearAllIndex >= 0);
         assertTrue(clearAllLabelIndex > clearAllIndex);
-        assertTrue(
+        assertTrue(feedIndex.contains("<c:set var=\"feedPath\" value=\"/\" />"));
+        assertTrue(feedIndex.contains("<c:url var=\"clearFiltersHref\" value=\"${feedPath}\" />"));
+        assertFalse(
                 feedIndex.contains(
                         "<c:url var=\"clearFiltersHref\" value=\"${feedFormAction}\" />"));
         final String clearAllBlock = feedIndex.substring(clearAllIndex, clearAllLabelIndex);
