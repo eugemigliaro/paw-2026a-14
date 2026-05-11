@@ -155,6 +155,12 @@
 				<groupId>org.hibernate</groupId>
 				<artifactId>hibernate-core</artifactId>
 				<version>${org.hibernate.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>javax.activation</groupId>
+						<artifactId>javax.activation-api</artifactId>
+					</exclusion>
+				</exclusions>
 			</dependency>
 			<dependency>
 				<groupId>javax.persistence</groupId>
