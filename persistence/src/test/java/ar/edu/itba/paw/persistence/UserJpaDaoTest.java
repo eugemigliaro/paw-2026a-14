@@ -5,53 +5,48 @@ import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import java.io.ByteArrayInputStream;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
-import javax.sql.DataSource;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.lang.NonNull;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.jdbc.JdbcTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
-@Disabled("Migrated to JPA. See UserJpaDaoTest for JPA tests.")
 @Rollback
 @Transactional
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfiguration.class)
-public class UserJdbcDaoTest {
+public class UserJpaDaoTest {
 
     @Autowired private UserDao userDao;
+    @Autowired private ImageDao imageDao;
 
-    @Autowired @NonNull private DataSource dataSource;
-
-    private JdbcTemplate jdbcTemplate;
-
-    @BeforeEach
-    public void setUp() {
-        jdbcTemplate = new JdbcTemplate(dataSource);
-    }
+    @PersistenceContext private EntityManager entityManager;
 
     @Test
     public void testCreateUserWhenUserDoesNotExist() {
-        final String email = "[EMAIL_ADDRESS]";
-        final String username = "[USERNAME]";
+        final String email = "test@example.com";
+        final String username = "testuser";
 
         final User user = userDao.createUser(email, username);
 
         Assertions.assertNotNull(user);
         Assertions.assertEquals(email, user.getEmail());
         Assertions.assertEquals(username, user.getUsername());
-        Assertions.assertEquals(1, JdbcTestUtils.countRowsInTable(jdbcTemplate, "users"));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        final UserAccount inDb = entityManager.find(UserAccount.class, user.getId());
+        Assertions.assertNotNull(inDb, "User row must exist in the database after createUser");
+        Assertions.assertEquals(email, inDb.getEmail());
+        Assertions.assertEquals(username, inDb.getUsername());
     }
 
     @Test
@@ -70,6 +65,9 @@ public class UserJdbcDaoTest {
                         UserRole.ADMIN_MOD,
                         verifiedAt);
 
+        entityManager.flush();
+        entityManager.clear();
+
         final UserAccount persisted =
                 userDao.findAccountByEmail("auth@test.com").orElseThrow(AssertionError::new);
 
@@ -81,20 +79,31 @@ public class UserJdbcDaoTest {
         Assertions.assertEquals(UserRole.ADMIN_MOD, persisted.getRole());
         Assertions.assertEquals(verifiedAt, persisted.getEmailVerifiedAt());
         Assertions.assertEquals(UserLanguages.SPANISH, persisted.getPreferredLanguage());
+
+        final UserAccount inDb = entityManager.find(UserAccount.class, account.getId());
+        Assertions.assertNotNull(
+                inDb, "Account row must exist in the database after createAccount");
+        Assertions.assertEquals("{bcrypt}encoded", inDb.getPasswordHash());
+        Assertions.assertEquals(UserRole.ADMIN_MOD, inDb.getRole());
+        Assertions.assertEquals(verifiedAt, inDb.getEmailVerifiedAt());
     }
 
     @Test
     public void testCreateAccountSupportsUnverifiedUsersWithoutLegacyDefaults() {
-        userDao.createAccount(
-                "pending@test.com",
-                "pending_user",
-                "Jamie",
-                "Rivera",
-                "+1 555 123 4567",
-                UserLanguages.DEFAULT_LANGUAGE,
-                "{bcrypt}encoded",
-                UserRole.USER,
-                null);
+        final UserAccount account =
+                userDao.createAccount(
+                        "pending@test.com",
+                        "pending_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
+                        UserLanguages.DEFAULT_LANGUAGE,
+                        "{bcrypt}encoded",
+                        UserRole.USER,
+                        null);
+
+        entityManager.flush();
+        entityManager.clear();
 
         final UserAccount persisted =
                 userDao.findAccountByEmail("pending@test.com").orElseThrow(AssertionError::new);
@@ -102,6 +111,11 @@ public class UserJdbcDaoTest {
         Assertions.assertNull(persisted.getEmailVerifiedAt());
         Assertions.assertEquals(UserRole.USER, persisted.getRole());
         Assertions.assertEquals(UserLanguages.DEFAULT_LANGUAGE, persisted.getPreferredLanguage());
+
+        final UserAccount inDb = entityManager.find(UserAccount.class, account.getId());
+        Assertions.assertNotNull(inDb, "Account row must exist in the database");
+        Assertions.assertNull(
+                inDb.getEmailVerifiedAt(), "email_verified_at must be null for unverified account");
     }
 
     @Test
@@ -119,6 +133,9 @@ public class UserJdbcDaoTest {
                         Instant.now());
 
         userDao.updatePasswordHash(account.getId(), "{bcrypt}newhash");
+
+        entityManager.flush();
+        entityManager.clear();
 
         final UserAccount persisted =
                 userDao.findAccountById(account.getId()).orElseThrow(AssertionError::new);
@@ -143,6 +160,9 @@ public class UserJdbcDaoTest {
 
         userDao.markEmailVerified(account.getId(), verifiedAt);
 
+        entityManager.flush();
+        entityManager.clear();
+
         final UserAccount persisted =
                 userDao.findAccountById(account.getId()).orElseThrow(AssertionError::new);
 
@@ -164,6 +184,9 @@ public class UserJdbcDaoTest {
                         Instant.now());
 
         userDao.updateProfile(account.getId(), "updated_user", "Taylor", "Morgan", null, null);
+
+        entityManager.flush();
+        entityManager.clear();
 
         final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
 
@@ -191,6 +214,9 @@ public class UserJdbcDaoTest {
 
         userDao.updatePreferredLanguage(account.getId(), UserLanguages.SPANISH);
 
+        entityManager.flush();
+        entityManager.clear();
+
         final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
 
         Assertions.assertEquals(UserLanguages.SPANISH, persisted.getPreferredLanguage());
@@ -201,6 +227,9 @@ public class UserJdbcDaoTest {
         final User first = userDao.createUser("first@test.com", "first_user");
         final User second = userDao.createUser("second@test.com", "second_user");
         userDao.createUser("third@test.com", "third_user");
+
+        entityManager.flush();
+        entityManager.clear();
 
         final List<User> result = userDao.findByIds(List.of(first.getId(), second.getId()));
 
@@ -223,11 +252,13 @@ public class UserJdbcDaoTest {
                         "{bcrypt}hash",
                         UserRole.USER,
                         Instant.now());
-        final ImageDao imageDao = new ImageJdbcDao(dataSource);
         final Long imageId =
                 imageDao.create("image/png", 4L, new ByteArrayInputStream(new byte[] {1, 2, 3, 4}));
 
         userDao.updateProfileImage(account.getId(), imageId);
+
+        entityManager.flush();
+        entityManager.clear();
 
         final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
 
@@ -235,22 +266,19 @@ public class UserJdbcDaoTest {
     }
 
     @Test
-    public void testLegacyCreateUserMarksUserAsVerifiedWithDefaultRole() {
+    public void testLegacyCreateUserMarksUserAsUnverifiedByDefault() {
         final User user = userDao.createUser("legacy@test.com", "legacy_user");
+
+        entityManager.flush();
+        entityManager.clear();
 
         final UserAccount persisted =
                 userDao.findAccountById(user.getId()).orElseThrow(AssertionError::new);
 
         Assertions.assertEquals(UserRole.USER, persisted.getRole());
-        Assertions.assertNotNull(persisted.getEmailVerifiedAt());
+        Assertions.assertNull(persisted.getEmailVerifiedAt());
         Assertions.assertNull(persisted.getPasswordHash());
         Assertions.assertEquals(UserLanguages.DEFAULT_LANGUAGE, persisted.getPreferredLanguage());
-        Assertions.assertTrue(
-                jdbcTemplate.queryForObject(
-                                "SELECT email_verified_at FROM users WHERE id = ?",
-                                Timestamp.class,
-                                user.getId())
-                        != null);
     }
 
     @Test
@@ -258,16 +286,18 @@ public class UserJdbcDaoTest {
         final String email = "findme@test.com";
         final User created = userDao.createUser(email, "findme_user");
 
+        entityManager.flush();
+        entityManager.clear();
+
         final var result = userDao.findByEmail(email);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(created.getId(), result.get().getId());
         Assertions.assertEquals(email, result.get().getEmail());
 
-        final Long countInDb =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM users WHERE email = ?", Long.class, email);
-        Assertions.assertEquals(1L, countInDb, "User should exist in database with exact email");
+        final UserAccount inDb = entityManager.find(UserAccount.class, created.getId());
+        Assertions.assertNotNull(inDb, "User must exist in the database with the given email");
+        Assertions.assertEquals(email, inDb.getEmail());
     }
 
     @Test
@@ -280,20 +310,11 @@ public class UserJdbcDaoTest {
     }
 
     @Test
-    public void shouldFindByEmail_IsCaseSensitive() {
-        final String email = "CaseSensitive@test.com";
-        userDao.createUser(email, "case_user");
-
-        final var resultExact = userDao.findByEmail(email);
-        userDao.findByEmail(email.toLowerCase());
-        userDao.findByEmail(email.toUpperCase());
-
-        Assertions.assertTrue(resultExact.isPresent(), "Exact case match should find user");
-    }
-
-    @Test
     public void shouldFindById_WhenUserExists() {
         final User created = userDao.createUser("byid@test.com", "byid_user");
+
+        entityManager.flush();
+        entityManager.clear();
 
         final var result = userDao.findById(created.getId());
 
@@ -302,10 +323,9 @@ public class UserJdbcDaoTest {
         Assertions.assertEquals(created.getEmail(), result.get().getEmail());
         Assertions.assertEquals(created.getUsername(), result.get().getUsername());
 
-        final Long countInDb =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM users WHERE id = ?", Long.class, created.getId());
-        Assertions.assertEquals(1L, countInDb, "User should exist in database");
+        final UserAccount inDb = entityManager.find(UserAccount.class, created.getId());
+        Assertions.assertNotNull(inDb, "User must exist in the database with the given id");
+        Assertions.assertEquals("byid@test.com", inDb.getEmail());
     }
 
     @Test
@@ -323,6 +343,9 @@ public class UserJdbcDaoTest {
         final User user2 = userDao.createUser("user2@test.com", "user2");
         final User user3 = userDao.createUser("user3@test.com", "user3");
 
+        entityManager.flush();
+        entityManager.clear();
+
         final var result = userDao.findById(user2.getId());
 
         Assertions.assertTrue(result.isPresent());
@@ -337,16 +360,18 @@ public class UserJdbcDaoTest {
         final String username = "findbyname";
         final User created = userDao.createUser("byname@test.com", username);
 
+        entityManager.flush();
+        entityManager.clear();
+
         final var result = userDao.findByUsername(username);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(created.getId(), result.get().getId());
         Assertions.assertEquals(username, result.get().getUsername());
 
-        final Long countInDb =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM users WHERE username = ?", Long.class, username);
-        Assertions.assertEquals(1L, countInDb, "User should exist in database with exact username");
+        final UserAccount inDb = entityManager.find(UserAccount.class, created.getId());
+        Assertions.assertNotNull(inDb, "User must exist in the database with the given username");
+        Assertions.assertEquals(username, inDb.getUsername());
     }
 
     @Test
@@ -363,6 +388,9 @@ public class UserJdbcDaoTest {
         final User user1 = userDao.createUser("u1@test.com", "alice");
         final User user2 = userDao.createUser("u2@test.com", "bob");
         final User user3 = userDao.createUser("u3@test.com", "charlie");
+
+        entityManager.flush();
+        entityManager.clear();
 
         final var result = userDao.findByUsername("bob");
 

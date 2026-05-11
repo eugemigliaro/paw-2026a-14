@@ -19,9 +19,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Repository;
 
-@Repository
 public class UserJdbcDao implements UserDao {
 
     @NonNull

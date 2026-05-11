@@ -31,11 +31,13 @@ public class TestConfiguration {
     }
 
     @Bean
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(
+            final DataSource dataSource, final Flyway flyway) {
+        // flyway parameter to ensure migrations run before EntityManagerFactory validation
         final LocalContainerEntityManagerFactoryBean factoryBean =
                 new LocalContainerEntityManagerFactoryBean();
         factoryBean.setPackagesToScan("ar.edu.itba.paw.models");
-        factoryBean.setDataSource(dataSource());
+        factoryBean.setDataSource(dataSource);
 
         final JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         factoryBean.setJpaVendorAdapter(vendorAdapter);

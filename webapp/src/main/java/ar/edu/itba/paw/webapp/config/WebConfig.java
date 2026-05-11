@@ -194,7 +194,8 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(final Flyway flyway) {
+        // Ensures Flyway migrations run before Hibernate validates the schema.
         final LocalContainerEntityManagerFactoryBean factoryBean =
                 new LocalContainerEntityManagerFactoryBean();
         factoryBean.setPackagesToScan("ar.edu.itba.paw.models");
