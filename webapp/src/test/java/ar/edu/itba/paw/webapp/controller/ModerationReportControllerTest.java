@@ -170,17 +170,24 @@ class ModerationReportControllerTest {
     }
 
     private static void authenticateUser(final Long userId) {
+        UserAccount userAccount =
+                new UserAccount(
+                        userId,
+                        "user@test.com",
+                        "user",
+                        null,
+                        null,
+                        null,
+                        userId,
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        Instant.parse("2026-04-10T10:00:00Z"),
+                        null);
+
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"))),
+                                new AuthenticatedUserPrincipal(userAccount),
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }

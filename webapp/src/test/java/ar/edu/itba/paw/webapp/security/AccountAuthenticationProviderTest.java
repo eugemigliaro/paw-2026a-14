@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import java.time.Instant;
@@ -29,9 +30,14 @@ class AccountAuthenticationProviderTest {
                         3L,
                         "player@test.com",
                         "player_one",
+                        null,
+                        null,
+                        null,
+                        null,
                         "{bcrypt}hash",
                         UserRole.ADMIN_MOD,
-                        Instant.parse("2026-04-10T18:00:00Z"));
+                        Instant.parse("2026-04-10T18:00:00Z"),
+                        UserLanguages.DEFAULT_LANGUAGE);
 
         Mockito.when(accountAuthService.findAccountByEmail("player@test.com"))
                 .thenReturn(Optional.of(account));
@@ -68,9 +74,14 @@ class AccountAuthenticationProviderTest {
                                         4L,
                                         "pending@test.com",
                                         "pending",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        null)));
+                                        null,
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final AccountAuthenticationProvider provider =
                 new AccountAuthenticationProvider(
@@ -98,8 +109,13 @@ class AccountAuthenticationProviderTest {
                                         "legacy@test.com",
                                         "legacy",
                                         null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         UserRole.USER,
-                                        Instant.parse("2026-04-10T18:00:00Z"))));
+                                        Instant.parse("2026-04-10T18:00:00Z"),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final AccountAuthenticationProvider provider =
                 new AccountAuthenticationProvider(
@@ -123,9 +139,14 @@ class AccountAuthenticationProviderTest {
                         6L,
                         "player@test.com",
                         "player_one",
+                        null,
+                        null,
+                        null,
+                        null,
                         "{bcrypt}hash",
                         UserRole.USER,
-                        Instant.parse("2026-04-10T18:00:00Z"));
+                        Instant.parse("2026-04-10T18:00:00Z"),
+                        UserLanguages.DEFAULT_LANGUAGE);
 
         Mockito.when(accountAuthService.findAccountByEmail("player@test.com"))
                 .thenReturn(Optional.of(account));

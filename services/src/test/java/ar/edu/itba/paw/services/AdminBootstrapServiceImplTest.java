@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.persistence.UserDao;
 import java.time.Clock;
@@ -69,7 +70,8 @@ public class AdminBootstrapServiceImplTest {
                                         null,
                                         passwordEncoder.encode("password"),
                                         UserRole.ADMIN_MOD,
-                                        FIXED_NOW)));
+                                        FIXED_NOW,
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         service =
                 new AdminBootstrapServiceImpl(

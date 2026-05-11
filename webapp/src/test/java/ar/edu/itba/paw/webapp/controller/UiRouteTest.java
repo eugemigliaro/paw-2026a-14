@@ -22,6 +22,7 @@ import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
@@ -1317,9 +1318,14 @@ class UiRouteTest {
                                         9L,
                                         "player@test.com",
                                         "player-account",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW),
+                                        FIXED_NOW,
+                                        UserLanguages.DEFAULT_LANGUAGE),
                                 "/",
                                 "done");
                     }
@@ -1350,9 +1356,14 @@ class UiRouteTest {
                                         9L,
                                         email,
                                         "host-player",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW));
+                                        FIXED_NOW,
+                                        UserLanguages.DEFAULT_LANGUAGE));
                     }
                 };
 
@@ -3448,7 +3459,17 @@ class UiRouteTest {
         final AuthenticatedUserPrincipal principal =
                 new AuthenticatedUserPrincipal(
                         new UserAccount(
-                                userId, email, username, "{bcrypt}hash", UserRole.USER, FIXED_NOW));
+                                userId,
+                                email,
+                                username,
+                                null,
+                                null,
+                                null,
+                                null,
+                                "{bcrypt}hash",
+                                UserRole.USER,
+                                FIXED_NOW,
+                                UserLanguages.DEFAULT_LANGUAGE));
         final UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));

@@ -16,6 +16,7 @@ import ar.edu.itba.paw.models.ReportResolution;
 import ar.edu.itba.paw.models.ReportStatus;
 import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
@@ -94,8 +95,13 @@ class ModerationAdminControllerTest {
                                                 "admin@test.com",
                                                 "admin",
                                                 null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
                                                 UserRole.ADMIN_MOD,
-                                                Instant.parse("2026-04-11T18:00:00Z"))),
+                                                Instant.parse("2026-04-11T18:00:00Z"),
+                                                UserLanguages.DEFAULT_LANGUAGE)),
                                 "ignored",
                                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
 

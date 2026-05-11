@@ -159,9 +159,14 @@ public class ModerationServiceImplTest {
                                         88L,
                                         "reported@test.com",
                                         "reported",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW)));
+                                        Instant.parse("2026-04-10T10:00:00Z"),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final ModerationReport resolved =
                 moderationService.resolveReport(
@@ -246,9 +251,14 @@ public class ModerationServiceImplTest {
                                         88L,
                                         "reported@test.com",
                                         "reported",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW)));
+                                        Instant.parse("2026-04-10T10:00:00Z"),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         moderationService.resolveReport(
                 77L, 99L, ReportResolution.USER_BANNED, "Repeated abuse", ReportStatus.RESOLVED);

@@ -14,6 +14,7 @@ import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
@@ -149,9 +150,14 @@ class PublicProfileControllerTest {
                                                 userId,
                                                 "user@test.com",
                                                 "user",
+                                                null,
+                                                null,
+                                                null,
+                                                null,
                                                 "{bcrypt}hash",
                                                 UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"))),
+                                                Instant.parse("2026-04-10T10:00:00Z"),
+                                                UserLanguages.DEFAULT_LANGUAGE)),
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }

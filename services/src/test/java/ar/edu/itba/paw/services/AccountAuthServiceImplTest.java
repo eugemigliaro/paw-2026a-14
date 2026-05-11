@@ -426,9 +426,14 @@ public class AccountAuthServiceImplTest {
                                         5L,
                                         "verify@test.com",
                                         "verified_user",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        null)));
+                                        null,
+                                        UserLanguages.DEFAULT_LANGUAGE)));
         Mockito.doAnswer(
                         invocation -> {
                             verificationTimestamp.set(invocation.getArgument(1));
@@ -526,9 +531,14 @@ public class AccountAuthServiceImplTest {
                                         7L,
                                         "pending@test.com",
                                         "pending",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        null)));
+                                        null,
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final Optional<VerificationRequestResult> result =
                 accountAuthService.requestPasswordReset("pending@test.com");
@@ -561,9 +571,14 @@ public class AccountAuthServiceImplTest {
                                         8L,
                                         "player@test.com",
                                         "player",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW.minusSeconds(10))));
+                                        FIXED_NOW.minusSeconds(10),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final PasswordResetPreview preview =
                 accountAuthService.getPasswordResetPreview("raw-token");
@@ -600,8 +615,13 @@ public class AccountAuthServiceImplTest {
                                         "player@test.com",
                                         "player",
                                         null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         UserRole.USER,
-                                        FIXED_NOW.minusSeconds(60))));
+                                        FIXED_NOW.minusSeconds(60),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
         Mockito.doAnswer(
                         invocation -> {
                             capturedPasswordHash.set(invocation.getArgument(1));

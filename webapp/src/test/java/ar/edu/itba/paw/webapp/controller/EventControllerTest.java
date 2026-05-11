@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.UserRole;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -118,9 +119,14 @@ class EventControllerTest {
                                                 userId,
                                                 "user@test.com",
                                                 "user",
+                                                null,
+                                                null,
+                                                null,
+                                                null,
                                                 "{bcrypt}hash",
                                                 UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"))),
+                                                Instant.parse("2026-04-10T10:00:00Z"),
+                                                UserLanguages.DEFAULT_LANGUAGE)),
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
