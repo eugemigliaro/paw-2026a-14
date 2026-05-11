@@ -85,8 +85,7 @@ public class UserJpaDao implements UserDao {
     @Transactional(readOnly = true)
     public Optional<User> findByEmail(final String email) {
         final TypedQuery<UserAccount> query =
-                em.createQuery(
-                        "SELECT u FROM UserAccount u WHERE u.email = :email", UserAccount.class);
+                em.createQuery("FROM UserAccount u WHERE u.email = :email", UserAccount.class);
         query.setParameter("email", email);
 
         return query.getResultList().stream().map(this::toUser).findAny();
@@ -96,8 +95,7 @@ public class UserJpaDao implements UserDao {
     @Transactional(readOnly = true)
     public Optional<UserAccount> findAccountByEmail(final String email) {
         final TypedQuery<UserAccount> query =
-                em.createQuery(
-                        "SELECT u FROM UserAccount u WHERE u.email = :email", UserAccount.class);
+                em.createQuery("FROM UserAccount u WHERE u.email = :email", UserAccount.class);
         query.setParameter("email", email);
 
         return query.getResultList().stream().findAny();
@@ -117,7 +115,7 @@ public class UserJpaDao implements UserDao {
         }
 
         final TypedQuery<UserAccount> query =
-                em.createQuery("SELECT u FROM UserAccount u WHERE u.id IN :ids", UserAccount.class);
+                em.createQuery("FROM UserAccount u WHERE u.id IN :ids", UserAccount.class);
         query.setParameter("ids", ids);
 
         return query.getResultList().stream().map(this::toUser).toList();
@@ -134,8 +132,7 @@ public class UserJpaDao implements UserDao {
     public Optional<User> findByUsername(final String username) {
         final TypedQuery<UserAccount> query =
                 em.createQuery(
-                        "SELECT u FROM UserAccount u WHERE u.username = :username",
-                        UserAccount.class);
+                        "FROM UserAccount u WHERE u.username = :username", UserAccount.class);
         query.setParameter("username", username);
 
         return query.getResultList().stream().map(this::toUser).findAny();
