@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -30,9 +31,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class MatchJpaDao implements MatchDao {
 
-    private static final List<String> ACTIVE_PARTICIPANT_STATUSES =
-            List.of("joined", "checked_in", "invited");
-    private static final List<String> JOINED_PARTICIPANT_STATUSES = List.of("joined", "checked_in");
+    private static final List<ParticipantStatus> ACTIVE_PARTICIPANT_STATUSES =
+            List.of(
+                    ParticipantStatus.JOINED,
+                    ParticipantStatus.CHECKED_IN,
+                    ParticipantStatus.INVITED);
+    private static final List<ParticipantStatus> JOINED_PARTICIPANT_STATUSES =
+            List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN);
 
     @PersistenceContext private EntityManager em;
 
@@ -729,7 +734,7 @@ public class MatchJpaDao implements MatchDao {
         };
     }
 
-    private static void setCommonParams(final javax.persistence.Query query) {
+    private static void setCommonParams(final Query query) {
         setParameterIfPresent(query, "activeStatuses", ACTIVE_PARTICIPANT_STATUSES);
     }
 
@@ -748,7 +753,7 @@ public class MatchJpaDao implements MatchDao {
     }
 
     private static void setParameterIfPresent(
-            final javax.persistence.Query query, final String name, final Object value) {
+            final Query query, final String name, final Object value) {
         final boolean present =
                 query.getParameters().stream()
                         .anyMatch(parameter -> name.equals(parameter.getName()));

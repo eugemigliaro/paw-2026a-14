@@ -24,6 +24,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import javax.persistence.Version;
 
 @Entity
 @Table(name = "matches")
@@ -118,6 +119,10 @@ public class Match {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Version
+    @Column(name = "version")
+    private Long version = 0L;
 
     @OneToMany(mappedBy = "match")
     private List<MatchParticipant> participants;
@@ -479,6 +484,10 @@ public class Match {
         this.seriesId = series == null ? null : series.getId();
     }
 
+    public void setSeriesOccurrenceIndex(final Integer seriesOccurrenceIndex) {
+        this.seriesOccurrenceIndex = seriesOccurrenceIndex;
+    }
+
     public void setDeleted(final boolean deleted) {
         this.deleted = deleted;
     }
@@ -501,6 +510,10 @@ public class Match {
 
     public void setUpdatedAt(final Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
     @Override
