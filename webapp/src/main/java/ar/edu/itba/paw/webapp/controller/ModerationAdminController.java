@@ -178,25 +178,8 @@ public class ModerationAdminController {
             mav.addObject("userBan", userBanViewModel(report, locale));
         }
 
-        Optional<User> reporterUsername = userService.findById(report.getReporterUserId());
-        Optional<User> reviewerUsername = userService.findById(report.getReviewedByUserId());
-
-        mav.addObject(
-                "reporterUsername",
-                reporterUsername.isPresent()
-                        ? reporterUsername.get().getUsername()
-                        : messageSource.getMessage(
-                                "moderation.target.user.fallback",
-                                new Object[] {report.getReporterUserId()},
-                                locale));
-        mav.addObject(
-                "reviewerUsername",
-                reviewerUsername.isPresent()
-                        ? reviewerUsername.get().getUsername()
-                        : messageSource.getMessage(
-                                "moderation.target.user.fallback",
-                                new Object[] {report.getReviewedByUserId()},
-                                locale));
+        mav.addObject("reporterUsername", resolveUsername(report.getReporterUserId(), locale));
+        mav.addObject("reviewerUsername", resolveUsername(report.getReviewedByUserId(), locale));
 
         return mav;
     }
@@ -324,6 +307,22 @@ public class ModerationAdminController {
 
     private ModelAndView redirectToReportsError(final String errorCode) {
         return new ModelAndView("redirect:/admin/reports?error=" + errorCode);
+    }
+
+    private String resolveUsername(final Long userId, final Locale locale) {
+        if (userId == null) {
+            return "";
+        }
+
+        return userService
+                .findById(userId)
+                .map(User::getUsername)
+                .orElseGet(
+                        () ->
+                                messageSource.getMessage(
+                                        "moderation.target.user.fallback",
+                                        new Object[] {userId},
+                                        locale));
     }
 
     private long currentAdminUserId() {

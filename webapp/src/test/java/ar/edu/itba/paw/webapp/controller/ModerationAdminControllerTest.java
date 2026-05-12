@@ -123,6 +123,19 @@ class ModerationAdminControllerTest {
     }
 
     @Test
+    void getReportDetailRendersPendingReportWithoutReviewer() throws Exception {
+        Mockito.when(moderationService.findReportById(3L))
+                .thenReturn(Optional.of(samplePendingReport()));
+        Mockito.when(userService.findById(Mockito.isNull()))
+                .thenThrow(new IllegalArgumentException("id to load is required for loading"));
+
+        mockMvc.perform(get("/admin/reports/3").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/reports/detail"))
+                .andExpect(model().attribute("reviewerUsername", ""));
+    }
+
+    @Test
     void getReportDetailReturnsNotFoundWhenMissing() throws Exception {
         Mockito.when(moderationService.findReportById(17L)).thenReturn(Optional.empty());
 
@@ -144,13 +157,36 @@ class ModerationAdminControllerTest {
                 99L,
                 Instant.parse("2026-04-12T10:00:00Z"),
                 "I disagree with this decision",
-                1,
+                (short) 1,
                 Instant.parse("2026-04-13T10:00:00Z"),
                 null,
                 null,
                 null,
                 Instant.parse("2026-04-12T09:00:00Z"),
                 Instant.parse("2026-04-13T10:00:00Z"));
+    }
+
+    private static ModerationReport samplePendingReport() {
+        return new ModerationReport(
+                3L,
+                7L,
+                ReportTargetType.USER,
+                44L,
+                ReportReason.HARASSMENT,
+                "Harassing messages",
+                ReportStatus.PENDING,
+                null,
+                null,
+                null,
+                null,
+                null,
+                (short) 0,
+                null,
+                null,
+                null,
+                null,
+                Instant.parse("2026-04-12T09:00:00Z"),
+                Instant.parse("2026-04-12T09:00:00Z"));
     }
 
     private static MessageSource messageSource() {
