@@ -3,6 +3,10 @@ package ar.edu.itba.paw.webapp.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.ReportReason;
+import ar.edu.itba.paw.models.ReportStatus;
+import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
@@ -63,8 +67,31 @@ class BannedAccountAuthorizationFilterTest {
         assertNull(response.getRedirectedUrl());
     }
 
+    private static ModerationReport sampleReport() {
+        return new ModerationReport(
+                1L,
+                7L,
+                ReportTargetType.USER,
+                7L,
+                ReportReason.SPAM,
+                "Details",
+                ReportStatus.RESOLVED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                0,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                Instant.now());
+    }
+
     private static UserBan sampleBan() {
-        return new UserBan(11L, 1L, Instant.now().plusSeconds(600));
+        return new UserBan(11L, sampleReport(), Instant.now().plusSeconds(600));
     }
 
     private static void authenticateUser(final Long userId) {

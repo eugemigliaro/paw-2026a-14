@@ -581,7 +581,7 @@ public class ModerationServiceImpl implements ModerationService {
                 && report.getTargetType() == ReportTargetType.USER) {
             final Instant bannedUntil =
                     Instant.now(clock).plusSeconds(DEFAULT_BAN_DURATION_DAYS * 24L * 3600L);
-            banUser(sourceReportId, bannedUntil, report.getTargetId(), resolutionDetails);
+            banUser(report, bannedUntil, report.getTargetId(), resolutionDetails);
         }
     }
 
@@ -640,13 +640,13 @@ public class ModerationServiceImpl implements ModerationService {
     }
 
     private UserBan banUser(
-            final Long moderationReportId,
+            final ModerationReport report,
             final Instant bannedUntil,
             final Long userId,
             final String banReason) {
-        final UserBan ban = userBanDao.createBan(moderationReportId, bannedUntil);
+        final UserBan ban = userBanDao.createBan(report, bannedUntil);
         cancelFutureContentForUser(userId);
-        sendBanEmail(moderationReportId, userId, bannedUntil, banReason);
+        sendBanEmail(report.getId(), userId, bannedUntil, banReason);
         return ban;
     }
 }

@@ -45,7 +45,7 @@ public class UserBanAppealController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         final ModerationReport report =
                 moderationService
-                        .findReportById(activeBan.getModerationReportId())
+                        .findReportById(activeBan.getModerationReport().getId())
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final ModelAndView mav = new ModelAndView("account/banned");
         mav.addObject(
@@ -85,7 +85,7 @@ public class UserBanAppealController {
                         .findActiveBan(userId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         try {
-            moderationService.appealReport(activeBan.getModerationReportId(), appealReason);
+            moderationService.appealReport(activeBan.getModerationReport().getId(), appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
         } catch (final ModerationException exception) {

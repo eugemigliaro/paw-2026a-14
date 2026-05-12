@@ -370,13 +370,12 @@ public class ModerationAdminController {
                 moderationService.findLatestBanForUser(report.getTargetId());
 
         if (latestBanForUser.isEmpty()
-                || !latestBanForUser.get().getModerationReportId().equals(report.getId())) {
+                || !latestBanForUser.get().getModerationReport().getId().equals(report.getId())) {
             return null;
         }
 
         final UserBan ban = latestBanForUser.get();
-        return new UserBanViewModel(
-                latestBanForUser.get().getId(), formatInstant(ban.getBannedUntil(), locale));
+        return new UserBanViewModel(ban.getId(), formatInstant(ban.getBannedUntil(), locale));
     }
 
     public static final class UserBanViewModel {

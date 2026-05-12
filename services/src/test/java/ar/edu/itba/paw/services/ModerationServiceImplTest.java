@@ -144,12 +144,14 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(ReportStatus.RESOLVED)))
                 .thenReturn(true);
 
-        Mockito.when(userBanDao.createBan(Mockito.anyLong(), Mockito.any()))
+        Mockito.when(userBanDao.createBan(Mockito.any(ModerationReport.class), Mockito.any()))
                 .thenAnswer(
                         invocation -> {
                             capturedBannedUntil.set(invocation.getArgument(1));
                             return new UserBan(
-                                    10L, invocation.getArgument(0), invocation.getArgument(1));
+                                    10L,
+                                    (ModerationReport) invocation.getArgument(0),
+                                    invocation.getArgument(1));
                         });
 
         Mockito.when(userDao.findAccountById(88L))
@@ -236,12 +238,12 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(ReportStatus.RESOLVED)))
                 .thenReturn(true);
 
-        Mockito.when(userBanDao.createBan(Mockito.anyLong(), Mockito.any()))
+        Mockito.when(userBanDao.createBan(Mockito.any(ModerationReport.class), Mockito.any()))
                 .thenAnswer(
                         invocation -> {
-                            capturedLinkedReportId.set(invocation.<Long>getArgument(0));
-                            return new UserBan(
-                                    10L, invocation.getArgument(0), invocation.getArgument(1));
+                            final ModerationReport rep = invocation.getArgument(0);
+                            capturedLinkedReportId.set(rep.getId());
+                            return new UserBan(10L, rep, invocation.getArgument(1));
                         });
 
         Mockito.when(userDao.findAccountById(88L))

@@ -65,7 +65,7 @@ class UserBanAppealControllerTest {
         authenticateUser(7L);
         final UserBan ban = sampleBan();
         Mockito.when(moderationService.findActiveBan(7L)).thenReturn(Optional.of(ban));
-        Mockito.when(moderationService.findReportById(ban.getModerationReportId()))
+        Mockito.when(moderationService.findReportById(ban.getModerationReport().getId()))
                 .thenReturn(Optional.of(sampleReport()));
 
         mockMvc.perform(get("/account/ban"))
@@ -85,7 +85,7 @@ class UserBanAppealControllerTest {
     }
 
     private static UserBan sampleBan() {
-        return new UserBan(10L, 12L, Instant.now().plusSeconds(3600));
+        return new UserBan(10L, sampleReport(), Instant.now().plusSeconds(3600));
     }
 
     private static ModerationReport sampleReport() {

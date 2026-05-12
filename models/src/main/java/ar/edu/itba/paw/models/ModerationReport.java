@@ -1,28 +1,94 @@
 package ar.edu.itba.paw.models;
 
+import ar.edu.itba.paw.models.converters.AppealDecisionConverter;
+import ar.edu.itba.paw.models.converters.ReportReasonConverter;
+import ar.edu.itba.paw.models.converters.ReportResolutionConverter;
+import ar.edu.itba.paw.models.converters.ReportStatusConverter;
+import ar.edu.itba.paw.models.converters.ReportTargetTypeConverter;
 import java.time.Instant;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
+@Entity
+@Table(name = "moderation_reports")
 public class ModerationReport {
 
-    private final Long id;
-    private final Long reporterUserId;
-    private final ReportTargetType targetType;
-    private final Long targetId;
-    private final ReportReason reason;
-    private final String details;
-    private final ReportStatus status;
-    private final ReportResolution resolution;
-    private final String resolutionDetails;
-    private final Long reviewedByUserId;
-    private final Instant reviewedAt;
-    private final String appealReason;
-    private final int appealCount;
-    private final Instant appealedAt;
-    private final AppealDecision appealDecision;
-    private final Long appealResolvedByUserId;
-    private final Instant appealResolvedAt;
-    private final Instant createdAt;
-    private final Instant updatedAt;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "moderation_reports_id_seq")
+    @SequenceGenerator(
+            sequenceName = "moderation_reports_id_seq",
+            name = "moderation_reports_id_seq",
+            allocationSize = 1)
+    @Column(name = "id")
+    private Long id;
+
+    @Column(name = "reporter_user_id", nullable = false)
+    private Long reporterUserId; // TODO: Add relation with users
+
+    @Column(name = "target_type", nullable = false)
+    @Convert(converter = ReportTargetTypeConverter.class)
+    private ReportTargetType targetType;
+
+    @Column(name = "target_id", nullable = false)
+    private Long targetId;
+
+    @Column(name = "reason", nullable = false)
+    @Convert(converter = ReportReasonConverter.class)
+    private ReportReason reason;
+
+    @Column(name = "details")
+    private String details;
+
+    @Column(name = "status", nullable = false)
+    @Convert(converter = ReportStatusConverter.class)
+    private ReportStatus status;
+
+    @Column(name = "resolution")
+    @Convert(converter = ReportResolutionConverter.class)
+    private ReportResolution resolution;
+
+    @Column(name = "resolution_details")
+    private String resolutionDetails;
+
+    @Column(name = "reviewed_by_user_id")
+    private Long reviewedByUserId; // TODO: Add relation with users
+
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
+    @Column(name = "appeal_reason")
+    private String appealReason;
+
+    @Column(name = "appeal_count", nullable = false, columnDefinition = "smallint")
+    private int appealCount;
+
+    @Column(name = "appealed_at")
+    private Instant appealedAt;
+
+    @Column(name = "appeal_decision")
+    @Convert(converter = AppealDecisionConverter.class)
+    private AppealDecision appealDecision;
+
+    @Column(name = "appeal_resolved_by_user_id")
+    private Long appealResolvedByUserId;
+
+    @Column(name = "appeal_resolved_at")
+    private Instant appealResolvedAt;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    // Default no-arg constructor for JPA
+    ModerationReport() {}
 
     public ModerationReport(
             final Long id,
