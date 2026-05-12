@@ -1,16 +1,17 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventTimeFilter;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.RecurrenceEndMode;
-import ar.edu.itba.paw.models.RecurrenceFrequency;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventTimeFilter;
+import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.RecurrenceEndMode;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
@@ -2309,12 +2310,14 @@ public class MatchServiceImplTest {
             final String visibility,
             final String joinPolicy) {
         final EventVisibility parsedVisibility =
-                EventVisibility.fromDbValue(visibility).orElse(EventVisibility.PUBLIC);
+                PersistableEnum.fromDbValue(EventVisibility.class, visibility)
+                        .orElse(EventVisibility.PUBLIC);
         final EventJoinPolicy parsedJoinPolicy =
-                EventJoinPolicy.fromDbValue(joinPolicy).orElse(EventJoinPolicy.DIRECT);
+                PersistableEnum.fromDbValue(EventJoinPolicy.class, joinPolicy)
+                        .orElse(EventJoinPolicy.DIRECT);
         return new Match(
                 id,
-                Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
+                PersistableEnum.fromDbValue(Sport.class, sport).orElse(Sport.FOOTBALL),
                 1L,
                 "Test Address",
                 title,

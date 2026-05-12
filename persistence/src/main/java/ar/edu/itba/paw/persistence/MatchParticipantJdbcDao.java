@@ -1,12 +1,13 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -927,7 +928,8 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
         final BigDecimal price = rs.getBigDecimal("price_per_player");
         return new Match(
                 rs.getLong("id"),
-                Sport.fromDbValue(rs.getString("sport")).orElse(Sport.FOOTBALL),
+                PersistableEnum.fromDbValue(Sport.class, rs.getString("sport"))
+                        .orElse(Sport.FOOTBALL),
                 rs.getLong("host_user_id"),
                 rs.getString("address"),
                 rs.getString("title"),
@@ -936,11 +938,12 @@ public class MatchParticipantJdbcDao implements MatchParticipantDao {
                 endsAt == null ? null : endsAt.toInstant(),
                 rs.getInt("max_players"),
                 price,
-                EventVisibility.fromDbValue(rs.getString("visibility"))
+                PersistableEnum.fromDbValue(EventVisibility.class, rs.getString("visibility"))
                         .orElse(EventVisibility.PUBLIC),
-                EventJoinPolicy.fromDbValue(rs.getString("join_policy"))
+                PersistableEnum.fromDbValue(EventJoinPolicy.class, rs.getString("join_policy"))
                         .orElse(EventJoinPolicy.DIRECT),
-                EventStatus.fromDbValue(rs.getString("status")).orElse(EventStatus.OPEN),
+                PersistableEnum.fromDbValue(EventStatus.class, rs.getString("status"))
+                        .orElse(EventStatus.OPEN),
                 rs.getInt("joined_players"),
                 rs.getObject("banner_image_id") == null ? null : rs.getLong("banner_image_id"),
                 rs.getObject("series_id") == null ? null : rs.getLong("series_id"),

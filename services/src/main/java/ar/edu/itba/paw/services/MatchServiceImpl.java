@@ -1,16 +1,17 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventTimeFilter;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.MatchSort;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.RecurrenceEndMode;
-import ar.edu.itba.paw.models.RecurrenceFrequency;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventTimeFilter;
+import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.RecurrenceEndMode;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
@@ -856,7 +857,7 @@ public class MatchServiceImpl implements MatchService {
             if (rawSport == null || rawSport.isBlank()) {
                 continue;
             }
-            Sport.fromDbValue(rawSport.trim()).ifPresent(sports::add);
+            PersistableEnum.fromDbValue(Sport.class, rawSport.trim()).ifPresent(sports::add);
         }
 
         return List.copyOf(sports);
@@ -872,7 +873,8 @@ public class MatchServiceImpl implements MatchService {
             if (rawStatus == null || rawStatus.isBlank()) {
                 continue;
             }
-            EventStatus.fromDbValue(rawStatus.trim()).ifPresent(statuses::add);
+            PersistableEnum.fromDbValue(EventStatus.class, rawStatus.trim())
+                    .ifPresent(statuses::add);
         }
 
         return List.copyOf(statuses);
@@ -888,7 +890,8 @@ public class MatchServiceImpl implements MatchService {
             if (rawValue == null || rawValue.isBlank()) {
                 continue;
             }
-            EventVisibility.fromDbValue(rawValue.trim()).ifPresent(visibility::add);
+            PersistableEnum.fromDbValue(EventVisibility.class, rawValue.trim())
+                    .ifPresent(visibility::add);
         }
 
         return List.copyOf(visibility);

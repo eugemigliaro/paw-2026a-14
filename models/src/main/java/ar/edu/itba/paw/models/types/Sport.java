@@ -1,9 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.types;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-public enum Sport {
+public enum Sport implements PersistableEnum {
     FOOTBALL("football", "Football"),
     TENNIS("tennis", "Tennis"),
     PADEL("padel", "Padel"),
@@ -18,18 +15,13 @@ public enum Sport {
         this.displayName = displayName;
     }
 
+    @Override
     public String getDbValue() {
         return dbValue;
     }
 
     public String getDisplayName() {
         return displayName;
-    }
-
-    public static Optional<Sport> fromDbValue(final String value) {
-        return Arrays.stream(values())
-                .filter(sport -> sport.dbValue.equalsIgnoreCase(value))
-                .findFirst();
     }
 
     @Override

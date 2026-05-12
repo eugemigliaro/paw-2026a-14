@@ -1,19 +1,13 @@
 package ar.edu.itba.paw.models.converters;
 
-import ar.edu.itba.paw.models.UserRole;
-import javax.persistence.AttributeConverter;
+import ar.edu.itba.paw.models.types.PersistableEnumConverter;
+import ar.edu.itba.paw.models.types.UserRole;
 import javax.persistence.Converter;
 
 @Converter(autoApply = false)
-public class UserRoleConverter implements AttributeConverter<UserRole, String> {
+public class UserRoleConverter extends PersistableEnumConverter<UserRole> {
 
-    @Override
-    public String convertToDatabaseColumn(final UserRole attribute) {
-        return attribute == null ? null : attribute.getDbValue();
-    }
-
-    @Override
-    public UserRole convertToEntityAttribute(final String dbData) {
-        return dbData == null ? null : UserRole.fromDbValue(dbData).orElseThrow();
+    public UserRoleConverter() {
+        super(UserRole.class);
     }
 }

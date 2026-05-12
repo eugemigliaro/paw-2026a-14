@@ -1,9 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.types;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-public enum ReportReason {
+public enum ReportReason implements PersistableEnum {
     INAPPROPRIATE_CONTENT("inappropriate_content"),
     AGGRESSIVE_LANGUAGE("aggressive_language"),
     SPAM("spam"),
@@ -17,14 +14,9 @@ public enum ReportReason {
         this.dbValue = dbValue;
     }
 
+    @Override
     public String getDbValue() {
         return dbValue;
-    }
-
-    public static Optional<ReportReason> fromDbValue(final String value) {
-        return Arrays.stream(values())
-                .filter(reason -> reason.dbValue.equalsIgnoreCase(value))
-                .findFirst();
     }
 
     @Override

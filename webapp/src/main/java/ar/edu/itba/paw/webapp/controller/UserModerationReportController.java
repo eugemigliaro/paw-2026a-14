@@ -5,8 +5,9 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
@@ -53,9 +54,13 @@ public class UserModerationReportController {
             final Locale locale) {
         final long userId = currentUserId();
         final List<ReportTargetType> selectedTypes =
-                parseEnumFilters(typeFilters, ReportTargetType::fromDbValue);
+                parseEnumFilters(
+                        typeFilters,
+                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
         final List<ReportStatus> selectedStatuses =
-                parseEnumFilters(statusFilters, ReportStatus::fromDbValue);
+                parseEnumFilters(
+                        statusFilters,
+                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
                         userId, selectedTypes, selectedStatuses, page, PAGE_SIZE);

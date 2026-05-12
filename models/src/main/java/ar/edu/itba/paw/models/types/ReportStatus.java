@@ -1,9 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.types;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-public enum ReportStatus {
+public enum ReportStatus implements PersistableEnum {
     PENDING("pending"),
     UNDER_REVIEW("under_review"),
     RESOLVED("resolved"),
@@ -16,14 +13,9 @@ public enum ReportStatus {
         this.dbValue = dbValue;
     }
 
+    @Override
     public String getDbValue() {
         return dbValue;
-    }
-
-    public static Optional<ReportStatus> fromDbValue(final String value) {
-        return Arrays.stream(values())
-                .filter(status -> status.dbValue.equalsIgnoreCase(value))
-                .findFirst();
     }
 
     @Override

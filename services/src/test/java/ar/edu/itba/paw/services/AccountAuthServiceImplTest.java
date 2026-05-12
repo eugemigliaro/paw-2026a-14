@@ -1,11 +1,11 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
-import ar.edu.itba.paw.models.EmailActionStatus;
-import ar.edu.itba.paw.models.EmailActionType;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.EmailActionStatus;
+import ar.edu.itba.paw.models.types.EmailActionType;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;

@@ -1,9 +1,10 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.PlayerReviewFilter;
-import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -35,7 +36,8 @@ public class PlayerReviewJdbcDao implements PlayerReviewDao {
                             rs.getLong("id"),
                             rs.getLong("reviewer_user_id"),
                             rs.getLong("reviewed_user_id"),
-                            PlayerReviewReaction.fromDbValue(rs.getString("reaction"))
+                            PersistableEnum.fromDbValue(
+                                            PlayerReviewReaction.class, rs.getString("reaction"))
                                     .orElseThrow(
                                             () ->
                                                     new IllegalStateException(

@@ -3,13 +3,14 @@ package ar.edu.itba.paw.webapp.controller;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.RecurrenceEndMode;
-import ar.edu.itba.paw.models.RecurrenceFrequency;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.RecurrenceEndMode;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.CreateRecurrenceRequest;
 import ar.edu.itba.paw.services.ImageService;
@@ -159,10 +160,12 @@ public class HostController {
         }
 
         final EventVisibility visibility =
-                EventVisibility.fromDbValue(normalize(createEventForm.getVisibility()))
+                PersistableEnum.fromDbValue(
+                                EventVisibility.class, normalize(createEventForm.getVisibility()))
                         .orElse(null);
         final EventJoinPolicy joinPolicy =
-                EventJoinPolicy.fromDbValue(normalize(createEventForm.getJoinPolicy()))
+                PersistableEnum.fromDbValue(
+                                EventJoinPolicy.class, normalize(createEventForm.getJoinPolicy()))
                         .orElse(null);
 
         final CreateMatchRequest request =
@@ -177,7 +180,8 @@ public class HostController {
                         endsAt,
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
-                        Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
+                        PersistableEnum.fromDbValue(Sport.class, createEventForm.getSport())
+                                .orElse(Sport.PADEL),
                         visibility,
                         joinPolicy,
                         EventStatus.OPEN,
@@ -247,10 +251,12 @@ public class HostController {
         }
 
         final EventVisibility visibility =
-                EventVisibility.fromDbValue(normalize(createEventForm.getVisibility()))
+                PersistableEnum.fromDbValue(
+                                EventVisibility.class, normalize(createEventForm.getVisibility()))
                         .orElse(null);
         final EventJoinPolicy joinPolicy =
-                EventJoinPolicy.fromDbValue(normalize(createEventForm.getJoinPolicy()))
+                PersistableEnum.fromDbValue(
+                                EventJoinPolicy.class, normalize(createEventForm.getJoinPolicy()))
                         .orElse(null);
 
         final UpdateMatchRequest request =
@@ -262,7 +268,8 @@ public class HostController {
                         endsAt,
                         createEventForm.getMaxPlayers().intValue(),
                         createEventForm.getPricePerPlayer(),
-                        Sport.fromDbValue(createEventForm.getSport()).orElse(Sport.PADEL),
+                        PersistableEnum.fromDbValue(Sport.class, createEventForm.getSport())
+                                .orElse(Sport.PADEL),
                         visibility,
                         joinPolicy,
                         existingMatch.getStatus(),
@@ -600,9 +607,11 @@ public class HostController {
     private UpdateMatchRequest toUpdateRequest(
             final CreateEventForm form, final EventStatus status, final Long bannerImageId) {
         final EventVisibility visibility =
-                EventVisibility.fromDbValue(normalize(form.getVisibility())).orElse(null);
+                PersistableEnum.fromDbValue(EventVisibility.class, normalize(form.getVisibility()))
+                        .orElse(null);
         final EventJoinPolicy joinPolicy =
-                EventJoinPolicy.fromDbValue(normalize(form.getJoinPolicy())).orElse(null);
+                PersistableEnum.fromDbValue(EventJoinPolicy.class, normalize(form.getJoinPolicy()))
+                        .orElse(null);
         return new UpdateMatchRequest(
                 form.getAddress(),
                 form.getTitle(),
@@ -611,7 +620,7 @@ public class HostController {
                 toInstant(form.getEndDate(), form.getEndTime(), form.getTz()),
                 form.getMaxPlayers().intValue(),
                 form.getPricePerPlayer(),
-                Sport.fromDbValue(form.getSport()).orElse(Sport.PADEL),
+                PersistableEnum.fromDbValue(Sport.class, form.getSport()).orElse(Sport.PADEL),
                 visibility,
                 joinPolicy,
                 status,
@@ -682,9 +691,12 @@ public class HostController {
         }
 
         final RecurrenceFrequency frequency =
-                RecurrenceFrequency.fromValue(form.getRecurrenceFrequency()).orElseThrow();
+                PersistableEnum.fromDbValue(
+                                RecurrenceFrequency.class, form.getRecurrenceFrequency())
+                        .orElseThrow();
         final RecurrenceEndMode endMode =
-                RecurrenceEndMode.fromValue(form.getRecurrenceEndMode()).orElseThrow();
+                PersistableEnum.fromDbValue(RecurrenceEndMode.class, form.getRecurrenceEndMode())
+                        .orElseThrow();
         return new CreateRecurrenceRequest(
                 frequency,
                 endMode,
@@ -703,7 +715,8 @@ public class HostController {
 
         final String normalizedVisibility = normalize(form.getVisibility());
         final EventVisibility visibility =
-                EventVisibility.fromDbValue(normalizedVisibility).orElse(null);
+                PersistableEnum.fromDbValue(EventVisibility.class, normalizedVisibility)
+                        .orElse(null);
 
         if (visibility == null) {
             bindingResult.rejectValue(
@@ -730,7 +743,8 @@ public class HostController {
         }
 
         final boolean validJoinPolicy =
-                EventJoinPolicy.fromDbValue(normalizedJoinPolicy).isPresent();
+                PersistableEnum.fromDbValue(EventJoinPolicy.class, normalizedJoinPolicy)
+                        .isPresent();
 
         if (!validJoinPolicy) {
             bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.invalid");

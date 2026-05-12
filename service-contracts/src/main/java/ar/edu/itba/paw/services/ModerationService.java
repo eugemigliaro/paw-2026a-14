@@ -1,13 +1,13 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportResolution;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportResolution;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import java.util.List;
 import java.util.Optional;
 

@@ -1,12 +1,13 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventTimeFilter;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.MatchSort;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.query.EventTimeFilter;
+import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.ZoneId;
@@ -1612,7 +1613,7 @@ public class MatchJdbcDaoTest {
                         null,
                         maxPlayers,
                         pricePerPlayer,
-                        Sport.fromDbValue(sport).orElse(Sport.FOOTBALL),
+                        PersistableEnum.fromDbValue(Sport.class, sport).orElse(Sport.FOOTBALL),
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,

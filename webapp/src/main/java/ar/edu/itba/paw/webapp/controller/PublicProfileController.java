@@ -2,11 +2,12 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.PlayerReviewFilter;
-import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
@@ -168,7 +169,7 @@ public class PublicProfileController {
         final User reviewedUser = findUserByUsernameOrThrow(username);
         final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
         final Optional<PlayerReviewReaction> reaction =
-                PlayerReviewReaction.fromDbValue(reactionValue);
+                PersistableEnum.fromDbValue(PlayerReviewReaction.class, reactionValue);
         if (reaction.isEmpty()) {
             return redirectToProfile(username, "invalid_reaction", null);
         }

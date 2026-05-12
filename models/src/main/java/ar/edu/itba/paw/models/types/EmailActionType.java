@@ -1,9 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.types;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-public enum EmailActionType {
+public enum EmailActionType implements PersistableEnum {
     MATCH_RESERVATION("match_reservation"),
     MATCH_CREATION("match_creation"),
     ACCOUNT_VERIFICATION("account_verification"),
@@ -15,14 +12,9 @@ public enum EmailActionType {
         this.dbValue = dbValue;
     }
 
+    @Override
     public String getDbValue() {
         return dbValue;
-    }
-
-    public static Optional<EmailActionType> fromDbValue(final String value) {
-        return Arrays.stream(values())
-                .filter(actionType -> actionType.dbValue.equalsIgnoreCase(value))
-                .findFirst();
     }
 
     @Override

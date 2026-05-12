@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.models;
 
+import ar.edu.itba.paw.models.types.EmailActionStatus;
+import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Instant;
 
 public class EmailActionRequest {

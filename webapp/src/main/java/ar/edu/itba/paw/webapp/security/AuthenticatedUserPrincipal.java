@@ -2,7 +2,7 @@ package ar.edu.itba.paw.webapp.security;
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.UserRole;
 import java.io.Serial;
 import java.io.Serializable;
 import java.security.Principal;

@@ -1,8 +1,9 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
-import ar.edu.itba.paw.models.EmailActionStatus;
-import ar.edu.itba.paw.models.EmailActionType;
+import ar.edu.itba.paw.models.types.EmailActionStatus;
+import ar.edu.itba.paw.models.types.EmailActionType;
+import ar.edu.itba.paw.models.types.PersistableEnum;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -141,7 +142,7 @@ public class EmailActionRequestJdbcDao implements EmailActionRequestDao {
         final String statusRaw = rs.getString("status");
         return new EmailActionRequest(
                 rs.getLong("id"),
-                EmailActionType.fromDbValue(actionTypeRaw)
+                PersistableEnum.fromDbValue(EmailActionType.class, actionTypeRaw)
                         .orElseThrow(
                                 () ->
                                         new IllegalStateException(
@@ -150,7 +151,7 @@ public class EmailActionRequestJdbcDao implements EmailActionRequestDao {
                 rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
                 rs.getString("token_hash"),
                 rs.getString("payload_json"),
-                EmailActionStatus.fromDbValue(statusRaw)
+                PersistableEnum.fromDbValue(EmailActionStatus.class, statusRaw)
                         .orElseThrow(
                                 () ->
                                         new IllegalStateException(

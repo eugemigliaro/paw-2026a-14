@@ -1,9 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.types;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-public enum ReportResolution {
+public enum ReportResolution implements PersistableEnum {
     DISMISSED("dismissed"),
     CONTENT_DELETED("content_deleted"),
     USER_BANNED("user_banned");
@@ -14,14 +11,9 @@ public enum ReportResolution {
         this.dbValue = dbValue;
     }
 
+    @Override
     public String getDbValue() {
         return dbValue;
-    }
-
-    public static Optional<ReportResolution> fromDbValue(final String value) {
-        return Arrays.stream(values())
-                .filter(resolution -> resolution.dbValue.equalsIgnoreCase(value))
-                .findFirst();
     }
 
     @Override

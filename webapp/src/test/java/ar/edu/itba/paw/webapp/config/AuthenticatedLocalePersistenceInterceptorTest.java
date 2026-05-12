@@ -5,7 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import java.util.Locale;

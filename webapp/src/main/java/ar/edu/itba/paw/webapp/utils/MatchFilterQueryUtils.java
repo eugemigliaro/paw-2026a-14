@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.utils;
 
-import ar.edu.itba.paw.models.MatchSort;
+import ar.edu.itba.paw.models.query.MatchSort;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;

@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
-import ar.edu.itba.paw.models.EmailActionStatus;
-import ar.edu.itba.paw.models.EmailActionType;
+import ar.edu.itba.paw.models.types.EmailActionStatus;
+import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Instant;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Assertions;

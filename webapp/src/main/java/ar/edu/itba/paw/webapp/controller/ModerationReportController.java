@@ -5,9 +5,10 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
@@ -223,7 +224,7 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.USER,
                     reportedUser.getId(),
-                    ReportReason.fromDbValue(form.getReason())
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(
@@ -271,7 +272,7 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.REVIEW,
                     review.getId(),
-                    ReportReason.fromDbValue(form.getReason())
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(
@@ -319,7 +320,7 @@ public class ModerationReportController {
                     currentUser.getUserId(),
                     ReportTargetType.MATCH,
                     match.getId(),
-                    ReportReason.fromDbValue(form.getReason())
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(

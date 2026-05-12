@@ -9,7 +9,8 @@ import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthen
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -1264,7 +1265,9 @@ public class MatchDashboardController {
         final List<String> normalized = normalizeCsvValues(rawSports);
         final List<String> sports = new ArrayList<>();
         for (final String sport : normalized) {
-            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(sports::add);
+            PersistableEnum.fromDbValue(Sport.class, sport)
+                    .map(Sport::getDbValue)
+                    .ifPresent(sports::add);
         }
         return List.copyOf(sports);
     }

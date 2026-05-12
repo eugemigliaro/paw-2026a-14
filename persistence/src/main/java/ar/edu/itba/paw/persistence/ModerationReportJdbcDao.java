@@ -1,12 +1,13 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportResolution;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
+import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportResolution;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -34,13 +35,18 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                     new ModerationReport(
                             rs.getLong("id"),
                             rs.getLong("reporter_user_id"),
-                            ReportTargetType.fromDbValue(rs.getString("target_type")).orElse(null),
+                            PersistableEnum.fromDbValue(
+                                            ReportTargetType.class, rs.getString("target_type"))
+                                    .orElse(null),
                             rs.getLong("target_id"),
-                            ReportReason.fromDbValue(rs.getString("reason")).orElse(null),
+                            PersistableEnum.fromDbValue(ReportReason.class, rs.getString("reason"))
+                                    .orElse(null),
                             rs.getString("details"),
-                            ReportStatus.fromDbValue(rs.getString("status"))
+                            PersistableEnum.fromDbValue(ReportStatus.class, rs.getString("status"))
                                     .orElse(ReportStatus.PENDING),
-                            ReportResolution.fromDbValue(rs.getString("resolution")).orElse(null),
+                            PersistableEnum.fromDbValue(
+                                            ReportResolution.class, rs.getString("resolution"))
+                                    .orElse(null),
                             rs.getString("resolution_details"),
                             rs.getObject("reviewed_by_user_id") == null
                                     ? null
@@ -49,7 +55,8 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                             rs.getString("appeal_reason"),
                             rs.getShort("appeal_count"),
                             toInstant(rs.getTimestamp("appealed_at")),
-                            AppealDecision.fromDbValue(rs.getString("appeal_decision"))
+                            PersistableEnum.fromDbValue(
+                                            AppealDecision.class, rs.getString("appeal_decision"))
                                     .orElse(null),
                             rs.getObject("appeal_resolved_by_user_id") == null
                                     ? null

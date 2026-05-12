@@ -1,9 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.types;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-public enum UserRole {
+public enum UserRole implements PersistableEnum {
     USER("user"),
     ADMIN_MOD("admin_mod");
 
@@ -13,18 +10,13 @@ public enum UserRole {
         this.dbValue = dbValue;
     }
 
+    @Override
     public String getDbValue() {
         return dbValue;
     }
 
     public boolean isAdmin() {
         return this == ADMIN_MOD;
-    }
-
-    public static Optional<UserRole> fromDbValue(final String value) {
-        return Arrays.stream(values())
-                .filter(role -> role.dbValue.equalsIgnoreCase(value))
-                .findFirst();
     }
 
     @Override

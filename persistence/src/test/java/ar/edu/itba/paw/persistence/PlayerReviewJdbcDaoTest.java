@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.PlayerReviewFilter;
-import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;

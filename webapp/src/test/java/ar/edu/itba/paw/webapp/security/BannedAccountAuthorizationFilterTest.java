@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import ar.edu.itba.paw.models.ModerationReport;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import java.time.Instant;
 import java.util.List;

@@ -9,21 +9,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.PlayerReviewFilter;
-import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
+import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
@@ -737,7 +737,9 @@ class UiRouteTest {
                             final int page,
                             final int pageSize) {
                         final List<Match> items =
-                                status != null && status.contains(EventStatus.COMPLETED.getValue())
+                                status != null
+                                                && status.contains(
+                                                        EventStatus.COMPLETED.getDbValue())
                                         ? List.of(completedMatch)
                                         : List.of(realMatch);
                         return new PaginatedResult<>(items, items.size(), 1, pageSize);
@@ -2503,7 +2505,7 @@ class UiRouteTest {
         final CreateMatchRequest request = lastCreateMatchRequest.get();
         Assertions.assertNotNull(request);
         Assertions.assertTrue(request.isRecurring());
-        Assertions.assertEquals("weekly", request.getRecurrence().getFrequency().getValue());
+        Assertions.assertEquals("weekly", request.getRecurrence().getFrequency().getDbValue());
         Assertions.assertEquals(3, request.getRecurrence().getOccurrenceCount());
     }
 
@@ -2535,7 +2537,7 @@ class UiRouteTest {
         final CreateMatchRequest request = lastCreateMatchRequest.get();
         Assertions.assertNotNull(request);
         Assertions.assertTrue(request.isRecurring());
-        Assertions.assertEquals("until_date", request.getRecurrence().getEndMode().getValue());
+        Assertions.assertEquals("until_date", request.getRecurrence().getEndMode().getDbValue());
         Assertions.assertEquals(LocalDate.of(2099, 4, 24), request.getRecurrence().getUntilDate());
     }
 

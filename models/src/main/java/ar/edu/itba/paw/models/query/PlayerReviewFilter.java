@@ -1,5 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.query;
 
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.util.Arrays;
 import java.util.Optional;
 

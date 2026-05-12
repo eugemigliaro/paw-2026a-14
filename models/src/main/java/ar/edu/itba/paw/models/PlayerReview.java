@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models;
 
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.time.Instant;
 
 public class PlayerReview {

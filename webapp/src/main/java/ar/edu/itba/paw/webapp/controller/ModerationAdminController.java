@@ -3,14 +3,15 @@ package ar.edu.itba.paw.webapp.controller;
 import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
-import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.ReportResolution;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportResolution;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
@@ -73,9 +74,13 @@ public class ModerationAdminController {
             final Locale locale) {
 
         final List<ReportTargetType> selectedTypes =
-                parseEnumFilters(typeFilters, ReportTargetType::fromDbValue);
+                parseEnumFilters(
+                        typeFilters,
+                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
         final List<ReportStatus> selectedStatuses =
-                parseEnumFilters(statusFilters, ReportStatus::fromDbValue);
+                parseEnumFilters(
+                        statusFilters,
+                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
 
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReports(selectedTypes, selectedStatuses, page, PAGE_SIZE);
@@ -256,7 +261,7 @@ public class ModerationAdminController {
             final Locale locale) {
 
         final AppealDecision parsedAppealDecision =
-                AppealDecision.fromDbValue(appealResolution)
+                PersistableEnum.fromDbValue(AppealDecision.class, appealResolution)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
         try {

@@ -1,11 +1,11 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportResolution;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
+import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportResolution;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;

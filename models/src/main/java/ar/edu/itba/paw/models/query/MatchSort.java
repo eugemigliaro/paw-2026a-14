@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.query;
 
 import java.util.Arrays;
 import java.util.Optional;

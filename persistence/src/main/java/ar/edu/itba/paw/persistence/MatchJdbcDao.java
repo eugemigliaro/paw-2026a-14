@@ -1,12 +1,13 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventTimeFilter;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.MatchSort;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.query.EventTimeFilter;
+import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -68,7 +69,8 @@ public class MatchJdbcDao implements MatchDao {
 
                 return new Match(
                         rs.getLong("id"),
-                        Sport.fromDbValue(rs.getString("sport")).orElse(Sport.FOOTBALL),
+                        PersistableEnum.fromDbValue(Sport.class, rs.getString("sport"))
+                                .orElse(Sport.FOOTBALL),
                         rs.getLong("host_user_id"),
                         rs.getString("address"),
                         rs.getObject("latitude") == null ? null : rs.getDouble("latitude"),
@@ -79,11 +81,14 @@ public class MatchJdbcDao implements MatchDao {
                         endsAt == null ? null : endsAt.toInstant(),
                         rs.getInt("max_players"),
                         price,
-                        EventVisibility.fromDbValue(rs.getString("visibility"))
+                        PersistableEnum.fromDbValue(
+                                        EventVisibility.class, rs.getString("visibility"))
                                 .orElse(EventVisibility.PUBLIC),
-                        EventJoinPolicy.fromDbValue(rs.getString("join_policy"))
+                        PersistableEnum.fromDbValue(
+                                        EventJoinPolicy.class, rs.getString("join_policy"))
                                 .orElse(EventJoinPolicy.DIRECT),
-                        EventStatus.fromDbValue(rs.getString("status")).orElse(EventStatus.OPEN),
+                        PersistableEnum.fromDbValue(EventStatus.class, rs.getString("status"))
+                                .orElse(EventStatus.OPEN),
                         rs.getInt("joined_players"),
                         rs.getObject("banner_image_id") == null
                                 ? null
@@ -148,9 +153,9 @@ public class MatchJdbcDao implements MatchDao {
         values.put("max_players", maxPlayers);
         values.put("price_per_player", pricePerPlayer);
         values.put("sport", new SqlParameterValue(Types.OTHER, sport.getDbValue()));
-        values.put("visibility", new SqlParameterValue(Types.OTHER, visibility.getValue()));
-        values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy.getValue()));
-        values.put("status", new SqlParameterValue(Types.OTHER, status.getValue()));
+        values.put("visibility", new SqlParameterValue(Types.OTHER, visibility.getDbValue()));
+        values.put("join_policy", new SqlParameterValue(Types.OTHER, joinPolicy.getDbValue()));
+        values.put("status", new SqlParameterValue(Types.OTHER, status.getDbValue()));
         values.put("banner_image_id", bannerImageId);
         values.put("series_id", seriesId);
         values.put("series_occurrence_index", seriesOccurrenceIndex);
@@ -240,9 +245,9 @@ public class MatchJdbcDao implements MatchDao {
                         maxPlayers,
                         pricePerPlayer,
                         new SqlParameterValue(Types.OTHER, sport.getDbValue()),
-                        new SqlParameterValue(Types.OTHER, visibility.getValue()),
-                        new SqlParameterValue(Types.OTHER, joinPolicy.getValue()),
-                        new SqlParameterValue(Types.OTHER, status.getValue()),
+                        new SqlParameterValue(Types.OTHER, visibility.getDbValue()),
+                        new SqlParameterValue(Types.OTHER, joinPolicy.getDbValue()),
+                        new SqlParameterValue(Types.OTHER, status.getDbValue()),
                         bannerImageId,
                         latitude,
                         longitude,

@@ -8,7 +8,8 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -466,7 +467,9 @@ public class FeedController {
         final List<String> normalized = normalizeCsvValues(sports);
         final List<String> validSports = new ArrayList<>();
         for (final String sport : normalized) {
-            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(validSports::add);
+            PersistableEnum.fromDbValue(Sport.class, sport)
+                    .map(Sport::getDbValue)
+                    .ifPresent(validSports::add);
         }
 
         return List.copyOf(validSports);

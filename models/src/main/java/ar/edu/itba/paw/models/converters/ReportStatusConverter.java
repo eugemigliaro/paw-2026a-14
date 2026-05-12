@@ -1,18 +1,13 @@
 package ar.edu.itba.paw.models.converters;
 
-import ar.edu.itba.paw.models.ReportStatus;
-import javax.persistence.AttributeConverter;
+import ar.edu.itba.paw.models.types.PersistableEnumConverter;
+import ar.edu.itba.paw.models.types.ReportStatus;
 import javax.persistence.Converter;
 
 @Converter(autoApply = false)
-public class ReportStatusConverter implements AttributeConverter<ReportStatus, String> {
-    @Override
-    public String convertToDatabaseColumn(final ReportStatus attribute) {
-        return attribute == null ? null : attribute.getDbValue();
-    }
+public class ReportStatusConverter extends PersistableEnumConverter<ReportStatus> {
 
-    @Override
-    public ReportStatus convertToEntityAttribute(final String dbData) {
-        return dbData == null ? null : ReportStatus.fromDbValue(dbData).orElseThrow();
+    public ReportStatusConverter() {
+        super(ReportStatus.class);
     }
 }
