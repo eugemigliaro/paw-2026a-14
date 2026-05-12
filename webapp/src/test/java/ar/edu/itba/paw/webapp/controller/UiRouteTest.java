@@ -1157,7 +1157,7 @@ class UiRouteTest {
         final PlayerReviewService playerReviewService =
                 new PlayerReviewService() {
                     private PlayerReview viewerReview =
-                            new PlayerReview(
+                            createPlayerReview(
                                     1L,
                                     9L,
                                     3L,
@@ -1166,6 +1166,33 @@ class UiRouteTest {
                                     FIXED_NOW,
                                     FIXED_NOW,
                                     null);
+
+                    private PlayerReview createPlayerReview(
+                            Long id,
+                            Long reviewerId,
+                            Long reviewedId,
+                            PlayerReviewReaction reaction,
+                            String comment,
+                            Instant createdAt,
+                            Instant updatedAt,
+                            Instant deletedAt) {
+                        UserAccount reviewer = Mockito.mock(UserAccount.class);
+                        UserAccount reviewed = Mockito.mock(UserAccount.class);
+                        Mockito.when(reviewer.getId()).thenReturn(reviewerId);
+                        Mockito.when(reviewed.getId()).thenReturn(reviewedId);
+                        return new PlayerReview(
+                                id,
+                                reviewer,
+                                reviewed,
+                                reaction,
+                                comment,
+                                createdAt,
+                                updatedAt,
+                                deletedAt != null,
+                                deletedAt,
+                                null,
+                                null);
+                    }
 
                     @Override
                     public Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId) {
@@ -1183,7 +1210,7 @@ class UiRouteTest {
                                     PlayerReviewException.NOT_ELIGIBLE, "Not eligible");
                         }
                         viewerReview =
-                                new PlayerReview(
+                                createPlayerReview(
                                         1L,
                                         reviewerUserId,
                                         reviewedUserId,
@@ -1200,8 +1227,8 @@ class UiRouteTest {
                     @Override
                     public void deleteReview(final Long reviewerUserId, final Long reviewedUserId) {
                         if (viewerReview == null
-                                || !reviewerUserId.equals(viewerReview.getReviewerUserId())
-                                || !reviewedUserId.equals(viewerReview.getReviewedUserId())) {
+                                || !reviewerUserId.equals(viewerReview.getReviewer().getId())
+                                || !reviewedUserId.equals(viewerReview.getReviewed().getId())) {
                             throw new PlayerReviewException(
                                     PlayerReviewException.NOT_FOUND, "Missing review");
                         }
@@ -1212,8 +1239,10 @@ class UiRouteTest {
                     public Optional<PlayerReview> findReviewByPair(
                             final Long reviewerUserId, final Long reviewedUserId) {
                         return viewerReview == null
-                                        || !reviewerUserId.equals(viewerReview.getReviewerUserId())
-                                        || !reviewedUserId.equals(viewerReview.getReviewedUserId())
+                                        || !reviewerUserId.equals(
+                                                viewerReview.getReviewer().getId())
+                                        || !reviewedUserId.equals(
+                                                viewerReview.getReviewed().getId())
                                 ? Optional.empty()
                                 : Optional.of(viewerReview);
                     }

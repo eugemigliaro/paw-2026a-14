@@ -6,6 +6,7 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportTargetType;
@@ -116,8 +117,8 @@ public class ModerationReportController {
             final Locale locale) {
         requireAuthenticatedUser();
         final PlayerReview review = findReviewByIdOrThrow(reviewId);
-        final User author = findUserByIdOrThrow(review.getReviewerUserId());
-        final User reviewedUser = findUserByIdOrThrow(review.getReviewedUserId());
+        final UserAccount author = review.getReviewer();
+        final UserAccount reviewedUser = review.getReviewed();
         return baseReportView(
                 locale,
                 Boolean.TRUE.equals(model.asMap().get("reportSent")) ? "sent" : reportStatus,

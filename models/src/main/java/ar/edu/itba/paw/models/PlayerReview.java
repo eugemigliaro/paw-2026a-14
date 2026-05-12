@@ -1,67 +1,96 @@
 package ar.edu.itba.paw.models;
 
+import ar.edu.itba.paw.models.converters.PlayerReviewReactionConverter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.time.Instant;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
+@Entity
+@Table(
+        name = "player_reviews",
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"reviewer_user_id", "reviewed_user_id"})
+        })
 public class PlayerReview {
 
-    private final Long id;
-    private final Long reviewerUserId;
-    private final Long reviewedUserId;
-    private final PlayerReviewReaction reaction;
-    private final String comment;
-    private final Instant createdAt;
-    private final Instant updatedAt;
-    private final boolean deleted;
-    private final Instant deletedAt;
-    private final Long deletedByUserId;
-    private final String deleteReason;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "player_reviews_id_seq")
+    @SequenceGenerator(
+            sequenceName = "player_reviews_id_seq",
+            name = "player_reviews_id_seq",
+            allocationSize = 1)
+    @Column(name = "id")
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reviewer_user_id", nullable = false)
+    private UserAccount reviewer;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reviewed_user_id", nullable = false)
+    private UserAccount reviewed;
+
+    @Column(name = "reaction", length = 20, nullable = false)
+    @Convert(converter = PlayerReviewReactionConverter.class)
+    private PlayerReviewReaction reaction;
+
+    @Column(name = "comment")
+    private String comment;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deleted_by_user_id")
+    private UserAccount deletedBy;
+
+    @Column(name = "delete_reason")
+    private String deleteReason;
+
+    PlayerReview() {}
 
     public PlayerReview(
             final Long id,
-            final Long reviewerUserId,
-            final Long reviewedUserId,
-            final PlayerReviewReaction reaction,
-            final String comment,
-            final Instant createdAt,
-            final Instant updatedAt,
-            final Instant deletedAt) {
-        this(
-                id,
-                reviewerUserId,
-                reviewedUserId,
-                reaction,
-                comment,
-                createdAt,
-                updatedAt,
-                deletedAt != null,
-                deletedAt,
-                null,
-                null);
-    }
-
-    public PlayerReview(
-            final Long id,
-            final Long reviewerUserId,
-            final Long reviewedUserId,
+            final UserAccount reviewer,
+            final UserAccount reviewed,
             final PlayerReviewReaction reaction,
             final String comment,
             final Instant createdAt,
             final Instant updatedAt,
             final boolean deleted,
             final Instant deletedAt,
-            final Long deletedByUserId,
+            final UserAccount deletedBy,
             final String deleteReason) {
         this.id = id;
-        this.reviewerUserId = reviewerUserId;
-        this.reviewedUserId = reviewedUserId;
+        this.reviewer = reviewer;
+        this.reviewed = reviewed;
         this.reaction = reaction;
         this.comment = comment;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.deleted = deleted;
         this.deletedAt = deletedAt;
-        this.deletedByUserId = deletedByUserId;
+        this.deletedBy = deletedBy;
         this.deleteReason = deleteReason;
     }
 
@@ -69,20 +98,28 @@ public class PlayerReview {
         return id;
     }
 
-    public Long getReviewerUserId() {
-        return reviewerUserId;
+    public UserAccount getReviewer() {
+        return reviewer;
     }
 
-    public Long getReviewedUserId() {
-        return reviewedUserId;
+    public UserAccount getReviewed() {
+        return reviewed;
     }
 
     public PlayerReviewReaction getReaction() {
         return reaction;
     }
 
+    public void setReaction(final PlayerReviewReaction reaction) {
+        this.reaction = reaction;
+    }
+
     public String getComment() {
         return comment;
+    }
+
+    public void setComment(final String comment) {
+        this.comment = comment;
     }
 
     public Instant getCreatedAt() {
@@ -93,20 +130,40 @@ public class PlayerReview {
         return updatedAt;
     }
 
+    public void setUpdatedAt(final Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public boolean isDeleted() {
         return deleted;
+    }
+
+    public void setDeleted(final boolean deleted) {
+        this.deleted = deleted;
     }
 
     public Instant getDeletedAt() {
         return deletedAt;
     }
 
-    public Long getDeletedByUserId() {
-        return deletedByUserId;
+    public void setDeletedAt(final Instant deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    public UserAccount getDeletedBy() {
+        return deletedBy;
+    }
+
+    public void setDeletedBy(final UserAccount deletedBy) {
+        this.deletedBy = deletedBy;
     }
 
     public String getDeleteReason() {
         return deleteReason;
+    }
+
+    public void setDeleteReason(final String deleteReason) {
+        this.deleteReason = deleteReason;
     }
 
     @Override
@@ -115,9 +172,9 @@ public class PlayerReview {
                 + "id="
                 + id
                 + ", reviewerUserId="
-                + reviewerUserId
+                + (reviewer != null ? reviewer.getId() : "null")
                 + ", reviewedUserId="
-                + reviewedUserId
+                + (reviewed != null ? reviewed.getId() : "null")
                 + ", reaction="
                 + reaction
                 + ", createdAt="
@@ -129,7 +186,7 @@ public class PlayerReview {
                 + ", deletedAt="
                 + deletedAt
                 + ", deletedByUserId="
-                + deletedByUserId
+                + (deletedBy != null ? deletedBy.getId() : "null")
                 + ", hasComment="
                 + (comment != null && !comment.isBlank())
                 + ", hasDeleteReason="

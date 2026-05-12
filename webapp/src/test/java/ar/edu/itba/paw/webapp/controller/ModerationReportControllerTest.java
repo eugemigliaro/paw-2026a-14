@@ -102,11 +102,15 @@ class ModerationReportControllerTest {
     @Test
     void postReviewReportRendersWithErrorCode() throws Exception {
         authenticateUser(9L);
+        final UserAccount reviewerAcc = Mockito.mock(UserAccount.class);
+        final UserAccount reviewedAcc = Mockito.mock(UserAccount.class);
+        Mockito.when(reviewerAcc.getId()).thenReturn(7L);
+        Mockito.when(reviewedAcc.getId()).thenReturn(42L);
         final PlayerReview review =
                 new PlayerReview(
                         12L,
-                        7L,
-                        42L,
+                        reviewerAcc,
+                        reviewedAcc,
                         PlayerReviewReaction.LIKE,
                         "Great player",
                         Instant.parse("2026-04-10T10:00:00Z"),

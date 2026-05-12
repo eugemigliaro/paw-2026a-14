@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PersistableEnum;
@@ -26,11 +27,7 @@ import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -212,21 +209,9 @@ public class PublicProfileController {
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
                         user.getId(), selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
-        final Map<Long, User> reviewersById =
-                userService
-                        .findByIds(
-                                reviewResult.getItems().stream()
-                                        .map(PlayerReview::getReviewerUserId)
-                                        .filter(Objects::nonNull)
-                                        .distinct()
-                                        .toList())
-                        .stream()
-                        .collect(
-                                Collectors.toMap(
-                                        User::getId, Function.identity(), (left, right) -> left));
         final List<PlayerReviewViewModel> reviews =
                 reviewResult.getItems().stream()
-                        .map(review -> toReviewViewModel(review, reviewersById, locale))
+                        .map(review -> toReviewViewModel(review, locale))
                         .toList();
         final Long currentUserId =
                 CurrentAuthenticatedUser.get()
@@ -372,10 +357,10 @@ public class PublicProfileController {
     }
 
     private PlayerReviewViewModel toReviewViewModel(
-            final PlayerReview review, final Map<Long, User> reviewersById, final Locale locale) {
-        final User reviewer = reviewersById.get(review.getReviewerUserId());
+            final PlayerReview review, final Locale locale) {
+        final UserAccount reviewer = review.getReviewer();
         final String reviewerUsername =
-                reviewer == null
+                reviewer == null || reviewer.getUsername() == null
                         ? messageSource.getMessage(
                                 "profile.reviews.unknownReviewer", null, "Unknown player", locale)
                         : reviewer.getUsername();

@@ -519,8 +519,7 @@ public class ModerationServiceImpl implements ModerationService {
                     case REVIEW ->
                             playerReviewDao
                                     .findByIdIncludingDeleted(targetId)
-                                    .flatMap(review -> userDao.findById(review.getReviewerUserId()))
-                                    .map(User::getUsername)
+                                    .map(review -> review.getReviewer().getUsername())
                                     .map(
                                             username ->
                                                     messageSource.getMessage(
@@ -600,8 +599,8 @@ public class ModerationServiceImpl implements ModerationService {
             review.ifPresent(
                     found ->
                             softDeleteReview(
-                                    found.getReviewerUserId(),
-                                    found.getReviewedUserId(),
+                                    found.getReviewer().getId(),
+                                    found.getReviewed().getId(),
                                     resolutionDetails,
                                     adminUserId));
             return;
@@ -616,7 +615,9 @@ public class ModerationServiceImpl implements ModerationService {
             final Optional<PlayerReview> review =
                     playerReviewDao.findByIdIncludingDeleted(report.getTargetId());
             review.ifPresent(
-                    found -> restoreReview(found.getReviewerUserId(), found.getReviewedUserId()));
+                    found ->
+                            restoreReview(
+                                    found.getReviewer().getId(), found.getReviewed().getId()));
             return;
         }
         if (report.getTargetType() == ReportTargetType.USER) {

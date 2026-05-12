@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
@@ -239,14 +240,22 @@ public class PlayerReviewServiceImplTest {
             final PlayerReviewReaction reaction,
             final String comment,
             final Instant deletedAt) {
+        final UserAccount reviewer = Mockito.mock(UserAccount.class);
+        final UserAccount reviewed = Mockito.mock(UserAccount.class);
+        Mockito.lenient().when(reviewer.getId()).thenReturn(reviewerUserId);
+        Mockito.lenient().when(reviewed.getId()).thenReturn(reviewedUserId);
+
         return new PlayerReview(
                 id,
-                reviewerUserId,
-                reviewedUserId,
+                reviewer,
+                reviewed,
                 reaction,
                 comment,
                 Instant.parse("2026-04-01T18:00:00Z"),
                 Instant.parse("2026-04-01T18:00:00Z"),
-                deletedAt);
+                deletedAt != null,
+                deletedAt,
+                null,
+                null);
     }
 }

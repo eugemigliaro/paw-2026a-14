@@ -291,17 +291,25 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(ReportStatus.RESOLVED)))
                 .thenReturn(true);
 
+        final UserAccount reviewer = Mockito.mock(UserAccount.class);
+        final UserAccount reviewed = Mockito.mock(UserAccount.class);
+        Mockito.when(reviewer.getId()).thenReturn(7L);
+        Mockito.when(reviewed.getId()).thenReturn(8L);
+
         Mockito.when(playerReviewDao.findByIdIncludingDeleted(123L))
                 .thenReturn(
                         Optional.of(
                                 new PlayerReview(
                                         123L,
-                                        7L,
-                                        8L,
+                                        reviewer,
+                                        reviewed,
                                         PlayerReviewReaction.DISLIKE,
                                         "bad",
                                         FIXED_NOW,
                                         FIXED_NOW,
+                                        false,
+                                        null,
+                                        null,
                                         null)));
 
         Mockito.when(

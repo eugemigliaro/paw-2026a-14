@@ -77,15 +77,22 @@ class PublicProfileControllerTest {
     @Test
     void getProfileDoesNotLinkUnknownReviewers() throws Exception {
         final User user = new User(42L, "target@test.com", "target", "Target", "User", null, null);
+        final UserAccount reviewerAcc = Mockito.mock(UserAccount.class);
+        final UserAccount reviewedAcc = Mockito.mock(UserAccount.class);
+        Mockito.when(reviewerAcc.getId()).thenReturn(99L);
+        Mockito.when(reviewedAcc.getId()).thenReturn(42L);
         final PlayerReview review =
                 new PlayerReview(
                         11L,
-                        99L,
-                        42L,
+                        reviewerAcc,
+                        reviewedAcc,
                         PlayerReviewReaction.LIKE,
                         "Helpful",
                         Instant.parse("2026-04-10T10:00:00Z"),
                         Instant.parse("2026-04-10T10:00:00Z"),
+                        false,
+                        null,
+                        null,
                         null);
         Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
         Mockito.when(playerReviewService.findSummaryForUser(42L))
