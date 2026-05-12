@@ -11,3 +11,7 @@ END;
 UPDATE matches
 SET visibility = 'private', join_policy = 'invite_only'
 WHERE visibility = 'invite_only';
+
+ALTER TABLE matches
+	ADD CONSTRAINT ck_matches_join_policy
+	CHECK (join_policy IN ('direct', 'approval_required', 'invite_only'));

@@ -2,6 +2,8 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -39,11 +41,11 @@ public class UserBanJpaDao implements UserBanDao {
     public Optional<UserBan> findLatestBanForUser(final Long userId) {
         return findFirstBan(
                 "FROM UserBan ub "
-                        + "WHERE CAST(ub.moderationReport.targetType AS string) = :targetType "
+                        + "WHERE ub.moderationReport.targetType = :targetType "
                         + "AND ub.moderationReport.targetId = :userId "
                         + "ORDER BY ub.id DESC",
                 userId,
-                "user",
+                ReportTargetType.USER,
                 null);
     }
 
@@ -52,14 +54,14 @@ public class UserBanJpaDao implements UserBanDao {
     public Optional<UserBan> findActiveBanForUser(final Long userId, final Instant now) {
         return findFirstBan(
                 "FROM UserBan ub "
-                        + "WHERE CAST(ub.moderationReport.targetType AS string) = :targetType "
+                        + "WHERE ub.moderationReport.targetType = :targetType "
                         + "AND ub.moderationReport.targetId = :userId "
                         + "AND ub.bannedUntil > :now "
                         + "AND (ub.moderationReport.appealDecision IS NULL "
-                        + "OR CAST(ub.moderationReport.appealDecision AS string) <> :liftedAppealDecision) "
+                        + "OR ub.moderationReport.appealDecision <> :liftedAppealDecision) "
                         + "ORDER BY ub.id DESC",
                 userId,
-                "user",
+                ReportTargetType.USER,
                 now);
     }
 
@@ -74,13 +76,17 @@ public class UserBanJpaDao implements UserBanDao {
     }
 
     private Optional<UserBan> findFirstBan(
-            final String jpql, final Long userId, final String targetType, final Instant now) {
+            final String jpql,
+            final Long userId,
+            final ReportTargetType targetType,
+            final Instant now) {
         final TypedQuery<UserBan> query =
                 em.createQuery(jpql, UserBan.class)
                         .setParameter("userId", userId)
                         .setParameter("targetType", targetType);
         if (now != null) {
-            query.setParameter("now", now).setParameter("liftedAppealDecision", "lifted");
+            query.setParameter("now", now)
+                    .setParameter("liftedAppealDecision", AppealDecision.LIFTED);
         }
         query.setMaxResults(1);
 

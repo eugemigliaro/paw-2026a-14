@@ -40,6 +40,8 @@ CREATE TABLE matches (
 	status VARCHAR(20) NOT NULL DEFAULT 'draft',
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT ck_matches_visibility CHECK (visibility IN ('public', 'private', 'invite_only')),
+	CONSTRAINT ck_matches_status CHECK (status IN ('draft', 'open', 'completed', 'cancelled')),
 	CHECK (ends_at IS NULL OR ends_at > starts_at)
 );
 
@@ -53,6 +55,17 @@ CREATE TABLE match_participants (
 	user_id BIGINT NOT NULL REFERENCES users(id),
 	status VARCHAR(20) NOT NULL DEFAULT 'joined',
 	joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT ck_match_participants_status CHECK (
+		status IN (
+			'invited',
+			'joined',
+			'waitlisted',
+			'cancelled',
+			'checked_in',
+			'pending_approval',
+			'declined_invite'
+		)
+	),
 	UNIQUE (match_id, user_id)
 );
 
@@ -70,7 +83,9 @@ CREATE TABLE tournaments (
 	starts_at TIMESTAMP,
 	ends_at TIMESTAMP,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT ck_tournaments_format CHECK (format IN ('knockout', 'league', 'groups_then_knockout')),
+	CONSTRAINT ck_tournaments_status CHECK (status IN ('draft', 'open', 'in_progress', 'completed', 'cancelled'))
 );
 
 CREATE INDEX idx_tournaments_host_user_id ON tournaments(host_user_id);
@@ -82,6 +97,7 @@ CREATE TABLE tournament_teams (
 	name VARCHAR(150) NOT NULL,
 	status VARCHAR(20) NOT NULL DEFAULT 'pending',
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT ck_tournament_teams_status CHECK (status IN ('pending', 'approved', 'active', 'eliminated', 'withdrawn')),
 	UNIQUE (tournament_id, name)
 );
 
@@ -93,6 +109,7 @@ CREATE TABLE tournament_team_members (
 	user_id BIGINT NOT NULL REFERENCES users(id),
 	status VARCHAR(20) NOT NULL DEFAULT 'joined',
 	joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT ck_tournament_team_members_status CHECK (status IN ('invited', 'joined', 'removed')),
 	UNIQUE (tournament_team_id, user_id)
 );
 
@@ -111,7 +128,8 @@ CREATE TABLE tournament_matches (
 	winner_team_id BIGINT REFERENCES tournament_teams(id),
 	next_match_id BIGINT REFERENCES tournament_matches(id),
 	winner_to_slot VARCHAR(10),
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT ck_tournament_matches_winner_to_slot CHECK (winner_to_slot IN ('home', 'away'))
 );
 
 CREATE INDEX idx_tournament_matches_tournament_id ON tournament_matches(tournament_id);

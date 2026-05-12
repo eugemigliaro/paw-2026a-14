@@ -18,6 +18,19 @@ CREATE TABLE moderation_reports (
 	appeal_resolved_at TIMESTAMP,
 	created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 	updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+	CONSTRAINT ck_moderation_reports_target_type CHECK (target_type IN ('match', 'review', 'user')),
+	CONSTRAINT ck_moderation_reports_reason CHECK (
+		reason IN ('inappropriate_content', 'aggressive_language', 'spam', 'harassment', 'cheating', 'other')
+	),
+	CONSTRAINT ck_moderation_reports_status CHECK (
+		status IN ('pending', 'under_review', 'resolved', 'appealed', 'finalized')
+	),
+	CONSTRAINT ck_moderation_reports_resolution CHECK (
+		resolution IS NULL OR resolution IN ('dismissed', 'content_deleted', 'user_banned')
+	),
+	CONSTRAINT ck_moderation_reports_appeal_decision CHECK (
+		appeal_decision IS NULL OR appeal_decision IN ('upheld', 'lifted')
+	),
 	CONSTRAINT uq_moderation_reports_reporter_target UNIQUE (reporter_user_id, target_type, target_id)
 );
 

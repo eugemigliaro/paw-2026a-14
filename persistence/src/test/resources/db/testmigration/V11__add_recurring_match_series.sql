@@ -9,6 +9,7 @@ CREATE TABLE match_series (
 	occurrence_count INTEGER,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT ck_match_series_frequency CHECK (frequency IN ('daily', 'weekly', 'monthly')),
 	CHECK (ends_at IS NULL OR ends_at > starts_at),
 	CHECK (
 		(until_date IS NOT NULL AND occurrence_count IS NULL)
