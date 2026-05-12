@@ -80,8 +80,6 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
             entity.setUserId(userId);
             entity.setConsumedAt(consumedAt);
             entity.setUpdatedAt(Instant.now(clock));
-            em.merge(entity);
-            em.flush();
         }
     }
 

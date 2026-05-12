@@ -155,7 +155,6 @@ public class UserJpaDao implements UserDao {
             user.setPhone(phone);
             user.setProfileImageId(profileImageId);
             user.setUpdatedAt(Instant.now());
-            em.merge(user);
         }
     }
 
@@ -166,7 +165,6 @@ public class UserJpaDao implements UserDao {
         if (user != null) {
             user.setProfileImageId(profileImageId);
             user.setUpdatedAt(Instant.now());
-            em.merge(user);
         }
     }
 
@@ -177,7 +175,6 @@ public class UserJpaDao implements UserDao {
         if (user != null) {
             user.setPasswordHash(passwordHash);
             user.setUpdatedAt(Instant.now());
-            em.merge(user);
         }
     }
 
@@ -188,7 +185,6 @@ public class UserJpaDao implements UserDao {
         if (user != null) {
             user.setEmailVerifiedAt(emailVerifiedAt);
             user.setUpdatedAt(Instant.now());
-            em.merge(user);
         }
     }
 
@@ -199,7 +195,6 @@ public class UserJpaDao implements UserDao {
         if (user != null) {
             user.setPreferredLanguage(UserLanguages.normalizeLanguage(preferredLanguage));
             user.setUpdatedAt(Instant.now());
-            em.merge(user);
         }
     }
 

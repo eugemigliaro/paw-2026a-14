@@ -3,7 +3,7 @@ CREATE TABLE player_reviews (
 	reviewer_user_id BIGINT NOT NULL REFERENCES users(id),
 	reviewed_user_id BIGINT NOT NULL REFERENCES users(id),
 	reaction VARCHAR(20) NOT NULL,
-	comment CLOB,
+	comment TEXT,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	deleted_at TIMESTAMP,

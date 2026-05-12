@@ -31,7 +31,7 @@ CREATE TABLE matches (
 	host_user_id BIGINT NOT NULL REFERENCES users(id),
 	address VARCHAR(255) NOT NULL,
 	title VARCHAR(150) NOT NULL,
-	description CLOB,
+	description TEXT,
 	starts_at TIMESTAMP NOT NULL,
 	ends_at TIMESTAMP,
 	max_players INTEGER NOT NULL CHECK (max_players > 0),
@@ -75,7 +75,7 @@ CREATE INDEX idx_match_participants_user_id ON match_participants(user_id);
 CREATE TABLE tournaments (
 	id BIGINT PRIMARY KEY DEFAULT NEXT VALUE FOR tournaments_id_seq,
 	name VARCHAR(150) NOT NULL,
-	description CLOB,
+	description TEXT,
 	address VARCHAR(255) NOT NULL,
 	host_user_id BIGINT NOT NULL REFERENCES users(id),
 	format VARCHAR(30) NOT NULL,

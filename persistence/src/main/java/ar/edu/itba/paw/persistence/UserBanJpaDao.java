@@ -71,7 +71,6 @@ public class UserBanJpaDao implements UserBanDao {
         final UserBan ban = em.find(UserBan.class, id);
         if (ban != null) {
             ban.setBannedUntil(Instant.now());
-            em.merge(ban);
         }
     }
 
