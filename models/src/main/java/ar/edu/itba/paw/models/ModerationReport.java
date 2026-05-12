@@ -66,7 +66,7 @@ public class ModerationReport {
     private String appealReason;
 
     @Column(name = "appeal_count", nullable = false, columnDefinition = "smallint")
-    private int appealCount;
+    private short appealCount;
 
     @Column(name = "appealed_at")
     private Instant appealedAt;
@@ -103,7 +103,7 @@ public class ModerationReport {
             final Long reviewedByUserId,
             final Instant reviewedAt,
             final String appealReason,
-            final int appealCount,
+            final short appealCount,
             final Instant appealedAt,
             final AppealDecision appealDecision,
             final Long appealResolvedByUserId,
@@ -179,7 +179,7 @@ public class ModerationReport {
         return appealReason;
     }
 
-    public int getAppealCount() {
+    public short getAppealCount() {
         return appealCount;
     }
 

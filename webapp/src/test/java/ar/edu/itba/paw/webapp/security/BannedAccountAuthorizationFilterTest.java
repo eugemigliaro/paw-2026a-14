@@ -81,7 +81,7 @@ class BannedAccountAuthorizationFilterTest {
                 null,
                 null,
                 null,
-                0,
+                (short) 0,
                 null,
                 null,
                 null,

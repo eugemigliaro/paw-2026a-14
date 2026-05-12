@@ -47,7 +47,7 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                                     : rs.getLong("reviewed_by_user_id"),
                             toInstant(rs.getTimestamp("reviewed_at")),
                             rs.getString("appeal_reason"),
-                            rs.getInt("appeal_count"),
+                            rs.getShort("appeal_count"),
                             toInstant(rs.getTimestamp("appealed_at")),
                             AppealDecision.fromDbValue(rs.getString("appeal_decision"))
                                     .orElse(null),
@@ -114,7 +114,7 @@ public class ModerationReportJdbcDao implements ModerationReportDao {
                 null,
                 null,
                 null,
-                0,
+                (short) 0,
                 null,
                 null,
                 null,
