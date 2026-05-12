@@ -1,15 +1,15 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.Image;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import javax.sql.DataSource;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -19,17 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfiguration.class)
-public class ImageJdbcDaoTest {
+public class ImageJpaDaoTest {
 
     @Autowired private ImageDao imageDao;
-    @Autowired private DataSource dataSource;
 
-    private JdbcTemplate jdbcTemplate;
-
-    @BeforeEach
-    public void setUp() {
-        jdbcTemplate = new JdbcTemplate(dataSource);
-    }
+    @PersistenceContext private EntityManager entityManager;
 
     @Test
     public void shouldCreateImage_WhenValidDataIsProvided() throws Exception {
@@ -42,14 +36,12 @@ public class ImageJdbcDaoTest {
         Assertions.assertNotNull(imageId);
         Assertions.assertNotEquals(0L, imageId);
 
-        final Long countInDb =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM images WHERE id = ? AND content_type = ? AND content_length = ?",
-                        Long.class,
-                        imageId,
-                        contentType,
-                        (long) content.length);
-        Assertions.assertEquals(1L, countInDb, "Image should be persisted in database");
+        final Image persistedImage = entityManager.find(Image.class, imageId);
+        Assertions.assertNotNull(persistedImage, "Image should be persisted in database");
+        Assertions.assertEquals(contentType, persistedImage.getContentType());
+        Assertions.assertEquals((long) content.length, persistedImage.getContentLength());
+        Assertions.assertArrayEquals(content, persistedImage.getContent());
+        Assertions.assertNotNull(persistedImage.getCreatedAt());
     }
 
     @Test
@@ -64,15 +56,11 @@ public class ImageJdbcDaoTest {
                 imageDao.create(
                         "image/jpeg", jpegContent.length, new ByteArrayInputStream(jpegContent));
 
-        final String pngType =
-                jdbcTemplate.queryForObject(
-                        "SELECT content_type FROM images WHERE id = ?", String.class, pngImageId);
-        final String jpegType =
-                jdbcTemplate.queryForObject(
-                        "SELECT content_type FROM images WHERE id = ?", String.class, jpegImageId);
+        final Image pngImage = entityManager.find(Image.class, pngImageId);
+        final Image jpegImage = entityManager.find(Image.class, jpegImageId);
 
-        Assertions.assertEquals("image/png", pngType);
-        Assertions.assertEquals("image/jpeg", jpegType);
+        Assertions.assertEquals("image/png", pngImage.getContentType());
+        Assertions.assertEquals("image/jpeg", jpegImage.getContentType());
     }
 
     @Test
@@ -85,10 +73,13 @@ public class ImageJdbcDaoTest {
         final var metadata = imageDao.findMetadataById(imageId);
 
         Assertions.assertTrue(metadata.isPresent(), "Metadata should be found");
-
         Assertions.assertEquals(imageId, metadata.get().getId());
         Assertions.assertEquals(contentType, metadata.get().getContentType());
         Assertions.assertEquals(content.length, metadata.get().getContentLength());
+
+        final Image persistedImage = entityManager.find(Image.class, imageId);
+        Assertions.assertNotNull(persistedImage);
+        Assertions.assertEquals(contentType, persistedImage.getContentType());
     }
 
     @Test
@@ -115,9 +106,15 @@ public class ImageJdbcDaoTest {
 
         Assertions.assertEquals(imageId1, metadata1.get().getId());
         Assertions.assertEquals(content1.length, metadata1.get().getContentLength());
-
         Assertions.assertEquals(imageId2, metadata2.get().getId());
         Assertions.assertEquals(content2.length, metadata2.get().getContentLength());
+
+        final Image image1 = entityManager.find(Image.class, imageId1);
+        final Image image2 = entityManager.find(Image.class, imageId2);
+        Assertions.assertNotNull(image1);
+        Assertions.assertNotNull(image2);
+        Assertions.assertEquals(content1.length, image1.getContentLength());
+        Assertions.assertEquals(content2.length, image2.getContentLength());
     }
 
     @Test
@@ -133,13 +130,11 @@ public class ImageJdbcDaoTest {
         final boolean result = imageDao.streamContentById(imageId, outputStream);
 
         Assertions.assertTrue(result, "streamContentById should return true for existing image");
-
         Assertions.assertArrayEquals(expectedContent, outputStream.toByteArray());
 
-        final Long countInDb =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM images WHERE id = ?", Long.class, imageId);
-        Assertions.assertEquals(1L, countInDb, "Image should still exist after streaming");
+        final Image persistedImage = entityManager.find(Image.class, imageId);
+        Assertions.assertNotNull(persistedImage);
+        Assertions.assertArrayEquals(expectedContent, persistedImage.getContent());
     }
 
     @Test
@@ -151,7 +146,6 @@ public class ImageJdbcDaoTest {
 
         Assertions.assertFalse(
                 result, "streamContentById should return false for non-existent image");
-
         Assertions.assertEquals(0, outputStream.size(), "Output stream should be empty");
     }
 
@@ -170,6 +164,10 @@ public class ImageJdbcDaoTest {
 
         Assertions.assertTrue(result);
         Assertions.assertArrayEquals(largeContent, outputStream.toByteArray());
+
+        final Image persistedImage = entityManager.find(Image.class, imageId);
+        Assertions.assertNotNull(persistedImage);
+        Assertions.assertEquals(largeContent.length, persistedImage.getContentLength());
     }
 
     @Test
@@ -187,6 +185,10 @@ public class ImageJdbcDaoTest {
         Assertions.assertTrue(result2);
         Assertions.assertArrayEquals(content, output1.toByteArray());
         Assertions.assertArrayEquals(content, output2.toByteArray());
+
+        final Image persistedImage = entityManager.find(Image.class, imageId);
+        Assertions.assertNotNull(persistedImage);
+        Assertions.assertArrayEquals(content, persistedImage.getContent());
     }
 
     @Test
@@ -207,5 +209,12 @@ public class ImageJdbcDaoTest {
         Assertions.assertTrue(result2);
         Assertions.assertArrayEquals(content1, output1.toByteArray());
         Assertions.assertArrayEquals(content2, output2.toByteArray());
+
+        final Image image1 = entityManager.find(Image.class, imageId1);
+        final Image image2 = entityManager.find(Image.class, imageId2);
+        Assertions.assertNotNull(image1);
+        Assertions.assertNotNull(image2);
+        Assertions.assertEquals("image/png", image1.getContentType());
+        Assertions.assertEquals("image/jpeg", image2.getContentType());
     }
 }
