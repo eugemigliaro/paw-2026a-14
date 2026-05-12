@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models;
 
+import ar.edu.itba.paw.models.converters.UserRoleConverter;
 import java.time.Instant;
 import javax.persistence.Column;
 import javax.persistence.Convert;

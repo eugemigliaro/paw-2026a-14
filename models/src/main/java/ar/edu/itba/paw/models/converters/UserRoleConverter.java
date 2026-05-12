@@ -1,5 +1,6 @@
-package ar.edu.itba.paw.models;
+package ar.edu.itba.paw.models.converters;
 
+import ar.edu.itba.paw.models.UserRole;
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
 
