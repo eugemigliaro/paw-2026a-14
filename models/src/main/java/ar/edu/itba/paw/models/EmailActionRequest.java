@@ -1,22 +1,65 @@
 package ar.edu.itba.paw.models;
 
+import ar.edu.itba.paw.models.converters.EmailActionStatusConverter;
+import ar.edu.itba.paw.models.converters.EmailActionTypeConverter;
 import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Instant;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
+@Entity
+@Table(name = "email_action_requests")
 public class EmailActionRequest {
 
-    private final Long id;
-    private final EmailActionType actionType;
-    private final String email;
-    private final Long userId;
-    private final String tokenHash;
-    private final String payloadJson;
-    private final EmailActionStatus status;
-    private final Instant expiresAt;
-    private final Instant consumedAt;
-    private final Instant createdAt;
-    private final Instant updatedAt;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "email_action_requests_id_seq")
+    @SequenceGenerator(
+            sequenceName = "email_action_requests_id_seq",
+            name = "email_action_requests_id_seq",
+            allocationSize = 1)
+    @Column(name = "id")
+    private Long id;
+
+    @Column(name = "action_type", length = 50, nullable = false)
+    @Convert(converter = EmailActionTypeConverter.class)
+    private EmailActionType actionType;
+
+    @Column(name = "email", length = 255, nullable = false)
+    private String email;
+
+    @Column(name = "user_id")
+    private Long userId;
+
+    @Column(name = "token_hash", length = 128, nullable = false, unique = true)
+    private String tokenHash;
+
+    @Column(name = "payload_json", columnDefinition = "text", nullable = false)
+    private String payloadJson;
+
+    @Column(name = "status", length = 20, nullable = false)
+    @Convert(converter = EmailActionStatusConverter.class)
+    private EmailActionStatus status;
+
+    @Column(name = "expires_at", nullable = false)
+    private Instant expiresAt;
+
+    @Column(name = "consumed_at")
+    private Instant consumedAt;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    EmailActionRequest() {}
 
     public EmailActionRequest(
             final Long id,
@@ -85,6 +128,22 @@ public class EmailActionRequest {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUserId(final Long userId) {
+        this.userId = userId;
+    }
+
+    public void setStatus(final EmailActionStatus status) {
+        this.status = status;
+    }
+
+    public void setConsumedAt(final Instant consumedAt) {
+        this.consumedAt = consumedAt;
+    }
+
+    public void setUpdatedAt(final Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public boolean isExpired(final Instant now) {
