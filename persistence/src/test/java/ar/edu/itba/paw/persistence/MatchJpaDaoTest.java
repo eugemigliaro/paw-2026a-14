@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -1083,10 +1084,10 @@ public class MatchJpaDaoTest {
                 .executeUpdate();
         em.flush();
 
-        final java.time.Instant beforeCancel =
+        final Instant beforeCancel =
                 em.createQuery(
                                 "SELECT m.updatedAt FROM Match m WHERE m.id = :matchId",
-                                java.time.Instant.class)
+                                Instant.class)
                         .setParameter("matchId", created.getId())
                         .getSingleResult();
 
@@ -1094,10 +1095,10 @@ public class MatchJpaDaoTest {
 
         em.flush();
 
-        final java.time.Instant afterUpdate =
+        final Instant afterUpdate =
                 em.createQuery(
                                 "SELECT m.updatedAt FROM Match m WHERE m.id = :matchId",
-                                java.time.Instant.class)
+                                Instant.class)
                         .setParameter("matchId", created.getId())
                         .getSingleResult();
 
@@ -1150,7 +1151,6 @@ public class MatchJpaDaoTest {
         Assertions.assertNull(found.getDeletedByUserId());
         Assertions.assertNull(found.getDeleteReason());
         Assertions.assertNull(found.getDeletedAt());
-        // status stays cancelled after restore (same as JDBC behaviour)
         Assertions.assertEquals(EventStatus.CANCELLED, found.getStatus());
     }
 
