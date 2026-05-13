@@ -10,13 +10,13 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import javax.sql.DataSource;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -26,31 +26,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfiguration.class)
-public class ModerationReportJdbcDaoTest {
+public class ModerationReportJpaDaoTest {
 
     private static final Instant NOW = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
     @Autowired private ModerationReportDao moderationReportDao;
 
-    @Autowired private DataSource dataSource;
-
-    private JdbcTemplate jdbcTemplate;
+    @PersistenceContext private EntityManager em;
 
     @BeforeEach
     public void setUp() {
-        jdbcTemplate = new JdbcTemplate(dataSource);
-        jdbcTemplate.update(
-                "INSERT INTO users "
-                        + "(id, username, email, name, last_name, phone, created_at, updated_at)"
-                        + " VALUES "
-                        + "(1, 'reporter', 'rep@test.com', 'Reporter', 'User', null,"
-                        + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
-                        + "(2, 'admin', 'admin@test.com', 'Admin', 'User', null,"
-                        + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
-                        + "(3, 'target', 'target@test.com', 'Target', 'User', null,"
-                        + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
-                        + "(4, 'reporter2', 'rep2@test.com', 'Reporter2', 'User', null,"
-                        + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+        em.createNativeQuery(
+                        "INSERT INTO users "
+                                + "(id, username, email, name, last_name, phone, created_at, updated_at)"
+                                + " VALUES "
+                                + "(1, 'reporter', 'rep@test.com', 'Reporter', 'User', null,"
+                                + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
+                                + "(2, 'admin', 'admin@test.com', 'Admin', 'User', null,"
+                                + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
+                                + "(3, 'target', 'target@test.com', 'Target', 'User', null,"
+                                + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
+                                + "(4, 'reporter2', 'rep2@test.com', 'Reporter2', 'User', null,"
+                                + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                .executeUpdate();
     }
 
     @Test
@@ -66,6 +64,7 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertEquals(ReportReason.SPAM, report.getReason());
         Assertions.assertEquals("Too many messages", report.getDetails());
         Assertions.assertEquals(ReportStatus.PENDING, report.getStatus());
+        assertPersistedStatus(report.getId(), ReportStatus.PENDING);
     }
 
     @Test
@@ -79,6 +78,7 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertTrue(found.isPresent());
         Assertions.assertEquals(report.getId(), found.get().getId());
         Assertions.assertEquals(ReportTargetType.USER, found.get().getTargetType());
+        assertPersistedStatus(report.getId(), ReportStatus.PENDING);
     }
 
     @Test
@@ -92,16 +92,16 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertEquals(2, reports.size());
         Assertions.assertEquals(1L, reports.get(0).getReporterUserId());
         Assertions.assertEquals(1L, reports.get(1).getReporterUserId());
+        assertPersistedStatus(reports.get(0).getId(), ReportStatus.PENDING);
+        assertPersistedStatus(reports.get(1).getId(), ReportStatus.PENDING);
     }
 
     @Test
     public void testFindActiveReportsAndCount() {
-        // Pending
         moderationReportDao.createReport(
                 1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Pending");
 
-        // Resolve one report so it is no longer active
-        ModerationReport toResolve =
+        final ModerationReport toResolve =
                 moderationReportDao.createReport(
                         1L, ReportTargetType.USER, 2L, ReportReason.SPAM, "Resolved");
         moderationReportDao.markUnderReview(toResolve.getId(), 2L, NOW);
@@ -120,6 +120,7 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertEquals(1, activeReports.size());
         Assertions.assertEquals("Pending", activeReports.get(0).getDetails());
         Assertions.assertEquals(1, activeCount);
+        assertPersistedStatus(activeReports.get(0).getId(), ReportStatus.PENDING);
     }
 
     @Test
@@ -131,10 +132,12 @@ public class ModerationReportJdbcDaoTest {
         final boolean success = moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
 
         Assertions.assertTrue(success);
-        ModerationReport updated = moderationReportDao.findById(report.getId()).get();
+        flushAndClear();
+        final ModerationReport updated = moderationReportDao.findById(report.getId()).get();
         Assertions.assertEquals(ReportStatus.UNDER_REVIEW, updated.getStatus());
         Assertions.assertEquals(2L, updated.getReviewedByUserId());
         Assertions.assertNotNull(updated.getReviewedAt());
+        assertPersistedStatus(report.getId(), ReportStatus.UNDER_REVIEW);
     }
 
     @Test
@@ -154,10 +157,12 @@ public class ModerationReportJdbcDaoTest {
                         ReportStatus.RESOLVED);
 
         Assertions.assertTrue(success);
-        ModerationReport resolved = moderationReportDao.findById(report.getId()).get();
+        flushAndClear();
+        final ModerationReport resolved = moderationReportDao.findById(report.getId()).get();
         Assertions.assertEquals(ReportStatus.RESOLVED, resolved.getStatus());
         Assertions.assertEquals(ReportResolution.DISMISSED, resolved.getResolution());
         Assertions.assertEquals("No issue found", resolved.getResolutionDetails());
+        assertPersistedStatus(report.getId(), ReportStatus.RESOLVED);
     }
 
     @Test
@@ -177,10 +182,12 @@ public class ModerationReportJdbcDaoTest {
         final boolean success = moderationReportDao.appealReport(report.getId(), "I disagree", NOW);
 
         Assertions.assertTrue(success);
-        ModerationReport appealed = moderationReportDao.findById(report.getId()).get();
+        flushAndClear();
+        final ModerationReport appealed = moderationReportDao.findById(report.getId()).get();
         Assertions.assertEquals(ReportStatus.APPEALED, appealed.getStatus());
         Assertions.assertEquals("I disagree", appealed.getAppealReason());
         Assertions.assertEquals(1, appealed.getAppealCount());
+        assertPersistedStatus(report.getId(), ReportStatus.APPEALED);
     }
 
     @Test
@@ -202,11 +209,13 @@ public class ModerationReportJdbcDaoTest {
                 moderationReportDao.finalizeAppeal(report.getId(), 2L, AppealDecision.LIFTED, NOW);
 
         Assertions.assertTrue(success);
-        ModerationReport finalized = moderationReportDao.findById(report.getId()).get();
+        flushAndClear();
+        final ModerationReport finalized = moderationReportDao.findById(report.getId()).get();
         Assertions.assertEquals(ReportStatus.FINALIZED, finalized.getStatus());
         Assertions.assertEquals(AppealDecision.LIFTED, finalized.getAppealDecision());
         Assertions.assertEquals(2L, finalized.getAppealResolvedByUserId());
         Assertions.assertNotNull(finalized.getAppealResolvedAt());
+        assertPersistedStatus(report.getId(), ReportStatus.FINALIZED);
     }
 
     @Test
@@ -225,6 +234,7 @@ public class ModerationReportJdbcDaoTest {
 
         final boolean success = moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
         Assertions.assertFalse(success);
+        assertPersistedStatus(report.getId(), ReportStatus.RESOLVED);
     }
 
     @Test
@@ -250,6 +260,7 @@ public class ModerationReportJdbcDaoTest {
                         NOW,
                         ReportStatus.RESOLVED);
         Assertions.assertFalse(success);
+        assertPersistedStatus(report.getId(), ReportStatus.RESOLVED);
     }
 
     @Test
@@ -260,6 +271,7 @@ public class ModerationReportJdbcDaoTest {
 
         final boolean success1 = moderationReportDao.appealReport(report.getId(), "Appeal", NOW);
         Assertions.assertFalse(success1);
+        assertPersistedStatus(report.getId(), ReportStatus.PENDING);
 
         moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
         moderationReportDao.resolveReport(
@@ -272,10 +284,12 @@ public class ModerationReportJdbcDaoTest {
 
         final boolean success2 = moderationReportDao.appealReport(report.getId(), "Appeal", NOW);
         Assertions.assertTrue(success2);
+        assertPersistedStatus(report.getId(), ReportStatus.APPEALED);
 
         final boolean success3 =
                 moderationReportDao.appealReport(report.getId(), "Appeal again", NOW);
         Assertions.assertFalse(success3);
+        assertPersistedStatus(report.getId(), ReportStatus.APPEALED);
     }
 
     @Test
@@ -287,6 +301,7 @@ public class ModerationReportJdbcDaoTest {
         final boolean success =
                 moderationReportDao.finalizeAppeal(report.getId(), 2L, AppealDecision.UPHELD, NOW);
         Assertions.assertFalse(success);
+        assertPersistedStatus(report.getId(), ReportStatus.PENDING);
     }
 
     @Test
@@ -329,6 +344,8 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertEquals(targetUserId, latest.get().getTargetId());
         Assertions.assertEquals(ReportStatus.RESOLVED, latest.get().getStatus());
         Assertions.assertEquals(ReportResolution.USER_BANNED, latest.get().getResolution());
+        assertPersistedStatus(report1.getId(), ReportStatus.RESOLVED);
+        assertPersistedStatus(report2.getId(), ReportStatus.RESOLVED);
     }
 
     @Test
@@ -375,6 +392,8 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(banReport.getId(), result.get().getId());
         Assertions.assertEquals(ReportResolution.USER_BANNED, result.get().getResolution());
+        assertPersistedStatus(banReport.getId(), ReportStatus.RESOLVED);
+        assertPersistedStatus(dismissedReport.getId(), ReportStatus.RESOLVED);
     }
 
     @Test
@@ -402,6 +421,7 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(resolvedBan.getId(), result.get().getId());
         Assertions.assertEquals(ReportStatus.RESOLVED, result.get().getStatus());
+        assertPersistedStatus(resolvedBan.getId(), ReportStatus.RESOLVED);
     }
 
     @Test
@@ -445,5 +465,22 @@ public class ModerationReportJdbcDaoTest {
         Assertions.assertEquals(ban2.getId(), result2.get().getId());
 
         Assertions.assertNotEquals(result1.get().getId(), result2.get().getId());
+        assertPersistedStatus(ban1.getId(), ReportStatus.RESOLVED);
+        assertPersistedStatus(ban2.getId(), ReportStatus.RESOLVED);
+    }
+
+    private void assertPersistedStatus(final Long reportId, final ReportStatus expectedStatus) {
+        flushAndClear();
+        final String status =
+                (String)
+                        em.createNativeQuery("SELECT status FROM moderation_reports WHERE id = :id")
+                                .setParameter("id", reportId)
+                                .getSingleResult();
+        Assertions.assertEquals(expectedStatus.getDbValue(), status);
+    }
+
+    private void flushAndClear() {
+        em.flush();
+        em.clear();
     }
 }

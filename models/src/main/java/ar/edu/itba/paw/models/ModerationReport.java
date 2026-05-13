@@ -34,7 +34,7 @@ public class ModerationReport {
     private Long id;
 
     @Column(name = "reporter_user_id", nullable = false)
-    private Long reporterUserId; // TODO: Add relation with users
+    private Long reporterUserId;
 
     @Column(name = "target_type", nullable = false)
     @Convert(converter = ReportTargetTypeConverter.class)
@@ -62,7 +62,7 @@ public class ModerationReport {
     private String resolutionDetails;
 
     @Column(name = "reviewed_by_user_id")
-    private Long reviewedByUserId; // TODO: Add relation with users
+    private Long reviewedByUserId;
 
     @Column(name = "reviewed_at")
     private Instant reviewedAt;
@@ -210,6 +210,54 @@ public class ModerationReport {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setStatus(final ReportStatus status) {
+        this.status = status;
+    }
+
+    public void setReviewedByUserId(final Long reviewedByUserId) {
+        this.reviewedByUserId = reviewedByUserId;
+    }
+
+    public void setReviewedAt(final Instant reviewedAt) {
+        this.reviewedAt = reviewedAt;
+    }
+
+    public void setResolution(final ReportResolution resolution) {
+        this.resolution = resolution;
+    }
+
+    public void setResolutionDetails(final String resolutionDetails) {
+        this.resolutionDetails = resolutionDetails;
+    }
+
+    public void setAppealReason(final String appealReason) {
+        this.appealReason = appealReason;
+    }
+
+    public void setAppealCount(final short appealCount) {
+        this.appealCount = appealCount;
+    }
+
+    public void setAppealedAt(final Instant appealedAt) {
+        this.appealedAt = appealedAt;
+    }
+
+    public void setAppealDecision(final AppealDecision appealDecision) {
+        this.appealDecision = appealDecision;
+    }
+
+    public void setAppealResolvedByUserId(final Long appealResolvedByUserId) {
+        this.appealResolvedByUserId = appealResolvedByUserId;
+    }
+
+    public void setAppealResolvedAt(final Instant appealResolvedAt) {
+        this.appealResolvedAt = appealResolvedAt;
+    }
+
+    public void setUpdatedAt(final Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     @Override
