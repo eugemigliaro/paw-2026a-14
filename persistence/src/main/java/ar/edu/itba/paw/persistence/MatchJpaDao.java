@@ -26,7 +26,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class MatchJpaDao implements MatchDao {
@@ -42,7 +41,6 @@ public class MatchJpaDao implements MatchDao {
     @PersistenceContext private EntityManager em;
 
     @Override
-    @Transactional
     public Match createMatch(
             final Long hostUserId,
             final String address,
@@ -96,7 +94,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional
     public Long createMatchSeries(
             final Long hostUserId,
             final String frequency,
@@ -125,7 +122,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional
     public boolean updateMatch(
             final Long matchId,
             final Long hostUserId,
@@ -168,7 +164,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional
     public boolean cancelMatch(final Long matchId, final Long hostUserId) {
         final Match match = em.find(Match.class, matchId);
 
@@ -182,7 +177,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional
     public boolean softDeleteMatch(
             final Long matchId, final Long deletedByUserId, final String deleteReason) {
         final Match match = em.find(Match.class, matchId);
@@ -203,7 +197,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional
     public boolean restoreMatch(final Long matchId) {
         final Match match = em.find(Match.class, matchId);
 
@@ -223,13 +216,11 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Match> findById(final Long matchId) {
         return findProjected("m.id = :matchId", Map.of("matchId", matchId)).stream().findFirst();
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Match> findPublicMatchById(final Long matchId) {
         return findProjected(
                         "m.id = :matchId"
@@ -248,7 +239,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Match> findSeriesOccurrences(final Long seriesId) {
         final String where = "m.series.id = :seriesId";
         final Map<String, Object> params = Map.of("seriesId", seriesId);
@@ -266,7 +256,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Match> findPublicMatches(
             final String query,
             final List<Sport> sports,
@@ -302,7 +291,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public int countPublicMatches(
             final String query,
             final List<Sport> sports,
@@ -333,7 +321,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Match> findHostedMatches(
             final Long hostUserId,
             final Boolean upcoming,
@@ -370,7 +357,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public int countHostedMatches(
             final Long hostUserId,
             final Boolean upcoming,
@@ -404,7 +390,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Match> findJoinedMatches(
             final Long userId,
             final Boolean upcoming,
@@ -438,7 +423,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public int countJoinedMatches(
             final Long userId,
             final Boolean upcoming,

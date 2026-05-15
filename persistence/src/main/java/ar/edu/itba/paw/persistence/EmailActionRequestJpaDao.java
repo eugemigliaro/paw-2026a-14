@@ -12,7 +12,6 @@ import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class EmailActionRequestJpaDao implements EmailActionRequestDao {
@@ -26,7 +25,6 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
     }
 
     @Override
-    @Transactional
     public EmailActionRequest create(
             final EmailActionType actionType,
             final String email,
@@ -56,19 +54,16 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<EmailActionRequest> findByTokenHash(final String tokenHash) {
         return findEntityByTokenHash(tokenHash, null);
     }
 
     @Override
-    @Transactional
     public Optional<EmailActionRequest> findByTokenHashForUpdate(final String tokenHash) {
         return findEntityByTokenHash(tokenHash, LockModeType.PESSIMISTIC_WRITE);
     }
 
     @Override
-    @Transactional
     public void updateStatus(
             final Long id,
             final EmailActionStatus status,
@@ -84,7 +79,6 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
     }
 
     @Override
-    @Transactional
     public void expirePendingByEmailAndActionType(
             final EmailActionType actionType, final String email, final Instant consumedAt) {
         final List<EmailActionRequest> pendingRequests =

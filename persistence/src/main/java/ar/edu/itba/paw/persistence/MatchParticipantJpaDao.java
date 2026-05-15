@@ -22,7 +22,6 @@ import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class MatchParticipantJpaDao implements MatchParticipantDao {
@@ -39,7 +38,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                     ParticipantStatus.INVITED);
 
     @Override
-    @Transactional(readOnly = true)
     public boolean hasActiveReservation(final Long matchId, final Long userId) {
         final TypedQuery<Long> query =
                 em.createQuery(
@@ -54,7 +52,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Long> findActiveFutureReservationMatchIdsForSeries(
             final Long seriesId, final Long userId, final Instant startsAfter) {
         final TypedQuery<Long> query =
@@ -75,7 +72,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Long> findPendingFutureRequestMatchIdsForSeries(
             final Long seriesId, final Long userId, final Instant startsAfter) {
         final TypedQuery<Long> query =
@@ -96,7 +92,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean createReservationIfSpace(final Long matchId, final Long userId) {
         final Match match = em.find(Match.class, matchId, LockModeType.PESSIMISTIC_WRITE);
         if (match == null) {
@@ -123,7 +118,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public int createSeriesReservationsIfSpace(
             final Long seriesId, final Long userId, final Instant startsAfter) {
         final TypedQuery<Match> query =
@@ -169,7 +163,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public int cancelFutureSeriesReservations(
             final Long seriesId, final Long userId, final Instant startsAfter) {
         return em.createQuery(
@@ -188,7 +181,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<User> findConfirmedParticipants(final Long matchId) {
         final TypedQuery<User> query =
                 em.createQuery(
@@ -205,7 +197,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean hasPendingRequest(final Long matchId, final Long userId) {
         final TypedQuery<Long> query =
                 em.createQuery(
@@ -220,7 +211,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean createJoinRequest(final Long matchId, final Long userId) {
         final Match match = em.find(Match.class, matchId);
         if (match == null) {
@@ -231,7 +221,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean createSeriesJoinRequestIfSpace(final Long matchId, final Long userId) {
         final Match match = em.find(Match.class, matchId, LockModeType.PESSIMISTIC_WRITE);
         if (match == null
@@ -252,7 +241,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<User> findPendingRequests(final Long matchId) {
         final TypedQuery<User> query =
                 em.createQuery(
@@ -269,7 +257,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public int countPendingRequests(final Long matchId) {
         return em.createQuery(
                         "SELECT COUNT(mp) FROM MatchParticipant mp"
@@ -282,7 +269,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<PendingJoinRequest> findPendingRequestsForHost(final Long hostUserId) {
         final List<PendingJoinRequestProjection> projections =
                 em.createQuery(
@@ -324,7 +310,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean approveRequest(final Long matchId, final Long userId) {
         final MatchParticipant mp = findParticipantInternal(matchId, userId);
         if (mp != null && mp.getStatus() == ParticipantStatus.PENDING_APPROVAL) {
@@ -336,7 +321,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public int approveAllPendingRequests(final Long matchId) {
         final int updated =
                 em.createQuery(
@@ -355,7 +339,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public int approveSeriesJoinRequest(
             final Long seriesId, final Long userId, final Instant startsAfter) {
         final TypedQuery<Match> query =
@@ -417,7 +400,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean isSeriesJoinRequest(final Long matchId, final Long userId) {
         return em.createQuery(
                                 "SELECT COUNT(mp) FROM MatchParticipant mp"
@@ -433,7 +415,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean hasPendingSeriesRequest(final Long seriesId, final Long userId) {
         return em.createQuery(
                                 "SELECT COUNT(mp) FROM MatchParticipant mp"
@@ -456,7 +437,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean rejectRequest(final Long matchId, final Long userId) {
         final MatchParticipant mp = findParticipantInternal(matchId, userId);
         if (mp != null && mp.getStatus() == ParticipantStatus.PENDING_APPROVAL) {
@@ -468,7 +448,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean removeParticipant(final Long matchId, final Long userId) {
         final MatchParticipant mp = findParticipantInternal(matchId, userId);
         if (mp != null && ACTIVE_RESERVATION_STATUSES.contains(mp.getStatus())) {
@@ -479,13 +458,11 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean cancelJoinRequest(final Long matchId, final Long userId) {
         return rejectRequest(matchId, userId);
     }
 
     @Override
-    @Transactional
     public int cancelPendingRequests(final Long matchId) {
         final int updated =
                 em.createQuery(
@@ -503,7 +480,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Long> findPendingMatchIds(final Long userId) {
         return em.createQuery(
                         "SELECT mp.match.id FROM MatchParticipant mp"
@@ -516,13 +492,11 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean inviteUser(final Long matchId, final Long userId) {
         return inviteUser(matchId, userId, false);
     }
 
     @Override
-    @Transactional
     public boolean inviteUser(
             final Long matchId, final Long userId, final boolean seriesInvitation) {
         final Match match = em.find(Match.class, matchId);
@@ -535,7 +509,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean hasInvitation(final Long matchId, final Long userId) {
         return em.createQuery(
                                 "SELECT COUNT(mp) FROM MatchParticipant mp"
@@ -550,7 +523,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean isSeriesInvitation(final Long matchId, final Long userId) {
         return em.createQuery(
                                 "SELECT COUNT(mp) FROM MatchParticipant mp"
@@ -568,7 +540,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean acceptInvite(final Long matchId, final Long userId) {
         final MatchParticipant mp = findParticipantInternal(matchId, userId);
         if (mp != null && mp.getStatus() == ParticipantStatus.INVITED) {
@@ -580,7 +551,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public int acceptSeriesInvite(
             final Long seriesId, final Long userId, final Instant startsAfter) {
         final int updated =
@@ -621,7 +591,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public boolean declineInvite(final Long matchId, final Long userId) {
         final MatchParticipant mp = findParticipantInternal(matchId, userId);
         if (mp != null && mp.getStatus() == ParticipantStatus.INVITED) {
@@ -633,7 +602,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public int declineSeriesInvite(final Long seriesId, final Long userId) {
         final int updated =
                 em.createQuery(
@@ -655,7 +623,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<User> findInvitedUsers(final Long matchId) {
         return em.createQuery(
                         "SELECT new ar.edu.itba.paw.models.User(u.id, u.email, u.username)"
@@ -671,7 +638,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional
     public int cancelPendingInvitations(final Long matchId) {
         final int updated =
                 em.createQuery(
@@ -689,7 +655,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<User> findDeclinedInvitees(final Long matchId) {
         return em.createQuery(
                         "SELECT new ar.edu.itba.paw.models.User(u.id, u.email, u.username)"
@@ -705,7 +670,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Long> findInvitedMatchIds(final Long userId) {
         return em.createQuery(
                         "SELECT mp.match.id FROM MatchParticipant mp"

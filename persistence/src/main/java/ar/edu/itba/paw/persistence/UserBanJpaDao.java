@@ -11,7 +11,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class UserBanJpaDao implements UserBanDao {
@@ -19,7 +18,6 @@ public class UserBanJpaDao implements UserBanDao {
     @PersistenceContext private EntityManager em;
 
     @Override
-    @Transactional
     public UserBan createBan(final ModerationReport moderationReport, final Instant bannedUntil) {
         final UserBan ban = new UserBan(null, moderationReport, bannedUntil);
 
@@ -30,14 +28,12 @@ public class UserBanJpaDao implements UserBanDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<UserBan> findById(final Long id) {
         final UserBan userBan = em.find(UserBan.class, id);
         return Optional.ofNullable(userBan);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<UserBan> findLatestBanForUser(final Long userId) {
         return findFirstBan(
                 "FROM UserBan ub "
@@ -50,7 +46,6 @@ public class UserBanJpaDao implements UserBanDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<UserBan> findActiveBanForUser(final Long userId, final Instant now) {
         return findFirstBan(
                 "FROM UserBan ub "
@@ -66,7 +61,6 @@ public class UserBanJpaDao implements UserBanDao {
     }
 
     @Override
-    @Transactional
     public void upliftBan(final Long id) {
         final UserBan ban = em.find(UserBan.class, id);
         if (ban != null) {

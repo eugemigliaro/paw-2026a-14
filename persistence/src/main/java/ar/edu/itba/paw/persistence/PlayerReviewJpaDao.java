@@ -15,7 +15,6 @@ import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class PlayerReviewJpaDao implements PlayerReviewDao {
@@ -32,7 +31,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     @PersistenceContext private EntityManager em;
 
     @Override
-    @Transactional
     public PlayerReview upsertReview(
             final Long reviewerUserId,
             final Long reviewedUserId,
@@ -69,13 +67,11 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional
     public boolean softDeleteReview(final Long reviewerUserId, final Long reviewedUserId) {
         return softDeleteReview(reviewerUserId, reviewedUserId, null, null);
     }
 
     @Override
-    @Transactional
     public boolean softDeleteReview(
             final Long reviewerUserId,
             final Long reviewedUserId,
@@ -102,7 +98,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional
     public boolean restoreReview(final Long reviewerUserId, final Long reviewedUserId) {
         final Instant now = Instant.now();
         final int rows =
@@ -123,7 +118,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<PlayerReview> findByPair(final Long reviewerUserId, final Long reviewedUserId) {
         final List<PlayerReviewProjection> projections =
                 em.createQuery(
@@ -139,7 +133,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<PlayerReview> findByIdIncludingDeleted(final Long reviewId) {
         final List<PlayerReviewProjection> projections =
                 em.createQuery(
@@ -151,7 +144,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public PlayerReviewSummary getSummaryForUser(final Long reviewedUserId) {
         final Object[] counts =
                 em.createQuery(
@@ -176,7 +168,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public int countReviewsForUser(final Long reviewedUserId, final PlayerReviewFilter filter) {
         final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
         final Optional<PlayerReviewReaction> reaction = safeFilter.getReaction();
@@ -199,7 +190,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<PlayerReview> findReviewsForUser(
             final Long reviewedUserId,
             final PlayerReviewFilter filter,
@@ -231,7 +221,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
         if (reviewerUserId == null || reviewerUserId.equals(reviewedUserId)) {
             return false;
@@ -264,7 +253,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Long> findReviewableUserIds(final Long reviewerUserId) {
         if (reviewerUserId == null) {
             return List.of();

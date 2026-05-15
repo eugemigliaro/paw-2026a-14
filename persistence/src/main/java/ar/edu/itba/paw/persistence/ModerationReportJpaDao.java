@@ -15,7 +15,6 @@ import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class ModerationReportJpaDao implements ModerationReportDao {
@@ -23,7 +22,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     @PersistenceContext private EntityManager em;
 
     @Override
-    @Transactional
     public ModerationReport createReport(
             final Long reporterUserId,
             final ReportTargetType targetType,
@@ -59,19 +57,16 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<ModerationReport> findById(final Long reportId) {
         return Optional.ofNullable(em.find(ModerationReport.class, reportId));
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<ModerationReport> findReportsByReporter(final Long reporterUserId) {
         return findReportsByReporter(reporterUserId, List.of(), List.of());
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<ModerationReport> findReportsByReporter(
             final Long reporterUserId,
             final List<ReportTargetType> targetTypes,
@@ -81,20 +76,17 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<ModerationReport> findReports() {
         return findReports(List.of(), List.of());
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<ModerationReport> findReports(
             final List<ReportTargetType> targetTypes, final List<ReportStatus> statuses) {
         return findReports(targetTypes, statuses, 1, Integer.MAX_VALUE).getItems();
     }
 
     @Override
-    @Transactional(readOnly = true)
     public PaginatedResult<ModerationReport> findReports(
             final List<ReportTargetType> targetTypes,
             final List<ReportStatus> statuses,
@@ -104,7 +96,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<ModerationReport> findLatestUserBanReportByTargetUserId(
             final Long targetUserId) {
         final TypedQuery<ModerationReport> query =
@@ -124,7 +115,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public int countActiveReportsByReporter(final Long reporterUserId) {
         final TypedQuery<Long> query =
                 em.createQuery(
@@ -141,7 +131,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional
     public boolean markUnderReview(
             final Long reportId, final Long reviewedByUserId, final Instant reviewedAt) {
         final ModerationReport report = findForUpdate(reportId);
@@ -159,7 +148,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional
     public boolean resolveReport(
             final Long reportId,
             final Long reviewedByUserId,
@@ -186,7 +174,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional
     public boolean appealReport(
             final Long reportId, final String appealReason, final Instant appealedAt) {
         final ModerationReport report = findForUpdate(reportId);
@@ -207,7 +194,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional
     public boolean finalizeAppeal(
             final Long reportId,
             final Long appealResolvedByUserId,
@@ -229,7 +215,6 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public PaginatedResult<ModerationReport> findReportsByReporter(
             final Long reporterUserId,
             final List<ReportTargetType> targetTypes,

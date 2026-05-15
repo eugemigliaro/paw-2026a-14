@@ -12,7 +12,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class UserJpaDao implements UserDao {
@@ -20,7 +19,6 @@ public class UserJpaDao implements UserDao {
     @PersistenceContext private EntityManager em;
 
     @Override
-    @Transactional
     public User createUser(final String email, final String username) {
         final Instant now = Instant.now();
         final UserAccount userAccount =
@@ -46,7 +44,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional
     public UserAccount createAccount(
             final String email,
             final String username,
@@ -82,7 +79,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<User> findByEmail(final String email) {
         final TypedQuery<UserAccount> query =
                 em.createQuery("FROM UserAccount u WHERE u.email = :email", UserAccount.class);
@@ -92,7 +88,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<UserAccount> findAccountByEmail(final String email) {
         final TypedQuery<UserAccount> query =
                 em.createQuery("FROM UserAccount u WHERE u.email = :email", UserAccount.class);
@@ -102,13 +97,11 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<User> findById(final Long id) {
         return Optional.ofNullable(em.find(UserAccount.class, id)).map(this::toUser);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<User> findByIds(final Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -122,13 +115,11 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<UserAccount> findAccountById(final Long id) {
         return Optional.ofNullable(em.find(UserAccount.class, id));
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<User> findByUsername(final String username) {
         final TypedQuery<UserAccount> query =
                 em.createQuery(
@@ -139,7 +130,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional
     public void updateProfile(
             final Long id,
             final String username,
@@ -159,7 +149,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional
     public void updateProfileImage(final Long id, final Long profileImageId) {
         final UserAccount user = em.find(UserAccount.class, id);
         if (user != null) {
@@ -169,7 +158,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional
     public void updatePasswordHash(final Long id, final String passwordHash) {
         final UserAccount user = em.find(UserAccount.class, id);
         if (user != null) {
@@ -179,7 +167,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional
     public void markEmailVerified(final Long id, final Instant emailVerifiedAt) {
         final UserAccount user = em.find(UserAccount.class, id);
         if (user != null) {
@@ -189,7 +176,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    @Transactional
     public void updatePreferredLanguage(final Long id, final String preferredLanguage) {
         final UserAccount user = em.find(UserAccount.class, id);
         if (user != null) {

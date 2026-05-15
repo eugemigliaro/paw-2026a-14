@@ -10,7 +10,6 @@ import java.util.Optional;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class ImageJpaDao implements ImageDao {
@@ -18,7 +17,6 @@ public class ImageJpaDao implements ImageDao {
     @PersistenceContext private EntityManager em;
 
     @Override
-    @Transactional
     public Long create(
             final String contentType, final long contentLength, final InputStream contentStream)
             throws IOException {
@@ -37,7 +35,6 @@ public class ImageJpaDao implements ImageDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<ImageMetadata> findMetadataById(final Long imageId) {
         return Optional.ofNullable(em.find(Image.class, imageId))
                 .map(
@@ -49,7 +46,6 @@ public class ImageJpaDao implements ImageDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean streamContentById(final Long imageId, final OutputStream outputStream)
             throws IOException {
         final Image image = em.find(Image.class, imageId);
