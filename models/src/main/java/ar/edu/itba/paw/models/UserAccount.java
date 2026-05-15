@@ -6,9 +6,12 @@ import java.time.Instant;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -40,8 +43,9 @@ public class UserAccount {
     @Column(name = "phone", length = 50)
     private String phone;
 
-    @Column(name = "profile_image_id")
-    private Long profileImageId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_image_id")
+    private ImageMetadata profileImageMetadata;
 
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
@@ -72,7 +76,7 @@ public class UserAccount {
             final String name,
             final String lastName,
             final String phone,
-            final Long profileImageId,
+            final ImageMetadata profileImageMetadata,
             final String passwordHash,
             final UserRole role,
             final Instant emailVerifiedAt,
@@ -84,7 +88,7 @@ public class UserAccount {
                 name,
                 lastName,
                 phone,
-                profileImageId,
+                profileImageMetadata,
                 passwordHash,
                 role,
                 emailVerifiedAt,
@@ -100,7 +104,7 @@ public class UserAccount {
             final String name,
             final String lastName,
             final String phone,
-            final Long profileImageId,
+            final ImageMetadata profileImageMetadata,
             final String passwordHash,
             final UserRole role,
             final Instant emailVerifiedAt,
@@ -113,7 +117,7 @@ public class UserAccount {
         this.name = name;
         this.lastName = lastName;
         this.phone = phone;
-        this.profileImageId = profileImageId;
+        this.profileImageMetadata = profileImageMetadata;
         this.passwordHash = passwordHash;
         this.role = role;
         this.emailVerifiedAt = emailVerifiedAt;
@@ -146,8 +150,8 @@ public class UserAccount {
         return phone;
     }
 
-    public Long getProfileImageId() {
-        return profileImageId;
+    public ImageMetadata getProfileImageMetadata() {
+        return profileImageMetadata;
     }
 
     public String getPasswordHash() {
@@ -190,8 +194,8 @@ public class UserAccount {
         this.phone = phone;
     }
 
-    public void setProfileImageId(final Long profileImageId) {
-        this.profileImageId = profileImageId;
+    public void setProfileImageMetadata(final ImageMetadata profileImageMetadata) {
+        this.profileImageMetadata = profileImageMetadata;
     }
 
     public void setPasswordHash(final String passwordHash) {
@@ -229,7 +233,7 @@ public class UserAccount {
                 + ", role="
                 + role
                 + ", profileImageId="
-                + profileImageId
+                + (profileImageMetadata == null ? null : profileImageMetadata.getId())
                 + ", emailVerified="
                 + isEmailVerified()
                 + ", emailVerifiedAt="

@@ -14,9 +14,12 @@ import java.time.Instant;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -33,8 +36,9 @@ public class ModerationReport {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "reporter_user_id", nullable = false)
-    private Long reporterUserId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reporter_user_id", nullable = false)
+    private User reporter;
 
     @Column(name = "target_type", nullable = false)
     @Convert(converter = ReportTargetTypeConverter.class)
@@ -61,8 +65,9 @@ public class ModerationReport {
     @Column(name = "resolution_details")
     private String resolutionDetails;
 
-    @Column(name = "reviewed_by_user_id")
-    private Long reviewedByUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by_user_id")
+    private User reviewer;
 
     @Column(name = "reviewed_at")
     private Instant reviewedAt;
@@ -80,8 +85,9 @@ public class ModerationReport {
     @Convert(converter = AppealDecisionConverter.class)
     private AppealDecision appealDecision;
 
-    @Column(name = "appeal_resolved_by_user_id")
-    private Long appealResolvedByUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "appeal_resolved_by_user_id")
+    private User appealResolvedBy;
 
     @Column(name = "appeal_resolved_at")
     private Instant appealResolvedAt;
@@ -97,7 +103,7 @@ public class ModerationReport {
 
     public ModerationReport(
             final Long id,
-            final Long reporterUserId,
+            final User reporter,
             final ReportTargetType targetType,
             final Long targetId,
             final ReportReason reason,
@@ -105,18 +111,18 @@ public class ModerationReport {
             final ReportStatus status,
             final ReportResolution resolution,
             final String resolutionDetails,
-            final Long reviewedByUserId,
+            final User reviewer,
             final Instant reviewedAt,
             final String appealReason,
             final short appealCount,
             final Instant appealedAt,
             final AppealDecision appealDecision,
-            final Long appealResolvedByUserId,
+            final User appealResolvedBy,
             final Instant appealResolvedAt,
             final Instant createdAt,
             final Instant updatedAt) {
         this.id = id;
-        this.reporterUserId = reporterUserId;
+        this.reporter = reporter;
         this.targetType = targetType;
         this.targetId = targetId;
         this.reason = reason;
@@ -124,13 +130,13 @@ public class ModerationReport {
         this.status = status;
         this.resolution = resolution;
         this.resolutionDetails = resolutionDetails;
-        this.reviewedByUserId = reviewedByUserId;
+        this.reviewer = reviewer;
         this.reviewedAt = reviewedAt;
         this.appealReason = appealReason;
         this.appealCount = appealCount;
         this.appealedAt = appealedAt;
         this.appealDecision = appealDecision;
-        this.appealResolvedByUserId = appealResolvedByUserId;
+        this.appealResolvedBy = appealResolvedBy;
         this.appealResolvedAt = appealResolvedAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -140,8 +146,8 @@ public class ModerationReport {
         return id;
     }
 
-    public Long getReporterUserId() {
-        return reporterUserId;
+    public User getReporter() {
+        return reporter;
     }
 
     public ReportTargetType getTargetType() {
@@ -172,8 +178,8 @@ public class ModerationReport {
         return resolutionDetails;
     }
 
-    public Long getReviewedByUserId() {
-        return reviewedByUserId;
+    public User getReviewer() {
+        return reviewer;
     }
 
     public Instant getReviewedAt() {
@@ -196,8 +202,8 @@ public class ModerationReport {
         return appealDecision;
     }
 
-    public Long getAppealResolvedByUserId() {
-        return appealResolvedByUserId;
+    public User getAppealResolvedBy() {
+        return appealResolvedBy;
     }
 
     public Instant getAppealResolvedAt() {
@@ -216,8 +222,8 @@ public class ModerationReport {
         this.status = status;
     }
 
-    public void setReviewedByUserId(final Long reviewedByUserId) {
-        this.reviewedByUserId = reviewedByUserId;
+    public void setReviewer(final User reviewer) {
+        this.reviewer = reviewer;
     }
 
     public void setReviewedAt(final Instant reviewedAt) {
@@ -248,8 +254,8 @@ public class ModerationReport {
         this.appealDecision = appealDecision;
     }
 
-    public void setAppealResolvedByUserId(final Long appealResolvedByUserId) {
-        this.appealResolvedByUserId = appealResolvedByUserId;
+    public void setAppealResolvedBy(final User appealResolvedBy) {
+        this.appealResolvedBy = appealResolvedBy;
     }
 
     public void setAppealResolvedAt(final Instant appealResolvedAt) {
@@ -266,7 +272,7 @@ public class ModerationReport {
                 + "id="
                 + id
                 + ", reporterUserId="
-                + reporterUserId
+                + (reporter == null ? null : reporter.getId())
                 + ", targetType="
                 + targetType
                 + ", targetId="
@@ -278,7 +284,7 @@ public class ModerationReport {
                 + ", resolution="
                 + resolution
                 + ", reviewedByUserId="
-                + reviewedByUserId
+                + (reviewer == null ? null : reviewer.getId())
                 + ", reviewedAt="
                 + reviewedAt
                 + ", appealCount="
@@ -288,7 +294,7 @@ public class ModerationReport {
                 + ", appealDecision="
                 + appealDecision
                 + ", appealResolvedByUserId="
-                + appealResolvedByUserId
+                + (appealResolvedBy == null ? null : appealResolvedBy.getId())
                 + ", appealResolvedAt="
                 + appealResolvedAt
                 + ", createdAt="

@@ -14,7 +14,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 @Entity
 @Table(name = "match_series")
@@ -31,9 +30,7 @@ public class MatchSeries {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "host_user_id", nullable = false)
-    private UserAccount host;
-
-    @Transient private Long hostUserId;
+    private User host;
 
     @Column(name = "frequency", length = 30, nullable = false)
     private String frequency;
@@ -59,13 +56,13 @@ public class MatchSeries {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @OneToMany(mappedBy = "series")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "series")
     private List<Match> occurrences;
 
     MatchSeries() {}
 
     public MatchSeries(
-            final Long hostUserId,
+            final User host,
             final String frequency,
             final Instant startsAt,
             final Instant endsAt,
@@ -74,7 +71,7 @@ public class MatchSeries {
             final Integer occurrenceCount,
             final Instant createdAt,
             final Instant updatedAt) {
-        this.hostUserId = hostUserId;
+        this.host = host;
         this.frequency = frequency;
         this.startsAt = startsAt;
         this.endsAt = endsAt;
@@ -89,8 +86,7 @@ public class MatchSeries {
         return id;
     }
 
-    public void setHost(final UserAccount host) {
+    public void setHost(final User host) {
         this.host = host;
-        this.hostUserId = host == null ? null : host.getId();
     }
 }

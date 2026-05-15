@@ -1,6 +1,9 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.MatchSeries;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -17,7 +20,7 @@ import java.util.Optional;
 public interface MatchDao {
 
     default Match createMatch(
-            Long hostUserId,
+            User host,
             String address,
             String title,
             String description,
@@ -29,9 +32,9 @@ public interface MatchDao {
             EventVisibility visibility,
             EventJoinPolicy joinPolicy,
             EventStatus status,
-            Long bannerImageId) {
+            ImageMetadata bannerImageMetadata) {
         return createMatch(
-                hostUserId,
+                host,
                 address,
                 title,
                 description,
@@ -43,7 +46,7 @@ public interface MatchDao {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageId,
+                bannerImageMetadata,
                 null,
                 null,
                 null,
@@ -51,7 +54,7 @@ public interface MatchDao {
     }
 
     default Match createMatch(
-            Long hostUserId,
+            User host,
             String address,
             String title,
             String description,
@@ -63,11 +66,11 @@ public interface MatchDao {
             EventVisibility visibility,
             EventJoinPolicy joinPolicy,
             EventStatus status,
-            Long bannerImageId,
+            ImageMetadata bannerImageMetadata,
             Double latitude,
             Double longitude) {
         return createMatch(
-                hostUserId,
+                host,
                 address,
                 title,
                 description,
@@ -79,7 +82,7 @@ public interface MatchDao {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageId,
+                bannerImageMetadata,
                 latitude,
                 longitude,
                 null,
@@ -87,7 +90,7 @@ public interface MatchDao {
     }
 
     default Match createMatch(
-            Long hostUserId,
+            User host,
             String address,
             String title,
             String description,
@@ -99,11 +102,11 @@ public interface MatchDao {
             EventVisibility visibility,
             EventJoinPolicy joinPolicy,
             EventStatus status,
-            Long bannerImageId,
-            Long seriesId,
+            ImageMetadata bannerImageMetadata,
+            MatchSeries series,
             Integer seriesOccurrenceIndex) {
         return createMatch(
-                hostUserId,
+                host,
                 address,
                 title,
                 description,
@@ -115,15 +118,15 @@ public interface MatchDao {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageId,
+                bannerImageMetadata,
                 null,
                 null,
-                seriesId,
+                series,
                 seriesOccurrenceIndex);
     }
 
     Match createMatch(
-            Long hostUserId,
+            User host,
             String address,
             String title,
             String description,
@@ -135,14 +138,14 @@ public interface MatchDao {
             EventVisibility visibility,
             EventJoinPolicy joinPolicy,
             EventStatus status,
-            Long bannerImageId,
+            ImageMetadata bannerImageMetadata,
             Double latitude,
             Double longitude,
-            Long seriesId,
+            MatchSeries series,
             Integer seriesOccurrenceIndex);
 
     Long createMatchSeries(
-            Long hostUserId,
+            User host,
             String frequency,
             Instant startsAt,
             Instant endsAt,
@@ -152,7 +155,7 @@ public interface MatchDao {
 
     default boolean updateMatch(
             Long matchId,
-            Long hostUserId,
+            User host,
             String address,
             String title,
             String description,
@@ -164,10 +167,10 @@ public interface MatchDao {
             EventVisibility visibility,
             EventJoinPolicy joinPolicy,
             EventStatus status,
-            Long bannerImageId) {
+            ImageMetadata bannerImageMetadata) {
         return updateMatch(
                 matchId,
-                hostUserId,
+                host,
                 address,
                 title,
                 description,
@@ -179,14 +182,14 @@ public interface MatchDao {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageId,
+                bannerImageMetadata,
                 null,
                 null);
     }
 
     boolean updateMatch(
             Long matchId,
-            Long hostUserId,
+            User host,
             String address,
             String title,
             String description,
@@ -198,13 +201,13 @@ public interface MatchDao {
             EventVisibility visibility,
             EventJoinPolicy joinPolicy,
             EventStatus status,
-            Long bannerImageId,
+            ImageMetadata bannerImageMetadata,
             Double latitude,
             Double longitude);
 
-    boolean cancelMatch(Long matchId, Long hostUserId);
+    boolean cancelMatch(Long matchId, User host);
 
-    boolean softDeleteMatch(Long matchId, Long deletedByUserId, String deleteReason);
+    boolean softDeleteMatch(Long matchId, User deletedBy, String deleteReason);
 
     boolean restoreMatch(Long matchId);
 
@@ -307,7 +310,7 @@ public interface MatchDao {
     }
 
     List<Match> findHostedMatches(
-            Long hostUserId,
+            User host,
             Boolean upcoming,
             String query,
             List<Sport> sports,
@@ -324,7 +327,7 @@ public interface MatchDao {
             int limit);
 
     default List<Match> findHostedMatches(
-            final Long hostUserId,
+            final User host,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -338,7 +341,7 @@ public interface MatchDao {
             final int offset,
             final int limit) {
         return findHostedMatches(
-                hostUserId,
+                host,
                 upcoming,
                 query,
                 sports,
@@ -356,7 +359,7 @@ public interface MatchDao {
     }
 
     int countHostedMatches(
-            Long hostUserId,
+            User host,
             Boolean upcoming,
             String query,
             List<Sport> sports,
@@ -370,7 +373,7 @@ public interface MatchDao {
             ZoneId zoneId);
 
     default int countHostedMatches(
-            final Long hostUserId,
+            final User host,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -381,7 +384,7 @@ public interface MatchDao {
             final BigDecimal maxPrice,
             final ZoneId zoneId) {
         return countHostedMatches(
-                hostUserId,
+                host,
                 upcoming,
                 query,
                 sports,
@@ -396,7 +399,7 @@ public interface MatchDao {
     }
 
     List<Match> findJoinedMatches(
-            Long userId,
+            User user,
             Boolean upcoming,
             String query,
             List<Sport> sports,
@@ -413,7 +416,7 @@ public interface MatchDao {
             int limit);
 
     default List<Match> findJoinedMatches(
-            final Long userId,
+            final User user,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -427,7 +430,7 @@ public interface MatchDao {
             final int offset,
             final int limit) {
         return findJoinedMatches(
-                userId,
+                user,
                 upcoming,
                 query,
                 sports,
@@ -445,7 +448,7 @@ public interface MatchDao {
     }
 
     int countJoinedMatches(
-            Long userId,
+            User user,
             Boolean upcoming,
             String query,
             List<Sport> sports,
@@ -459,7 +462,7 @@ public interface MatchDao {
             ZoneId zoneId);
 
     default int countJoinedMatches(
-            final Long userId,
+            final User user,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -470,7 +473,7 @@ public interface MatchDao {
             final BigDecimal maxPrice,
             final ZoneId zoneId) {
         return countJoinedMatches(
-                userId,
+                user,
                 upcoming,
                 query,
                 sports,

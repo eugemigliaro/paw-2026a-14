@@ -8,9 +8,12 @@ import java.time.Instant;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -34,8 +37,9 @@ public class EmailActionRequest {
     @Column(name = "email", length = 255, nullable = false)
     private String email;
 
-    @Column(name = "user_id")
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "token_hash", length = 128, nullable = false, unique = true)
     private String tokenHash;
@@ -65,7 +69,7 @@ public class EmailActionRequest {
             final Long id,
             final EmailActionType actionType,
             final String email,
-            final Long userId,
+            final User user,
             final String tokenHash,
             final String payloadJson,
             final EmailActionStatus status,
@@ -76,7 +80,7 @@ public class EmailActionRequest {
         this.id = id;
         this.actionType = actionType;
         this.email = email;
-        this.userId = userId;
+        this.user = user;
         this.tokenHash = tokenHash;
         this.payloadJson = payloadJson;
         this.status = status;
@@ -98,8 +102,8 @@ public class EmailActionRequest {
         return email;
     }
 
-    public Long getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
     public String getTokenHash() {
@@ -130,8 +134,8 @@ public class EmailActionRequest {
         return updatedAt;
     }
 
-    public void setUserId(final Long userId) {
-        this.userId = userId;
+    public void setUser(final User user) {
+        this.user = user;
     }
 
     public void setStatus(final EmailActionStatus status) {
@@ -158,7 +162,7 @@ public class EmailActionRequest {
                 + ", actionType="
                 + actionType
                 + ", userId="
-                + userId
+                + (user == null ? null : user.getId())
                 + ", status="
                 + status
                 + ", expiresAt="

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
@@ -14,7 +15,7 @@ import java.util.Optional;
 public interface ModerationReportDao {
 
     ModerationReport createReport(
-            Long reporterUserId,
+            User reporter,
             ReportTargetType targetType,
             Long targetId,
             ReportReason reason,
@@ -22,10 +23,10 @@ public interface ModerationReportDao {
 
     Optional<ModerationReport> findById(Long reportId);
 
-    List<ModerationReport> findReportsByReporter(Long reporterUserId);
+    List<ModerationReport> findReportsByReporter(User reporter);
 
     List<ModerationReport> findReportsByReporter(
-            Long reporterUserId, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
+            User reporter, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
     List<ModerationReport> findReports();
 
@@ -38,15 +39,15 @@ public interface ModerationReportDao {
             int page,
             int pageSize);
 
-    Optional<ModerationReport> findLatestUserBanReportByTargetUserId(Long targetUserId);
+    Optional<ModerationReport> findLatestUserBanReportByTargetUserId(User targetUser);
 
-    int countActiveReportsByReporter(Long reporterUserId);
+    int countActiveReportsByReporter(User reporter);
 
-    boolean markUnderReview(Long reportId, Long reviewedByUserId, Instant reviewedAt);
+    boolean markUnderReview(Long reportId, User reviewedBy, Instant reviewedAt);
 
     boolean resolveReport(
             Long reportId,
-            Long reviewedByUserId,
+            User reviewedBy,
             ReportResolution resolution,
             String resolutionDetails,
             Instant reviewedAt,
@@ -56,12 +57,12 @@ public interface ModerationReportDao {
 
     boolean finalizeAppeal(
             Long reportId,
-            Long appealResolvedByUserId,
+            User appealResolvedBy,
             AppealDecision appealDecision,
             Instant appealResolvedAt);
 
     PaginatedResult<ModerationReport> findReportsByReporter(
-            Long reporterUserId,
+            User reporter,
             List<ReportTargetType> targetTypes,
             List<ReportStatus> statuses,
             int page,

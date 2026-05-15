@@ -1,19 +1,52 @@
 package ar.edu.itba.paw.models;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "users")
 public class User {
 
-    private final Long id;
-    private final String email;
-    private final String username;
-    private final String name;
-    private final String lastName;
-    private final String phone;
-    private final Long profileImageId;
-    private final String preferredLanguage;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_userid_seq")
+    @SequenceGenerator(
+            sequenceName = "users_userid_seq",
+            name = "users_userid_seq",
+            allocationSize = 1)
+    @Column(name = "id")
+    private Long id;
 
-    public User(final Long id, final String email, final String username) {
-        this(id, email, username, null, null, null, null, UserLanguages.DEFAULT_LANGUAGE);
-    }
+    @Column(name = "email", length = 255, nullable = false, unique = true)
+    private String email;
+
+    @Column(name = "username", length = 50, nullable = false, unique = true)
+    private String username;
+
+    @Column(name = "name", length = 150)
+    private String name;
+
+    @Column(name = "last_name", length = 150)
+    private String lastName;
+
+    @Column(name = "phone", length = 50)
+    private String phone;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_image_id")
+    private ImageMetadata profileImageMetadata;
+
+    @Column(name = "preferred_language", length = 5, nullable = false)
+    private String preferredLanguage;
+
+    User() {}
 
     public User(
             final Long id,
@@ -22,26 +55,7 @@ public class User {
             final String name,
             final String lastName,
             final String phone,
-            final Long profileImageId) {
-        this(
-                id,
-                email,
-                username,
-                name,
-                lastName,
-                phone,
-                profileImageId,
-                UserLanguages.DEFAULT_LANGUAGE);
-    }
-
-    public User(
-            final Long id,
-            final String email,
-            final String username,
-            final String name,
-            final String lastName,
-            final String phone,
-            final Long profileImageId,
+            final ImageMetadata profileImageMetadata,
             final String preferredLanguage) {
         this.id = id;
         this.email = email;
@@ -49,7 +63,7 @@ public class User {
         this.name = name;
         this.lastName = lastName;
         this.phone = phone;
-        this.profileImageId = profileImageId;
+        this.profileImageMetadata = profileImageMetadata;
         this.preferredLanguage = UserLanguages.normalizeLanguage(preferredLanguage);
     }
 
@@ -77,8 +91,8 @@ public class User {
         return phone;
     }
 
-    public Long getProfileImageId() {
-        return profileImageId;
+    public ImageMetadata getProfileImageMetadata() {
+        return profileImageMetadata;
     }
 
     public String getPreferredLanguage() {
@@ -94,7 +108,7 @@ public class User {
                 + username
                 + '\''
                 + ", profileImageId="
-                + profileImageId
+                + (profileImageMetadata == null ? null : profileImageMetadata.getId())
                 + ", hasEmail="
                 + (email != null && !email.isBlank())
                 + ", hasName="

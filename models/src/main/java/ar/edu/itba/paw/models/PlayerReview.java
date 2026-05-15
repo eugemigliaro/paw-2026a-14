@@ -35,11 +35,11 @@ public class PlayerReview {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "reviewer_user_id", nullable = false)
-    private UserAccount reviewer;
+    private User reviewer;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "reviewed_user_id", nullable = false)
-    private UserAccount reviewed;
+    private User reviewed;
 
     @Column(name = "reaction", length = 20, nullable = false)
     @Convert(converter = PlayerReviewReactionConverter.class)
@@ -62,7 +62,7 @@ public class PlayerReview {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deleted_by_user_id")
-    private UserAccount deletedBy;
+    private User deletedBy;
 
     @Column(name = "delete_reason")
     private String deleteReason;
@@ -71,15 +71,15 @@ public class PlayerReview {
 
     public PlayerReview(
             final Long id,
-            final UserAccount reviewer,
-            final UserAccount reviewed,
+            final User reviewer,
+            final User reviewed,
             final PlayerReviewReaction reaction,
             final String comment,
             final Instant createdAt,
             final Instant updatedAt,
             final boolean deleted,
             final Instant deletedAt,
-            final UserAccount deletedBy,
+            final User deletedBy,
             final String deleteReason) {
         this.id = id;
         this.reviewer = reviewer;
@@ -98,11 +98,11 @@ public class PlayerReview {
         return id;
     }
 
-    public UserAccount getReviewer() {
+    public User getReviewer() {
         return reviewer;
     }
 
-    public UserAccount getReviewed() {
+    public User getReviewed() {
         return reviewed;
     }
 
@@ -150,11 +150,11 @@ public class PlayerReview {
         this.deletedAt = deletedAt;
     }
 
-    public UserAccount getDeletedBy() {
+    public User getDeletedBy() {
         return deletedBy;
     }
 
-    public void setDeletedBy(final UserAccount deletedBy) {
+    public void setDeletedBy(final User deletedBy) {
         this.deletedBy = deletedBy;
     }
 

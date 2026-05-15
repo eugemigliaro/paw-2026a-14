@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import java.time.Instant;
 import java.util.Optional;
@@ -11,9 +12,9 @@ public interface UserBanDao {
 
     Optional<UserBan> findById(Long banId);
 
-    Optional<UserBan> findLatestBanForUser(Long userId);
+    Optional<UserBan> findLatestBanForUser(User user);
 
-    Optional<UserBan> findActiveBanForUser(Long userId, Instant now);
+    Optional<UserBan> findActiveBanForUser(User user, Instant now);
 
     void upliftBan(Long banId);
 }

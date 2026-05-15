@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.util.List;
@@ -10,30 +11,26 @@ import java.util.Optional;
 public interface PlayerReviewDao {
 
     PlayerReview upsertReview(
-            Long reviewerUserId,
-            Long reviewedUserId,
-            PlayerReviewReaction reaction,
-            String comment);
+            User reviewer, User reviewed, PlayerReviewReaction reaction, String comment);
 
-    boolean softDeleteReview(Long reviewerUserId, Long reviewedUserId);
+    boolean softDeleteReview(User reviewer, User reviewed);
 
-    boolean softDeleteReview(
-            Long reviewerUserId, Long reviewedUserId, Long deletedByUserId, String deleteReason);
+    boolean softDeleteReview(User reviewer, User reviewed, User deletedBy, String deleteReason);
 
-    boolean restoreReview(Long reviewerUserId, Long reviewedUserId);
+    boolean restoreReview(User reviewer, User reviewed);
 
-    Optional<PlayerReview> findByPair(Long reviewerUserId, Long reviewedUserId);
+    Optional<PlayerReview> findByPair(User reviewer, User reviewed);
 
     Optional<PlayerReview> findByIdIncludingDeleted(Long reviewId);
 
-    PlayerReviewSummary getSummaryForUser(Long reviewedUserId);
+    PlayerReviewSummary getSummaryForUser(User reviewed);
 
-    int countReviewsForUser(Long reviewedUserId, PlayerReviewFilter filter);
+    int countReviewsForUser(User reviewed, PlayerReviewFilter filter);
 
     List<PlayerReview> findReviewsForUser(
-            Long reviewedUserId, PlayerReviewFilter filter, int limit, int offset);
+            User reviewed, PlayerReviewFilter filter, int limit, int offset);
 
-    boolean canReview(Long reviewerUserId, Long reviewedUserId);
+    boolean canReview(User reviewer, User reviewed);
 
-    List<Long> findReviewableUserIds(Long reviewerUserId);
+    List<Long> findReviewableUserIds(User reviewer);
 }

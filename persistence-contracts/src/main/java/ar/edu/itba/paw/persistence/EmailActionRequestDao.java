@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Instant;
@@ -11,7 +12,7 @@ public interface EmailActionRequestDao {
     EmailActionRequest create(
             EmailActionType actionType,
             String email,
-            Long userId,
+            User user,
             String tokenHash,
             String payloadJson,
             Instant expiresAt);
@@ -20,7 +21,7 @@ public interface EmailActionRequestDao {
 
     Optional<EmailActionRequest> findByTokenHashForUpdate(String tokenHash);
 
-    void updateStatus(Long id, EmailActionStatus status, Long userId, Instant consumedAt);
+    void updateStatus(Long id, EmailActionStatus status, User user, Instant consumedAt);
 
     void expirePendingByEmailAndActionType(
             EmailActionType actionType, String email, Instant consumedAt);

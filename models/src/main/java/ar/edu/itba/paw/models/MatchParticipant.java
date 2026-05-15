@@ -40,7 +40,7 @@ public class MatchParticipant {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
-    private UserAccount user;
+    private User user;
 
     @Column(name = "status", length = 30, nullable = false)
     @Convert(converter = ParticipantStatusConverter.class)
@@ -61,7 +61,7 @@ public class MatchParticipant {
 
     public MatchParticipant(
             Match match,
-            UserAccount user,
+            User user,
             ParticipantStatus status,
             Instant joinedAt,
             ParticipantScope scope) {
@@ -80,7 +80,7 @@ public class MatchParticipant {
         return match;
     }
 
-    public UserAccount getUser() {
+    public User getUser() {
         return user;
     }
 
