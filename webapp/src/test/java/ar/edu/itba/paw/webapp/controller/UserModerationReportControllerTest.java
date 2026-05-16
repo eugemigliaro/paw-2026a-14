@@ -13,8 +13,8 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.utils.UserUtils;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -60,7 +60,9 @@ class UserModerationReportControllerTest {
     @Test
     void getMyReportsRendersList() throws Exception {
         AuthenticationUtils.authenticateUser(7L);
-        Mockito.when(moderationService.findReportsByReporter(7L, List.of(), List.of(), 1, 4))
+        Mockito.when(
+                        moderationService.findReportsByReporter(
+                                UserUtils.getUser(7L), List.of(), List.of(), 1, 4))
                 .thenReturn(new PaginatedResult<>(List.of(sampleReport()), 1, 1, 4));
 
         mockMvc.perform(get("/reports/mine"))
@@ -73,7 +75,7 @@ class UserModerationReportControllerTest {
         AuthenticationUtils.authenticateUser(7L);
         Mockito.when(
                         moderationService.findReportsByReporter(
-                                7L,
+                                UserUtils.getUser(7L),
                                 List.of(ReportTargetType.MATCH, ReportTargetType.REVIEW),
                                 List.of(ReportStatus.PENDING, ReportStatus.RESOLVED),
                                 1,

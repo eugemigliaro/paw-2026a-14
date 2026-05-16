@@ -4,7 +4,6 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PersistableEnum;
@@ -13,9 +12,9 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
@@ -119,14 +118,11 @@ public class PublicProfileController {
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
-        final Long currentUserId =
-                CurrentAuthenticatedUser.get()
-                        .map(AuthenticatedUserPrincipal::getUserId)
-                        .orElse(null);
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
         final boolean reportUserCanSubmit =
-                currentUserId != null && !currentUserId.equals(user.getId());
+                currentUser != null && !currentUser.getId().equals(user.getId());
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
-        final Optional<UserBan> activeBan = moderationService.findActiveBan(user.getId());
+        final Optional<UserBan> activeBan = moderationService.findActiveBan(user);
         mav.addObject("profileBanned", activeBan.isPresent());
         mav.addObject(
                 "profileBannedLabel",
@@ -141,7 +137,7 @@ public class PublicProfileController {
                                     .format(ban.getBannedUntil().atZone(ZoneId.systemDefault())));
                 });
         CurrentAuthenticatedUser.get()
-                .filter(principal -> principal.getUserId().equals(user.getId()))
+                .filter(principal -> principal.getUser().getId().equals(user.getId()))
                 .ifPresent(
                         principal -> {
                             mav.addObject("profileEditHref", "/account");
@@ -164,7 +160,7 @@ public class PublicProfileController {
             @RequestParam(value = "comment", required = false) final String comment,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
         final Optional<PlayerReviewReaction> reaction =
                 PersistableEnum.fromDbValue(PlayerReviewReaction.class, reactionValue);
         if (reaction.isEmpty()) {
@@ -172,8 +168,7 @@ public class PublicProfileController {
         }
 
         try {
-            playerReviewService.submitReview(
-                    currentUser.getUserId(), reviewedUser.getId(), reaction.get(), comment);
+            playerReviewService.submitReview(currentUser, reviewedUser, reaction.get(), comment);
             return redirectToProfile(username, null, "saved", redirectAttributes);
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
@@ -186,10 +181,10 @@ public class PublicProfileController {
             @PathVariable("username") final String username,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            playerReviewService.deleteReview(currentUser.getUserId(), reviewedUser.getId());
+            playerReviewService.deleteReview(currentUser, reviewedUser);
             return redirectToProfile(username, null, "deleted", redirectAttributes);
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
@@ -203,28 +198,25 @@ public class PublicProfileController {
             final String reviewFilter,
             final int reviewPage,
             final Locale locale) {
-        final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user.getId());
+        final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user);
         final PlayerReviewFilter selectedFilter =
                 PlayerReviewFilter.fromQueryValueOrDefault(reviewFilter);
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
-                        user.getId(), selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
+                        user, selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
         final List<PlayerReviewViewModel> reviews =
                 reviewResult.getItems().stream()
                         .map(review -> toReviewViewModel(review, locale))
                         .toList();
-        final Long currentUserId =
-                CurrentAuthenticatedUser.get()
-                        .map(AuthenticatedUserPrincipal::getUserId)
-                        .orElse(null);
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
         final Optional<PlayerReview> viewerReview =
-                currentUserId == null
+                currentUser == null
                         ? Optional.empty()
-                        : playerReviewService.findReviewByPair(currentUserId, user.getId());
+                        : playerReviewService.findReviewByPair(currentUser, user);
         final boolean reviewCanSubmit =
-                currentUserId != null
-                        && !currentUserId.equals(user.getId())
-                        && playerReviewService.canReview(currentUserId, user.getId());
+                currentUser != null
+                        && !currentUser.getId().equals(user.getId())
+                        && playerReviewService.canReview(currentUser, user);
         final String profilePath = "/users/" + user.getUsername();
 
         mav.addObject("reviewSummary", summary);
@@ -358,7 +350,7 @@ public class PublicProfileController {
 
     private PlayerReviewViewModel toReviewViewModel(
             final PlayerReview review, final Locale locale) {
-        final UserAccount reviewer = review.getReviewer();
+        final User reviewer = review.getReviewer();
         final String reviewerUsername =
                 reviewer == null || reviewer.getUsername() == null
                         ? messageSource.getMessage(
@@ -418,11 +410,6 @@ public class PublicProfileController {
         return userService
                 .findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    }
-
-    private static AuthenticatedUserPrincipal requireAuthenticatedUser() {
-        return CurrentAuthenticatedUser.get()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static ModelAndView redirectToProfile(

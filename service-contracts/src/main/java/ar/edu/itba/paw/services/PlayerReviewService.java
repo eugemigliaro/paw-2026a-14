@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.util.Optional;
@@ -13,23 +14,20 @@ public interface PlayerReviewService {
     int MAX_COMMENT_LENGTH = 1000;
 
     PlayerReview submitReview(
-            Long reviewerUserId,
-            Long reviewedUserId,
-            PlayerReviewReaction reaction,
-            String comment);
+            User reviewer, User reviewed, PlayerReviewReaction reaction, String comment);
 
-    void deleteReview(Long reviewerUserId, Long reviewedUserId);
+    void deleteReview(User reviewer, User reviewed);
 
-    Optional<PlayerReview> findReviewByPair(Long reviewerUserId, Long reviewedUserId);
+    Optional<PlayerReview> findReviewByPair(User reviewer, User reviewed);
 
     Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId);
 
-    PlayerReviewSummary findSummaryForUser(Long reviewedUserId);
+    PlayerReviewSummary findSummaryForUser(User reviewed);
 
     PaginatedResult<PlayerReview> findReviewsForUser(
-            Long reviewedUserId, PlayerReviewFilter filter, int page, int pageSize);
+            User reviewed, PlayerReviewFilter filter, int page, int pageSize);
 
-    boolean canReview(Long reviewerUserId, Long reviewedUserId);
+    boolean canReview(User reviewer, User reviewed);
 
-    Set<Long> findReviewableUserIds(Long reviewerUserId);
+    Set<Long> findReviewableUserIds(User reviewer);
 }

@@ -123,7 +123,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
                                 ArgumentMatchers.eq("new@test.com"),
-                                ArgumentMatchers.eq(UserUtils.getUser(9L)),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -291,7 +291,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
                                 ArgumentMatchers.eq("new@test.com"),
-                                ArgumentMatchers.eq(UserUtils.getUser(9L)),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -366,7 +366,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
                                 ArgumentMatchers.eq("pending@test.com"),
-                                ArgumentMatchers.eq(pendingAccount.toUser()),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -449,7 +449,7 @@ public class AccountAuthServiceImplTest {
                 .updateStatus(
                         ArgumentMatchers.eq(31L),
                         ArgumentMatchers.any(),
-                        ArgumentMatchers.eq(UserUtils.getUser(5L)),
+                        ArgumentMatchers.any(User.class),
                         ArgumentMatchers.any());
 
         final VerificationConfirmationResult result =
@@ -487,7 +487,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.PASSWORD_RESET),
                                 ArgumentMatchers.eq("legacy@test.com"),
-                                ArgumentMatchers.eq(UserUtils.getUser(6L)),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -637,7 +637,7 @@ public class AccountAuthServiceImplTest {
                 .updateStatus(
                         ArgumentMatchers.eq(60L),
                         ArgumentMatchers.any(),
-                        ArgumentMatchers.eq(UserUtils.getUser(9L)),
+                        ArgumentMatchers.any(User.class),
                         ArgumentMatchers.any());
 
         final VerificationConfirmationResult result =

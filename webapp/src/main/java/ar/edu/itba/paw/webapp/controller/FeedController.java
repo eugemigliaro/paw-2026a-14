@@ -8,15 +8,15 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
-import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
@@ -56,7 +56,6 @@ public class FeedController {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
-    private final UserService userService;
     private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
@@ -70,7 +69,6 @@ public class FeedController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
-            final UserService userService,
             final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
@@ -83,7 +81,6 @@ public class FeedController {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
-        this.userService = userService;
         this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
@@ -97,13 +94,11 @@ public class FeedController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
-            final UserService userService,
             final MessageSource messageSource) {
         this(
                 matchService,
                 matchParticipationService,
                 matchReservationService,
-                userService,
                 messageSource,
                 false,
                 "",
@@ -199,8 +194,7 @@ public class FeedController {
             final ExploreLocation exploreLocation) {
 
         final ZoneId zoneId = parseZone(filters.timezone());
-        final Long currentUserId =
-                CurrentAuthenticatedUser.get().map(user -> user.getUserId()).orElse(null);
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
                 "",
@@ -217,14 +211,13 @@ public class FeedController {
                                                 match,
                                                 zoneId,
                                                 locale,
-                                                currentUserId,
+                                                currentUser,
                                                 messageSource.getMessage(
                                                         "event.spotsLeft",
                                                         new Object[] {match.getAvailableSpots()},
                                                         locale),
                                                 distanceLabel(match, exploreLocation, locale),
                                                 messageSource,
-                                                userService,
                                                 matchParticipationService,
                                                 matchReservationService))
                         .toList(),

@@ -9,6 +9,7 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.sportLabel;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
@@ -30,7 +31,7 @@ public final class EventCardViewModelUtils {
             final Match match,
             final ZoneId zoneId,
             final Locale locale,
-            final Long currentUserId,
+            final User currentUser,
             final String badge,
             final MessageSource messageSource,
             final MatchParticipationService matchParticipationService,
@@ -39,7 +40,7 @@ public final class EventCardViewModelUtils {
                 match,
                 zoneId,
                 locale,
-                currentUserId,
+                currentUser,
                 badge,
                 null,
                 messageSource,
@@ -51,7 +52,7 @@ public final class EventCardViewModelUtils {
             final Match match,
             final ZoneId zoneId,
             final Locale locale,
-            final Long currentUserId,
+            final User currentUser,
             final String badge,
             final String distanceLabel,
             final MessageSource messageSource,
@@ -62,7 +63,7 @@ public final class EventCardViewModelUtils {
         final List<EventRelationshipBadgeViewModel> relationshipBadges =
                 relationshipBadgesFor(
                         match,
-                        currentUserId,
+                        currentUser,
                         locale,
                         messageSource,
                         matchParticipationService,
@@ -99,23 +100,23 @@ public final class EventCardViewModelUtils {
 
     public static List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
             final Match match,
-            final Long currentUserId,
+            final User currentUser,
             final Locale locale,
             final MessageSource messageSource,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService) {
-        if (currentUserId == null) {
+        if (currentUser == null) {
             return List.of();
         }
         final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
-        if (currentUserId.equals(match.getHost().getId())) {
+        if (currentUser.getId().equals(match.getHost().getId())) {
             badges.add(relationshipBadge("my_event", locale, messageSource));
         }
-        if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {
+        if (matchParticipationService.hasPendingRequest(match.getId(), currentUser)) {
             badges.add(relationshipBadge("pending", locale, messageSource));
-        } else if (matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+        } else if (matchParticipationService.hasInvitation(match.getId(), currentUser)) {
             badges.add(relationshipBadge("invited", locale, messageSource));
-        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+        } else if (matchReservationService.hasActiveReservation(match.getId(), currentUser)) {
             badges.add(relationshipBadge("going", locale, messageSource));
         }
         return List.copyOf(badges);

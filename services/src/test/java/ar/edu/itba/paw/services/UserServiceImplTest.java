@@ -91,12 +91,18 @@ public class UserServiceImplTest {
                         "+1 111 111 1111",
                         new ImageMetadata(14L, "image/png", 4L),
                         null);
-        Mockito.when(userDao.findById(2L)).thenReturn(Optional.of(existingUser));
         Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
 
         final User result =
                 userService.updateProfile(
-                        2L, "new_user", "Jamie", "Rivera", "+1 555 123 4567", null, 0L, null);
+                        existingUser,
+                        "new_user",
+                        "Jamie",
+                        "Rivera",
+                        "+1 555 123 4567",
+                        null,
+                        0L,
+                        null);
 
         Assertions.assertEquals("old@test.com", result.getEmail());
         Assertions.assertEquals("new_user", result.getUsername());
@@ -120,7 +126,6 @@ public class UserServiceImplTest {
                         null);
         final User conflictingUser =
                 new User(3L, "other@test.com", "new_user", "Other", "User", null, null, null);
-        Mockito.when(userDao.findById(2L)).thenReturn(Optional.of(existingUser));
         Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.of(conflictingUser));
         Mockito.when(
                         messageSource.getMessage(
@@ -134,7 +139,7 @@ public class UserServiceImplTest {
                 AccountRegistrationException.class,
                 () ->
                         userService.updateProfile(
-                                2L, "new_user", "Jamie", "Rivera", "", null, 0L, null));
+                                existingUser, "new_user", "Jamie", "Rivera", "", null, 0L, null));
     }
 
     @Test
@@ -165,46 +170,48 @@ public class UserServiceImplTest {
     public void testUpdateProfileRejectsInvalidUsername() {
         final User existingUser =
                 new User(1L, "test@test.com", "valid", null, null, null, null, null);
-        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
 
         Assertions.assertThrows(
                 AccountRegistrationException.class,
-                () -> userService.updateProfile(1L, "a", "Name", "Last", null, null, 0, null));
+                () ->
+                        userService.updateProfile(
+                                existingUser, "a", "Name", "Last", null, null, 0, null));
     }
 
     @Test
     public void testUpdateProfileRejectsEmptyName() {
         final User existingUser =
                 new User(1L, "test@test.com", "valid", null, null, null, null, null);
-        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
 
         Assertions.assertThrows(
                 AccountRegistrationException.class,
-                () -> userService.updateProfile(1L, "valid", " ", "Last", null, null, 0, null));
+                () ->
+                        userService.updateProfile(
+                                existingUser, "valid", " ", "Last", null, null, 0, null));
     }
 
     @Test
     public void testUpdateProfileRejectsInvalidPhone() {
         final User existingUser =
                 new User(1L, "test@test.com", "valid", null, null, null, null, null);
-        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
 
         Assertions.assertThrows(
                 AccountRegistrationException.class,
-                () -> userService.updateProfile(1L, "valid", "Name", "Last", "abc", null, 0, null));
+                () ->
+                        userService.updateProfile(
+                                existingUser, "valid", "Name", "Last", "abc", null, 0, null));
     }
 
     @Test
     public void testUpdateProfileWithNewImage() throws IOException {
         final User existingUser =
                 new User(1L, "test@test.com", "valid", null, null, null, null, null);
-        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(existingUser));
         Mockito.when(imageService.store(Mockito.any(), Mockito.anyLong(), Mockito.any()))
                 .thenReturn(100L);
 
         final User result =
                 userService.updateProfile(
-                        1L,
+                        existingUser,
                         "valid",
                         "Name",
                         "Last",

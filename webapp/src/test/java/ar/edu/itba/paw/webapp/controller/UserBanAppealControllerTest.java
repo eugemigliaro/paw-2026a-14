@@ -13,8 +13,8 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.utils.UserUtils;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
@@ -59,7 +59,8 @@ class UserBanAppealControllerTest {
     void getBanPageRendersForActiveBan() throws Exception {
         AuthenticationUtils.authenticateUser(7L);
         final UserBan ban = sampleBan();
-        Mockito.when(moderationService.findActiveBan(7L)).thenReturn(Optional.of(ban));
+        Mockito.when(moderationService.findActiveBan(UserUtils.getUser(7L)))
+                .thenReturn(Optional.of(ban));
         Mockito.when(moderationService.findReportById(ban.getModerationReport().getId()))
                 .thenReturn(Optional.of(sampleReport()));
 
@@ -71,7 +72,8 @@ class UserBanAppealControllerTest {
     @Test
     void postAppealRedirectsOnSuccess() throws Exception {
         AuthenticationUtils.authenticateUser(7L);
-        Mockito.when(moderationService.findActiveBan(7L)).thenReturn(Optional.of(sampleBan()));
+        Mockito.when(moderationService.findActiveBan(UserUtils.getUser(7L)))
+                .thenReturn(Optional.of(sampleBan()));
 
         mockMvc.perform(post("/account/ban/appeal").param("appealReason", "Please review"))
                 .andExpect(status().is3xxRedirection())

@@ -17,8 +17,8 @@ import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.utils.UserUtils;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -54,7 +54,7 @@ class ModerationAdminControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new ModerationAdminController(
-                                        moderationService, messageSource(), userService))
+                                        moderationService, userService, messageSource()))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
@@ -78,7 +78,7 @@ class ModerationAdminControllerTest {
         Mockito.when(
                         moderationService.finalizeReportAppeal(
                                 Mockito.eq(17L),
-                                Mockito.eq(99L),
+                                UserUtils.getUser(99L),
                                 Mockito.eq(AppealDecision.UPHELD)))
                 .thenReturn(sampleAppealedReport());
 

@@ -1,11 +1,11 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -38,10 +38,10 @@ public class UserBanAppealController {
 
     @GetMapping
     public ModelAndView showBanPage(final Model model, final Locale locale) {
-        final long userId = currentUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final UserBan activeBan =
                 moderationService
-                        .findActiveBan(userId)
+                        .findActiveBan(user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         final ModerationReport report =
                 moderationService
@@ -79,10 +79,10 @@ public class UserBanAppealController {
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final long userId = currentUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final UserBan activeBan =
                 moderationService
-                        .findActiveBan(userId)
+                        .findActiveBan(user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         try {
             moderationService.appealReport(activeBan.getModerationReport().getId(), appealReason);
@@ -91,11 +91,5 @@ public class UserBanAppealController {
         } catch (final ModerationException exception) {
             return new ModelAndView("redirect:/account/ban?error=" + exception.getCode());
         }
-    }
-
-    private static long currentUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 }

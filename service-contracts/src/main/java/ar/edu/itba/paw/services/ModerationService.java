@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportReason;
@@ -13,12 +14,12 @@ import java.util.Optional;
 
 public interface ModerationService {
 
-    Optional<UserBan> findActiveBan(Long userId);
+    Optional<UserBan> findActiveBan(User user);
 
-    Optional<UserBan> findLatestBanForUser(Long userId);
+    Optional<UserBan> findLatestBanForUser(User user);
 
     ModerationReport reportContent(
-            Long reporterUserId,
+            User reporter,
             ReportTargetType targetType,
             Long targetId,
             ReportReason reason,
@@ -35,13 +36,13 @@ public interface ModerationService {
             int page,
             int pageSize);
 
-    List<ModerationReport> findReportsByReporter(Long reporterUserId);
+    List<ModerationReport> findReportsByReporter(User reporter);
 
     List<ModerationReport> findReportsByReporter(
-            Long reporterUserId, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
+            User reporter, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
     PaginatedResult<ModerationReport> findReportsByReporter(
-            Long reporterUserId,
+            User reporter,
             List<ReportTargetType> targetTypes,
             List<ReportStatus> statuses,
             int page,
@@ -49,11 +50,11 @@ public interface ModerationService {
 
     Optional<ModerationReport> findReportById(Long reportId);
 
-    ModerationReport markReportUnderReview(Long reportId, Long adminUserId);
+    ModerationReport markReportUnderReview(Long reportId, User adminUser);
 
     ModerationReport resolveReport(
             Long reportId,
-            Long adminUserId,
+            User adminUser,
             ReportResolution resolution,
             String resolutionDetails,
             ReportStatus nextStatus);
@@ -61,14 +62,13 @@ public interface ModerationService {
     ModerationReport appealReport(Long reportId, String appealReason);
 
     ModerationReport finalizeReportAppeal(
-            Long reportId, Long adminUserId, AppealDecision appealDecision);
+            Long reportId, User adminUser, AppealDecision appealDecision);
 
-    boolean softDeleteReview(
-            Long reviewerUserId, Long reviewedUserId, String reason, Long deletedByUserId);
+    boolean softDeleteReview(User reviewer, User reviewed, String reason, User deletedBy);
 
-    boolean restoreReview(Long reviewerUserId, Long reviewedUserId);
+    boolean restoreReview(User reviewer, User reviewed);
 
-    boolean softDeleteMatch(Long matchId, Long deletedByUserId, String deleteReason);
+    boolean softDeleteMatch(Long matchId, User deletedBy, String deleteReason);
 
     boolean restoreMatch(Long matchId);
 

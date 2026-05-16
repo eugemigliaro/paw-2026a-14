@@ -11,27 +11,27 @@ public class AuthenticatedUserPrincipal implements Principal, Serializable {
 
     @Serial private static final long serialVersionUID = 1L;
 
-    private final Long userId;
+    private final User user;
     private final String email;
     private final String username;
     private final UserRole role;
 
     public AuthenticatedUserPrincipal(final UserAccount account) {
-        this.userId = account.getId();
+        this.user = account.toUser();
         this.email = account.getEmail();
         this.username = account.getUsername();
         this.role = account.getRole();
     }
 
     public AuthenticatedUserPrincipal(final User user, final UserRole role) {
-        this.userId = user.getId();
+        this.user = user;
         this.email = user.getEmail();
         this.username = user.getUsername();
         this.role = role;
     }
 
-    public Long getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
     public String getEmail() {

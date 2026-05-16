@@ -16,9 +16,8 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
@@ -47,17 +46,17 @@ public class ModerationAdminController {
     private static final int PAGE_SIZE = 4;
 
     private final ModerationService moderationService;
-    private final MessageSource messageSource;
     private final UserService userService;
+    private final MessageSource messageSource;
 
     @Autowired
     public ModerationAdminController(
             final ModerationService moderationService,
-            final MessageSource messageSource,
-            final UserService userService) {
+            final UserService userService,
+            final MessageSource messageSource) {
         this.moderationService = moderationService;
-        this.messageSource = messageSource;
         this.userService = userService;
+        this.messageSource = messageSource;
     }
 
     @ModelAttribute("resolutionForm")
@@ -183,8 +182,8 @@ public class ModerationAdminController {
             mav.addObject("userBan", userBanViewModel(report, locale));
         }
 
-        mav.addObject("reporterUsername", resolveUsername(report.getReporterUserId(), locale));
-        mav.addObject("reviewerUsername", resolveUsername(report.getReviewedByUserId(), locale));
+        mav.addObject("reporterUsername", report.getReporter().getUsername());
+        mav.addObject("reviewerUsername", report.getReviewer().getUsername());
 
         return mav;
     }
@@ -195,7 +194,8 @@ public class ModerationAdminController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         try {
-            moderationService.markReportUnderReview(reportId, currentAdminUserId());
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+            moderationService.markReportUnderReview(reportId, currentAdminUser);
             return redirectToReports("reviewed", redirectAttributes);
         } catch (final ModerationException ex) {
             return redirectToReportsError("report_not_found");
@@ -265,8 +265,10 @@ public class ModerationAdminController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
         try {
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+
             moderationService.finalizeReportAppeal(
-                    reportId, currentAdminUserId(), parsedAppealDecision);
+                    reportId, currentAdminUser, parsedAppealDecision);
 
             final String action =
                     parsedAppealDecision == AppealDecision.UPHELD
@@ -288,10 +290,12 @@ public class ModerationAdminController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         try {
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+
             final ModerationReport report =
                     moderationService.resolveReport(
                             reportId,
-                            currentAdminUserId(),
+                            currentAdminUser,
                             resolution,
                             resolutionDetails,
                             ReportStatus.RESOLVED);
@@ -314,33 +318,11 @@ public class ModerationAdminController {
         return new ModelAndView("redirect:/admin/reports?error=" + errorCode);
     }
 
-    private String resolveUsername(final Long userId, final Locale locale) {
-        if (userId == null) {
-            return "";
-        }
-
-        return userService
-                .findById(userId)
-                .map(User::getUsername)
-                .orElseGet(
-                        () ->
-                                messageSource.getMessage(
-                                        "moderation.target.user.fallback",
-                                        new Object[] {userId},
-                                        locale));
-    }
-
-    private long currentAdminUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-    }
-
     private ModerationReportViewModel toViewModel(
             final ModerationReport report, final Locale locale) {
         return new ModerationReportViewModel(
                 report.getId(),
-                report.getReporterUserId(),
+                report.getReporter(),
                 report.getTargetType() == null ? "" : report.getTargetType().getDbValue(),
                 moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()),
                 report.getReason() == null ? "" : report.getReason().getDbValue(),
@@ -354,10 +336,10 @@ public class ModerationAdminController {
                 formatInstant(report.getUpdatedAt(), locale),
                 formatInstant(report.getAppealedAt(), locale),
                 formatInstant(report.getReviewedAt(), locale),
-                report.getReviewedByUserId(),
+                report.getReviewer(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
                 formatInstant(report.getAppealResolvedAt(), locale),
-                report.getAppealResolvedByUserId(),
+                report.getAppealResolvedBy(),
                 isAppealed(report));
     }
 
@@ -370,8 +352,13 @@ public class ModerationAdminController {
             return null;
         }
 
+        final User targetUser =
+                userService
+                        .findById(report.getTargetId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
         final Optional<UserBan> latestBanForUser =
-                moderationService.findLatestBanForUser(report.getTargetId());
+                moderationService.findLatestBanForUser(targetUser);
 
         if (latestBanForUser.isEmpty()
                 || !latestBanForUser.get().getModerationReport().getId().equals(report.getId())) {
@@ -402,7 +389,7 @@ public class ModerationAdminController {
 
     public static final class ModerationReportViewModel {
         private final Long id;
-        private final Long reporterUserId;
+        private final User reporter;
         private final String targetTypeCode;
         private final String targetKey;
         private final String reasonCode;
@@ -416,15 +403,15 @@ public class ModerationAdminController {
         private final String updatedAtLabel;
         private final String appealedAtLabel;
         private final String reviewedAtLabel;
-        private final Long reviewedByUserId;
+        private final User reviewedBy;
         private final String appealDecisionCode;
         private final String appealResolvedAtLabel;
-        private final Long appealResolvedByUserId;
+        private final User appealResolvedBy;
         private final boolean appealed;
 
         private ModerationReportViewModel(
                 final Long id,
-                final Long reporterUserId,
+                final User reporter,
                 final String targetTypeCode,
                 final String targetKey,
                 final String reasonCode,
@@ -438,13 +425,13 @@ public class ModerationAdminController {
                 final String updatedAtLabel,
                 final String appealedAtLabel,
                 final String reviewedAtLabel,
-                final Long reviewedByUserId,
+                final User reviewedByUser,
                 final String appealDecisionCode,
                 final String appealResolvedAtLabel,
-                final Long appealResolvedByUserId,
+                final User appealResolvedByUser,
                 final boolean appealed) {
             this.id = id;
-            this.reporterUserId = reporterUserId;
+            this.reporter = reporter;
             this.targetTypeCode = targetTypeCode;
             this.targetKey = targetKey;
             this.reasonCode = reasonCode;
@@ -458,10 +445,10 @@ public class ModerationAdminController {
             this.updatedAtLabel = updatedAtLabel;
             this.appealedAtLabel = appealedAtLabel;
             this.reviewedAtLabel = reviewedAtLabel;
-            this.reviewedByUserId = reviewedByUserId;
+            this.reviewedBy = reviewedByUser;
             this.appealDecisionCode = appealDecisionCode;
             this.appealResolvedAtLabel = appealResolvedAtLabel;
-            this.appealResolvedByUserId = appealResolvedByUserId;
+            this.appealResolvedBy = appealResolvedByUser;
             this.appealed = appealed;
         }
 
@@ -469,8 +456,8 @@ public class ModerationAdminController {
             return id;
         }
 
-        public Long getReporterUserId() {
-            return reporterUserId;
+        public User getReporter() {
+            return reporter;
         }
 
         public String getTargetTypeCode() {
@@ -525,8 +512,8 @@ public class ModerationAdminController {
             return reviewedAtLabel;
         }
 
-        public Long getReviewedByUserId() {
-            return reviewedByUserId;
+        public User getReviewedBy() {
+            return reviewedBy;
         }
 
         public String getAppealDecisionCode() {
@@ -537,8 +524,8 @@ public class ModerationAdminController {
             return appealResolvedAtLabel;
         }
 
-        public Long getAppealResolvedByUserId() {
-            return appealResolvedByUserId;
+        public User getAppealResolvedBy() {
+            return appealResolvedBy;
         }
 
         public boolean isAppealed() {

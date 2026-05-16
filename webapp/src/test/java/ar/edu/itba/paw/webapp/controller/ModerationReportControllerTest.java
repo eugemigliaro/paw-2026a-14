@@ -18,9 +18,9 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.services.utils.MatchUtils;
-import ar.edu.itba.paw.services.utils.UserUtils;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.MatchUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -112,7 +112,7 @@ class ModerationReportControllerTest {
                 .thenReturn(Optional.of(review));
         Mockito.when(
                         moderationService.reportContent(
-                                Mockito.eq(9L),
+                                Mockito.any(User.class),
                                 Mockito.any(),
                                 Mockito.eq(12L),
                                 Mockito.any(),

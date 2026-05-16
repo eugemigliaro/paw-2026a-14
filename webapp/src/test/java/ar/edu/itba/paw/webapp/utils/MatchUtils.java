@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.services.utils;
+package ar.edu.itba.paw.webapp.utils;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;

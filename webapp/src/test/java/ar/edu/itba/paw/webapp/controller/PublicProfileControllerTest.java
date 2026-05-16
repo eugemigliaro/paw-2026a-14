@@ -16,8 +16,8 @@ import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.utils.UserUtils;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
 import java.time.Instant;
 import java.util.List;
@@ -87,12 +87,14 @@ class PublicProfileControllerTest {
                         null,
                         null);
         Mockito.when(userService.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
-        Mockito.when(playerReviewService.findSummaryForUser(42L))
+        Mockito.when(playerReviewService.findSummaryForUser(UserUtils.getUser(42L)))
                 .thenReturn(new PlayerReviewSummary(42L, 1, 0, 1));
-        Mockito.when(playerReviewService.findReviewsForUser(42L, PlayerReviewFilter.BOTH, 1, 10))
+        Mockito.when(
+                        playerReviewService.findReviewsForUser(
+                                UserUtils.getUser(42L), PlayerReviewFilter.BOTH, 1, 10))
                 .thenReturn(new PaginatedResult<>(List.of(review), 1, 1, 10));
         Mockito.when(userService.findByIds(List.of(99L))).thenReturn(List.of());
-        Mockito.when(moderationService.findActiveBan(42L)).thenReturn(Optional.empty());
+        Mockito.when(moderationService.findActiveBan(user)).thenReturn(Optional.empty());
         Mockito.when(
                         messageSource.getMessage(
                                 Mockito.eq("profile.reviews.unknownReviewer"),

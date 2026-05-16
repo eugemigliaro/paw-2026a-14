@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -90,5 +91,53 @@ public class MatchSeries {
 
     public void setHost(final User host) {
         this.host = host;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof MatchSeries)) {
+            return false;
+        }
+
+        MatchSeries that = (MatchSeries) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "MatchSeries{"
+                + "id="
+                + id
+                + ", host="
+                + host
+                + ", frequency='"
+                + frequency
+                + '\''
+                + ", startsAt="
+                + startsAt
+                + ", endsAt="
+                + endsAt
+                + ", timezone='"
+                + timezone
+                + '\''
+                + ", untilDate="
+                + untilDate
+                + ", occurrenceCount="
+                + occurrenceCount
+                + ", createdAt="
+                + createdAt
+                + ", updatedAt="
+                + updatedAt
+                + '}';
     }
 }

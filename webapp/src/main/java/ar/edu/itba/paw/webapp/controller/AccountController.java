@@ -6,15 +6,14 @@ import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -25,7 +24,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -48,7 +46,7 @@ public class AccountController {
 
     @GetMapping("/account")
     public ModelAndView showAccount(final Model model, final Locale locale) {
-        final User user = requiredAuthenticatedUser();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         return accountView(
                 user,
                 locale,
@@ -66,8 +64,9 @@ public class AccountController {
             final Locale locale) {
         final Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
-        final AuthenticatedUserPrincipal principal = requiredAuthenticatedPrincipal();
-        final User currentUser = requiredAuthenticatedUser();
+        final AuthenticatedUserPrincipal principal =
+                SecurityControllerUtils.requireAuthenticatedPrincipal();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (bindingResult.hasErrors()) {
             return accountView(currentUser, locale, false, accountProfileForm, null);
@@ -80,7 +79,7 @@ public class AccountController {
                         : accountProfileForm.getProfileImage().getInputStream()) {
             final User updatedUser =
                     userService.updateProfile(
-                            principal.getUserId(),
+                            principal.getUser(),
                             accountProfileForm.getUsername(),
                             accountProfileForm.getName(),
                             accountProfileForm.getLastName(),
@@ -185,18 +184,6 @@ public class AccountController {
                 messageSource.getMessage(
                         "account.viewPublicProfile", null, "View public profile", locale));
         return mav;
-    }
-
-    private User requiredAuthenticatedUser() {
-        final AuthenticatedUserPrincipal principal = requiredAuthenticatedPrincipal();
-        return userService
-                .findById(principal.getUserId())
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
-    }
-
-    private static AuthenticatedUserPrincipal requiredAuthenticatedPrincipal() {
-        return CurrentAuthenticatedUser.get()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static AccountProfileForm accountProfileFormFrom(final User user) {

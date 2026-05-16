@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
-import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.DEFAULT_PROFILE_IMAGE_URL;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
@@ -18,11 +17,10 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
-import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
@@ -60,7 +58,6 @@ public class EventController {
     private final MatchReservationService matchReservationService;
     private final MatchParticipationService matchParticipationService;
     private final PlayerReviewService playerReviewService;
-    private final UserService userService;
     private final MessageSource messageSource;
     private final Clock clock;
     private final boolean mapPickerEnabled;
@@ -73,7 +70,6 @@ public class EventController {
             final MatchReservationService matchReservationService,
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
-            final UserService userService,
             final MessageSource messageSource,
             final Clock clock) {
         this(
@@ -81,7 +77,6 @@ public class EventController {
                 matchReservationService,
                 matchParticipationService,
                 playerReviewService,
-                userService,
                 messageSource,
                 clock,
                 false,
@@ -96,7 +91,6 @@ public class EventController {
             final MatchReservationService matchReservationService,
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
-            final UserService userService,
             final MessageSource messageSource,
             final Clock clock,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
@@ -107,7 +101,6 @@ public class EventController {
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
         this.playerReviewService = playerReviewService;
-        this.userService = userService;
         this.messageSource = messageSource;
         this.clock = clock;
         this.mapPickerEnabled = mapPickerEnabled;
@@ -152,19 +145,16 @@ public class EventController {
                 locale);
     }
 
-    @PostMapping("/matches/{eventId}/reservations")
+    @PostMapping("/matches/{matchId:\\d+}/reservations")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView requestReservation(
-            @PathVariable("eventId") final String eventId,
+            @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final Long matchId = parseEventIdOrThrowNotFound(eventId);
-        final AuthenticatedUserPrincipal currentUser =
-                CurrentAuthenticatedUser.get()
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            matchReservationService.reserveSpot(matchId, currentUser.getUserId());
+            matchReservationService.reserveSpot(matchId, currentUser);
             redirectAttributes.addFlashAttribute("reservationStatus", "confirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
@@ -184,23 +174,18 @@ public class EventController {
         }
     }
 
-    @PostMapping("/matches/{eventId}/reservations/cancel")
+    @PostMapping("/matches/{matchId:\\d+}/reservations/cancel")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView cancelReservation(
-            @PathVariable("eventId") final String eventId,
+            @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final Long matchId = parseEventIdOrThrowNotFound(eventId);
-        final AuthenticatedUserPrincipal currentUser =
-                CurrentAuthenticatedUser.get()
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
         final Match cancellationContext = matchService.findMatchById(matchId).orElse(null);
 
         try {
-            matchParticipationService.removeParticipant(
-                    matchId, currentUser.getUserId(), currentUser.getUserId());
-            if (shouldRedirectToPlayerMatchesAfterCancellation(
-                    cancellationContext, currentUser.getUserId())) {
+            matchParticipationService.removeParticipant(matchId, currentUser, currentUser);
+            if (shouldRedirectToPlayerMatchesAfterCancellation(cancellationContext, currentUser)) {
                 return new ModelAndView("redirect:/events");
             }
             redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
@@ -223,21 +208,18 @@ public class EventController {
     }
 
     @PostMapping({
-        "/matches/{eventId}/recurring-reservations",
-        "/matches/{eventId}/series-reservations"
+        "/matches/{matchId:\\d+}/recurring-reservations",
+        "/matches/{matchId:\\d+}/series-reservations"
     })
     @PreAuthorize("isAuthenticated()")
     public ModelAndView requestSeriesReservation(
-            @PathVariable("eventId") final String eventId,
+            @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final Long matchId = parseEventIdOrThrowNotFound(eventId);
-        final AuthenticatedUserPrincipal currentUser =
-                CurrentAuthenticatedUser.get()
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            matchReservationService.reserveSeries(matchId, currentUser.getUserId());
+            matchReservationService.reserveSeries(matchId, currentUser);
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringConfirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
@@ -258,20 +240,17 @@ public class EventController {
     }
 
     @PostMapping({
-        "/matches/{eventId}/recurring-reservations/cancel",
-        "/matches/{eventId}/series-reservations/cancel"
+        "/matches/{matchId:\\d+}/recurring-reservations/cancel",
+        "/matches/{matchId:\\d+}/series-reservations/cancel"
     })
     public ModelAndView cancelSeriesReservations(
-            @PathVariable("eventId") final String eventId,
+            @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final Long matchId = parseEventIdOrThrowNotFound(eventId);
-        final AuthenticatedUserPrincipal currentUser =
-                CurrentAuthenticatedUser.get()
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            matchReservationService.cancelSeriesReservations(matchId, currentUser.getUserId());
+            matchReservationService.cancelSeriesReservations(matchId, currentUser);
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringCancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
@@ -309,31 +288,27 @@ public class EventController {
                         .findMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        final Long currentUserId =
-                CurrentAuthenticatedUser.get()
-                        .map(AuthenticatedUserPrincipal::getUserId)
-                        .orElse(null);
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
-        if (!isMatchVisibleToUser(match, currentUserId)) {
+        if (!isMatchVisibleToUser(match, currentUser)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
         final boolean isHostViewer =
-                currentUserId != null && currentUserId.equals(match.getHostUserId());
+                currentUser != null && currentUser.getId().equals(match.getHost().getId());
         final boolean hasPendingRequest =
                 !isHostViewer
-                        && currentUserId != null
+                        && currentUser != null
                         && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
-                        && matchParticipationService.hasPendingRequest(eventId, currentUserId);
+                        && matchParticipationService.hasPendingRequest(eventId, currentUser);
         final boolean isInvitedPlayer =
                 !isHostViewer
-                        && currentUserId != null
+                        && currentUser != null
                         && match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY
-                        && matchParticipationService.hasInvitation(eventId, currentUserId);
+                        && matchParticipationService.hasInvitation(eventId, currentUser);
         final boolean isConfirmedParticipant =
-                currentUserId != null
-                        && matchReservationService.hasActiveReservation(
-                                match.getId(), currentUserId);
+                currentUser != null
+                        && matchReservationService.hasActiveReservation(match.getId(), currentUser);
         final boolean isApprovalRequired =
                 match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
         final boolean isInviteOnly = match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY;
@@ -342,19 +317,19 @@ public class EventController {
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
         final List<Match> seriesOccurrences =
                 match.isRecurringOccurrence()
-                        ? matchService.findSeriesOccurrences(match.getSeriesId())
+                        ? matchService.findSeriesOccurrences(match.getSeries().getId())
                         : List.of();
         final SeriesReservationUiState seriesReservationState =
                 buildSeriesReservationUiState(
-                        match.getSeriesId(), seriesOccurrences, currentUserId, isHostViewer);
+                        match.getSeries().getId(), seriesOccurrences, currentUser, isHostViewer);
         final SeriesJoinRequestUiState seriesJoinRequestState =
                 isHostViewer
                         ? new SeriesJoinRequestUiState(false, false)
-                        : buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUserId);
+                        : buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUser);
         final boolean suppressReservationErrors =
                 hasPendingRequest || seriesJoinRequestState.pending();
         final ModelAndView mav = new ModelAndView("matches/detail");
-        final boolean hostCanManage = isHost(match, currentUserId);
+        final boolean hostCanManage = isHost(match, currentUser);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
         mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("isInviteOnly", isInviteOnly);
@@ -363,7 +338,7 @@ public class EventController {
         mav.addObject(
                 "eventPage",
                 buildRealEventPage(
-                        match, confirmedParticipants, seriesOccurrences, currentUserId, locale));
+                        match, confirmedParticipants, seriesOccurrences, currentUser, locale));
 
         mav.addObject("reservationEnabled", canReserveMatch(match, isHostViewer));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
@@ -383,7 +358,7 @@ public class EventController {
         mav.addObject("seriesReservationEnabled", seriesReservationState.available());
         mav.addObject("seriesReservationJoined", seriesReservationState.joined());
         mav.addObject("seriesCancellationEnabled", seriesReservationState.cancellable());
-        mav.addObject("seriesReservationRequiresLogin", currentUserId == null);
+        mav.addObject("seriesReservationRequiresLogin", currentUser == null);
         mav.addObject(
                 "seriesReservationConfirmed",
                 seriesReservationState.joined()
@@ -405,7 +380,7 @@ public class EventController {
         mav.addObject("seriesJoinRequestPath", "/matches/" + eventId + "/recurring-join-requests");
         mav.addObject("seriesJoinRequestEnabled", seriesJoinRequestState.available());
         mav.addObject("seriesJoinRequestPending", seriesJoinRequestState.pending());
-        mav.addObject("seriesJoinRequestRequiresLogin", currentUserId == null);
+        mav.addObject("seriesJoinRequestRequiresLogin", currentUser == null);
         mav.addObject("cancelJoinRequestPath", "/matches/" + eventId + "/join-requests/cancel");
         mav.addObject(
                 "hasPendingJoinRequest", hasPendingRequest && !seriesJoinRequestState.pending());
@@ -451,37 +426,36 @@ public class EventController {
             final Match match,
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
-            final Long currentUserId,
+            final User currentUser,
             final Locale locale) {
-        final Optional<User> host = userService.findById(match.getHostUserId());
+        final User host = match.getHost();
         final Set<Long> reviewableUserIds =
-                currentUserId == null
+                currentUser == null
                         ? Set.of()
                         : Optional.ofNullable(
-                                        playerReviewService.findReviewableUserIds(currentUserId))
+                                        playerReviewService.findReviewableUserIds(currentUser))
                                 .orElseGet(Set::of);
         return new EventDetailPageViewModel(
                 toCard(
                         match,
                         ZoneId.systemDefault(),
                         locale,
-                        currentUserId,
+                        currentUser,
                         buildAvailabilityLabel(match, locale),
                         messageSource,
-                        userService,
                         matchParticipationService,
                         matchReservationService),
                 null,
                 null,
-                host.map(User::getUsername)
-                        .orElse(
-                                messageSource.getMessage(
-                                        "event.detail.unknownHost",
-                                        new Object[] {match.getHostUserId()},
-                                        locale)),
-                host.map(this::profileHrefFor).orElse(null),
-                host.map(user -> profileUrlFor(user)).orElse(DEFAULT_PROFILE_IMAGE_URL),
-                toParticipantViewModels(confirmedParticipants, currentUserId, reviewableUserIds),
+                host.getUsername() != null
+                        ? host.getUsername()
+                        : messageSource.getMessage(
+                                "event.detail.unknownHost",
+                                new Object[] {match.getHost().getId()},
+                                locale),
+                profileHrefFor(host),
+                profileUrlFor(host),
+                toParticipantViewModels(confirmedParticipants, currentUser, reviewableUserIds),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
                 buildAboutParagraphs(match, locale),
@@ -489,8 +463,8 @@ public class EventController {
                 buildBookingDetails(match, locale),
                 buildAvailabilityLabel(match, locale),
                 messageSource.getMessage("event.booking.cta", null, locale),
-                loadNearbyMatches(match.getId(), currentUserId, locale),
-                toOccurrenceViewModels(match, seriesOccurrences, currentUserId, locale),
+                loadNearbyMatches(match.getId(), currentUser, locale),
+                toOccurrenceViewModels(match, seriesOccurrences, currentUser, locale),
                 mapPickerEnabled && !mapTileUrlTemplate.isBlank() && match.hasCoordinates(),
                 match.getLatitude(),
                 match.getLongitude(),
@@ -544,7 +518,7 @@ public class EventController {
 
     private List<ParticipantViewModel> toParticipantViewModels(
             final List<User> confirmedParticipants,
-            final Long currentUserId,
+            final User currentUser,
             final Set<Long> reviewableUserIds) {
         return confirmedParticipants.stream()
                 .map(
@@ -555,15 +529,15 @@ public class EventController {
                                         profileHrefFor(participant),
                                         profileImageUrlForParticipant(participant),
                                         reviewHrefForParticipant(
-                                                participant, currentUserId, reviewableUserIds)))
+                                                participant, currentUser, reviewableUserIds)))
                 .toList();
     }
 
     private String reviewHrefForParticipant(
-            final User participant, final Long currentUserId, final Set<Long> reviewableUserIds) {
-        if (currentUserId == null
+            final User participant, final User currentUser, final Set<Long> reviewableUserIds) {
+        if (currentUser == null
                 || participant.getId() == null
-                || currentUserId.equals(participant.getId())
+                || currentUser.getId().equals(participant.getId())
                 || !reviewableUserIds.contains(participant.getId())) {
             return null;
         }
@@ -575,11 +549,14 @@ public class EventController {
     }
 
     private String profileHrefFor(final User user) {
+        if (user.getUsername() == null) {
+            return null;
+        }
         return "/users/" + user.getUsername();
     }
 
     private List<EventCardViewModel> loadNearbyMatches(
-            final Long currentMatchId, final Long currentUserId, final Locale locale) {
+            final Long currentMatchId, final User currentUser, final Locale locale) {
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
                         "", null, null, null, "soonest", 1, 4, null, null, null);
@@ -592,10 +569,9 @@ public class EventController {
                                         match,
                                         ZoneId.systemDefault(),
                                         locale,
-                                        currentUserId,
+                                        currentUser,
                                         buildAvailabilityLabel(match, locale),
                                         messageSource,
-                                        userService,
                                         matchParticipationService,
                                         matchReservationService))
                 .toList();
@@ -604,7 +580,7 @@ public class EventController {
     private List<EventOccurrenceViewModel> toOccurrenceViewModels(
             final Match currentMatch,
             final List<Match> occurrences,
-            final Long currentUserId,
+            final User currentUser,
             final Locale locale) {
         if (occurrences == null || occurrences.size() <= 1) {
             return List.of();
@@ -615,7 +591,7 @@ public class EventController {
                         occurrence -> {
                             final EventDisplayState state = eventDisplayState(occurrence);
                             final String href =
-                                    isMatchVisibleToUser(occurrence, currentUserId)
+                                    isMatchVisibleToUser(occurrence, currentUser)
                                             ? "/matches/" + occurrence.getId()
                                             : null;
                             return new EventOccurrenceViewModel(
@@ -635,19 +611,19 @@ public class EventController {
     private SeriesReservationUiState buildSeriesReservationUiState(
             final Long seriesId,
             final List<Match> occurrences,
-            final Long currentUserId,
+            final User currentUser,
             final boolean isHostViewer) {
         if (occurrences == null || occurrences.isEmpty()) {
             return new SeriesReservationUiState(false, false, false);
         }
         final Set<Long> activeFutureReservationMatchIds =
-                currentUserId == null || seriesId == null
+                currentUser == null || seriesId == null
                         ? Set.of()
                         : matchReservationService.findActiveFutureReservationMatchIdsForSeries(
-                                seriesId, currentUserId);
+                                seriesId, currentUser);
         final SeriesReservationEvaluation evaluation =
                 evaluateSeriesReservationTargets(
-                        occurrences, currentUserId, activeFutureReservationMatchIds, isHostViewer);
+                        occurrences, currentUser, activeFutureReservationMatchIds, isHostViewer);
         return new SeriesReservationUiState(
                 !evaluation.targetMatchIds().isEmpty(),
                 evaluation.joined(),
@@ -656,7 +632,7 @@ public class EventController {
 
     private SeriesReservationEvaluation evaluateSeriesReservationTargets(
             final List<Match> occurrences,
-            final Long userId,
+            final User currentUser,
             final Set<Long> activeFutureReservationMatchIds,
             final boolean isHostViewer) {
         final List<Long> targetMatchIds = new ArrayList<>();
@@ -694,7 +670,7 @@ public class EventController {
         }
 
         final boolean joined =
-                userId != null
+                currentUser != null
                         && futureOpenOccurrenceCount > 0
                         && joinedFutureOpenOccurrenceCount == futureOpenOccurrenceCount;
         return new SeriesReservationEvaluation(
@@ -710,28 +686,27 @@ public class EventController {
     }
 
     private SeriesJoinRequestUiState buildSeriesJoinRequestUiState(
-            final Match match, final List<Match> occurrences, final Long currentUserId) {
-        if (currentUserId != null
+            final Match match, final List<Match> occurrences, final User currentUser) {
+        if (currentUser != null
                 && match.isRecurringOccurrence()
-                && matchParticipationService.hasPendingSeriesRequest(
-                        match.getId(), currentUserId)) {
+                && matchParticipationService.hasPendingSeriesRequest(match.getId(), currentUser)) {
             return new SeriesJoinRequestUiState(false, true);
         }
 
         final Set<Long> activeFutureReservationMatchIds =
-                currentUserId == null || match.getSeriesId() == null
+                currentUser == null || !match.isRecurringOccurrence()
                         ? Set.of()
                         : matchReservationService.findActiveFutureReservationMatchIdsForSeries(
-                                match.getSeriesId(), currentUserId);
+                                match.getSeries().getId(), currentUser);
         final Set<Long> pendingFutureRequestMatchIds =
-                currentUserId == null || match.getSeriesId() == null
+                currentUser == null || !match.isRecurringOccurrence()
                         ? Set.of()
                         : matchParticipationService.findPendingFutureRequestMatchIdsForSeries(
-                                match.getSeriesId(), currentUserId);
+                                match.getSeries().getId(), currentUser);
         final SeriesJoinRequestEvaluation evaluation =
                 evaluateSeriesJoinRequestTargets(
                         occurrences,
-                        currentUserId,
+                        currentUser,
                         activeFutureReservationMatchIds,
                         pendingFutureRequestMatchIds);
         return new SeriesJoinRequestUiState(
@@ -740,7 +715,7 @@ public class EventController {
 
     private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
             final List<Match> occurrences,
-            final Long userId,
+            final User currentUser,
             final Set<Long> activeFutureReservationMatchIds,
             final Set<Long> pendingFutureRequestMatchIds) {
         final List<Long> targetMatchIds = new ArrayList<>();
@@ -776,7 +751,7 @@ public class EventController {
         }
 
         final boolean pending =
-                userId != null
+                currentUser != null
                         && futureOpenApprovalOccurrenceCount > 0
                         && pendingFutureOpenApprovalOccurrenceCount
                                 == futureOpenApprovalOccurrenceCount;
@@ -919,22 +894,22 @@ public class EventController {
         }
     }
 
-    private boolean isMatchVisibleToUser(final Match match, final Long currentUserId) {
+    private boolean isMatchVisibleToUser(final Match match, final User currentUser) {
         if (EventStatus.DRAFT == match.getStatus()) {
-            return currentUserId != null && currentUserId.equals(match.getHostUserId());
+            return currentUser != null && currentUser.getId().equals(match.getHost().getId());
         }
 
         if (match.getVisibility() == EventVisibility.PRIVATE
                 || EventStatus.CANCELLED == match.getStatus()) {
-            if (currentUserId != null && currentUserId.equals(match.getHostUserId())) {
+            if (currentUser != null && currentUser.getId().equals(match.getHost().getId())) {
                 return true;
             }
-            if (currentUserId != null
-                    && matchReservationService.hasActiveReservation(match.getId(), currentUserId)) {
+            if (currentUser != null
+                    && matchReservationService.hasActiveReservation(match.getId(), currentUser)) {
                 return true;
             }
-            if (currentUserId != null
-                    && matchParticipationService.hasInvitation(match.getId(), currentUserId)) {
+            if (currentUser != null
+                    && matchParticipationService.hasInvitation(match.getId(), currentUser)) {
                 return true;
             }
             return false;
@@ -965,10 +940,11 @@ public class EventController {
     }
 
     private boolean shouldRedirectToPlayerMatchesAfterCancellation(
-            final Match match, final Long userId) {
+            final Match match, final User user) {
         return match != null
+                && user != null
                 && match.getVisibility() == EventVisibility.PRIVATE
-                && !userId.equals(match.getHostUserId());
+                && !user.getId().equals(match.getHost().getId());
     }
 
     private String joinErrorMessage(final String code, final Locale locale) {
@@ -1047,8 +1023,8 @@ public class EventController {
         return null;
     }
 
-    private boolean isHost(final Match match, final Long currentUserId) {
-        return currentUserId != null && currentUserId.equals(match.getHostUserId());
+    private boolean isHost(final Match match, final User currentUser) {
+        return currentUser != null && currentUser.getId().equals(match.getHost().getId());
     }
 
     private boolean canHostEdit(final Match match) {

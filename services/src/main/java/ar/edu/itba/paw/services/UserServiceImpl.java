@@ -69,7 +69,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User updateProfile(
-            final Long id,
+            final User user,
             final String username,
             final String name,
             final String lastName,
@@ -79,30 +79,28 @@ public class UserServiceImpl implements UserService {
             final InputStream profileImageContentStream)
             throws IOException {
         final Locale locale = currentLocale();
-        final User existingUser =
-                userDao.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        nonNullUser(user);
 
-        final String normalizedUsername = normalizeUsername(existingUser, username, locale);
+        final String normalizedUsername = normalizeUsername(user, username, locale);
         final String normalizedName = normalizeRequiredText(name, 150, "name", locale);
         final String normalizedLastName = normalizeRequiredText(lastName, 150, "lastName", locale);
         final String normalizedPhone = normalizePhone(phone, locale);
         final ImageMetadata profileImageMetadata =
                 resolveProfileImageMetadata(
-                        existingUser,
+                        user,
                         profileImageContentType,
                         profileImageContentLength,
                         profileImageContentStream);
 
         final Optional<User> userWithUsername = userDao.findByUsername(normalizedUsername);
-        if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(id)) {
+        if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(user.getId())) {
             throw new AccountRegistrationException(
                     "username_taken", message("profile.edit.error.usernameTaken", locale));
         }
 
         try {
             userDao.updateProfile(
-                    id,
+                    user.getId(),
                     normalizedUsername,
                     normalizedName,
                     normalizedLastName,
@@ -110,7 +108,7 @@ public class UserServiceImpl implements UserService {
                     profileImageMetadata);
         } catch (final DataIntegrityViolationException exception) {
             if (userDao.findByUsername(normalizedUsername)
-                    .filter(user -> !user.getId().equals(id))
+                    .filter(u -> !u.getId().equals(user.getId()))
                     .isPresent()) {
                 throw new AccountRegistrationException(
                         "username_taken", message("profile.edit.error.usernameTaken", locale));
@@ -119,14 +117,14 @@ public class UserServiceImpl implements UserService {
         }
 
         return new User(
-                existingUser.getId(),
-                existingUser.getEmail(),
+                user.getId(),
+                user.getEmail(),
                 normalizedUsername,
                 normalizedName,
                 normalizedLastName,
                 normalizedPhone,
                 profileImageMetadata,
-                existingUser.getPreferredLanguage());
+                user.getPreferredLanguage());
     }
 
     @Override
@@ -157,9 +155,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void updatePreferredLanguage(final Long id, final String preferredLanguage) {
-        userDao.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        userDao.updatePreferredLanguage(id, UserLanguages.normalizeLanguage(preferredLanguage));
+    public void updatePreferredLanguage(final User user, final String preferredLanguage) {
+        nonNullUser(user);
+        userDao.updatePreferredLanguage(
+                user.getId(), UserLanguages.normalizeLanguage(preferredLanguage));
     }
 
     private ImageMetadata resolveProfileImageMetadata(
@@ -198,6 +197,12 @@ public class UserServiceImpl implements UserService {
                     "username_invalid", message("profile.edit.error.usernameInvalid", locale));
         }
         return normalized;
+    }
+
+    private void nonNullUser(final User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
+        }
     }
 
     private String normalizeRequiredText(

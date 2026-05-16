@@ -4,17 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import ar.edu.itba.paw.models.ModerationReport;
-import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
-import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.services.utils.UserUtils;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,8 +19,6 @@ import org.mockito.Mockito;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class BannedAccountAuthorizationFilterTest {
@@ -36,9 +31,9 @@ class BannedAccountAuthorizationFilterTest {
     @Test
     void redirectsBannedUserToBanPageForProtectedRoute() throws Exception {
         final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
-        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(7L), Mockito.any()))
+        Mockito.when(userBanDao.findActiveBanForUser(UserUtils.getUser(7L), Mockito.any()))
                 .thenReturn(Optional.of(sampleBan()));
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
 
         final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/account");
         final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -53,9 +48,9 @@ class BannedAccountAuthorizationFilterTest {
     @Test
     void allowsBannedUserAppealRoute() throws Exception {
         final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
-        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(7L), Mockito.any()))
+        Mockito.when(userBanDao.findActiveBanForUser(UserUtils.getUser(7L), Mockito.any()))
                 .thenReturn(Optional.of(sampleBan()));
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
 
         final MockHttpServletRequest request =
                 new MockHttpServletRequest("POST", "/account/ban/appeal");
@@ -93,26 +88,5 @@ class BannedAccountAuthorizationFilterTest {
 
     private static UserBan sampleBan() {
         return new UserBan(11L, sampleReport(), Instant.now().plusSeconds(600));
-    }
-
-    private static void authenticateUser(final Long userId) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"),
-                                                UserLanguages.DEFAULT_LANGUAGE)),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
 }

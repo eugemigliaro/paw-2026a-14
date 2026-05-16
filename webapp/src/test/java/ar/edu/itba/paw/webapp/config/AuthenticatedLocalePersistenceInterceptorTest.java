@@ -58,7 +58,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -92,7 +92,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -124,7 +124,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -157,7 +157,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
 
         mockMvc.perform(get("/ping").param("lang", "es")).andExpect(status().isOk());
 

@@ -10,61 +10,58 @@ public interface MatchParticipationService {
 
     // Player actions (public approval-required events)
 
-    void requestToJoin(Long matchId, Long userId);
+    void requestToJoin(Long matchId, User user);
 
-    void requestToJoinSeries(Long matchId, Long userId);
+    void requestToJoinSeries(Long matchId, User user);
 
-    void cancelJoinRequest(Long matchId, Long userId);
+    void cancelJoinRequest(Long matchId, User user);
 
-    boolean hasPendingRequest(Long matchId, Long userId);
+    boolean hasPendingRequest(Long matchId, User user);
 
-    boolean hasPendingSeriesRequest(Long matchId, Long userId);
+    boolean hasPendingSeriesRequest(Long matchId, User user);
 
-    Set<Long> findPendingFutureRequestMatchIdsForSeries(Long seriesId, Long userId);
+    Set<Long> findPendingFutureRequestMatchIdsForSeries(Long seriesId, User user);
 
     // Host actions (public approval-required events)
 
-    void approveRequest(Long matchId, Long hostUserId, Long targetUserId);
+    void approveRequest(Long matchId, User host, User targetUser);
 
-    void rejectRequest(Long matchId, Long hostUserId, Long targetUserId);
+    void rejectRequest(Long matchId, User host, User targetUser);
 
-    void removeParticipant(Long matchId, Long hostUserId, Long targetUserId);
+    void removeParticipant(Long matchId, User host, User targetUser);
 
     // Queries (public approval-required events)
 
-    List<User> findPendingRequests(Long matchId, Long hostUserId);
+    List<User> findPendingRequests(Long matchId, User host);
 
-    List<PendingJoinRequest> findPendingRequestsForHost(Long hostUserId);
+    List<PendingJoinRequest> findPendingRequestsForHost(User host);
 
-    List<User> findConfirmedParticipants(Long matchId, Long hostUserId);
+    List<User> findConfirmedParticipants(Long matchId, User host);
 
-    List<Match> findPendingRequestMatches(Long userId);
+    List<Match> findPendingRequestMatches(User user);
 
     // Invite-only flow (private events)
 
-    void inviteUser(Long matchId, Long hostUserId, String email);
+    void inviteUser(Long matchId, User host, String email);
 
     default void inviteUser(
-            final Long matchId,
-            final Long hostUserId,
-            final String email,
-            final boolean includeSeries) {
-        inviteUser(matchId, hostUserId, email);
+            final Long matchId, final User host, final String email, final boolean includeSeries) {
+        inviteUser(matchId, host, email);
     }
 
-    void acceptInvite(Long matchId, Long userId);
+    void acceptInvite(Long matchId, User user);
 
-    void declineInvite(Long matchId, Long userId);
+    void declineInvite(Long matchId, User user);
 
-    boolean hasInvitation(Long matchId, Long userId);
+    boolean hasInvitation(Long matchId, User user);
 
-    default boolean isSeriesInvitation(final Long matchId, final Long userId) {
+    default boolean isSeriesInvitation(final Long matchId, final User user) {
         return false;
     }
 
-    List<User> findInvitedUsers(Long matchId, Long hostUserId);
+    List<User> findInvitedUsers(Long matchId, User host);
 
-    List<User> findDeclinedInvitees(Long matchId, Long hostUserId);
+    List<User> findDeclinedInvitees(Long matchId, User host);
 
-    List<Match> findInvitedMatches(Long userId);
+    List<Match> findInvitedMatches(User user);
 }

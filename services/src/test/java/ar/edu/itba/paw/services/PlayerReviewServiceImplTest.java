@@ -3,11 +3,12 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,15 +38,22 @@ public class PlayerReviewServiceImplTest {
     public void testSubmitReviewCreatesValidReview() {
         final PlayerReview persisted =
                 review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great teammate", null);
-        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
+        Mockito.when(playerReviewDao.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(true);
         Mockito.when(
                         playerReviewDao.upsertReview(
-                                2L, 3L, PlayerReviewReaction.LIKE, "Great teammate"))
+                                UserUtils.getUser(2L),
+                                UserUtils.getUser(3L),
+                                PlayerReviewReaction.LIKE,
+                                "Great teammate"))
                 .thenReturn(persisted);
 
         final PlayerReview review =
                 playerReviewService.submitReview(
-                        2L, 3L, PlayerReviewReaction.LIKE, "  Great teammate  ");
+                        UserUtils.getUser(2L),
+                        UserUtils.getUser(3L),
+                        PlayerReviewReaction.LIKE,
+                        "  Great teammate  ");
 
         Assertions.assertEquals(persisted, review);
         Assertions.assertEquals("Great teammate", review.getComment());
@@ -54,12 +62,22 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testSubmitReviewAllowsOnceEverEditableBehavior() {
         final PlayerReview updated = review(1L, 2L, 3L, PlayerReviewReaction.DISLIKE, "Late", null);
-        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
-        Mockito.when(playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late"))
+        Mockito.when(playerReviewDao.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(true);
+        Mockito.when(
+                        playerReviewDao.upsertReview(
+                                UserUtils.getUser(2L),
+                                UserUtils.getUser(3L),
+                                PlayerReviewReaction.DISLIKE,
+                                "Late"))
                 .thenReturn(updated);
 
         final PlayerReview review =
-                playerReviewService.submitReview(2L, 3L, PlayerReviewReaction.DISLIKE, "Late");
+                playerReviewService.submitReview(
+                        UserUtils.getUser(2L),
+                        UserUtils.getUser(3L),
+                        PlayerReviewReaction.DISLIKE,
+                        "Late");
 
         Assertions.assertEquals(1L, review.getId());
         Assertions.assertEquals(PlayerReviewReaction.DISLIKE, review.getReaction());
@@ -72,21 +90,28 @@ public class PlayerReviewServiceImplTest {
                         PlayerReviewException.class,
                         () ->
                                 playerReviewService.submitReview(
-                                        2L, 2L, PlayerReviewReaction.LIKE, "Great"));
+                                        UserUtils.getUser(2L),
+                                        UserUtils.getUser(2L),
+                                        PlayerReviewReaction.LIKE,
+                                        "Great"));
 
         Assertions.assertEquals(PlayerReviewException.SELF_REVIEW, exception.getCode());
     }
 
     @Test
     public void testSubmitReviewRejectsIneligibleUsers() {
-        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(false);
+        Mockito.when(playerReviewDao.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(false);
 
         final PlayerReviewException exception =
                 Assertions.assertThrows(
                         PlayerReviewException.class,
                         () ->
                                 playerReviewService.submitReview(
-                                        2L, 3L, PlayerReviewReaction.LIKE, "Great"));
+                                        UserUtils.getUser(2L),
+                                        UserUtils.getUser(3L),
+                                        PlayerReviewReaction.LIKE,
+                                        "Great"));
 
         Assertions.assertEquals(PlayerReviewException.NOT_ELIGIBLE, exception.getCode());
     }
@@ -96,7 +121,12 @@ public class PlayerReviewServiceImplTest {
         final PlayerReviewException exception =
                 Assertions.assertThrows(
                         PlayerReviewException.class,
-                        () -> playerReviewService.submitReview(2L, 3L, null, "Great"));
+                        () ->
+                                playerReviewService.submitReview(
+                                        UserUtils.getUser(2L),
+                                        UserUtils.getUser(3L),
+                                        null,
+                                        "Great"));
 
         Assertions.assertEquals(PlayerReviewException.INVALID_REACTION, exception.getCode());
     }
@@ -104,19 +134,30 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testSubmitReviewStoresBlankCommentAsNull() {
         final PlayerReview persisted = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, null, null);
-        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
-        Mockito.when(playerReviewDao.upsertReview(2L, 3L, PlayerReviewReaction.LIKE, null))
+        Mockito.when(playerReviewDao.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(true);
+        Mockito.when(
+                        playerReviewDao.upsertReview(
+                                UserUtils.getUser(2L),
+                                UserUtils.getUser(3L),
+                                PlayerReviewReaction.LIKE,
+                                null))
                 .thenReturn(persisted);
 
         final PlayerReview review =
-                playerReviewService.submitReview(2L, 3L, PlayerReviewReaction.LIKE, "   ");
+                playerReviewService.submitReview(
+                        UserUtils.getUser(2L),
+                        UserUtils.getUser(3L),
+                        PlayerReviewReaction.LIKE,
+                        "   ");
 
         Assertions.assertNull(review.getComment());
     }
 
     @Test
     public void testSubmitReviewRejectsTooLongComment() {
-        Mockito.when(playerReviewDao.canReview(2L, 3L)).thenReturn(true);
+        Mockito.when(playerReviewDao.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(true);
         final String tooLongComment = "a".repeat(PlayerReviewService.MAX_COMMENT_LENGTH + 1);
 
         final PlayerReviewException exception =
@@ -124,7 +165,10 @@ public class PlayerReviewServiceImplTest {
                         PlayerReviewException.class,
                         () ->
                                 playerReviewService.submitReview(
-                                        2L, 3L, PlayerReviewReaction.LIKE, tooLongComment));
+                                        UserUtils.getUser(2L),
+                                        UserUtils.getUser(3L),
+                                        PlayerReviewReaction.LIKE,
+                                        tooLongComment));
 
         Assertions.assertEquals(PlayerReviewException.COMMENT_TOO_LONG, exception.getCode());
     }
@@ -132,27 +176,34 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testDeleteReviewDelegatesToDao() {
         final List<Long> deletedReviewArgs = new ArrayList<>();
-        Mockito.when(playerReviewDao.softDeleteReview(2L, 3L))
+        Mockito.when(playerReviewDao.softDeleteReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenAnswer(
                         invocation -> {
-                            deletedReviewArgs.add(invocation.getArgument(0));
-                            deletedReviewArgs.add(invocation.getArgument(1));
+                            final User reviewer = invocation.getArgument(0);
+                            final User reviewed = invocation.getArgument(1);
+
+                            deletedReviewArgs.add(reviewer.getId());
+                            deletedReviewArgs.add(reviewed.getId());
+
                             return true;
                         });
 
-        playerReviewService.deleteReview(2L, 3L);
+        playerReviewService.deleteReview(UserUtils.getUser(2L), UserUtils.getUser(3L));
 
         Assertions.assertEquals(List.of(2L, 3L), deletedReviewArgs);
     }
 
     @Test
     public void testDeleteReviewRejectsMissingReview() {
-        Mockito.when(playerReviewDao.softDeleteReview(2L, 3L)).thenReturn(false);
+        Mockito.when(playerReviewDao.softDeleteReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(false);
 
         final PlayerReviewException exception =
                 Assertions.assertThrows(
                         PlayerReviewException.class,
-                        () -> playerReviewService.deleteReview(2L, 3L));
+                        () ->
+                                playerReviewService.deleteReview(
+                                        UserUtils.getUser(2L), UserUtils.getUser(3L)));
 
         Assertions.assertEquals(PlayerReviewException.NOT_FOUND, exception.getCode());
     }
@@ -161,23 +212,33 @@ public class PlayerReviewServiceImplTest {
     public void testFindMethodsDelegateToDaoResults() {
         final PlayerReview review = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great", null);
         final PlayerReviewSummary summary = new PlayerReviewSummary(3L, 1, 0, 1);
-        Mockito.when(playerReviewDao.findByPair(2L, 3L)).thenReturn(Optional.of(review));
-        Mockito.when(playerReviewDao.getSummaryForUser(3L)).thenReturn(summary);
+        Mockito.when(playerReviewDao.findByPair(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(Optional.of(review));
+        Mockito.when(playerReviewDao.getSummaryForUser(UserUtils.getUser(3L))).thenReturn(summary);
 
-        Assertions.assertTrue(playerReviewService.findReviewByPair(2L, 3L).isPresent());
-        Assertions.assertEquals(summary, playerReviewService.findSummaryForUser(3L));
+        Assertions.assertTrue(
+                playerReviewService
+                        .findReviewByPair(UserUtils.getUser(2L), UserUtils.getUser(3L))
+                        .isPresent());
+        Assertions.assertEquals(
+                summary, playerReviewService.findSummaryForUser(UserUtils.getUser(3L)));
     }
 
     @Test
     public void testFindReviewsForUserReturnsRequestedPage() {
         final PlayerReview review = review(2L, 4L, 3L, PlayerReviewReaction.LIKE, "Second", null);
-        Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BOTH))
+        Mockito.when(
+                        playerReviewDao.countReviewsForUser(
+                                UserUtils.getUser(3L), PlayerReviewFilter.BOTH))
                 .thenReturn(21);
-        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 10, 10))
+        Mockito.when(
+                        playerReviewDao.findReviewsForUser(
+                                UserUtils.getUser(3L), PlayerReviewFilter.BOTH, 10, 10))
                 .thenReturn(List.of(review));
 
         final PaginatedResult<PlayerReview> result =
-                playerReviewService.findReviewsForUser(3L, PlayerReviewFilter.BOTH, 2, 10);
+                playerReviewService.findReviewsForUser(
+                        UserUtils.getUser(3L), PlayerReviewFilter.BOTH, 2, 10);
 
         Assertions.assertEquals(2, result.getPage());
         Assertions.assertEquals(3, result.getTotalPages());
@@ -188,13 +249,18 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testFindReviewsForUserNormalizesInvalidPageAndPageSize() {
         final PlayerReview review = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great", null);
-        Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.POSITIVE))
+        Mockito.when(
+                        playerReviewDao.countReviewsForUser(
+                                UserUtils.getUser(3L), PlayerReviewFilter.POSITIVE))
                 .thenReturn(1);
-        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.POSITIVE, 10, 0))
+        Mockito.when(
+                        playerReviewDao.findReviewsForUser(
+                                UserUtils.getUser(3L), PlayerReviewFilter.POSITIVE, 10, 0))
                 .thenReturn(List.of(review));
 
         final PaginatedResult<PlayerReview> result =
-                playerReviewService.findReviewsForUser(3L, PlayerReviewFilter.POSITIVE, -2, 0);
+                playerReviewService.findReviewsForUser(
+                        UserUtils.getUser(3L), PlayerReviewFilter.POSITIVE, -2, 0);
 
         Assertions.assertEquals(1, result.getPage());
         Assertions.assertEquals(10, result.getPageSize());
@@ -204,13 +270,18 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testFindReviewsForUserClampsPagePastTotal() {
         final PlayerReview review = review(3L, 5L, 3L, PlayerReviewReaction.DISLIKE, "Third", null);
-        Mockito.when(playerReviewDao.countReviewsForUser(3L, PlayerReviewFilter.BAD))
+        Mockito.when(
+                        playerReviewDao.countReviewsForUser(
+                                UserUtils.getUser(3L), PlayerReviewFilter.BAD))
                 .thenReturn(25);
-        Mockito.when(playerReviewDao.findReviewsForUser(3L, PlayerReviewFilter.BAD, 10, 20))
+        Mockito.when(
+                        playerReviewDao.findReviewsForUser(
+                                UserUtils.getUser(3L), PlayerReviewFilter.BAD, 10, 20))
                 .thenReturn(List.of(review));
 
         final PaginatedResult<PlayerReview> result =
-                playerReviewService.findReviewsForUser(3L, PlayerReviewFilter.BAD, 9, 10);
+                playerReviewService.findReviewsForUser(
+                        UserUtils.getUser(3L), PlayerReviewFilter.BAD, 9, 10);
 
         Assertions.assertEquals(3, result.getPage());
         Assertions.assertEquals(3, result.getTotalPages());
@@ -219,9 +290,11 @@ public class PlayerReviewServiceImplTest {
 
     @Test
     public void testFindReviewableUserIdsReturnsDaoIdsAsSet() {
-        Mockito.when(playerReviewDao.findReviewableUserIds(2L)).thenReturn(List.of(3L, 4L, 3L));
+        Mockito.when(playerReviewDao.findReviewableUserIds(UserUtils.getUser(2L)))
+                .thenReturn(List.of(3L, 4L, 3L));
 
-        final Set<Long> reviewableUserIds = playerReviewService.findReviewableUserIds(2L);
+        final Set<Long> reviewableUserIds =
+                playerReviewService.findReviewableUserIds(UserUtils.getUser(2L));
 
         Assertions.assertEquals(Set.of(3L, 4L), reviewableUserIds);
     }
@@ -240,8 +313,8 @@ public class PlayerReviewServiceImplTest {
             final PlayerReviewReaction reaction,
             final String comment,
             final Instant deletedAt) {
-        final UserAccount reviewer = Mockito.mock(UserAccount.class);
-        final UserAccount reviewed = Mockito.mock(UserAccount.class);
+        final User reviewer = Mockito.mock(User.class);
+        final User reviewed = Mockito.mock(User.class);
         Mockito.lenient().when(reviewer.getId()).thenReturn(reviewerUserId);
         Mockito.lenient().when(reviewed.getId()).thenReturn(reviewedUserId);
 

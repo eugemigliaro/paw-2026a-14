@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -27,17 +28,22 @@ class HostParticipationControllerTest {
     private MatchService matchService;
     private MatchParticipationService matchParticipationService;
     private MessageSource messageSource;
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
         matchService = Mockito.mock(MatchService.class);
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
         messageSource = Mockito.mock(MessageSource.class);
+        userService = Mockito.mock(UserService.class);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostParticipationController(
-                                        matchService, matchParticipationService, messageSource))
+                                        matchService,
+                                        matchParticipationService,
+                                        userService,
+                                        messageSource))
                         .build();
     }
 
