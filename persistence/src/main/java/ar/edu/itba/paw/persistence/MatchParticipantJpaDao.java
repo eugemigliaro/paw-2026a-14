@@ -266,7 +266,7 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     public List<PendingJoinRequest> findPendingRequestsForHost(final User host) {
         final List<MatchParticipant> participants =
                 em.createQuery(
-                                "FROM MatchParticipant mp"
+                                "SELECT mp FROM MatchParticipant mp"
                                         + " JOIN mp.match m"
                                         + " JOIN mp.user u"
                                         + " WHERE m.host.id = :hostUserId"
@@ -329,17 +329,20 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
 
         Instant now = Instant.now();
 
-        match.getParticipants().stream()
-                .filter(mp -> mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
-                .forEach(
-                        mp -> {
-                            mp.setStatus(ParticipantStatus.JOINED);
-                            mp.setScope(ParticipantScope.MATCH);
-                            mp.setJoinedAt(now);
-                            mp.setVersion(mp.getVersion() + 1);
-                        });
+        final List<MatchParticipant> toBeUpdated =
+                match.getParticipants().stream()
+                        .filter(mp -> mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
+                        .toList();
 
-        return 1;
+        toBeUpdated.forEach(
+                mp -> {
+                    mp.setStatus(ParticipantStatus.JOINED);
+                    mp.setScope(ParticipantScope.MATCH);
+                    mp.setJoinedAt(now);
+                    mp.setVersion(mp.getVersion() + 1);
+                });
+
+        return toBeUpdated.size();
     }
 
     @Override
@@ -472,17 +475,19 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
             return 0;
         }
 
-        match.getParticipants().stream()
-                .filter(mp -> mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
-                .map(
-                        mp -> {
-                            mp.setStatus(ParticipantStatus.CANCELLED);
-                            mp.setScope(ParticipantScope.MATCH);
-                            mp.setVersion(mp.getVersion() + 1);
-                            return mp;
-                        });
+        List<MatchParticipant> toBeUpdated =
+                match.getParticipants().stream()
+                        .filter(mp -> mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
+                        .toList();
 
-        return 1;
+        toBeUpdated.forEach(
+                mp -> {
+                    mp.setStatus(ParticipantStatus.CANCELLED);
+                    mp.setScope(ParticipantScope.MATCH);
+                    mp.setVersion(mp.getVersion() + 1);
+                });
+
+        return toBeUpdated.size();
     }
 
     @Override

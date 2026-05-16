@@ -39,6 +39,12 @@ public class MatchJpaDao implements MatchDao {
     private static final List<ParticipantStatus> JOINED_PARTICIPANT_STATUSES =
             List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN);
 
+    private static final String JOINED_PLAYERS_EXPRESSION =
+            "(SELECT COUNT(mp.id) FROM MatchParticipant mp"
+                    + " WHERE mp.match = m AND mp.status IN :activeStatuses)";
+    private static final String OPEN_SPOTS_EXPRESSION =
+            "(m.maxPlayers - " + JOINED_PLAYERS_EXPRESSION + ")";
+
     @PersistenceContext private EntityManager em;
 
     @Override
@@ -219,7 +225,15 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public Optional<Match> findById(final Long matchId) {
-        return Optional.ofNullable(em.find(Match.class, matchId));
+        final Match match = em.find(Match.class, matchId);
+
+        if (match == null) {
+            return Optional.empty();
+        }
+
+        match.setJoinedPlayers(countJoinedPlayers(match));
+
+        return Optional.of(match);
     }
 
     @Override
@@ -248,26 +262,11 @@ public class MatchJpaDao implements MatchDao {
             return matches;
         }
 
-        final List<Long> ids = matches.stream().map(Match::getId).toList();
-
-        final List<Object[]> counts =
-                em.createQuery(
-                                "SELECT mp.match.id, COUNT(mp.id) FROM MatchParticipant mp WHERE mp.match.id IN :ids AND mp.status IN :activeStatuses GROUP BY mp.match.id",
-                                Object[].class)
-                        .setParameter("ids", ids)
-                        .setParameter("activeStatuses", ACTIVE_PARTICIPANT_STATUSES)
-                        .getResultList();
-
-        final Map<Long, Integer> joinedPlayersByMatchId = new HashMap<>();
-
-        for (final Object[] row : counts) {
-            joinedPlayersByMatchId.put((Long) row[0], ((Long) row[1]).intValue());
+        for (final Match match : matches) {
+            if (match != null) {
+                match.setJoinedPlayers(countJoinedPlayers(match));
+            }
         }
-
-        matches.forEach(
-                match ->
-                        match.setJoinedPlayers(
-                                joinedPlayersByMatchId.getOrDefault(match.getId(), 0)));
 
         return matches;
     }
@@ -292,7 +291,7 @@ public class MatchJpaDao implements MatchDao {
         parts.params.put("visibility", List.of(EventVisibility.PUBLIC));
         appendStatusFilter(parts, List.of(EventStatus.OPEN));
         parts.where.add("m.deleted = FALSE");
-        parts.where.add(openSpotsExpression() + " >= 1");
+        parts.where.add(OPEN_SPOTS_EXPRESSION + " >= 1");
         appendFilters(
                 parts,
                 query,
@@ -322,7 +321,7 @@ public class MatchJpaDao implements MatchDao {
         parts.params.put("visibility", List.of(EventVisibility.PUBLIC));
         appendStatusFilter(parts, List.of(EventStatus.OPEN));
         parts.where.add("m.deleted = FALSE");
-        parts.where.add(openSpotsExpression() + " >= 1");
+        parts.where.add(OPEN_SPOTS_EXPRESSION + " >= 1");
         appendFilters(
                 parts,
                 query,
@@ -508,6 +507,18 @@ public class MatchJpaDao implements MatchDao {
         }
 
         return matchesQuery.getResultList().stream()
+                .map(
+                        m -> {
+                            if (m != null) {
+                                m.setJoinedPlayers(countJoinedPlayers(m));
+                                if (m.getEndsAt() == null
+                                        && m.getStartsAt().isBefore(Instant.now())
+                                        && m.getStatus() == EventStatus.OPEN) {
+                                    m.setStatus(EventStatus.COMPLETED);
+                                }
+                            }
+                            return m;
+                        })
                 .sorted(Comparator.comparingInt(match -> order.get(match.getId())))
                 .toList();
     }
@@ -520,6 +531,17 @@ public class MatchJpaDao implements MatchDao {
         setCommonParams(countQuery);
         setParams(countQuery, parts.params);
         return countQuery.getSingleResult().intValue();
+    }
+
+    private int countJoinedPlayers(final Match match) {
+        return em.createQuery(
+                        "SELECT COUNT(mp.id) FROM MatchParticipant mp"
+                                + " WHERE mp.match = :match AND mp.status IN :activeStatuses",
+                        Long.class)
+                .setParameter("match", match)
+                .setParameter("activeStatuses", ACTIVE_PARTICIPANT_STATUSES)
+                .getSingleResult()
+                .intValue();
     }
 
     private static QueryParts joinedParts(final Long userId) {
@@ -675,15 +697,6 @@ public class MatchJpaDao implements MatchDao {
         return parts.where.isEmpty() ? "" : " WHERE " + String.join(" AND ", parts.where);
     }
 
-    private static String joinedPlayersExpression() {
-        return "(SELECT COUNT(mp.id) FROM MatchParticipant mp"
-                + " WHERE mp.match = m AND mp.status IN :activeStatuses)";
-    }
-
-    private static String openSpotsExpression() {
-        return "(m.maxPlayers - " + joinedPlayersExpression() + ")";
-    }
-
     private static String orderBy(
             final MatchSort sort,
             final Boolean upcoming,
@@ -701,7 +714,7 @@ public class MatchJpaDao implements MatchDao {
                 case PRICE_LOW ->
                         " ORDER BY COALESCE(m.pricePerPlayer, 0) ASC, m.startsAt DESC, m.id DESC";
                 case SPOTS_DESC ->
-                        " ORDER BY " + openSpotsExpression() + " DESC, m.startsAt DESC, m.id DESC";
+                        " ORDER BY " + OPEN_SPOTS_EXPRESSION + " DESC, m.startsAt DESC, m.id DESC";
                 default -> " ORDER BY m.startsAt DESC, m.id DESC";
             };
         }
@@ -709,7 +722,7 @@ public class MatchJpaDao implements MatchDao {
             case PRICE_LOW ->
                     " ORDER BY COALESCE(m.pricePerPlayer, 0) ASC, m.startsAt ASC, m.id ASC";
             case SPOTS_DESC ->
-                    " ORDER BY " + openSpotsExpression() + " DESC, m.startsAt ASC, m.id ASC";
+                    " ORDER BY " + OPEN_SPOTS_EXPRESSION + " DESC, m.startsAt ASC, m.id ASC";
             default -> " ORDER BY m.startsAt ASC, m.id ASC";
         };
     }

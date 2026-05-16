@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import javax.persistence.EntityManager;
-import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
@@ -119,7 +118,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
         final TypedQuery<Long> query =
                 em.createQuery(
                         "SELECT COUNT(mr) FROM ModerationReport mr "
-                                + "WHERE mr.reporterUserId = :reporterUserId "
+                                + "WHERE mr.reporter.id = :reporterUserId "
                                 + "AND mr.status IN (:statuses)",
                         Long.class);
         query.setParameter("reporterUserId", reporter.getId());
@@ -133,7 +132,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     @Override
     public boolean markUnderReview(
             final Long reportId, final User reviewer, final Instant reviewedAt) {
-        final ModerationReport report = findForUpdate(reportId);
+        final ModerationReport report = em.find(ModerationReport.class, reportId);
 
         if (report == null || report.getStatus() != ReportStatus.PENDING) {
             return false;
@@ -155,7 +154,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
             final String resolutionDetails,
             final Instant reviewedAt,
             final ReportStatus nextStatus) {
-        final ModerationReport report = findForUpdate(reportId);
+        final ModerationReport report = em.find(ModerationReport.class, reportId);
 
         if (report == null
                 || (report.getStatus() != ReportStatus.PENDING
@@ -176,7 +175,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     @Override
     public boolean appealReport(
             final Long reportId, final String appealReason, final Instant appealedAt) {
-        final ModerationReport report = findForUpdate(reportId);
+        final ModerationReport report = em.find(ModerationReport.class, reportId);
 
         if (report == null
                 || report.getStatus() != ReportStatus.RESOLVED
@@ -199,7 +198,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
             final User appealResolvedBy,
             final AppealDecision appealDecision,
             final Instant appealResolvedAt) {
-        final ModerationReport report = findForUpdate(reportId);
+        final ModerationReport report = em.find(ModerationReport.class, reportId);
 
         if (report == null || report.getStatus() != ReportStatus.APPEALED) {
             return false;
@@ -257,7 +256,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
         final StringBuilder jpql = new StringBuilder("FROM ModerationReport mr WHERE 1=1");
 
         if (reporterUserIdFilter != null) {
-            jpql.append(" AND mr.reporterUserId = :reporterUserId");
+            jpql.append(" AND mr.reporter.id = :reporterUserId");
         }
 
         if (targetTypes != null && !targetTypes.isEmpty()) {
@@ -297,16 +296,5 @@ public class ModerationReportJpaDao implements ModerationReportDao {
         final TypedQuery<Long> query = em.createQuery(countJpql, Long.class);
         applyFilterParameters(query, reporterUserIdFilter, targetTypes, statuses);
         return query.getSingleResult().intValue();
-    }
-
-    private ModerationReport findForUpdate(final Long reportId) {
-        final TypedQuery<ModerationReport> query =
-                em.createQuery(
-                                "FROM ModerationReport mr WHERE mr.id = :reportId",
-                                ModerationReport.class)
-                        .setParameter("reportId", reportId)
-                        .setLockMode(LockModeType.PESSIMISTIC_WRITE);
-
-        return query.getResultList().stream().findFirst().orElse(null);
     }
 }

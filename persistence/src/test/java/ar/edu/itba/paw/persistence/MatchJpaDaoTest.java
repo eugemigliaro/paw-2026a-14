@@ -239,8 +239,10 @@ public class MatchJpaDaoTest {
 
     @Test
     public void testFindPublicEventsBySearchText() {
+        final User otherHost = createUser("other-host", "other-host@example.com");
+
         matchDao.createMatch(
-                host,
+                otherHost,
                 "River Court",
                 "Morning Football",
                 "Fast 5v5 match",
@@ -262,7 +264,7 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        for (final String query : List.of("football", "fast", "river", host.getUsername())) {
+        for (final String query : List.of("football", "fast", "river", otherHost.getUsername())) {
             final List<Match> result = findPublicMatchesByQuery(query);
 
             Assertions.assertEquals(1, result.size(), query);
@@ -567,17 +569,7 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        final User admin =
-                new User(
-                        host.getId() + 1,
-                        "admin2@test.com",
-                        "admin2",
-                        null,
-                        null,
-                        null,
-                        null,
-                        null);
-        matchDao.softDeleteMatch(toDelete.getId(), admin, "Violation");
+        matchDao.softDeleteMatch(toDelete.getId(), host, "Violation");
         em.flush();
         em.clear();
 

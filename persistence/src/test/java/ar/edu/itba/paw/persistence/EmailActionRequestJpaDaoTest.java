@@ -228,7 +228,7 @@ public class EmailActionRequestJpaDaoTest {
         final Optional<EmailActionRequest> updated =
                 emailActionRequestDao.findByTokenHash("token-null-user");
         Assertions.assertTrue(updated.isPresent());
-        Assertions.assertNull(updated.get().getUser().getId());
+        Assertions.assertNull(updated.get().getUser());
         Assertions.assertEquals(EmailActionStatus.EXPIRED, updated.get().getStatus());
         Assertions.assertEquals(1L, countRequests());
         assertPersistedRequest(
@@ -248,7 +248,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.ACCOUNT_VERIFICATION,
                         targetEmail,
-                        user,
+                        null,
                         "token-verify",
                         "{}",
                         Instant.parse("2026-05-24T10:00:00Z"));
@@ -264,7 +264,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.ACCOUNT_VERIFICATION,
                         "other@test.com",
-                        user,
+                        null,
                         "token-other",
                         "{}",
                         Instant.parse("2026-05-24T10:00:00Z"));
@@ -350,7 +350,12 @@ public class EmailActionRequestJpaDaoTest {
         Assertions.assertNotNull(persisted);
         Assertions.assertEquals(actionType, persisted.getActionType());
         Assertions.assertEquals(email, persisted.getEmail());
-        Assertions.assertEquals(user.getId(), persisted.getUser().getId());
+        if (user == null) {
+            Assertions.assertNull(persisted.getUser());
+        } else {
+            Assertions.assertNotNull(persisted.getUser());
+            Assertions.assertEquals(user.getId(), persisted.getUser().getId());
+        }
         Assertions.assertEquals(tokenHash, persisted.getTokenHash());
         Assertions.assertEquals(status, persisted.getStatus());
         Assertions.assertEquals(status.getDbValue(), persistedStatus(id));

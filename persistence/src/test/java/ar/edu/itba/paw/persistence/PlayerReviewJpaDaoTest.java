@@ -160,6 +160,7 @@ public class PlayerReviewJpaDaoTest {
         final PlayerReview initial =
                 playerReviewDao.upsertReview(
                         user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
+        flushAndClear();
 
         final boolean deleted = playerReviewDao.softDeleteReview(user2, user3, user4, "spam");
 

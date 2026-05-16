@@ -38,6 +38,7 @@ public class ModerationReportJpaDaoTest {
     private User reporter;
     private User admin;
     private User target;
+    private User reporter2;
 
     @BeforeEach
     public void setUp() {
@@ -50,12 +51,15 @@ public class ModerationReportJpaDaoTest {
                                 + "(2, 'admin', 'admin@test.com', 'Admin', 'User', null,"
                                 + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
                                 + "(3, 'target', 'target@test.com', 'Target', 'User', null,"
+                                + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
+                                + "(4, 'reporter2', 'rep2@test.com', 'Reporter2', 'User', null,"
                                 + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                 .executeUpdate();
 
         reporter = em.find(User.class, 1L);
         admin = em.find(User.class, 2L);
         target = em.find(User.class, 3L);
+        reporter2 = em.find(User.class, 4L);
     }
 
     @Test
@@ -378,7 +382,7 @@ public class ModerationReportJpaDaoTest {
 
         final ModerationReport report2 =
                 moderationReportDao.createReport(
-                        reporter,
+                        reporter2,
                         ReportTargetType.USER,
                         target.getId(),
                         ReportReason.HARASSMENT,
@@ -428,7 +432,7 @@ public class ModerationReportJpaDaoTest {
 
         final ModerationReport dismissedReport =
                 moderationReportDao.createReport(
-                        reporter,
+                        reporter2,
                         ReportTargetType.USER,
                         target.getId(),
                         ReportReason.SPAM,
@@ -469,9 +473,8 @@ public class ModerationReportJpaDaoTest {
                 "Banned",
                 NOW,
                 ReportStatus.RESOLVED);
-
         moderationReportDao.createReport(
-                reporter,
+                reporter2,
                 ReportTargetType.USER,
                 target.getId(),
                 ReportReason.HARASSMENT,

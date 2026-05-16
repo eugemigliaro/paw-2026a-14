@@ -74,9 +74,7 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
         final EmailActionRequest entity = em.find(EmailActionRequest.class, id);
         if (entity != null) {
             entity.setStatus(status);
-            if (user != null) {
-                entity.setUser(user);
-            }
+            entity.setUser(user);
             entity.setConsumedAt(consumedAt);
             entity.setUpdatedAt(Instant.now(clock));
         }
