@@ -26,6 +26,7 @@ import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import ar.edu.itba.paw.services.mail.UnbanMailTemplateData;
+import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -137,7 +138,7 @@ public class ModerationServiceImplTest {
         Mockito.when(
                         moderationReportDao.resolveReport(
                                 Mockito.eq(77L),
-                                Mockito.eq(99L),
+                                Mockito.eq(UserUtils.getUser(99L)),
                                 Mockito.eq(ReportResolution.USER_BANNED),
                                 Mockito.anyString(),
                                 Mockito.any(),
@@ -231,7 +232,7 @@ public class ModerationServiceImplTest {
         Mockito.when(
                         moderationReportDao.resolveReport(
                                 Mockito.eq(77L),
-                                Mockito.eq(99L),
+                                Mockito.eq(UserUtils.getUser(99L)),
                                 Mockito.eq(ReportResolution.USER_BANNED),
                                 Mockito.anyString(),
                                 Mockito.any(),
@@ -284,25 +285,20 @@ public class ModerationServiceImplTest {
         Mockito.when(
                         moderationReportDao.resolveReport(
                                 Mockito.eq(45L),
-                                Mockito.eq(99L),
+                                Mockito.eq(UserUtils.getUser(99L)),
                                 Mockito.eq(ReportResolution.CONTENT_DELETED),
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.eq(ReportStatus.RESOLVED)))
                 .thenReturn(true);
 
-        final UserAccount reviewer = Mockito.mock(UserAccount.class);
-        final UserAccount reviewed = Mockito.mock(UserAccount.class);
-        Mockito.when(reviewer.getId()).thenReturn(7L);
-        Mockito.when(reviewed.getId()).thenReturn(8L);
-
         Mockito.when(playerReviewDao.findByIdIncludingDeleted(123L))
                 .thenReturn(
                         Optional.of(
                                 new PlayerReview(
                                         123L,
-                                        reviewer,
-                                        reviewed,
+                                        UserUtils.getUser(7L),
+                                        UserUtils.getUser(8L),
                                         PlayerReviewReaction.DISLIKE,
                                         "bad",
                                         FIXED_NOW,
@@ -314,8 +310,8 @@ public class ModerationServiceImplTest {
 
         Mockito.when(
                         playerReviewDao.softDeleteReview(
-                                Mockito.anyLong(), Mockito.anyLong(),
-                                Mockito.anyLong(), Mockito.anyString()))
+                                Mockito.any(), Mockito.any(),
+                                Mockito.any(), Mockito.anyString()))
                 .thenAnswer(
                         invocation -> {
                             capturedReviewerUserId.set(invocation.getArgument(0));
@@ -346,11 +342,14 @@ public class ModerationServiceImplTest {
     @Test
     public void findReportsByReporter_returnsExactlyTheReportsFromDao() {
         final List<ModerationReport> expected = List.of(sampleUserReport());
-        Mockito.when(moderationReportDao.findReportsByReporter(50L, List.of(), List.of()))
+        Mockito.when(
+                        moderationReportDao.findReportsByReporter(
+                                UserUtils.getUser(50L), List.of(), List.of()))
                 .thenReturn(expected);
 
         final List<ModerationReport> actual =
-                moderationService.findReportsByReporter(50L, List.of(), List.of());
+                moderationService.findReportsByReporter(
+                        UserUtils.getUser(50L), List.of(), List.of());
 
         Assertions.assertEquals(expected, actual);
     }
@@ -368,13 +367,18 @@ public class ModerationServiceImplTest {
 
     @Test
     public void reportContent_throwsModerationException_whenActiveReportLimitReached() {
-        Mockito.when(moderationReportDao.countActiveReportsByReporter(50L)).thenReturn(3);
+        Mockito.when(moderationReportDao.countActiveReportsByReporter(UserUtils.getUser(50L)))
+                .thenReturn(3);
 
         Assertions.assertThrows(
                 ModerationException.class,
                 () ->
                         moderationService.reportContent(
-                                50L, ReportTargetType.USER, 88L, ReportReason.SPAM, "Too many"));
+                                UserUtils.getUser(50L),
+                                ReportTargetType.USER,
+                                88L,
+                                ReportReason.SPAM,
+                                "Too many"));
     }
 
     @Test
@@ -432,7 +436,7 @@ public class ModerationServiceImplTest {
         final ModerationReport reportWithExistingAppeal =
                 new ModerationReport(
                         77L,
-                        50L,
+                        UserUtils.getUser(50L),
                         ReportTargetType.USER,
                         88L,
                         ReportReason.HARASSMENT,
@@ -440,7 +444,7 @@ public class ModerationServiceImplTest {
                         ReportStatus.RESOLVED,
                         ReportResolution.USER_BANNED,
                         "reason",
-                        99L,
+                        UserUtils.getUser(99L),
                         FIXED_NOW,
                         "previous appeal",
                         (short) 1 /* appealCount >= 1 */,
@@ -559,7 +563,7 @@ public class ModerationServiceImplTest {
             final ModerationReport report =
                     new ModerationReport(
                             77L,
-                            50L,
+                            UserUtils.getUser(50L),
                             ReportTargetType.USER,
                             userId,
                             ReportReason.HARASSMENT,
@@ -567,7 +571,7 @@ public class ModerationServiceImplTest {
                             ReportStatus.RESOLVED,
                             ReportResolution.USER_BANNED,
                             "reason",
-                            99L,
+                            UserUtils.getUser(99L),
                             FIXED_NOW,
                             "appeal",
                             (short) 1,
@@ -579,7 +583,7 @@ public class ModerationServiceImplTest {
                             FIXED_NOW);
 
             Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
-            Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(userId), Mockito.any()))
+            Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(account), Mockito.any()))
                     .thenReturn(Optional.empty());
             Mockito.when(
                             moderationReportDao.finalizeAppeal(
@@ -609,7 +613,7 @@ public class ModerationServiceImplTest {
     private static ModerationReport sampleUserReport() {
         return new ModerationReport(
                 77L,
-                50L,
+                UserUtils.getUser(50L),
                 ReportTargetType.USER,
                 88L,
                 ReportReason.HARASSMENT,
@@ -632,7 +636,7 @@ public class ModerationServiceImplTest {
     private static ModerationReport sampleReviewReport() {
         return new ModerationReport(
                 45L,
-                50L,
+                UserUtils.getUser(50L),
                 ReportTargetType.REVIEW,
                 123L,
                 ReportReason.AGGRESSIVE_LANGUAGE,

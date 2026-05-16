@@ -1,8 +1,9 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
-import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -42,7 +43,7 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public Match createMatch(
-            final Long hostUserId,
+            final User host,
             final String address,
             final String title,
             final String description,
@@ -54,17 +55,17 @@ public class MatchJpaDao implements MatchDao {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final Long bannerImageId,
+            final ImageMetadata bannerImageMetadata,
             final Double latitude,
             final Double longitude,
-            final Long seriesId,
+            final MatchSeries series,
             final Integer seriesOccurrenceIndex) {
         final Instant now = Instant.now();
         final Match match =
                 new Match(
                         null,
                         sport,
-                        hostUserId,
+                        host,
                         address,
                         latitude,
                         longitude,
@@ -78,13 +79,14 @@ public class MatchJpaDao implements MatchDao {
                         joinPolicy,
                         status,
                         0,
-                        bannerImageId,
-                        seriesId,
-                        seriesOccurrenceIndex);
-        match.setHost(em.getReference(UserAccount.class, hostUserId));
-        if (seriesId != null) {
-            match.setSeries(em.getReference(MatchSeries.class, seriesId));
-        }
+                        bannerImageMetadata,
+                        series,
+                        seriesOccurrenceIndex,
+                        false,
+                        null,
+                        null,
+                        null);
+
         match.setCreatedAt(now);
         match.setUpdatedAt(now);
 
@@ -95,7 +97,7 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public Long createMatchSeries(
-            final Long hostUserId,
+            final User host,
             final String frequency,
             final Instant startsAt,
             final Instant endsAt,
@@ -105,7 +107,8 @@ public class MatchJpaDao implements MatchDao {
         final Instant now = Instant.now();
         final MatchSeries series =
                 new MatchSeries(
-                        hostUserId,
+                        null,
+                        host,
                         frequency,
                         startsAt,
                         endsAt,
@@ -114,7 +117,6 @@ public class MatchJpaDao implements MatchDao {
                         occurrenceCount,
                         now,
                         now);
-        series.setHost(em.getReference(UserAccount.class, hostUserId));
 
         em.persist(series);
 
@@ -124,7 +126,7 @@ public class MatchJpaDao implements MatchDao {
     @Override
     public boolean updateMatch(
             final Long matchId,
-            final Long hostUserId,
+            final User host,
             final String address,
             final String title,
             final String description,
@@ -136,12 +138,12 @@ public class MatchJpaDao implements MatchDao {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final Long bannerImageId,
+            final ImageMetadata bannerImageMetadata,
             final Double latitude,
             final Double longitude) {
         final Match match = em.find(Match.class, matchId);
 
-        if (match == null || !match.getHostUserId().equals(hostUserId)) {
+        if (match == null || !match.getHost().getId().equals(host.getId())) {
             return false;
         }
 
@@ -156,7 +158,7 @@ public class MatchJpaDao implements MatchDao {
         match.setVisibility(visibility);
         match.setJoinPolicy(joinPolicy);
         match.setStatus(status);
-        match.setBannerImageId(bannerImageId);
+        match.setBannerImageMetadata(bannerImageMetadata);
         match.setLatitude(latitude);
         match.setLongitude(longitude);
         match.setUpdatedAt(Instant.now());
@@ -164,10 +166,10 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    public boolean cancelMatch(final Long matchId, final Long hostUserId) {
+    public boolean cancelMatch(final Long matchId, final User host) {
         final Match match = em.find(Match.class, matchId);
 
-        if (match == null || !match.getHostUserId().equals(hostUserId)) {
+        if (match == null || !match.getHost().getId().equals(host.getId())) {
             return false;
         }
 
@@ -178,7 +180,7 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public boolean softDeleteMatch(
-            final Long matchId, final Long deletedByUserId, final String deleteReason) {
+            final Long matchId, final User deletedBy, final String deleteReason) {
         final Match match = em.find(Match.class, matchId);
 
         if (match == null) {
@@ -190,7 +192,7 @@ public class MatchJpaDao implements MatchDao {
         match.setStatus(EventStatus.CANCELLED);
         match.setDeleted(true);
         match.setDeletedAt(Instant.now());
-        match.setDeletedByUserId(deletedByUserId);
+        match.setDeletedBy(deletedBy);
         match.setDeleteReason(deleteReason);
         match.setUpdatedAt(now);
         return true;
@@ -209,7 +211,7 @@ public class MatchJpaDao implements MatchDao {
         match.setStatus(EventStatus.CANCELLED);
         match.setDeleted(false);
         match.setDeletedAt(null);
-        match.setDeletedByUserId(null);
+        match.setDeletedBy(null);
         match.setDeleteReason(null);
         match.setUpdatedAt(now);
         return true;
@@ -217,42 +219,57 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public Optional<Match> findById(final Long matchId) {
-        return findProjected("m.id = :matchId", Map.of("matchId", matchId)).stream().findFirst();
+        return Optional.ofNullable(em.find(Match.class, matchId));
     }
 
     @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
-        return findProjected(
-                        "m.id = :matchId"
-                                + " AND m.visibility = :publicVisibility"
-                                + " AND m.status = :openStatus"
-                                + " AND COALESCE(m.endsAt, m.startsAt) > CURRENT_TIMESTAMP",
-                        Map.of(
-                                "matchId",
-                                matchId,
-                                "publicVisibility",
-                                EventVisibility.PUBLIC,
-                                "openStatus",
-                                EventStatus.OPEN))
-                .stream()
-                .findFirst();
+        TypedQuery<Match> query =
+                em.createQuery(
+                        "FROM Match m WHERE m.id = :matchId AND m.visibility = :publicVisibility AND m.status = :openStatus AND COALESCE(m.endsAt, m.startsAt) > CURRENT_TIMESTAMP",
+                        Match.class);
+        query.setParameter("matchId", matchId);
+        query.setParameter("publicVisibility", EventVisibility.PUBLIC);
+        query.setParameter("openStatus", EventStatus.OPEN);
+
+        return query.getResultStream().findFirst();
     }
 
     @Override
     public List<Match> findSeriesOccurrences(final Long seriesId) {
-        final String where = "m.series.id = :seriesId";
-        final Map<String, Object> params = Map.of("seriesId", seriesId);
-        final TypedQuery<MatchProjection> query =
+        final List<Match> matches =
                 em.createQuery(
-                        projectedSelect()
-                                + " WHERE "
-                                + where
-                                + " ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
-                        MatchProjection.class);
-        setCommonParams(query);
-        setParams(query, params);
-        final Instant now = Instant.now();
-        return query.getResultList().stream().map(projection -> projection.toMatch(now)).toList();
+                                "FROM Match m WHERE m.series.id = :seriesId ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
+                                Match.class)
+                        .setParameter("seriesId", seriesId)
+                        .getResultList();
+
+        if (matches.isEmpty()) {
+            return matches;
+        }
+
+        final List<Long> ids = matches.stream().map(Match::getId).toList();
+
+        final List<Object[]> counts =
+                em.createQuery(
+                                "SELECT mp.match.id, COUNT(mp.id) FROM MatchParticipant mp WHERE mp.match.id IN :ids AND mp.status IN :activeStatuses GROUP BY mp.match.id",
+                                Object[].class)
+                        .setParameter("ids", ids)
+                        .setParameter("activeStatuses", ACTIVE_PARTICIPANT_STATUSES)
+                        .getResultList();
+
+        final Map<Long, Integer> joinedPlayersByMatchId = new HashMap<>();
+
+        for (final Object[] row : counts) {
+            joinedPlayersByMatchId.put((Long) row[0], ((Long) row[1]).intValue());
+        }
+
+        matches.forEach(
+                match ->
+                        match.setJoinedPlayers(
+                                joinedPlayersByMatchId.getOrDefault(match.getId(), 0)));
+
+        return matches;
     }
 
     @Override
@@ -322,7 +339,7 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public List<Match> findHostedMatches(
-            final Long hostUserId,
+            final User host,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -339,7 +356,7 @@ public class MatchJpaDao implements MatchDao {
             final int limit) {
         final QueryParts parts = new QueryParts();
         parts.where.add("m.host.id = :hostUserId");
-        parts.params.put("hostUserId", hostUserId);
+        parts.params.put("hostUserId", host.getId());
         parts.where.add("m.deleted = FALSE");
         appendManagedFilters(parts, visibility, statuses);
         appendFilters(
@@ -358,7 +375,7 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public int countHostedMatches(
-            final Long hostUserId,
+            final User host,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -372,7 +389,7 @@ public class MatchJpaDao implements MatchDao {
             final ZoneId zoneId) {
         final QueryParts parts = new QueryParts();
         parts.where.add("m.host.id = :hostUserId");
-        parts.params.put("hostUserId", hostUserId);
+        parts.params.put("hostUserId", host.getId());
         parts.where.add("m.deleted = FALSE");
         appendManagedFilters(parts, visibility, statuses);
         appendFilters(
@@ -391,7 +408,7 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public List<Match> findJoinedMatches(
-            final Long userId,
+            final User user,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -406,7 +423,7 @@ public class MatchJpaDao implements MatchDao {
             final ZoneId zoneId,
             final int offset,
             final int limit) {
-        final QueryParts parts = joinedParts(userId);
+        final QueryParts parts = joinedParts(user.getId());
         appendManagedFilters(parts, visibility, statuses);
         appendFilters(
                 parts,
@@ -424,7 +441,7 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public int countJoinedMatches(
-            final Long userId,
+            final User user,
             final Boolean upcoming,
             final String query,
             final List<Sport> sports,
@@ -436,7 +453,7 @@ public class MatchJpaDao implements MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final ZoneId zoneId) {
-        final QueryParts parts = joinedParts(userId);
+        final QueryParts parts = joinedParts(user.getId());
         appendManagedFilters(parts, visibility, statuses);
         appendFilters(
                 parts,
@@ -480,8 +497,8 @@ public class MatchJpaDao implements MatchDao {
             return List.of();
         }
 
-        final TypedQuery<MatchProjection> matchesQuery =
-                em.createQuery(projectedSelect() + " WHERE m.id IN :ids", MatchProjection.class);
+        final TypedQuery<Match> matchesQuery =
+                em.createQuery("FROM Match m WHERE m.id IN :ids", Match.class);
         setCommonParams(matchesQuery);
         matchesQuery.setParameter("ids", ids);
 
@@ -489,9 +506,8 @@ public class MatchJpaDao implements MatchDao {
         for (int i = 0; i < ids.size(); i++) {
             order.put(ids.get(i), i);
         }
-        final Instant now = Instant.now();
+
         return matchesQuery.getResultList().stream()
-                .map(projection -> projection.toMatch(now))
                 .sorted(Comparator.comparingInt(match -> order.get(match.getId())))
                 .toList();
     }
@@ -504,15 +520,6 @@ public class MatchJpaDao implements MatchDao {
         setCommonParams(countQuery);
         setParams(countQuery, parts.params);
         return countQuery.getSingleResult().intValue();
-    }
-
-    private List<Match> findProjected(final String where, final Map<String, Object> params) {
-        final TypedQuery<MatchProjection> query =
-                em.createQuery(projectedSelect() + " WHERE " + where, MatchProjection.class);
-        setCommonParams(query);
-        setParams(query, params);
-        final Instant now = Instant.now();
-        return query.getResultList().stream().map(projection -> projection.toMatch(now)).toList();
     }
 
     private static QueryParts joinedParts(final Long userId) {
@@ -666,17 +673,6 @@ public class MatchJpaDao implements MatchDao {
 
     private static String whereClause(final QueryParts parts) {
         return parts.where.isEmpty() ? "" : " WHERE " + String.join(" AND ", parts.where);
-    }
-
-    private static String projectedSelect() {
-        return "SELECT NEW ar.edu.itba.paw.persistence.MatchProjection("
-                + "m.id, m.sport, m.host.id, m.address, m.latitude, m.longitude, "
-                + "m.title, m.description, m.startsAt, m.endsAt, m.maxPlayers, "
-                + "m.pricePerPlayer, m.visibility, m.joinPolicy, m.status, "
-                + joinedPlayersExpression()
-                + ", m.bannerImageId, m.series.id, m.seriesOccurrenceIndex, "
-                + "m.deleted, m.deletedAt, m.deletedByUserId, m.deleteReason)"
-                + " FROM Match m";
     }
 
     private static String joinedPlayersExpression() {

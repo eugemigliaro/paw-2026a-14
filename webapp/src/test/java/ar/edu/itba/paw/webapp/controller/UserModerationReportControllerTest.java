@@ -9,14 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.services.utils.UserUtils;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -27,8 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -63,7 +59,7 @@ class UserModerationReportControllerTest {
 
     @Test
     void getMyReportsRendersList() throws Exception {
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
         Mockito.when(moderationService.findReportsByReporter(7L, List.of(), List.of(), 1, 4))
                 .thenReturn(new PaginatedResult<>(List.of(sampleReport()), 1, 1, 4));
 
@@ -74,7 +70,7 @@ class UserModerationReportControllerTest {
 
     @Test
     void getMyReportsAppliesBackendFilters() throws Exception {
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
         Mockito.when(
                         moderationService.findReportsByReporter(
                                 7L,
@@ -94,7 +90,7 @@ class UserModerationReportControllerTest {
 
     @Test
     void postAppealRedirectsToReportDetail() throws Exception {
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
 
         mockMvc.perform(
                         post("/reports/mine/90/appeal")
@@ -106,11 +102,11 @@ class UserModerationReportControllerTest {
 
     @Test
     void getMyReportDetailReturnsNotFoundForOtherUser() throws Exception {
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
         final ModerationReport reportFromOtherUser =
                 new ModerationReport(
                         90L,
-                        99L,
+                        UserUtils.getUser(99L),
                         ReportTargetType.MATCH,
                         42L,
                         ReportReason.OTHER,
@@ -137,7 +133,7 @@ class UserModerationReportControllerTest {
     private static ModerationReport sampleReport() {
         return new ModerationReport(
                 90L,
-                7L,
+                UserUtils.getUser(7L),
                 ReportTargetType.MATCH,
                 42L,
                 ReportReason.OTHER,
@@ -155,26 +151,5 @@ class UserModerationReportControllerTest {
                 null,
                 Instant.now(),
                 Instant.now());
-    }
-
-    private static void authenticateUser(final Long userId) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"),
-                                                UserLanguages.DEFAULT_LANGUAGE)),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
 }

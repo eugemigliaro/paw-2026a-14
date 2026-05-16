@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Instant;
@@ -27,6 +28,8 @@ public class EmailActionRequestJpaDaoTest {
 
     @PersistenceContext private EntityManager em;
 
+    private User user;
+
     @BeforeEach
     public void setUp() {
         em.createNativeQuery(
@@ -34,12 +37,15 @@ public class EmailActionRequestJpaDaoTest {
                                 + "VALUES (1, 'testuser', 'user@test.com', "
                                 + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                 .executeUpdate();
+
+        user = em.find(User.class, 1L);
+
+        flushAndClear();
     }
 
     @Test
     public void shouldCreateEmailActionRequest_WithAllFields() {
         final String email = "new@test.com";
-        final Long userId = 1L;
         final String tokenHash = "hash-unique-123";
         final String payloadJson = "{\"matchId\": 42}";
         final Instant expiresAt = Instant.parse("2026-05-15T10:30:00Z");
@@ -48,7 +54,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.MATCH_RESERVATION,
                         email,
-                        userId,
+                        user,
                         tokenHash,
                         payloadJson,
                         expiresAt);
@@ -56,7 +62,7 @@ public class EmailActionRequestJpaDaoTest {
         Assertions.assertNotNull(created.getId());
         Assertions.assertEquals(EmailActionType.MATCH_RESERVATION, created.getActionType());
         Assertions.assertEquals(email, created.getEmail());
-        Assertions.assertEquals(userId, created.getUserId());
+        Assertions.assertEquals(user.getId(), created.getUser().getId());
         Assertions.assertEquals(tokenHash, created.getTokenHash());
         Assertions.assertEquals(payloadJson, created.getPayloadJson());
         Assertions.assertEquals(EmailActionStatus.PENDING, created.getStatus());
@@ -67,7 +73,7 @@ public class EmailActionRequestJpaDaoTest {
                 created.getId(),
                 EmailActionType.MATCH_RESERVATION,
                 email,
-                userId,
+                user,
                 tokenHash,
                 EmailActionStatus.PENDING,
                 null);
@@ -89,7 +95,7 @@ public class EmailActionRequestJpaDaoTest {
                         expiresAt);
 
         Assertions.assertNotNull(created.getId());
-        Assertions.assertNull(created.getUserId());
+        Assertions.assertNull(created.getUser());
         Assertions.assertEquals(1L, countRequests());
         assertPersistedRequest(
                 created.getId(),
@@ -108,7 +114,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.MATCH_RESERVATION,
                         "find@test.com",
-                        1L,
+                        user,
                         tokenHash,
                         "{\"matchId\": 100}",
                         Instant.parse("2026-05-18T14:00:00Z"));
@@ -125,7 +131,7 @@ public class EmailActionRequestJpaDaoTest {
                 created.getId(),
                 EmailActionType.MATCH_RESERVATION,
                 "find@test.com",
-                1L,
+                user,
                 tokenHash,
                 EmailActionStatus.PENDING,
                 null);
@@ -178,27 +184,27 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.MATCH_RESERVATION,
                         "complete@test.com",
-                        1L,
+                        user,
                         "token-to-complete",
                         "{\"matchId\": 50}",
                         Instant.parse("2026-05-21T13:00:00Z"));
         final Instant consumedAt = Instant.parse("2026-05-21T13:15:00Z");
 
         emailActionRequestDao.updateStatus(
-                created.getId(), EmailActionStatus.COMPLETED, 1L, consumedAt);
+                created.getId(), EmailActionStatus.COMPLETED, user, consumedAt);
 
         final Optional<EmailActionRequest> updated =
                 emailActionRequestDao.findByTokenHash("token-to-complete");
         Assertions.assertTrue(updated.isPresent());
         Assertions.assertEquals(EmailActionStatus.COMPLETED, updated.get().getStatus());
-        Assertions.assertEquals(1L, updated.get().getUserId());
+        Assertions.assertEquals(user.getId(), updated.get().getUser().getId());
         Assertions.assertEquals(consumedAt, updated.get().getConsumedAt());
         Assertions.assertEquals(1L, countRequests());
         assertPersistedRequest(
                 created.getId(),
                 EmailActionType.MATCH_RESERVATION,
                 "complete@test.com",
-                1L,
+                user,
                 "token-to-complete",
                 EmailActionStatus.COMPLETED,
                 consumedAt);
@@ -210,7 +216,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.ACCOUNT_VERIFICATION,
                         "null-user@test.com",
-                        1L,
+                        user,
                         "token-null-user",
                         "{}",
                         Instant.parse("2026-05-23T12:00:00Z"));
@@ -222,7 +228,7 @@ public class EmailActionRequestJpaDaoTest {
         final Optional<EmailActionRequest> updated =
                 emailActionRequestDao.findByTokenHash("token-null-user");
         Assertions.assertTrue(updated.isPresent());
-        Assertions.assertNull(updated.get().getUserId());
+        Assertions.assertNull(updated.get().getUser().getId());
         Assertions.assertEquals(EmailActionStatus.EXPIRED, updated.get().getStatus());
         Assertions.assertEquals(1L, countRequests());
         assertPersistedRequest(
@@ -242,7 +248,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.ACCOUNT_VERIFICATION,
                         targetEmail,
-                        null,
+                        user,
                         "token-verify",
                         "{}",
                         Instant.parse("2026-05-24T10:00:00Z"));
@@ -250,7 +256,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.PASSWORD_RESET,
                         targetEmail,
-                        1L,
+                        user,
                         "token-reset",
                         "{}",
                         Instant.parse("2026-05-24T10:00:00Z"));
@@ -258,7 +264,7 @@ public class EmailActionRequestJpaDaoTest {
                 emailActionRequestDao.create(
                         EmailActionType.ACCOUNT_VERIFICATION,
                         "other@test.com",
-                        null,
+                        user,
                         "token-other",
                         "{}",
                         Instant.parse("2026-05-24T10:00:00Z"));
@@ -280,7 +286,7 @@ public class EmailActionRequestJpaDaoTest {
                 passwordReset.getId(),
                 EmailActionType.PASSWORD_RESET,
                 targetEmail,
-                1L,
+                user,
                 "token-reset",
                 EmailActionStatus.PENDING,
                 null);
@@ -335,7 +341,7 @@ public class EmailActionRequestJpaDaoTest {
             final Long id,
             final EmailActionType actionType,
             final String email,
-            final Long userId,
+            final User user,
             final String tokenHash,
             final EmailActionStatus status,
             final Instant consumedAt) {
@@ -344,7 +350,7 @@ public class EmailActionRequestJpaDaoTest {
         Assertions.assertNotNull(persisted);
         Assertions.assertEquals(actionType, persisted.getActionType());
         Assertions.assertEquals(email, persisted.getEmail());
-        Assertions.assertEquals(userId, persisted.getUserId());
+        Assertions.assertEquals(user.getId(), persisted.getUser().getId());
         Assertions.assertEquals(tokenHash, persisted.getTokenHash());
         Assertions.assertEquals(status, persisted.getStatus());
         Assertions.assertEquals(status.getDbValue(), persistedStatus(id));

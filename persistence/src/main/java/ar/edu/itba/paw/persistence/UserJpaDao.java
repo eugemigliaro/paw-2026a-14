@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
@@ -20,9 +21,8 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public User createUser(final String email, final String username) {
-        final Instant now = Instant.now();
-        final UserAccount userAccount =
-                new UserAccount(
+        final User user =
+                new User(
                         null,
                         email,
                         username,
@@ -30,17 +30,11 @@ public class UserJpaDao implements UserDao {
                         null,
                         null,
                         null,
-                        null,
-                        UserRole.USER,
-                        null,
-                        UserLanguages.DEFAULT_LANGUAGE,
-                        now,
-                        now);
+                        UserLanguages.DEFAULT_LANGUAGE);
 
-        em.persist(userAccount);
-        em.flush();
+        em.persist(user);
 
-        return toUser(userAccount);
+        return user;
     }
 
     @Override
@@ -73,18 +67,17 @@ public class UserJpaDao implements UserDao {
                         now);
 
         em.persist(userAccount);
-        em.flush();
 
         return userAccount;
     }
 
     @Override
     public Optional<User> findByEmail(final String email) {
-        final TypedQuery<UserAccount> query =
-                em.createQuery("FROM UserAccount u WHERE u.email = :email", UserAccount.class);
+        final TypedQuery<User> query =
+                em.createQuery("FROM User u WHERE u.email = :email", User.class);
         query.setParameter("email", email);
 
-        return query.getResultList().stream().map(this::toUser).findAny();
+        return query.getResultList().stream().findAny();
     }
 
     @Override
@@ -98,7 +91,7 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public Optional<User> findById(final Long id) {
-        return Optional.ofNullable(em.find(UserAccount.class, id)).map(this::toUser);
+        return Optional.ofNullable(em.find(User.class, id));
     }
 
     @Override
@@ -107,11 +100,10 @@ public class UserJpaDao implements UserDao {
             return List.of();
         }
 
-        final TypedQuery<UserAccount> query =
-                em.createQuery("FROM UserAccount u WHERE u.id IN :ids", UserAccount.class);
+        final TypedQuery<User> query = em.createQuery("FROM User u WHERE u.id IN :ids", User.class);
         query.setParameter("ids", ids);
 
-        return query.getResultList().stream().map(this::toUser).toList();
+        return query.getResultList().stream().toList();
     }
 
     @Override
@@ -121,12 +113,11 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public Optional<User> findByUsername(final String username) {
-        final TypedQuery<UserAccount> query =
-                em.createQuery(
-                        "FROM UserAccount u WHERE u.username = :username", UserAccount.class);
+        final TypedQuery<User> query =
+                em.createQuery("FROM User u WHERE u.username = :username", User.class);
         query.setParameter("username", username);
 
-        return query.getResultList().stream().map(this::toUser).findAny();
+        return query.getResultList().stream().findAny();
     }
 
     @Override
@@ -136,23 +127,23 @@ public class UserJpaDao implements UserDao {
             final String name,
             final String lastName,
             final String phone,
-            final Long profileImageId) {
+            final ImageMetadata profileImageMetadata) {
         final UserAccount user = em.find(UserAccount.class, id);
         if (user != null) {
             user.setUsername(username);
             user.setName(name);
             user.setLastName(lastName);
             user.setPhone(phone);
-            user.setProfileImageId(profileImageId);
+            user.setProfileImageMetadata(profileImageMetadata);
             user.setUpdatedAt(Instant.now());
         }
     }
 
     @Override
-    public void updateProfileImage(final Long id, final Long profileImageId) {
+    public void updateProfileImage(final Long id, final ImageMetadata profileImageMetadata) {
         final UserAccount user = em.find(UserAccount.class, id);
         if (user != null) {
-            user.setProfileImageId(profileImageId);
+            user.setProfileImageMetadata(profileImageMetadata);
             user.setUpdatedAt(Instant.now());
         }
     }
@@ -182,18 +173,5 @@ public class UserJpaDao implements UserDao {
             user.setPreferredLanguage(UserLanguages.normalizeLanguage(preferredLanguage));
             user.setUpdatedAt(Instant.now());
         }
-    }
-
-    // Convert a UserAccount entity to a User DTO.
-    private User toUser(final UserAccount account) {
-        return new User(
-                account.getId(),
-                account.getEmail(),
-                account.getUsername(),
-                account.getName(),
-                account.getLastName(),
-                account.getPhone(),
-                account.getProfileImageId(),
-                account.getPreferredLanguage());
     }
 }

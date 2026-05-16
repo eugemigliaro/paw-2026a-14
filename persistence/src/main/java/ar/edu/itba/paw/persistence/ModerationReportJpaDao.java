@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
@@ -23,7 +24,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
 
     @Override
     public ModerationReport createReport(
-            final Long reporterUserId,
+            final User reporter,
             final ReportTargetType targetType,
             final Long targetId,
             final ReportReason reason,
@@ -32,7 +33,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
         final ModerationReport report =
                 new ModerationReport(
                         null,
-                        reporterUserId,
+                        reporter,
                         targetType,
                         targetId,
                         reason,
@@ -62,16 +63,16 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    public List<ModerationReport> findReportsByReporter(final Long reporterUserId) {
-        return findReportsByReporter(reporterUserId, List.of(), List.of());
+    public List<ModerationReport> findReportsByReporter(final User reporter) {
+        return findReportsByReporter(reporter, List.of(), List.of());
     }
 
     @Override
     public List<ModerationReport> findReportsByReporter(
-            final Long reporterUserId,
+            final User reporter,
             final List<ReportTargetType> targetTypes,
             final List<ReportStatus> statuses) {
-        return findReportsByReporter(reporterUserId, targetTypes, statuses, 1, Integer.MAX_VALUE)
+        return findReportsByReporter(reporter, targetTypes, statuses, 1, Integer.MAX_VALUE)
                 .getItems();
     }
 
@@ -96,8 +97,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    public Optional<ModerationReport> findLatestUserBanReportByTargetUserId(
-            final Long targetUserId) {
+    public Optional<ModerationReport> findLatestUserBanReportByTargetUser(final User targetUser) {
         final TypedQuery<ModerationReport> query =
                 em.createQuery(
                         "FROM ModerationReport mr "
@@ -107,7 +107,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
                                 + "ORDER BY mr.updatedAt DESC, mr.id DESC",
                         ModerationReport.class);
         query.setParameter("targetType", ReportTargetType.USER);
-        query.setParameter("targetUserId", targetUserId);
+        query.setParameter("targetUserId", targetUser.getId());
         query.setParameter("resolution", ReportResolution.USER_BANNED);
         query.setMaxResults(1);
 
@@ -115,14 +115,14 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    public int countActiveReportsByReporter(final Long reporterUserId) {
+    public int countActiveReportsByReporter(final User reporter) {
         final TypedQuery<Long> query =
                 em.createQuery(
                         "SELECT COUNT(mr) FROM ModerationReport mr "
                                 + "WHERE mr.reporterUserId = :reporterUserId "
                                 + "AND mr.status IN (:statuses)",
                         Long.class);
-        query.setParameter("reporterUserId", reporterUserId);
+        query.setParameter("reporterUserId", reporter.getId());
         query.setParameter(
                 "statuses",
                 List.of(ReportStatus.PENDING, ReportStatus.UNDER_REVIEW, ReportStatus.APPEALED));
@@ -132,7 +132,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
 
     @Override
     public boolean markUnderReview(
-            final Long reportId, final Long reviewedByUserId, final Instant reviewedAt) {
+            final Long reportId, final User reviewer, final Instant reviewedAt) {
         final ModerationReport report = findForUpdate(reportId);
 
         if (report == null || report.getStatus() != ReportStatus.PENDING) {
@@ -140,7 +140,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
         }
 
         report.setStatus(ReportStatus.UNDER_REVIEW);
-        report.setReviewedByUserId(reviewedByUserId);
+        report.setReviewer(reviewer);
         report.setReviewedAt(reviewedAt);
         report.setUpdatedAt(Instant.now());
 
@@ -150,7 +150,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     @Override
     public boolean resolveReport(
             final Long reportId,
-            final Long reviewedByUserId,
+            final User reviewer,
             final ReportResolution resolution,
             final String resolutionDetails,
             final Instant reviewedAt,
@@ -166,7 +166,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
         report.setStatus(nextStatus);
         report.setResolution(resolution);
         report.setResolutionDetails(resolutionDetails);
-        report.setReviewedByUserId(reviewedByUserId);
+        report.setReviewer(reviewer);
         report.setReviewedAt(reviewedAt);
         report.setUpdatedAt(Instant.now());
 
@@ -196,7 +196,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     @Override
     public boolean finalizeAppeal(
             final Long reportId,
-            final Long appealResolvedByUserId,
+            final User appealResolvedBy,
             final AppealDecision appealDecision,
             final Instant appealResolvedAt) {
         final ModerationReport report = findForUpdate(reportId);
@@ -207,7 +207,7 @@ public class ModerationReportJpaDao implements ModerationReportDao {
 
         report.setStatus(ReportStatus.FINALIZED);
         report.setAppealDecision(appealDecision);
-        report.setAppealResolvedByUserId(appealResolvedByUserId);
+        report.setAppealResolvedBy(appealResolvedBy);
         report.setAppealResolvedAt(appealResolvedAt);
         report.setUpdatedAt(Instant.now());
 
@@ -216,12 +216,12 @@ public class ModerationReportJpaDao implements ModerationReportDao {
 
     @Override
     public PaginatedResult<ModerationReport> findReportsByReporter(
-            final Long reporterUserId,
+            final User reporter,
             final List<ReportTargetType> targetTypes,
             final List<ReportStatus> statuses,
             final int page,
             final int pageSize) {
-        return findReportsInternal(reporterUserId, targetTypes, statuses, page, pageSize);
+        return findReportsInternal(reporter.getId(), targetTypes, statuses, page, pageSize);
     }
 
     private PaginatedResult<ModerationReport> findReportsInternal(

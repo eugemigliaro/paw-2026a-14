@@ -222,6 +222,18 @@ public class UserAccount {
         return passwordHash != null && !passwordHash.isBlank();
     }
 
+    public User toUser() {
+        return new User(
+                id,
+                email,
+                username,
+                name,
+                lastName,
+                phone,
+                profileImageMetadata,
+                preferredLanguage);
+    }
+
     @Override
     public String toString() {
         return "UserAccount{"

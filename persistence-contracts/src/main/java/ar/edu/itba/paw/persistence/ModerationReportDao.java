@@ -39,15 +39,15 @@ public interface ModerationReportDao {
             int page,
             int pageSize);
 
-    Optional<ModerationReport> findLatestUserBanReportByTargetUserId(User targetUser);
+    Optional<ModerationReport> findLatestUserBanReportByTargetUser(User targetUser);
 
     int countActiveReportsByReporter(User reporter);
 
-    boolean markUnderReview(Long reportId, User reviewedBy, Instant reviewedAt);
+    boolean markUnderReview(Long reportId, User reviewer, Instant reviewedAt);
 
     boolean resolveReport(
             Long reportId,
-            User reviewedBy,
+            User reviewer,
             ReportResolution resolution,
             String resolutionDetails,
             Instant reviewedAt,

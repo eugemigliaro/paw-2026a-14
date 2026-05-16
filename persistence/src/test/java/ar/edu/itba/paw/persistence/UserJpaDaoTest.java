@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
@@ -213,7 +214,7 @@ public class UserJpaDaoTest {
         Assertions.assertEquals("Taylor", inDb.getName());
         Assertions.assertEquals("Morgan", inDb.getLastName());
         Assertions.assertNull(inDb.getPhone());
-        Assertions.assertNull(inDb.getProfileImageId());
+        Assertions.assertNull(inDb.getProfileImageMetadata());
         Assertions.assertEquals(PASSWORD_HASH, inDb.getPasswordHash());
         Assertions.assertEquals(VERIFIED_AT, inDb.getEmailVerifiedAt());
     }
@@ -282,15 +283,19 @@ public class UserJpaDaoTest {
         final Long imageId =
                 imageDao.create("image/png", 4L, new ByteArrayInputStream(new byte[] {1, 2, 3, 4}));
 
-        userDao.updateProfileImage(account.getId(), imageId);
+        userDao.updateProfileImage(account.getId(), new ImageMetadata(imageId, "image/png", 4L));
 
         Assertions.assertEquals(1, countUsers());
 
         final User persisted = userDao.findById(account.getId()).orElseThrow(AssertionError::new);
-        Assertions.assertEquals(imageId, persisted.getProfileImageId());
+        Assertions.assertEquals(imageId, persisted.getProfileImageMetadata().getId());
+        Assertions.assertEquals("image/png", persisted.getProfileImageMetadata().getContentType());
+        Assertions.assertEquals(4L, persisted.getProfileImageMetadata().getContentLength());
 
         final UserAccount inDb = findPersistedUser(account.getId());
-        Assertions.assertEquals(imageId, inDb.getProfileImageId());
+        Assertions.assertEquals(imageId, inDb.getProfileImageMetadata().getId());
+        Assertions.assertEquals("image/png", inDb.getProfileImageMetadata().getContentType());
+        Assertions.assertEquals(4L, inDb.getProfileImageMetadata().getContentLength());
         Assertions.assertEquals("avatar@test.com", inDb.getEmail());
         Assertions.assertEquals("avatar_user", inDb.getUsername());
         Assertions.assertEquals(PASSWORD_HASH, inDb.getPasswordHash());

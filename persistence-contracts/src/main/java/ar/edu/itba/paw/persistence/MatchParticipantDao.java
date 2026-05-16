@@ -33,7 +33,7 @@ public interface MatchParticipantDao {
 
     int countPendingRequests(Long matchId);
 
-    List<PendingJoinRequest> findPendingRequestsForHost(Long hostUserId);
+    List<PendingJoinRequest> findPendingRequestsForHost(User host);
 
     boolean approveRequest(Long matchId, User user);
 

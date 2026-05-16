@@ -289,6 +289,10 @@ public class Match {
         return Math.max(maxPlayers - joinedPlayers, 0);
     }
 
+    public List<MatchParticipant> getParticipants() {
+        return participants;
+    }
+
     public void setAddress(final String address) {
         this.address = address;
     }
@@ -365,7 +369,7 @@ public class Match {
         this.deletedAt = deletedAt;
     }
 
-    public void setDeletedByUser(final User deletedByUser) {
+    public void setDeletedBy(final User deletedByUser) {
         this.deletedByUser = deletedByUser;
     }
 

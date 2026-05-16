@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.UserDao;
@@ -86,8 +87,8 @@ public class UserServiceImpl implements UserService {
         final String normalizedName = normalizeRequiredText(name, 150, "name", locale);
         final String normalizedLastName = normalizeRequiredText(lastName, 150, "lastName", locale);
         final String normalizedPhone = normalizePhone(phone, locale);
-        final Long profileImageId =
-                resolveProfileImageId(
+        final ImageMetadata profileImageMetadata =
+                resolveProfileImageMetadata(
                         existingUser,
                         profileImageContentType,
                         profileImageContentLength,
@@ -106,7 +107,7 @@ public class UserServiceImpl implements UserService {
                     normalizedName,
                     normalizedLastName,
                     normalizedPhone,
-                    profileImageId);
+                    profileImageMetadata);
         } catch (final DataIntegrityViolationException exception) {
             if (userDao.findByUsername(normalizedUsername)
                     .filter(user -> !user.getId().equals(id))
@@ -124,7 +125,7 @@ public class UserServiceImpl implements UserService {
                 normalizedName,
                 normalizedLastName,
                 normalizedPhone,
-                profileImageId,
+                profileImageMetadata,
                 existingUser.getPreferredLanguage());
     }
 
@@ -140,7 +141,9 @@ public class UserServiceImpl implements UserService {
                 userDao.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("User not found"));
         final Long profileImageId = imageService.store(contentType, contentLength, contentStream);
-        userDao.updateProfileImage(id, profileImageId);
+        final ImageMetadata profileImageMetadata =
+                new ImageMetadata(profileImageId, contentType, contentLength);
+        userDao.updateProfileImage(id, profileImageMetadata);
         return new User(
                 existingUser.getId(),
                 existingUser.getEmail(),
@@ -148,7 +151,7 @@ public class UserServiceImpl implements UserService {
                 existingUser.getName(),
                 existingUser.getLastName(),
                 existingUser.getPhone(),
-                profileImageId,
+                profileImageMetadata,
                 existingUser.getPreferredLanguage());
     }
 
@@ -159,18 +162,23 @@ public class UserServiceImpl implements UserService {
         userDao.updatePreferredLanguage(id, UserLanguages.normalizeLanguage(preferredLanguage));
     }
 
-    private Long resolveProfileImageId(
+    private ImageMetadata resolveProfileImageMetadata(
             final User existingUser,
             final String profileImageContentType,
             final long profileImageContentLength,
             final InputStream profileImageContentStream)
             throws IOException {
         if (profileImageContentStream == null || profileImageContentLength <= 0) {
-            return existingUser.getProfileImageId();
+            return existingUser.getProfileImageMetadata();
         }
 
-        return imageService.store(
-                profileImageContentType, profileImageContentLength, profileImageContentStream);
+        final Long profileImageId =
+                imageService.store(
+                        profileImageContentType,
+                        profileImageContentLength,
+                        profileImageContentStream);
+        return new ImageMetadata(
+                profileImageId, profileImageContentType, profileImageContentLength);
     }
 
     private String normalizeUsername(

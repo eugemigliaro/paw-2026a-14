@@ -4,14 +4,13 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchParticipant;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PendingJoinRequest;
-import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantScope;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.models.types.UserRole;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -38,9 +37,9 @@ public class MatchParticipantJpaDaoTest {
     @PersistenceContext private EntityManager em;
 
     private Match match;
-    private UserAccount host;
-    private UserAccount player;
-    private UserAccount other;
+    private User host;
+    private User player;
+    private User other;
 
     @BeforeEach
     public void setUp() {
@@ -62,7 +61,7 @@ public class MatchParticipantJpaDaoTest {
     @Test
     public void testCreateReservationIfSpaceInsertsParticipant() {
         final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(match.getId(), player.getId());
+                matchParticipantDao.createReservationIfSpace(match.getId(), player);
 
         Assertions.assertTrue(inserted);
         flushAndClear();
@@ -77,8 +76,7 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(match, other, ParticipantStatus.JOINED);
         flushAndClear();
 
-        final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(match.getId(), host.getId());
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(match.getId(), host);
 
         Assertions.assertFalse(inserted);
     }
@@ -89,12 +87,10 @@ public class MatchParticipantJpaDaoTest {
         match.setVisibility(EventVisibility.PRIVATE);
         match.setJoinPolicy(EventJoinPolicy.INVITE_ONLY);
         flushAndClear();
-        final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(match.getId(), host.getId());
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(match.getId(), host);
 
         Assertions.assertTrue(inserted);
-        Assertions.assertTrue(
-                matchParticipantDao.hasActiveReservation(match.getId(), host.getId()));
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(match.getId(), host));
     }
 
     @Test
@@ -105,11 +101,10 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(match.getId(), player.getId());
+                matchParticipantDao.createReservationIfSpace(match.getId(), player);
 
         Assertions.assertFalse(inserted);
-        Assertions.assertFalse(
-                matchParticipantDao.hasActiveReservation(match.getId(), player.getId()));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(match.getId(), player));
     }
 
     @Test
@@ -118,7 +113,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(match.getId(), player.getId());
+                matchParticipantDao.createReservationIfSpace(match.getId(), player);
 
         Assertions.assertTrue(inserted);
         flushAndClear();
@@ -134,7 +129,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(match.getId(), player.getId());
+                matchParticipantDao.createReservationIfSpace(match.getId(), player);
 
         Assertions.assertFalse(inserted);
         flushAndClear();
@@ -148,7 +143,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(match.getId(), player.getId());
+                matchParticipantDao.createReservationIfSpace(match.getId(), player);
 
         Assertions.assertFalse(inserted);
     }
@@ -158,10 +153,8 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(match, player, ParticipantStatus.JOINED);
         flushAndClear();
 
-        Assertions.assertTrue(
-                matchParticipantDao.hasActiveReservation(match.getId(), player.getId()));
-        Assertions.assertFalse(
-                matchParticipantDao.hasActiveReservation(match.getId(), other.getId()));
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(match.getId(), player));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(match.getId(), other));
     }
 
     @Test
@@ -172,7 +165,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final List<PendingJoinRequest> requests =
-                matchParticipantDao.findPendingRequestsForHost(host.getId());
+                matchParticipantDao.findPendingRequestsForHost(host);
 
         Assertions.assertEquals(1, requests.size());
         Assertions.assertEquals(match.getId(), requests.get(0).getMatch().getId());
@@ -190,7 +183,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final boolean requested =
-                matchParticipantDao.createSeriesJoinRequestIfSpace(m1.getId(), player.getId());
+                matchParticipantDao.createSeriesJoinRequestIfSpace(m1.getId(), player);
 
         Assertions.assertTrue(requested);
         flushAndClear();
@@ -199,7 +192,7 @@ public class MatchParticipantJpaDaoTest {
         Assertions.assertEquals(ParticipantScope.SERIES, p1.getScope());
 
         final List<PendingJoinRequest> hostRequests =
-                matchParticipantDao.findPendingRequestsForHost(host.getId());
+                matchParticipantDao.findPendingRequestsForHost(host);
         Assertions.assertEquals(1, hostRequests.size());
         Assertions.assertTrue(hostRequests.get(0).isSeriesRequest());
     }
@@ -214,7 +207,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final boolean requested =
-                matchParticipantDao.createSeriesJoinRequestIfSpace(m1.getId(), player.getId());
+                matchParticipantDao.createSeriesJoinRequestIfSpace(m1.getId(), player);
 
         Assertions.assertTrue(requested);
         flushAndClear();
@@ -238,7 +231,7 @@ public class MatchParticipantJpaDaoTest {
 
         final int approvedRows =
                 matchParticipantDao.approveSeriesJoinRequest(
-                        series.getId(), player.getId(), now.minusSeconds(60));
+                        series.getId(), player, now.minusSeconds(60));
 
         Assertions.assertEquals(2, approvedRows);
         flushAndClear();
@@ -264,13 +257,11 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(m2, player, ParticipantStatus.PENDING_APPROVAL, ParticipantScope.SERIES);
         flushAndClear();
 
-        Assertions.assertFalse(
-                matchParticipantDao.hasPendingSeriesRequest(series.getId(), player.getId()));
+        Assertions.assertFalse(matchParticipantDao.hasPendingSeriesRequest(series.getId(), player));
 
         createParticipant(m3, player, ParticipantStatus.PENDING_APPROVAL, ParticipantScope.SERIES);
         flushAndClear();
-        Assertions.assertTrue(
-                matchParticipantDao.hasPendingSeriesRequest(series.getId(), player.getId()));
+        Assertions.assertTrue(matchParticipantDao.hasPendingSeriesRequest(series.getId(), player));
     }
 
     @Test
@@ -278,7 +269,7 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(match, player, ParticipantStatus.PENDING_APPROVAL);
         flushAndClear();
 
-        final boolean approved = matchParticipantDao.approveRequest(match.getId(), player.getId());
+        final boolean approved = matchParticipantDao.approveRequest(match.getId(), player);
 
         Assertions.assertTrue(approved);
         flushAndClear();
@@ -320,7 +311,7 @@ public class MatchParticipantJpaDaoTest {
 
     @Test
     public void testInviteUser() {
-        final boolean invited = matchParticipantDao.inviteUser(match.getId(), player.getId());
+        final boolean invited = matchParticipantDao.inviteUser(match.getId(), player);
 
         Assertions.assertTrue(invited);
         flushAndClear();
@@ -343,7 +334,7 @@ public class MatchParticipantJpaDaoTest {
 
         final int accepted =
                 matchParticipantDao.acceptSeriesInvite(
-                        series.getId(), player.getId(), now.minusSeconds(60));
+                        series.getId(), player, now.minusSeconds(60));
 
         Assertions.assertEquals(2, accepted);
         flushAndClear();
@@ -366,8 +357,7 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(m2, player, ParticipantStatus.INVITED, ParticipantScope.MATCH);
         flushAndClear();
 
-        final int declined =
-                matchParticipantDao.declineSeriesInvite(series.getId(), player.getId());
+        final int declined = matchParticipantDao.declineSeriesInvite(series.getId(), player);
 
         Assertions.assertEquals(1, declined);
         flushAndClear();
@@ -391,7 +381,7 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(m3, player, ParticipantStatus.INVITED, ParticipantScope.MATCH);
         flushAndClear();
 
-        final List<Long> invitedIds = matchParticipantDao.findInvitedMatchIds(player.getId());
+        final List<Long> invitedIds = matchParticipantDao.findInvitedMatchIds(player);
 
         Assertions.assertEquals(2, invitedIds.size());
         Assertions.assertTrue(invitedIds.containsAll(List.of(m1.getId(), m3.getId())));
@@ -422,7 +412,7 @@ public class MatchParticipantJpaDaoTest {
 
         final int cancelled =
                 matchParticipantDao.cancelFutureSeriesReservations(
-                        series.getId(), player.getId(), Instant.now());
+                        series.getId(), player, Instant.now());
 
         Assertions.assertEquals(2, cancelled);
         flushAndClear();
@@ -447,8 +437,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final int insertedRows =
-                matchParticipantDao.createSeriesReservationsIfSpace(
-                        series.getId(), player.getId(), now);
+                matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player, now);
 
         Assertions.assertEquals(2, insertedRows);
         flushAndClear();
@@ -471,12 +460,11 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final int insertedRows =
-                matchParticipantDao.createSeriesReservationsIfSpace(
-                        series.getId(), host.getId(), now);
+                matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), host, now);
 
         Assertions.assertEquals(2, insertedRows);
-        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(m1.getId(), host.getId()));
-        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(m2.getId(), host.getId()));
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(m1.getId(), host));
+        Assertions.assertTrue(matchParticipantDao.hasActiveReservation(m2.getId(), host));
     }
 
     @Test
@@ -490,14 +478,11 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final int insertedRows =
-                matchParticipantDao.createSeriesReservationsIfSpace(
-                        series.getId(), player.getId(), now);
+                matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player, now);
 
         Assertions.assertEquals(0, insertedRows);
-        Assertions.assertFalse(
-                matchParticipantDao.hasActiveReservation(m1.getId(), player.getId()));
-        Assertions.assertFalse(
-                matchParticipantDao.hasActiveReservation(m2.getId(), player.getId()));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(m1.getId(), player));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(m2.getId(), player));
     }
 
     @Test
@@ -509,8 +494,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final int insertedRows =
-                matchParticipantDao.createSeriesReservationsIfSpace(
-                        series.getId(), player.getId(), now);
+                matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player, now);
 
         Assertions.assertEquals(1, insertedRows);
         flushAndClear();
@@ -531,8 +515,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final int insertedRows =
-                matchParticipantDao.createSeriesReservationsIfSpace(
-                        series.getId(), player.getId(), now);
+                matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player, now);
 
         Assertions.assertEquals(3, insertedRows);
         flushAndClear();
@@ -555,8 +538,7 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final int insertedRows =
-                matchParticipantDao.createSeriesReservationsIfSpace(
-                        series.getId(), player.getId(), now);
+                matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player, now);
 
         Assertions.assertEquals(0, insertedRows);
         flushAndClear();
@@ -577,12 +559,10 @@ public class MatchParticipantJpaDaoTest {
         flushAndClear();
 
         final int insertedRows =
-                matchParticipantDao.createSeriesReservationsIfSpace(
-                        series.getId(), player.getId(), now);
+                matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player, now);
 
         Assertions.assertEquals(0, insertedRows);
-        Assertions.assertFalse(
-                matchParticipantDao.hasActiveReservation(m1.getId(), player.getId()));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(m1.getId(), player));
     }
 
     @Test
@@ -593,12 +573,11 @@ public class MatchParticipantJpaDaoTest {
         final Match m2 = createMatchInSeries(series, host, now.plusSeconds(172800), 2);
         flushAndClear();
 
-        matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player.getId(), now);
-        matchParticipantDao.cancelFutureSeriesReservations(series.getId(), player.getId(), now);
+        matchParticipantDao.createSeriesReservationsIfSpace(series.getId(), player, now);
+        matchParticipantDao.cancelFutureSeriesReservations(series.getId(), player, now);
         flushAndClear();
 
-        final boolean inserted =
-                matchParticipantDao.createReservationIfSpace(m1.getId(), player.getId());
+        final boolean inserted = matchParticipantDao.createReservationIfSpace(m1.getId(), player);
 
         Assertions.assertTrue(inserted);
         flushAndClear();
@@ -623,7 +602,7 @@ public class MatchParticipantJpaDaoTest {
 
         final List<Long> matchIds =
                 matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
-                        series.getId(), player.getId(), now);
+                        series.getId(), player, now);
 
         Assertions.assertEquals(2, matchIds.size());
         Assertions.assertTrue(matchIds.containsAll(List.of(m1.getId(), m2.getId())));
@@ -643,7 +622,7 @@ public class MatchParticipantJpaDaoTest {
 
         final List<Long> matchIds =
                 matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
-                        series.getId(), player.getId(), now);
+                        series.getId(), player, now);
 
         Assertions.assertEquals(2, matchIds.size());
         Assertions.assertTrue(matchIds.containsAll(List.of(m1.getId(), m2.getId())));
@@ -654,7 +633,7 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(match, player, ParticipantStatus.INVITED);
         flushAndClear();
 
-        final boolean accepted = matchParticipantDao.acceptInvite(match.getId(), player.getId());
+        final boolean accepted = matchParticipantDao.acceptInvite(match.getId(), player);
 
         Assertions.assertTrue(accepted);
         flushAndClear();
@@ -668,39 +647,23 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(match, player, ParticipantStatus.JOINED);
         flushAndClear();
 
-        final boolean cancelled =
-                matchParticipantDao.removeParticipant(match.getId(), player.getId());
+        final boolean cancelled = matchParticipantDao.removeParticipant(match.getId(), player);
 
         Assertions.assertTrue(cancelled);
-        Assertions.assertFalse(
-                matchParticipantDao.hasActiveReservation(match.getId(), player.getId()));
+        Assertions.assertFalse(matchParticipantDao.hasActiveReservation(match.getId(), player));
         flushAndClear();
         final MatchParticipant participant = findParticipant(match.getId(), player.getId());
         Assertions.assertEquals(ParticipantStatus.CANCELLED, participant.getStatus());
     }
 
-    private UserAccount createUser(String username, String email) {
-        UserAccount user =
-                new UserAccount(
-                        null,
-                        email,
-                        username,
-                        "Name",
-                        "Last",
-                        "123",
-                        null,
-                        "hash",
-                        UserRole.USER,
-                        null,
-                        "en",
-                        Instant.now(),
-                        Instant.now());
+    private User createUser(String username, String email) {
+        User user = new User(null, email, username, "Name", "Last", "123", null, "en");
         em.persist(user);
         return user;
     }
 
     private Match createMatch(
-            UserAccount host,
+            User host,
             String address,
             String title,
             Instant startsAt,
@@ -710,8 +673,10 @@ public class MatchParticipantJpaDaoTest {
                 new Match(
                         null,
                         Sport.FOOTBALL,
-                        host.getId(),
+                        host,
                         address,
+                        null,
+                        null,
                         title,
                         "Desc",
                         startsAt,
@@ -722,6 +687,12 @@ public class MatchParticipantJpaDaoTest {
                         joinPolicy,
                         EventStatus.OPEN,
                         0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
         match.setHost(host);
         match.setCreatedAt(Instant.now());
@@ -730,10 +701,11 @@ public class MatchParticipantJpaDaoTest {
         return match;
     }
 
-    private MatchSeries createSeries(UserAccount host) {
+    private MatchSeries createSeries(User host) {
         MatchSeries series =
                 new MatchSeries(
-                        host.getId(),
+                        null,
+                        host,
                         "weekly",
                         Instant.now(),
                         Instant.now().plusSeconds(86400 * 30),
@@ -742,25 +714,23 @@ public class MatchParticipantJpaDaoTest {
                         4,
                         Instant.now(),
                         Instant.now());
-        series.setHost(host);
         em.persist(series);
         return series;
     }
 
-    private Match createMatchInSeries(
-            MatchSeries series, UserAccount host, Instant startsAt, int index) {
+    private Match createMatchInSeries(MatchSeries series, User host, Instant startsAt, int index) {
         Match m = createMatch(host, "Address", "Title", startsAt, 5, EventJoinPolicy.DIRECT);
         m.setSeries(series);
         m.setSeriesOccurrenceIndex(index);
         return em.merge(m);
     }
 
-    private void createParticipant(Match m, UserAccount user, ParticipantStatus status) {
+    private void createParticipant(Match m, User user, ParticipantStatus status) {
         createParticipant(m, user, status, ParticipantScope.MATCH);
     }
 
     private void createParticipant(
-            Match m, UserAccount user, ParticipantStatus status, ParticipantScope scope) {
+            Match m, User user, ParticipantStatus status, ParticipantScope scope) {
         MatchParticipant participant =
                 new MatchParticipant(
                         em.find(Match.class, m.getId()), user, status, Instant.now(), scope);

@@ -11,15 +11,13 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.services.utils.UserUtils;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
 import java.time.Instant;
 import java.util.List;
@@ -30,8 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -76,16 +72,12 @@ class PublicProfileControllerTest {
 
     @Test
     void getProfileDoesNotLinkUnknownReviewers() throws Exception {
-        final User user = new User(42L, "target@test.com", "target", "Target", "User", null, null);
-        final UserAccount reviewerAcc = Mockito.mock(UserAccount.class);
-        final UserAccount reviewedAcc = Mockito.mock(UserAccount.class);
-        Mockito.when(reviewerAcc.getId()).thenReturn(99L);
-        Mockito.when(reviewedAcc.getId()).thenReturn(42L);
+        final User user = UserUtils.getUser(42L);
         final PlayerReview review =
                 new PlayerReview(
                         11L,
-                        reviewerAcc,
-                        reviewedAcc,
+                        UserUtils.getUser(99L),
+                        UserUtils.getUser(42L),
                         PlayerReviewReaction.LIKE,
                         "Helpful",
                         Instant.parse("2026-04-10T10:00:00Z"),
@@ -94,7 +86,7 @@ class PublicProfileControllerTest {
                         null,
                         null,
                         null);
-        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
+        Mockito.when(userService.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
         Mockito.when(playerReviewService.findSummaryForUser(42L))
                 .thenReturn(new PlayerReviewSummary(42L, 1, 0, 1));
         Mockito.when(playerReviewService.findReviewsForUser(42L, PlayerReviewFilter.BOTH, 1, 10))
@@ -123,9 +115,9 @@ class PublicProfileControllerTest {
 
     @Test
     void postReviewRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
-        final User user = new User(42L, "target@test.com", "target", "Target", "User", null, null);
-        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
+        AuthenticationUtils.authenticateUser(1L);
+        final User user = UserUtils.getUser(42L);
+        Mockito.when(userService.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
 
         mockMvc.perform(
                         post("/users/target/reviews")
@@ -138,34 +130,13 @@ class PublicProfileControllerTest {
 
     @Test
     void deleteReviewRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
-        final User user = new User(42L, "target@test.com", "target", "Target", "User", null, null);
-        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
+        AuthenticationUtils.authenticateUser(1L);
+        final User user = UserUtils.getUser(42L);
+        Mockito.when(userService.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
 
         mockMvc.perform(post("/users/target/reviews/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/target#reviews"))
                 .andExpect(flash().attribute("reviewStatus", "deleted"));
-    }
-
-    private static void authenticateUser(final Long userId) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"),
-                                                UserLanguages.DEFAULT_LANGUAGE)),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
 }

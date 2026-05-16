@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Clock;
@@ -11,6 +12,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -20,6 +22,7 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
 
     private final Clock clock;
 
+    @Autowired
     public EmailActionRequestJpaDao(final Clock clock) {
         this.clock = clock;
     }
@@ -28,7 +31,7 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
     public EmailActionRequest create(
             final EmailActionType actionType,
             final String email,
-            final Long userId,
+            final User user,
             final String tokenHash,
             final String payloadJson,
             final Instant expiresAt) {
@@ -38,7 +41,7 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
                         null,
                         actionType,
                         email,
-                        userId,
+                        user,
                         tokenHash,
                         payloadJson,
                         EmailActionStatus.PENDING,
@@ -48,7 +51,6 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
                         now);
 
         em.persist(emailActionRequest);
-        em.flush();
 
         return emailActionRequest;
     }
@@ -67,12 +69,14 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
     public void updateStatus(
             final Long id,
             final EmailActionStatus status,
-            final Long userId,
+            final User user,
             final Instant consumedAt) {
         final EmailActionRequest entity = em.find(EmailActionRequest.class, id);
         if (entity != null) {
             entity.setStatus(status);
-            entity.setUserId(userId);
+            if (user != null) {
+                entity.setUser(user);
+            }
             entity.setConsumedAt(consumedAt);
             entity.setUpdatedAt(Instant.now(clock));
         }

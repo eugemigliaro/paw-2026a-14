@@ -79,7 +79,7 @@ public class SecurityServiceImpl implements SecurityService {
             return false;
         }
         final Optional<Match> match = matchDao.findById(matchId);
-        return match.map(m -> current.equals(m.getHostUserId())).orElse(false);
+        return match.map(m -> current.equals(m.getHost().getId())).orElse(false);
     }
 
     @Override

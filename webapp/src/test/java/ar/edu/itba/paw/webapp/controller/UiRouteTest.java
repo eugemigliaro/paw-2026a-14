@@ -50,6 +50,7 @@ import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.services.utils.UserUtils;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
@@ -545,16 +546,7 @@ class UiRouteTest {
                     @Override
                     public List<User> findConfirmedParticipants(final Long matchId) {
                         return matchId == 42L
-                                ? List.of(
-                                        new User(
-                                                2L,
-                                                "first@test.com",
-                                                "first-player",
-                                                "First",
-                                                "Player",
-                                                null,
-                                                77L),
-                                        new User(3L, "second@test.com", "second-player"))
+                                ? List.of(UserUtils.getUser(2L), UserUtils.getUser(3L))
                                 : List.of();
                     }
 
@@ -940,9 +932,7 @@ class UiRouteTest {
                             final Long hostUserId) {
                         return List.of(
                                 new PendingJoinRequest(
-                                        approvalRecurringMatch,
-                                        new User(9L, "player@test.com", "player-account"),
-                                        true));
+                                        approvalRecurringMatch, UserUtils.getUser(9L), true));
                     }
 
                     @Override
@@ -993,19 +983,11 @@ class UiRouteTest {
 
         final UserService userService =
                 new UserService() {
-                    private User currentUser =
-                            new User(
-                                    9L,
-                                    "host@test.com",
-                                    "host-player",
-                                    "Jamie",
-                                    "Rivera",
-                                    "+1 555 123 4567",
-                                    null);
+                    private User currentUser = UserUtils.getUser(9L);
 
                     @Override
                     public User createUser(final String email, final String username) {
-                        return new User(9L, email, username);
+                        return UserUtils.getUser(9L);
                     }
 
                     @Override
@@ -1015,43 +997,7 @@ class UiRouteTest {
 
                     @Override
                     public Optional<User> findById(final Long id) {
-                        if (id.equals(currentUser.getId())) {
-                            return Optional.of(currentUser);
-                        }
-                        if (id.equals(2L)) {
-                            return Optional.of(
-                                    new User(
-                                            2L,
-                                            "first@test.com",
-                                            "first-player",
-                                            "First",
-                                            "Player",
-                                            null,
-                                            77L));
-                        }
-                        if (id.equals(3L)) {
-                            return Optional.of(
-                                    new User(
-                                            3L,
-                                            "second@test.com",
-                                            "second-player",
-                                            "Second",
-                                            "Player",
-                                            null,
-                                            null));
-                        }
-                        if (id.equals(7L)) {
-                            return Optional.of(
-                                    new User(
-                                            7L,
-                                            "host@test.com",
-                                            "host-player",
-                                            "Jamie",
-                                            "Rivera",
-                                            "+1 555 123 4567",
-                                            88L));
-                        }
-                        return Optional.of(new User(id, "host@test.com", "host-player"));
+                        return Optional.of(UserUtils.getUser(id));
                     }
 
                     @Override

@@ -4,7 +4,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchParticipant;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -13,7 +13,6 @@ import ar.edu.itba.paw.models.types.ParticipantScope;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.models.types.UserRole;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -44,10 +43,10 @@ public class PlayerReviewJpaDaoTest {
 
     @PersistenceContext private EntityManager em;
 
-    private UserAccount user1;
-    private UserAccount user2;
-    private UserAccount user3;
-    private UserAccount user4;
+    private User user1;
+    private User user2;
+    private User user3;
+    private User user4;
     private Match matchCompleted;
     private Match matchOpenPast;
     private Match matchOpenFuture;
@@ -73,7 +72,7 @@ public class PlayerReviewJpaDaoTest {
 
         final PlayerReview review =
                 playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good teammate");
+                        user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
 
         Assertions.assertNotNull(review.getId());
         Assertions.assertEquals(user2.getId(), review.getReviewer().getId());
@@ -99,11 +98,11 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
         final PlayerReview initial =
                 playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good teammate");
+                        user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
 
         final PlayerReview updated =
                 playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, "Arrived late");
+                        user2, user3, PlayerReviewReaction.DISLIKE, "Arrived late");
 
         Assertions.assertEquals(initial.getId(), updated.getId());
         Assertions.assertEquals(PlayerReviewReaction.DISLIKE, updated.getReaction());
@@ -125,12 +124,12 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
         final PlayerReview initial =
                 playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good teammate");
-        Assertions.assertTrue(playerReviewDao.softDeleteReview(user2.getId(), user3.getId()));
+                        user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
+        Assertions.assertTrue(playerReviewDao.softDeleteReview(user2, user3));
 
         final PlayerReview restored =
                 playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Played well");
+                        user2, user3, PlayerReviewReaction.LIKE, "Played well");
 
         Assertions.assertEquals(initial.getId(), restored.getId());
         Assertions.assertFalse(restored.isDeleted());
@@ -145,11 +144,10 @@ public class PlayerReviewJpaDaoTest {
     public void testSoftDeleteExcludesReviewFromSummary() {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good teammate");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
 
-        Assertions.assertTrue(playerReviewDao.softDeleteReview(user2.getId(), user3.getId()));
-        final PlayerReviewSummary summary = playerReviewDao.getSummaryForUser(user3.getId());
+        Assertions.assertTrue(playerReviewDao.softDeleteReview(user2, user3));
+        final PlayerReviewSummary summary = playerReviewDao.getSummaryForUser(user3);
 
         Assertions.assertEquals(0L, summary.getReviewCount());
         Assertions.assertEquals(0L, summary.getLikeCount());
@@ -161,11 +159,9 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
         final PlayerReview initial =
                 playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good teammate");
+                        user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
 
-        final boolean deleted =
-                playerReviewDao.softDeleteReview(
-                        user2.getId(), user3.getId(), user4.getId(), "spam");
+        final boolean deleted = playerReviewDao.softDeleteReview(user2, user3, user4, "spam");
 
         Assertions.assertTrue(deleted);
         final Optional<PlayerReview> found =
@@ -181,16 +177,14 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
 
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good teammate");
-        playerReviewDao.softDeleteReview(user2.getId(), user3.getId(), user4.getId(), "spam");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
+        playerReviewDao.softDeleteReview(user2, user3, user4, "spam");
 
-        final boolean restored = playerReviewDao.restoreReview(user2.getId(), user3.getId());
+        final boolean restored = playerReviewDao.restoreReview(user2, user3);
 
         Assertions.assertTrue(restored);
 
-        final Optional<PlayerReview> found =
-                playerReviewDao.findByPair(user2.getId(), user3.getId());
+        final Optional<PlayerReview> found = playerReviewDao.findByPair(user2, user3);
         Assertions.assertTrue(found.isPresent());
         Assertions.assertFalse(found.get().isDeleted());
         Assertions.assertNull(found.get().getDeletedBy());
@@ -203,12 +197,10 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user1, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user1.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Great");
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, null);
+        playerReviewDao.upsertReview(user1, user3, PlayerReviewReaction.LIKE, "Great");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, null);
 
-        final PlayerReviewSummary summary = playerReviewDao.getSummaryForUser(user3.getId());
+        final PlayerReviewSummary summary = playerReviewDao.getSummaryForUser(user3);
 
         Assertions.assertEquals(user3.getId(), summary.getReviewedUserId());
         Assertions.assertEquals(2L, summary.getReviewCount());
@@ -221,13 +213,11 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user1, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user1.getId(), user3.getId(), PlayerReviewReaction.LIKE, "First");
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Second");
+        playerReviewDao.upsertReview(user1, user3, PlayerReviewReaction.LIKE, "First");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.LIKE, "Second");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findReviewsForUser(user3.getId(), PlayerReviewFilter.BOTH, 10, 0);
+                playerReviewDao.findReviewsForUser(user3, PlayerReviewFilter.BOTH, 10, 0);
 
         Assertions.assertEquals(2, reviews.size());
         Assertions.assertEquals("Second", reviews.get(0).getComment());
@@ -239,14 +229,11 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user1, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user1.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Helpful");
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, "Late");
+        playerReviewDao.upsertReview(user1, user3, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, "Late");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findReviewsForUser(
-                        user3.getId(), PlayerReviewFilter.POSITIVE, 10, 0);
+                playerReviewDao.findReviewsForUser(user3, PlayerReviewFilter.POSITIVE, 10, 0);
 
         Assertions.assertEquals(1, reviews.size());
         Assertions.assertEquals(PlayerReviewReaction.LIKE, reviews.get(0).getReaction());
@@ -258,13 +245,11 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user1, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user1.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Helpful");
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, "Late");
+        playerReviewDao.upsertReview(user1, user3, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, "Late");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findReviewsForUser(user3.getId(), PlayerReviewFilter.BAD, 10, 0);
+                playerReviewDao.findReviewsForUser(user3, PlayerReviewFilter.BAD, 10, 0);
 
         Assertions.assertEquals(1, reviews.size());
         Assertions.assertEquals(PlayerReviewReaction.DISLIKE, reviews.get(0).getReaction());
@@ -277,19 +262,15 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user4, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user1.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Helpful");
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, "Late");
-        playerReviewDao.upsertReview(
-                user4.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Reliable");
+        playerReviewDao.upsertReview(user1, user3, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, "Late");
+        playerReviewDao.upsertReview(user4, user3, PlayerReviewReaction.LIKE, "Reliable");
 
         final int totalReviews =
-                playerReviewDao.countReviewsForUser(user3.getId(), PlayerReviewFilter.BOTH);
+                playerReviewDao.countReviewsForUser(user3, PlayerReviewFilter.BOTH);
         final int positiveReviews =
-                playerReviewDao.countReviewsForUser(user3.getId(), PlayerReviewFilter.POSITIVE);
-        final int badReviews =
-                playerReviewDao.countReviewsForUser(user3.getId(), PlayerReviewFilter.BAD);
+                playerReviewDao.countReviewsForUser(user3, PlayerReviewFilter.POSITIVE);
+        final int badReviews = playerReviewDao.countReviewsForUser(user3, PlayerReviewFilter.BAD);
 
         Assertions.assertEquals(3, totalReviews);
         Assertions.assertEquals(2, positiveReviews);
@@ -301,16 +282,14 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user1, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user1.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Helpful");
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, "Late");
-        Assertions.assertTrue(playerReviewDao.softDeleteReview(user2.getId(), user3.getId()));
+        playerReviewDao.upsertReview(user1, user3, PlayerReviewReaction.LIKE, "Helpful");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, "Late");
+        Assertions.assertTrue(playerReviewDao.softDeleteReview(user2, user3));
 
         Assertions.assertEquals(
-                1, playerReviewDao.countReviewsForUser(user3.getId(), PlayerReviewFilter.BOTH));
+                1, playerReviewDao.countReviewsForUser(user3, PlayerReviewFilter.BOTH));
         Assertions.assertEquals(
-                0, playerReviewDao.countReviewsForUser(user3.getId(), PlayerReviewFilter.BAD));
+                0, playerReviewDao.countReviewsForUser(user3, PlayerReviewFilter.BAD));
     }
 
     @Test
@@ -319,15 +298,12 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user4, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user1.getId(), user3.getId(), PlayerReviewReaction.LIKE, "First");
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, "Second");
-        playerReviewDao.upsertReview(
-                user4.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Third");
+        playerReviewDao.upsertReview(user1, user3, PlayerReviewReaction.LIKE, "First");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, "Second");
+        playerReviewDao.upsertReview(user4, user3, PlayerReviewReaction.LIKE, "Third");
 
         final List<PlayerReview> reviews =
-                playerReviewDao.findReviewsForUser(user3.getId(), PlayerReviewFilter.BOTH, 1, 1);
+                playerReviewDao.findReviewsForUser(user3, PlayerReviewFilter.BOTH, 1, 1);
 
         Assertions.assertEquals(1, reviews.size());
         Assertions.assertEquals("Second", reviews.get(0).getComment());
@@ -338,7 +314,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.CHECKED_IN);
 
-        Assertions.assertTrue(playerReviewDao.canReview(user2.getId(), user3.getId()));
+        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
     }
 
     @Test
@@ -346,7 +322,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchOpenPast, user2, ParticipantStatus.JOINED);
         joinMatch(matchOpenPast, user3, ParticipantStatus.JOINED);
 
-        Assertions.assertTrue(playerReviewDao.canReview(user2.getId(), user3.getId()));
+        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
     }
 
     @Test
@@ -356,9 +332,9 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCancelled, user2, ParticipantStatus.JOINED);
         joinMatch(matchCancelled, user3, ParticipantStatus.JOINED);
 
-        Assertions.assertFalse(playerReviewDao.canReview(user2.getId(), user2.getId()));
-        Assertions.assertFalse(playerReviewDao.canReview(user2.getId(), user4.getId()));
-        Assertions.assertFalse(playerReviewDao.canReview(user2.getId(), user3.getId()));
+        Assertions.assertFalse(playerReviewDao.canReview(user2, user2));
+        Assertions.assertFalse(playerReviewDao.canReview(user2, user4));
+        Assertions.assertFalse(playerReviewDao.canReview(user2, user3));
     }
 
     @Test
@@ -366,7 +342,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.CANCELLED);
 
-        Assertions.assertFalse(playerReviewDao.canReview(user2.getId(), user3.getId()));
+        Assertions.assertFalse(playerReviewDao.canReview(user2, user3));
     }
 
     @Test
@@ -380,7 +356,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCancelled, user1, ParticipantStatus.JOINED);
 
         final Set<Long> reviewableUserIds =
-                Set.copyOf(playerReviewDao.findReviewableUserIds(user2.getId()));
+                Set.copyOf(playerReviewDao.findReviewableUserIds(user2));
 
         Assertions.assertEquals(Set.of(user3.getId(), user4.getId()), reviewableUserIds);
     }
@@ -391,8 +367,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
 
         final PlayerReview review =
-                playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, null);
+                playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, null);
 
         flushAndClear();
         final PlayerReview entity = em.find(PlayerReview.class, review.getId());
@@ -406,7 +381,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchOpenPast, user3, ParticipantStatus.JOINED);
         joinMatch(matchOpenFuture, user4, ParticipantStatus.JOINED);
 
-        final List<Long> reviewableUserIds = playerReviewDao.findReviewableUserIds(user2.getId());
+        final List<Long> reviewableUserIds = playerReviewDao.findReviewableUserIds(user2);
 
         Assertions.assertTrue(
                 reviewableUserIds.isEmpty(),
@@ -418,15 +393,14 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
         final PlayerReview review =
-                playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good");
+                playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.LIKE, "Good");
 
         Assertions.assertFalse(
                 playerReviewDao
-                        .findReviewsForUser(user3.getId(), PlayerReviewFilter.BOTH, 10, 0)
+                        .findReviewsForUser(user3, PlayerReviewFilter.BOTH, 10, 0)
                         .isEmpty());
 
-        final boolean deleted = playerReviewDao.softDeleteReview(user2.getId(), user3.getId());
+        final boolean deleted = playerReviewDao.softDeleteReview(user2, user3);
 
         Assertions.assertTrue(deleted);
 
@@ -436,7 +410,7 @@ public class PlayerReviewJpaDaoTest {
                 entity.getDeletedAt(), "deleted_at should be set after soft delete");
 
         final List<PlayerReview> reviewsAfterDelete =
-                playerReviewDao.findReviewsForUser(user3.getId(), PlayerReviewFilter.BOTH, 10, 0);
+                playerReviewDao.findReviewsForUser(user3, PlayerReviewFilter.BOTH, 10, 0);
         Assertions.assertTrue(
                 reviewsAfterDelete.isEmpty(),
                 "Soft-deleted review should be excluded from queries");
@@ -448,12 +422,10 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
 
         final PlayerReview first =
-                playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Great");
+                playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.LIKE, "Great");
 
         final PlayerReview second =
-                playerReviewDao.upsertReview(
-                        user2.getId(), user3.getId(), PlayerReviewReaction.DISLIKE, null);
+                playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.DISLIKE, null);
 
         Assertions.assertEquals(first.getId(), second.getId());
         Assertions.assertEquals(PlayerReviewReaction.DISLIKE, second.getReaction());
@@ -475,7 +447,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
 
-        final boolean deleted = playerReviewDao.softDeleteReview(user2.getId(), user3.getId());
+        final boolean deleted = playerReviewDao.softDeleteReview(user2, user3);
 
         Assertions.assertFalse(deleted);
     }
@@ -485,7 +457,7 @@ public class PlayerReviewJpaDaoTest {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
 
-        final boolean restored = playerReviewDao.restoreReview(user2.getId(), user3.getId());
+        final boolean restored = playerReviewDao.restoreReview(user2, user3);
 
         Assertions.assertFalse(restored);
     }
@@ -494,43 +466,30 @@ public class PlayerReviewJpaDaoTest {
     public void shouldSoftDeleteBeIdempotent() {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        playerReviewDao.upsertReview(
-                user2.getId(), user3.getId(), PlayerReviewReaction.LIKE, "Good teammate");
+        playerReviewDao.upsertReview(user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
 
-        final boolean firstDelete = playerReviewDao.softDeleteReview(user2.getId(), user3.getId());
-        final boolean secondDelete = playerReviewDao.softDeleteReview(user2.getId(), user3.getId());
+        final boolean firstDelete = playerReviewDao.softDeleteReview(user2, user3);
+        final boolean secondDelete = playerReviewDao.softDeleteReview(user2, user3);
 
         Assertions.assertTrue(firstDelete);
         Assertions.assertFalse(secondDelete);
     }
 
-    private UserAccount createUser(String username, String email) {
-        UserAccount user =
-                new UserAccount(
-                        null,
-                        email,
-                        username,
-                        "Name",
-                        "Last",
-                        null,
-                        null,
-                        "hash",
-                        UserRole.USER,
-                        null,
-                        "en",
-                        Instant.now(),
-                        Instant.now());
+    private User createUser(String username, String email) {
+        User user = new User(null, email, username, "Name", "Last", null, null, "en");
         em.persist(user);
         return user;
     }
 
-    private Match createMatch(UserAccount host, String status, Instant startsAt) {
+    private Match createMatch(User host, String status, Instant startsAt) {
         Match match =
                 new Match(
                         null,
                         Sport.FOOTBALL,
-                        host.getId(),
+                        host,
                         "Address",
+                        null,
+                        null,
                         "Match",
                         "Description",
                         startsAt,
@@ -541,15 +500,20 @@ public class PlayerReviewJpaDaoTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.valueOf(status.toUpperCase()),
                         0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
-        match.setHost(host);
         match.setCreatedAt(Instant.now());
         match.setUpdatedAt(Instant.now());
         em.persist(match);
         return match;
     }
 
-    private void joinMatch(Match match, UserAccount user, ParticipantStatus status) {
+    private void joinMatch(Match match, User user, ParticipantStatus status) {
         MatchParticipant participant =
                 new MatchParticipant(match, user, status, Instant.now(), ParticipantScope.MATCH);
         em.persist(participant);

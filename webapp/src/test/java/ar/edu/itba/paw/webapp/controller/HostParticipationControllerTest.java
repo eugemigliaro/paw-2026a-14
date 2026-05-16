@@ -7,23 +7,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import java.time.Instant;
-import java.util.List;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -55,9 +48,9 @@ class HostParticipationControllerTest {
 
     @Test
     void approveRequestRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L); // Host user
+        AuthenticationUtils.authenticateUser(1L); // Host user
         Match mockMatch = Mockito.mock(Match.class);
-        when(mockMatch.getHostUserId()).thenReturn(1L);
+        when(mockMatch.getHost().getId()).thenReturn(1L);
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
 
@@ -69,9 +62,9 @@ class HostParticipationControllerTest {
 
     @Test
     void rejectRequestRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
+        AuthenticationUtils.authenticateUser(1L);
         Match mockMatch = Mockito.mock(Match.class);
-        when(mockMatch.getHostUserId()).thenReturn(1L);
+        when(mockMatch.getHost().getId()).thenReturn(1L);
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
 
@@ -83,9 +76,9 @@ class HostParticipationControllerTest {
 
     @Test
     void inviteUserRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
+        AuthenticationUtils.authenticateUser(1L);
         Match mockMatch = Mockito.mock(Match.class);
-        when(mockMatch.getHostUserId()).thenReturn(1L);
+        when(mockMatch.getHost().getId()).thenReturn(1L);
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.INVITE_ONLY);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
 
@@ -97,32 +90,11 @@ class HostParticipationControllerTest {
 
     @Test
     void removeParticipantRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
+        AuthenticationUtils.authenticateUser(1L);
 
         mockMvc.perform(post("/host/matches/42/participants/9/remove"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/host/matches/42/participants"))
                 .andExpect(flash().attribute("action", "removed"));
-    }
-
-    private static void authenticateUser(final Long userId) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"),
-                                                UserLanguages.DEFAULT_LANGUAGE)),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
 }

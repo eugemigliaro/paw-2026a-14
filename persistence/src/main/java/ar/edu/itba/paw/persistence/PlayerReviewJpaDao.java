@@ -2,7 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
@@ -19,64 +19,43 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class PlayerReviewJpaDao implements PlayerReviewDao {
 
-    private static final String REVIEW_PROJECTION_JPQL =
-            "SELECT new ar.edu.itba.paw.persistence.PlayerReviewProjection("
-                    + "pr.id,"
-                    + " pr.reviewer.id, pr.reviewer.username,"
-                    + " pr.reviewed.id, pr.reviewed.username,"
-                    + " pr.reaction, pr.comment, pr.createdAt, pr.updatedAt,"
-                    + " pr.deleted, pr.deletedAt, pr.deletedBy.id, pr.deleteReason)"
-                    + " FROM PlayerReview pr";
-
     @PersistenceContext private EntityManager em;
 
     @Override
     public PlayerReview upsertReview(
-            final Long reviewerUserId,
-            final Long reviewedUserId,
+            final User reviewer,
+            final User reviewed,
             final PlayerReviewReaction reaction,
             final String comment) {
-        lockUsersForPair(reviewerUserId, reviewedUserId);
+        lockUsersForPair(reviewer.getId(), reviewed.getId());
 
         final Instant now = Instant.now();
         final Optional<PlayerReview> existing =
                 findEntityByPairIncludingDeleted(
-                        reviewerUserId, reviewedUserId, LockModeType.PESSIMISTIC_WRITE);
+                        reviewer.getId(), reviewed.getId(), LockModeType.PESSIMISTIC_WRITE);
 
         if (existing.isPresent()) {
             applyUpsertValues(existing.get(), reaction, comment, now);
         } else {
             final PlayerReview review =
                     new PlayerReview(
-                            null,
-                            em.getReference(UserAccount.class, reviewerUserId),
-                            em.getReference(UserAccount.class, reviewedUserId),
-                            reaction,
-                            comment,
-                            now,
-                            now,
-                            false,
-                            null,
-                            null,
-                            null);
+                            null, reviewer, reviewed, reaction, comment, now, now, false, null,
+                            null, null);
             em.persist(review);
         }
 
-        return findByPair(reviewerUserId, reviewedUserId)
+        return findByPair(reviewer, reviewed)
                 .orElseThrow(() -> new IllegalStateException("Player review was not persisted"));
     }
 
     @Override
-    public boolean softDeleteReview(final Long reviewerUserId, final Long reviewedUserId) {
-        return softDeleteReview(reviewerUserId, reviewedUserId, null, null);
+    public boolean softDeleteReview(final User reviewer, final User reviewed) {
+        return softDeleteReview(reviewer, reviewed, null, null);
     }
 
     @Override
     public boolean softDeleteReview(
-            final Long reviewerUserId,
-            final Long reviewedUserId,
-            final Long deletedByUserId,
-            final String reason) {
+            final User reviewer, final User reviewed, final User deletedBy, final String reason) {
         final Instant now = Instant.now();
         final int rows =
                 em.createQuery(
@@ -88,17 +67,16 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                                         + " AND pr.reviewed.id = :reviewedUserId"
                                         + " AND pr.deletedAt IS NULL")
                         .setParameter("now", now)
-                        .setParameter("deletedBy", userReferenceOrNull(deletedByUserId))
+                        .setParameter("deletedBy", deletedBy)
                         .setParameter("reason", reason)
-                        .setParameter("reviewerUserId", reviewerUserId)
-                        .setParameter("reviewedUserId", reviewedUserId)
+                        .setParameter("reviewerUserId", reviewer.getId())
+                        .setParameter("reviewedUserId", reviewed.getId())
                         .executeUpdate();
-        clearPersistenceContextAfterBulkUpdate(rows);
         return rows == 1;
     }
 
     @Override
-    public boolean restoreReview(final Long reviewerUserId, final Long reviewedUserId) {
+    public boolean restoreReview(final User reviewer, final User reviewed) {
         final Instant now = Instant.now();
         final int rows =
                 em.createQuery(
@@ -110,41 +88,34 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                                         + " AND pr.reviewed.id = :reviewedUserId"
                                         + " AND pr.deleted = TRUE")
                         .setParameter("now", now)
-                        .setParameter("reviewerUserId", reviewerUserId)
-                        .setParameter("reviewedUserId", reviewedUserId)
+                        .setParameter("reviewerUserId", reviewer.getId())
+                        .setParameter("reviewedUserId", reviewed.getId())
                         .executeUpdate();
-        clearPersistenceContextAfterBulkUpdate(rows);
         return rows == 1;
     }
 
     @Override
-    public Optional<PlayerReview> findByPair(final Long reviewerUserId, final Long reviewedUserId) {
-        final List<PlayerReviewProjection> projections =
+    public Optional<PlayerReview> findByPair(final User reviewer, final User reviewed) {
+        final List<PlayerReview> projections =
                 em.createQuery(
-                                REVIEW_PROJECTION_JPQL
+                                "From PlayerReview pr"
                                         + " WHERE pr.reviewer.id = :reviewerUserId"
                                         + " AND pr.reviewed.id = :reviewedUserId"
                                         + " AND pr.deleted = FALSE",
-                                PlayerReviewProjection.class)
-                        .setParameter("reviewerUserId", reviewerUserId)
-                        .setParameter("reviewedUserId", reviewedUserId)
+                                PlayerReview.class)
+                        .setParameter("reviewerUserId", reviewer.getId())
+                        .setParameter("reviewedUserId", reviewed.getId())
                         .getResultList();
-        return projections.stream().findFirst().map(PlayerReviewProjection::toPlayerReview);
+        return projections.stream().findFirst();
     }
 
     @Override
     public Optional<PlayerReview> findByIdIncludingDeleted(final Long reviewId) {
-        final List<PlayerReviewProjection> projections =
-                em.createQuery(
-                                REVIEW_PROJECTION_JPQL + " WHERE pr.id = :reviewId",
-                                PlayerReviewProjection.class)
-                        .setParameter("reviewId", reviewId)
-                        .getResultList();
-        return projections.stream().findFirst().map(PlayerReviewProjection::toPlayerReview);
+        return Optional.of(em.find(PlayerReview.class, reviewId));
     }
 
     @Override
-    public PlayerReviewSummary getSummaryForUser(final Long reviewedUserId) {
+    public PlayerReviewSummary getSummaryForUser(final User reviewed) {
         final Object[] counts =
                 em.createQuery(
                                 "SELECT"
@@ -155,20 +126,20 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                                         + " WHERE pr.reviewed.id = :reviewedUserId"
                                         + " AND pr.deleted = FALSE",
                                 Object[].class)
-                        .setParameter("reviewedUserId", reviewedUserId)
+                        .setParameter("reviewedUserId", reviewed.getId())
                         .setParameter("likeReaction", PlayerReviewReaction.LIKE)
                         .setParameter("dislikeReaction", PlayerReviewReaction.DISLIKE)
                         .getSingleResult();
 
         return new PlayerReviewSummary(
-                reviewedUserId,
+                reviewed.getId(),
                 ((Number) counts[0]).longValue(),
                 ((Number) counts[1]).longValue(),
                 ((Number) counts[2]).longValue());
     }
 
     @Override
-    public int countReviewsForUser(final Long reviewedUserId, final PlayerReviewFilter filter) {
+    public int countReviewsForUser(final User reviewed, final PlayerReviewFilter filter) {
         final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
         final Optional<PlayerReviewReaction> reaction = safeFilter.getReaction();
 
@@ -183,7 +154,7 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
         }
 
         final TypedQuery<Long> query = em.createQuery(jpql.toString(), Long.class);
-        query.setParameter("reviewedUserId", reviewedUserId);
+        query.setParameter("reviewedUserId", reviewed.getId());
         reaction.ifPresent(value -> query.setParameter("reaction", value));
 
         return query.getSingleResult().intValue();
@@ -191,7 +162,7 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
 
     @Override
     public List<PlayerReview> findReviewsForUser(
-            final Long reviewedUserId,
+            final User reviewed,
             final PlayerReviewFilter filter,
             final int limit,
             final int offset) {
@@ -200,7 +171,7 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
 
         final StringBuilder jpql =
                 new StringBuilder(
-                        REVIEW_PROJECTION_JPQL
+                        "From PlayerReview pr"
                                 + " WHERE pr.reviewed.id = :reviewedUserId"
                                 + " AND pr.deleted = FALSE");
 
@@ -210,19 +181,17 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
 
         jpql.append(" ORDER BY pr.updatedAt DESC, pr.id DESC");
 
-        final TypedQuery<PlayerReviewProjection> query =
-                em.createQuery(jpql.toString(), PlayerReviewProjection.class);
-        query.setParameter("reviewedUserId", reviewedUserId);
+        final TypedQuery<PlayerReview> query = em.createQuery(jpql.toString(), PlayerReview.class);
+        query.setParameter("reviewedUserId", reviewed.getId());
         reaction.ifPresent(value -> query.setParameter("reaction", value));
         query.setMaxResults(limit);
         query.setFirstResult(offset);
-        final List<PlayerReviewProjection> projections = query.getResultList();
-        return projections.stream().map(PlayerReviewProjection::toPlayerReview).toList();
+        return query.getResultList();
     }
 
     @Override
-    public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
-        if (reviewerUserId == null || reviewerUserId.equals(reviewedUserId)) {
+    public boolean canReview(final User reviewer, final User reviewed) {
+        if (reviewer == null || reviewer.equals(reviewed)) {
             return false;
         }
 
@@ -241,8 +210,8 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                                         + " OR (m.status = :openStatus"
                                         + " AND COALESCE(m.endsAt, m.startsAt) <= CURRENT_TIMESTAMP))",
                                 Long.class)
-                        .setParameter("reviewerUserId", reviewerUserId)
-                        .setParameter("reviewedUserId", reviewedUserId)
+                        .setParameter("reviewerUserId", reviewer.getId())
+                        .setParameter("reviewedUserId", reviewed.getId())
                         .setParameter(
                                 "participantStatuses",
                                 List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN))
@@ -253,8 +222,8 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    public List<Long> findReviewableUserIds(final Long reviewerUserId) {
-        if (reviewerUserId == null) {
+    public List<Long> findReviewableUserIds(final User reviewer) {
+        if (reviewer == null) {
             return List.of();
         }
 
@@ -272,7 +241,7 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                                 + " OR (m.status = :openStatus"
                                 + " AND COALESCE(m.endsAt, m.startsAt) <= CURRENT_TIMESTAMP))",
                         Long.class)
-                .setParameter("reviewerUserId", reviewerUserId)
+                .setParameter("reviewerUserId", reviewer.getId())
                 .setParameter(
                         "participantStatuses",
                         List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN))
@@ -333,19 +302,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                     .setParameter("userId", secondUserId)
                     .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                     .getResultList();
-        }
-    }
-
-    private UserAccount userReferenceOrNull(final Long userId) {
-        if (userId == null) {
-            return null;
-        }
-        return em.getReference(UserAccount.class, userId);
-    }
-
-    private void clearPersistenceContextAfterBulkUpdate(final int updatedRows) {
-        if (updatedRows > 0) {
-            em.clear();
         }
     }
 }

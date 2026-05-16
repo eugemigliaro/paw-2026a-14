@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
@@ -34,6 +35,10 @@ public class ModerationReportJpaDaoTest {
 
     @PersistenceContext private EntityManager em;
 
+    private User reporter;
+    private User admin;
+    private User target;
+
     @BeforeEach
     public void setUp() {
         em.createNativeQuery(
@@ -45,22 +50,28 @@ public class ModerationReportJpaDaoTest {
                                 + "(2, 'admin', 'admin@test.com', 'Admin', 'User', null,"
                                 + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
                                 + "(3, 'target', 'target@test.com', 'Target', 'User', null,"
-                                + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),"
-                                + "(4, 'reporter2', 'rep2@test.com', 'Reporter2', 'User', null,"
                                 + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                 .executeUpdate();
+
+        reporter = em.find(User.class, 1L);
+        admin = em.find(User.class, 2L);
+        target = em.find(User.class, 3L);
     }
 
     @Test
     public void testCreateReport() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
 
         Assertions.assertNotNull(report.getId());
-        Assertions.assertEquals(1L, report.getReporterUserId());
+        Assertions.assertEquals(reporter.getId(), report.getReporter().getId());
         Assertions.assertEquals(ReportTargetType.USER, report.getTargetType());
-        Assertions.assertEquals(3L, report.getTargetId());
+        Assertions.assertEquals(target.getId(), report.getTargetId());
         Assertions.assertEquals(ReportReason.SPAM, report.getReason());
         Assertions.assertEquals("Too many messages", report.getDetails());
         Assertions.assertEquals(ReportStatus.PENDING, report.getStatus());
@@ -71,7 +82,11 @@ public class ModerationReportJpaDaoTest {
     public void testFindById() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
 
         final Optional<ModerationReport> found = moderationReportDao.findById(report.getId());
 
@@ -83,15 +98,16 @@ public class ModerationReportJpaDaoTest {
 
     @Test
     public void testFindReportsByReporter() {
-        moderationReportDao.createReport(1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "First");
         moderationReportDao.createReport(
-                1L, ReportTargetType.USER, 2L, ReportReason.HARASSMENT, "Second");
+                reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "First");
+        moderationReportDao.createReport(
+                reporter, ReportTargetType.USER, admin.getId(), ReportReason.HARASSMENT, "Second");
 
-        final List<ModerationReport> reports = moderationReportDao.findReportsByReporter(1L);
+        final List<ModerationReport> reports = moderationReportDao.findReportsByReporter(reporter);
 
         Assertions.assertEquals(2, reports.size());
-        Assertions.assertEquals(1L, reports.get(0).getReporterUserId());
-        Assertions.assertEquals(1L, reports.get(1).getReporterUserId());
+        Assertions.assertEquals(reporter.getId(), reports.get(0).getReporter().getId());
+        Assertions.assertEquals(reporter.getId(), reports.get(1).getReporter().getId());
         assertPersistedStatus(reports.get(0).getId(), ReportStatus.PENDING);
         assertPersistedStatus(reports.get(1).getId(), ReportStatus.PENDING);
     }
@@ -99,15 +115,19 @@ public class ModerationReportJpaDaoTest {
     @Test
     public void testFindActiveReportsAndCount() {
         moderationReportDao.createReport(
-                1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Pending");
+                reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Pending");
 
         final ModerationReport toResolve =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 2L, ReportReason.SPAM, "Resolved");
-        moderationReportDao.markUnderReview(toResolve.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        admin.getId(),
+                        ReportReason.SPAM,
+                        "Resolved");
+        moderationReportDao.markUnderReview(toResolve.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 toResolve.getId(),
-                2L,
+                admin,
                 ReportResolution.DISMISSED,
                 "Nothing",
                 NOW,
@@ -115,7 +135,7 @@ public class ModerationReportJpaDaoTest {
 
         final List<ModerationReport> activeReports =
                 moderationReportDao.findReports(List.of(), List.of(ReportStatus.PENDING));
-        final int activeCount = moderationReportDao.countActiveReportsByReporter(1L);
+        final int activeCount = moderationReportDao.countActiveReportsByReporter(reporter);
 
         Assertions.assertEquals(1, activeReports.size());
         Assertions.assertEquals("Pending", activeReports.get(0).getDetails());
@@ -127,15 +147,19 @@ public class ModerationReportJpaDaoTest {
     public void testMarkUnderReview() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
 
-        final boolean success = moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+        final boolean success = moderationReportDao.markUnderReview(report.getId(), admin, NOW);
 
         Assertions.assertTrue(success);
         flushAndClear();
         final ModerationReport updated = moderationReportDao.findById(report.getId()).get();
         Assertions.assertEquals(ReportStatus.UNDER_REVIEW, updated.getStatus());
-        Assertions.assertEquals(2L, updated.getReviewedByUserId());
+        Assertions.assertEquals(admin.getId(), updated.getReviewer().getId());
         Assertions.assertNotNull(updated.getReviewedAt());
         assertPersistedStatus(report.getId(), ReportStatus.UNDER_REVIEW);
     }
@@ -144,13 +168,17 @@ public class ModerationReportJpaDaoTest {
     public void testResolveReport() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
-        moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
+        moderationReportDao.markUnderReview(report.getId(), admin, NOW);
 
         final boolean success =
                 moderationReportDao.resolveReport(
                         report.getId(),
-                        2L,
+                        admin,
                         ReportResolution.DISMISSED,
                         "No issue found",
                         NOW,
@@ -169,11 +197,15 @@ public class ModerationReportJpaDaoTest {
     public void testAppealReport() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
-        moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
+        moderationReportDao.markUnderReview(report.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
-                2L,
+                admin,
                 ReportResolution.DISMISSED,
                 "No issue found",
                 NOW,
@@ -194,11 +226,15 @@ public class ModerationReportJpaDaoTest {
     public void testFinalizeAppeal() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
-        moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
+        moderationReportDao.markUnderReview(report.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
-                2L,
+                admin,
                 ReportResolution.DISMISSED,
                 "No issue found",
                 NOW,
@@ -206,14 +242,15 @@ public class ModerationReportJpaDaoTest {
         moderationReportDao.appealReport(report.getId(), "I disagree", NOW);
 
         final boolean success =
-                moderationReportDao.finalizeAppeal(report.getId(), 2L, AppealDecision.LIFTED, NOW);
+                moderationReportDao.finalizeAppeal(
+                        report.getId(), admin, AppealDecision.LIFTED, NOW);
 
         Assertions.assertTrue(success);
         flushAndClear();
         final ModerationReport finalized = moderationReportDao.findById(report.getId()).get();
         Assertions.assertEquals(ReportStatus.FINALIZED, finalized.getStatus());
         Assertions.assertEquals(AppealDecision.LIFTED, finalized.getAppealDecision());
-        Assertions.assertEquals(2L, finalized.getAppealResolvedByUserId());
+        Assertions.assertEquals(admin.getId(), finalized.getAppealResolvedBy().getId());
         Assertions.assertNotNull(finalized.getAppealResolvedAt());
         assertPersistedStatus(report.getId(), ReportStatus.FINALIZED);
     }
@@ -222,17 +259,21 @@ public class ModerationReportJpaDaoTest {
     public void testMarkUnderReviewFailsWhenNotPending() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
-        moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
+        moderationReportDao.markUnderReview(report.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
-                2L,
+                admin,
                 ReportResolution.DISMISSED,
                 "Nothing",
                 NOW,
                 ReportStatus.RESOLVED);
 
-        final boolean success = moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+        final boolean success = moderationReportDao.markUnderReview(report.getId(), admin, NOW);
         Assertions.assertFalse(success);
         assertPersistedStatus(report.getId(), ReportStatus.RESOLVED);
     }
@@ -241,11 +282,15 @@ public class ModerationReportJpaDaoTest {
     public void testResolveReportFailsWhenNotPendingOrUnderReview() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
-        moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
+        moderationReportDao.markUnderReview(report.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
-                2L,
+                admin,
                 ReportResolution.DISMISSED,
                 "Nothing",
                 NOW,
@@ -254,7 +299,7 @@ public class ModerationReportJpaDaoTest {
         final boolean success =
                 moderationReportDao.resolveReport(
                         report.getId(),
-                        2L,
+                        admin,
                         ReportResolution.USER_BANNED,
                         "Ban",
                         NOW,
@@ -267,16 +312,20 @@ public class ModerationReportJpaDaoTest {
     public void testAppealReportFailsWhenNotResolvedOrAlreadyAppealed() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
 
         final boolean success1 = moderationReportDao.appealReport(report.getId(), "Appeal", NOW);
         Assertions.assertFalse(success1);
         assertPersistedStatus(report.getId(), ReportStatus.PENDING);
 
-        moderationReportDao.markUnderReview(report.getId(), 2L, NOW);
+        moderationReportDao.markUnderReview(report.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 report.getId(),
-                2L,
+                admin,
                 ReportResolution.DISMISSED,
                 "Nothing",
                 NOW,
@@ -296,25 +345,32 @@ public class ModerationReportJpaDaoTest {
     public void testFinalizeAppealFailsWhenNotAppealed() {
         final ModerationReport report =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, 3L, ReportReason.SPAM, "Too many messages");
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Too many messages");
 
         final boolean success =
-                moderationReportDao.finalizeAppeal(report.getId(), 2L, AppealDecision.UPHELD, NOW);
+                moderationReportDao.finalizeAppeal(
+                        report.getId(), admin, AppealDecision.UPHELD, NOW);
         Assertions.assertFalse(success);
         assertPersistedStatus(report.getId(), ReportStatus.PENDING);
     }
 
     @Test
     public void shouldFindLatestUserBanReportByTargetUserId_WhenReportsExist() {
-        final long targetUserId = 3L;
-
         final ModerationReport report1 =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "First ban");
-        moderationReportDao.markUnderReview(report1.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "First ban");
+        moderationReportDao.markUnderReview(report1.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 report1.getId(),
-                2L,
+                admin,
                 ReportResolution.USER_BANNED,
                 "Ban details",
                 NOW,
@@ -322,26 +378,26 @@ public class ModerationReportJpaDaoTest {
 
         final ModerationReport report2 =
                 moderationReportDao.createReport(
-                        2L,
+                        reporter,
                         ReportTargetType.USER,
-                        targetUserId,
+                        target.getId(),
                         ReportReason.HARASSMENT,
                         "Second ban");
-        moderationReportDao.markUnderReview(report2.getId(), 2L, NOW);
+        moderationReportDao.markUnderReview(report2.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 report2.getId(),
-                2L,
+                admin,
                 ReportResolution.USER_BANNED,
                 "Another ban",
                 NOW,
                 ReportStatus.RESOLVED);
 
         final Optional<ModerationReport> latest =
-                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserId);
+                moderationReportDao.findLatestUserBanReportByTargetUser(target);
 
         Assertions.assertTrue(latest.isPresent());
         Assertions.assertEquals(report2.getId(), latest.get().getId());
-        Assertions.assertEquals(targetUserId, latest.get().getTargetId());
+        Assertions.assertEquals(target.getId(), latest.get().getTargetId());
         Assertions.assertEquals(ReportStatus.RESOLVED, latest.get().getStatus());
         Assertions.assertEquals(ReportResolution.USER_BANNED, latest.get().getResolution());
         assertPersistedStatus(report1.getId(), ReportStatus.RESOLVED);
@@ -350,25 +406,21 @@ public class ModerationReportJpaDaoTest {
 
     @Test
     public void shouldFindLatestUserBanReportByTargetUserId_WhenNoReportsExist() {
-        final long targetUserWithNoBans = 2L;
-
         final Optional<ModerationReport> result =
-                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserWithNoBans);
+                moderationReportDao.findLatestUserBanReportByTargetUser(admin);
 
         Assertions.assertTrue(result.isEmpty());
     }
 
     @Test
     public void shouldFindLatestUserBanReportByTargetUserId_OnlyReturnsUserBans() {
-        final long targetUserId = 3L;
-
         final ModerationReport banReport =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "Ban");
-        moderationReportDao.markUnderReview(banReport.getId(), 2L, NOW);
+                        reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Ban");
+        moderationReportDao.markUnderReview(banReport.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 banReport.getId(),
-                2L,
+                admin,
                 ReportResolution.USER_BANNED,
                 "Banned",
                 NOW,
@@ -376,18 +428,22 @@ public class ModerationReportJpaDaoTest {
 
         final ModerationReport dismissedReport =
                 moderationReportDao.createReport(
-                        2L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "Dismissed");
-        moderationReportDao.markUnderReview(dismissedReport.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Dismissed");
+        moderationReportDao.markUnderReview(dismissedReport.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 dismissedReport.getId(),
-                2L,
+                admin,
                 ReportResolution.DISMISSED,
                 "No violation",
                 NOW,
                 ReportStatus.RESOLVED);
 
         final Optional<ModerationReport> result =
-                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserId);
+                moderationReportDao.findLatestUserBanReportByTargetUser(target);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(banReport.getId(), result.get().getId());
@@ -398,25 +454,31 @@ public class ModerationReportJpaDaoTest {
 
     @Test
     public void shouldFindLatestUserBanReportByTargetUserId_IgnoresPendingReports() {
-        final long targetUserId = 3L;
-
         final ModerationReport resolvedBan =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, targetUserId, ReportReason.SPAM, "Resolved ban");
-        moderationReportDao.markUnderReview(resolvedBan.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.SPAM,
+                        "Resolved ban");
+        moderationReportDao.markUnderReview(resolvedBan.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 resolvedBan.getId(),
-                2L,
+                admin,
                 ReportResolution.USER_BANNED,
                 "Banned",
                 NOW,
                 ReportStatus.RESOLVED);
 
         moderationReportDao.createReport(
-                2L, ReportTargetType.USER, targetUserId, ReportReason.HARASSMENT, "Pending ban");
+                reporter,
+                ReportTargetType.USER,
+                target.getId(),
+                ReportReason.HARASSMENT,
+                "Pending ban");
 
         final Optional<ModerationReport> result =
-                moderationReportDao.findLatestUserBanReportByTargetUserId(targetUserId);
+                moderationReportDao.findLatestUserBanReportByTargetUser(target);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(resolvedBan.getId(), result.get().getId());
@@ -426,16 +488,17 @@ public class ModerationReportJpaDaoTest {
 
     @Test
     public void shouldFindLatestUserBanReportByTargetUserId_IsolatedPerUser() {
-        final long user1 = 2L;
-        final long user2 = 3L;
-
         final ModerationReport ban1 =
                 moderationReportDao.createReport(
-                        1L, ReportTargetType.USER, user1, ReportReason.SPAM, "Ban user1");
-        moderationReportDao.markUnderReview(ban1.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        admin.getId(),
+                        ReportReason.SPAM,
+                        "Ban user1");
+        moderationReportDao.markUnderReview(ban1.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 ban1.getId(),
-                2L,
+                admin,
                 ReportResolution.USER_BANNED,
                 "Banned",
                 NOW,
@@ -443,20 +506,24 @@ public class ModerationReportJpaDaoTest {
 
         final ModerationReport ban2 =
                 moderationReportDao.createReport(
-                        2L, ReportTargetType.USER, user2, ReportReason.HARASSMENT, "Ban user2");
-        moderationReportDao.markUnderReview(ban2.getId(), 2L, NOW);
+                        reporter,
+                        ReportTargetType.USER,
+                        target.getId(),
+                        ReportReason.HARASSMENT,
+                        "Ban user2");
+        moderationReportDao.markUnderReview(ban2.getId(), admin, NOW);
         moderationReportDao.resolveReport(
                 ban2.getId(),
-                2L,
+                admin,
                 ReportResolution.USER_BANNED,
                 "Banned",
                 NOW,
                 ReportStatus.RESOLVED);
 
         final Optional<ModerationReport> result1 =
-                moderationReportDao.findLatestUserBanReportByTargetUserId(user1);
+                moderationReportDao.findLatestUserBanReportByTargetUser(admin);
         final Optional<ModerationReport> result2 =
-                moderationReportDao.findLatestUserBanReportByTargetUserId(user2);
+                moderationReportDao.findLatestUserBanReportByTargetUser(target);
 
         Assertions.assertTrue(result1.isPresent());
         Assertions.assertEquals(ban1.getId(), result1.get().getId());

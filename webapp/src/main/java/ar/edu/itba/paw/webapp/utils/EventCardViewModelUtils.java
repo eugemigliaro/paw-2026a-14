@@ -9,10 +9,8 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.sportLabel;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
-import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventRelationshipBadgeViewModel;
 import java.time.ZoneId;
@@ -22,7 +20,6 @@ import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import org.springframework.context.MessageSource;
 
 public final class EventCardViewModelUtils {
@@ -36,7 +33,6 @@ public final class EventCardViewModelUtils {
             final Long currentUserId,
             final String badge,
             final MessageSource messageSource,
-            final UserService userService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService) {
         return toCard(
@@ -47,7 +43,6 @@ public final class EventCardViewModelUtils {
                 badge,
                 null,
                 messageSource,
-                userService,
                 matchParticipationService,
                 matchReservationService);
     }
@@ -60,7 +55,6 @@ public final class EventCardViewModelUtils {
             final String badge,
             final String distanceLabel,
             final MessageSource messageSource,
-            final UserService userService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService) {
         final Locale resolvedLocale = resolvedLocale(locale);
@@ -80,7 +74,7 @@ public final class EventCardViewModelUtils {
                 sportLabel(match.getSport(), resolvedLocale, messageSource),
                 match.getTitle(),
                 match.getAddress(),
-                hostLabelFor(match, userService),
+                hostLabelFor(match),
                 scheduleFormatter(resolvedLocale).format(startsAt),
                 DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale).format(startsAt),
                 DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
@@ -96,14 +90,11 @@ public final class EventCardViewModelUtils {
                 bannerUrlFor(match));
     }
 
-    public static String hostLabelFor(final Match match, final UserService userService) {
-        if (match == null || match.getHostUserId() == null) {
+    public static String hostLabelFor(final Match match) {
+        if (match == null || match.getHost().getId() == null) {
             return null;
         }
-        return Optional.ofNullable(userService.findById(match.getHostUserId()))
-                .orElse(Optional.empty())
-                .map(User::getUsername)
-                .orElse(null);
+        return match.getHost().getUsername();
     }
 
     public static List<EventRelationshipBadgeViewModel> relationshipBadgesFor(
@@ -117,7 +108,7 @@ public final class EventCardViewModelUtils {
             return List.of();
         }
         final List<EventRelationshipBadgeViewModel> badges = new ArrayList<>();
-        if (currentUserId.equals(match.getHostUserId())) {
+        if (currentUserId.equals(match.getHost().getId())) {
             badges.add(relationshipBadge("my_event", locale, messageSource));
         }
         if (matchParticipationService.hasPendingRequest(match.getId(), currentUserId)) {

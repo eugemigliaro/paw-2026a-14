@@ -62,6 +62,7 @@ public class MatchSeries {
     MatchSeries() {}
 
     public MatchSeries(
+            final Long id,
             final User host,
             final String frequency,
             final Instant startsAt,
@@ -71,6 +72,7 @@ public class MatchSeries {
             final Integer occurrenceCount,
             final Instant createdAt,
             final Instant updatedAt) {
+        this.id = id;
         this.host = host;
         this.frequency = frequency;
         this.startsAt = startsAt;

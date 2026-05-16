@@ -1,7 +1,8 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.MatchSeries;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -35,8 +36,7 @@ public class MatchJpaDaoTest {
     @Autowired private MatchDao matchDao;
     @PersistenceContext private EntityManager em;
 
-    private UserAccount host;
-    private Long hostUserId;
+    private User host;
 
     @BeforeEach
     public void setUp() {
@@ -47,8 +47,7 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        host = em.find(UserAccount.class, 1L);
-        hostUserId = host.getId();
+        host = em.find(User.class, 1L);
     }
 
     @Test
@@ -57,7 +56,7 @@ public class MatchJpaDaoTest {
 
         final Match created =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Stadium A",
                         "Tennis Singles",
                         "Open match",
@@ -77,7 +76,7 @@ public class MatchJpaDaoTest {
 
         Assertions.assertNotNull(created.getId());
         Assertions.assertEquals(Sport.TENNIS, created.getSport());
-        Assertions.assertEquals(hostUserId, persisted.getHostUserId());
+        Assertions.assertEquals(host.getId(), persisted.getHost().getId());
         Assertions.assertEquals("Tennis Singles", persisted.getTitle());
         Assertions.assertEquals(Sport.TENNIS, persisted.getSport());
         Assertions.assertEquals(EventVisibility.PUBLIC, persisted.getVisibility());
@@ -94,16 +93,30 @@ public class MatchJpaDaoTest {
 
         final Long seriesId =
                 matchDao.createMatchSeries(
-                        hostUserId,
+                        host,
                         "weekly",
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),
                         null,
                         2);
+
+        final MatchSeries matchSeries =
+                new MatchSeries(
+                        seriesId,
+                        host,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2,
+                        null,
+                        null);
+
         final Match first =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Stadium A",
                         "Weekly Tennis",
                         "Open match",
@@ -116,11 +129,11 @@ public class MatchJpaDaoTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         null,
-                        seriesId,
+                        matchSeries,
                         1);
         final Match second =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Stadium A",
                         "Weekly Tennis",
                         "Open match",
@@ -133,7 +146,7 @@ public class MatchJpaDaoTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         null,
-                        seriesId,
+                        matchSeries,
                         2);
 
         em.flush();
@@ -145,7 +158,7 @@ public class MatchJpaDaoTest {
                                                 "SELECT COUNT(*) FROM match_series WHERE id = :seriesId"
                                                         + " AND host_user_id = :hostUserId AND frequency = 'weekly'")
                                         .setParameter("seriesId", seriesId)
-                                        .setParameter("hostUserId", hostUserId)
+                                        .setParameter("hostUserId", host.getId())
                                         .getSingleResult())
                         .intValue();
         final int occurrencesCount =
@@ -170,7 +183,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(2, occurrences.size());
         Assertions.assertEquals(first.getId(), occurrences.get(0).getId());
         Assertions.assertEquals(second.getId(), occurrences.get(1).getId());
-        Assertions.assertEquals(seriesId, occurrences.get(0).getSeriesId());
+        Assertions.assertEquals(seriesId, occurrences.get(0).getSeries().getId());
         Assertions.assertEquals(1, occurrences.get(0).getSeriesOccurrenceIndex());
     }
 
@@ -180,7 +193,7 @@ public class MatchJpaDaoTest {
         final ZonedDateTime endsAt = startsAt.plusMinutes(90);
         final Long seriesId =
                 matchDao.createMatchSeries(
-                        hostUserId,
+                        host,
                         "weekly",
                         startsAt.toInstant(),
                         endsAt.toInstant(),
@@ -188,11 +201,24 @@ public class MatchJpaDaoTest {
                         null,
                         2);
 
+        final MatchSeries matchSeries =
+                new MatchSeries(
+                        seriesId,
+                        host,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2,
+                        null,
+                        null);
+
         Assertions.assertThrows(
                 PersistenceException.class,
                 () -> {
                     matchDao.createMatch(
-                            hostUserId,
+                            host,
                             "Stadium A",
                             "Incomplete Weekly Tennis",
                             "Open match",
@@ -205,7 +231,7 @@ public class MatchJpaDaoTest {
                             EventJoinPolicy.DIRECT,
                             EventStatus.OPEN,
                             null,
-                            seriesId,
+                            matchSeries,
                             null);
                     em.flush();
                 });
@@ -213,9 +239,8 @@ public class MatchJpaDaoTest {
 
     @Test
     public void testFindPublicEventsBySearchText() {
-        final long namedHostId = createUser("serena-host", "serena-host@test.com");
         matchDao.createMatch(
-                namedHostId,
+                host,
                 "River Court",
                 "Morning Football",
                 "Fast 5v5 match",
@@ -237,7 +262,7 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        for (final String query : List.of("football", "fast", "river", "serena")) {
+        for (final String query : List.of("football", "fast", "river", host.getUsername())) {
             final List<Match> result = findPublicMatchesByQuery(query);
 
             Assertions.assertEquals(1, result.size(), query);
@@ -248,7 +273,7 @@ public class MatchJpaDaoTest {
     @Test
     public void testFindPublicEventsIncludesApprovalRequiredVisibility() {
         matchDao.createMatch(
-                hostUserId,
+                host,
                 "Test Address",
                 "Approval Required Match",
                 "Description",
@@ -265,14 +290,14 @@ public class MatchJpaDaoTest {
                 "Legacy Invite Only Match",
                 EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(1),
-                hostUserId,
+                host,
                 EventVisibility.PRIVATE,
                 EventJoinPolicy.INVITE_ONLY);
         createMatchWithPolicy(
                 "Private Match",
                 EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(1),
-                hostUserId,
+                host,
                 EventVisibility.PRIVATE,
                 EventJoinPolicy.INVITE_ONLY);
         em.flush();
@@ -526,7 +551,7 @@ public class MatchJpaDaoTest {
                 ZonedDateTime.now().plusDays(1));
         final Match toDelete =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Deleted Address",
                         "Deleted Match",
                         "Deleted Description",
@@ -542,8 +567,17 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        final long adminId = createUser("admin2", "admin2@test.com");
-        matchDao.softDeleteMatch(toDelete.getId(), adminId, "Violation");
+        final User admin =
+                new User(
+                        host.getId() + 1,
+                        "admin2@test.com",
+                        "admin2",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null);
+        matchDao.softDeleteMatch(toDelete.getId(), admin, "Violation");
         em.flush();
         em.clear();
 
@@ -568,7 +602,7 @@ public class MatchJpaDaoTest {
         final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
         final Match far =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Far Address",
                         "Far Match",
                         "Open match",
@@ -585,7 +619,7 @@ public class MatchJpaDaoTest {
                         -58.8);
         final Match nearby =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Near Address",
                         "Near Match",
                         "Open match",
@@ -602,7 +636,7 @@ public class MatchJpaDaoTest {
                         -58.39);
         final Match addressOnly =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Address Only",
                         "Address Only Match",
                         "Open match",
@@ -646,7 +680,7 @@ public class MatchJpaDaoTest {
     public void testFindMatchByIdIncludesAvailability() {
         final Match created =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Downtown Club",
                         "Padel Morning",
                         "Friendly doubles session",
@@ -673,7 +707,7 @@ public class MatchJpaDaoTest {
     public void testFindMatchByIdIncludesJoinedPlayersForNonPublicMatch() {
         final Match created =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Downtown Club",
                         "Private Football Night",
                         "Private 5v5",
@@ -701,7 +735,7 @@ public class MatchJpaDaoTest {
     public void shouldFindPublicMatchByIdOnlyWhenMatchIsPublicAndOpen() {
         final Match publicOpen =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Public Address",
                         "Public Open Match",
                         "Open match",
@@ -716,7 +750,7 @@ public class MatchJpaDaoTest {
                         null);
         final Match privateOpen =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Private Address",
                         "Private Open Match",
                         "Open match",
@@ -731,7 +765,7 @@ public class MatchJpaDaoTest {
                         null);
         final Match publicCancelled =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Cancelled Address",
                         "Public Cancelled Match",
                         "Cancelled match",
@@ -762,7 +796,7 @@ public class MatchJpaDaoTest {
         final boolean updated =
                 matchDao.updateMatch(
                         created.getId(),
-                        hostUserId,
+                        host,
                         "Updated Stadium",
                         "Updated Title",
                         "Updated description",
@@ -800,21 +834,14 @@ public class MatchJpaDaoTest {
     @Test
     public void testUpdateMatchRejectsWrongHostUserId() {
         final Match created = createOpenMatch("Original Title", ZonedDateTime.now().plusDays(1), 8);
-        createUser("other-host", "other-host@test.com");
+        final User other = createUser("other-host", "other-host@test.com");
         em.flush();
         em.clear();
-
-        final long otherHostId =
-                ((Number)
-                                em.createNativeQuery(
-                                                "SELECT id FROM users WHERE username = 'other-host'")
-                                        .getSingleResult())
-                        .longValue();
 
         final boolean updated =
                 matchDao.updateMatch(
                         created.getId(),
-                        otherHostId,
+                        other,
                         "Updated Address",
                         "Updated Title",
                         "Updated Description",
@@ -844,7 +871,7 @@ public class MatchJpaDaoTest {
         final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
         final Match created =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Court Address",
                         "Pinned Match",
                         "Open match",
@@ -870,7 +897,7 @@ public class MatchJpaDaoTest {
         final boolean updated =
                 matchDao.updateMatch(
                         created.getId(),
-                        hostUserId,
+                        host,
                         "New Court Address",
                         "Moved Match",
                         "Open match",
@@ -899,7 +926,7 @@ public class MatchJpaDaoTest {
     public void testCreateMatchAllowsAddressOnlyCoordinates() {
         final Match created =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Address Only",
                         "Address Only Match",
                         "Open match",
@@ -929,7 +956,7 @@ public class MatchJpaDaoTest {
                 PersistenceException.class,
                 () -> {
                     matchDao.createMatch(
-                            hostUserId,
+                            host,
                             "Invalid Address",
                             "Missing Pair",
                             "Open match",
@@ -951,7 +978,7 @@ public class MatchJpaDaoTest {
                 PersistenceException.class,
                 () -> {
                     matchDao.createMatch(
-                            hostUserId,
+                            host,
                             "Invalid Address",
                             "Out of Range",
                             "Open match",
@@ -976,7 +1003,7 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        final boolean cancelled = matchDao.cancelMatch(created.getId(), hostUserId);
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), host);
 
         em.flush();
         em.clear();
@@ -999,16 +1026,30 @@ public class MatchJpaDaoTest {
         final ZonedDateTime endsAt = startsAt.plusMinutes(90);
         final Long seriesId =
                 matchDao.createMatchSeries(
-                        hostUserId,
+                        host,
                         "weekly",
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),
                         null,
                         2);
+
+        final MatchSeries matchSeries =
+                new MatchSeries(
+                        seriesId,
+                        host,
+                        "weekly",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2,
+                        null,
+                        null);
+
         final Match firstOccurrence =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Original Address",
                         "Weekly Padel",
                         "First occurrence",
@@ -1021,11 +1062,11 @@ public class MatchJpaDaoTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         null,
-                        seriesId,
+                        matchSeries,
                         1);
         final Match secondOccurrence =
                 matchDao.createMatch(
-                        hostUserId,
+                        host,
                         "Original Address",
                         "Weekly Padel",
                         "Second occurrence",
@@ -1038,12 +1079,12 @@ public class MatchJpaDaoTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         null,
-                        seriesId,
+                        matchSeries,
                         2);
         em.flush();
         em.clear();
 
-        final boolean cancelled = matchDao.cancelMatch(secondOccurrence.getId(), hostUserId);
+        final boolean cancelled = matchDao.cancelMatch(secondOccurrence.getId(), host);
 
         em.flush();
         em.clear();
@@ -1059,11 +1100,11 @@ public class MatchJpaDaoTest {
     @Test
     public void testCancelMatchRejectsWrongHostUserId() {
         final Match created = createOpenMatch("Original Title", ZonedDateTime.now().plusDays(1), 8);
-        final long otherId = createUser("other-host", "other-host@test.com");
+        final User other = createUser("other-host", "other-host@test.com");
         em.flush();
         em.clear();
 
-        final boolean cancelled = matchDao.cancelMatch(created.getId(), otherId);
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), other);
 
         em.flush();
         em.clear();
@@ -1091,7 +1132,7 @@ public class MatchJpaDaoTest {
                         .setParameter("matchId", created.getId())
                         .getSingleResult();
 
-        final boolean cancelled = matchDao.cancelMatch(created.getId(), hostUserId);
+        final boolean cancelled = matchDao.cancelMatch(created.getId(), host);
 
         em.flush();
 
@@ -1111,11 +1152,11 @@ public class MatchJpaDaoTest {
     @Test
     public void shouldSoftDeleteMatchAndPersistAuditFields() {
         final Match created = createOpenMatch("Original Title", ZonedDateTime.now().plusDays(1), 8);
-        final long adminId = createUser("admin", "admin@test.com");
+        final User admin = createUser("admin", "admin@test.com");
         em.flush();
         em.clear();
 
-        final boolean deleted = matchDao.softDeleteMatch(created.getId(), adminId, "Violation");
+        final boolean deleted = matchDao.softDeleteMatch(created.getId(), admin, "Violation");
 
         em.flush();
         em.clear();
@@ -1123,7 +1164,7 @@ public class MatchJpaDaoTest {
 
         Assertions.assertTrue(deleted);
         Assertions.assertTrue(found.isDeleted());
-        Assertions.assertEquals(adminId, found.getDeletedByUserId());
+        Assertions.assertEquals(admin.getId(), found.getDeletedByUser().getId());
         Assertions.assertEquals("Violation", found.getDeleteReason());
         Assertions.assertNotNull(found.getDeletedAt());
         Assertions.assertEquals(EventStatus.CANCELLED, found.getStatus());
@@ -1132,11 +1173,11 @@ public class MatchJpaDaoTest {
     @Test
     public void shouldRestoreSoftDeletedMatchAndClearAuditFields() {
         final Match created = createOpenMatch("Original Title", ZonedDateTime.now().plusDays(1), 8);
-        final long adminId = createUser("admin-restore", "admin-restore@test.com");
+        final User admin = createUser("admin-restore", "admin-restore@test.com");
         em.flush();
         em.clear();
 
-        matchDao.softDeleteMatch(created.getId(), adminId, "Violation");
+        matchDao.softDeleteMatch(created.getId(), admin, "Violation");
         em.flush();
         em.clear();
 
@@ -1148,7 +1189,7 @@ public class MatchJpaDaoTest {
 
         Assertions.assertTrue(restored);
         Assertions.assertFalse(found.isDeleted());
-        Assertions.assertNull(found.getDeletedByUserId());
+        Assertions.assertNull(found.getDeletedByUser());
         Assertions.assertNull(found.getDeleteReason());
         Assertions.assertNull(found.getDeletedAt());
         Assertions.assertEquals(EventStatus.CANCELLED, found.getStatus());
@@ -1167,21 +1208,21 @@ public class MatchJpaDaoTest {
                 "Host Draft",
                 EventStatus.DRAFT,
                 ZonedDateTime.now().plusDays(2),
-                hostUserId,
+                host,
                 EventVisibility.PRIVATE,
                 EventJoinPolicy.INVITE_ONLY);
         createMatchWithPolicy(
                 "Host Completed",
                 EventStatus.COMPLETED,
                 ZonedDateTime.now().plusDays(1),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT);
         createMatchWithPolicy(
                 "Host Open",
                 EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(3),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT);
         em.flush();
@@ -1189,7 +1230,7 @@ public class MatchJpaDaoTest {
 
         final List<Match> matches =
                 matchDao.findHostedMatches(
-                        hostUserId,
+                        host,
                         null,
                         null,
                         List.of(),
@@ -1210,7 +1251,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(
                 3,
                 matchDao.countHostedMatches(
-                        hostUserId,
+                        host,
                         null,
                         null,
                         List.of(),
@@ -1228,28 +1269,28 @@ public class MatchJpaDaoTest {
                 "Host Completed",
                 EventStatus.COMPLETED,
                 ZonedDateTime.now().minusDays(2),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT);
         createMatchWithPolicy(
                 "Host Cancelled",
                 EventStatus.CANCELLED,
                 ZonedDateTime.now().minusDays(1),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT);
         createMatchWithPolicy(
                 "Host Open Past",
                 EventStatus.OPEN,
                 ZonedDateTime.now().minusHours(2),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT);
         createMatchWithPolicy(
                 "Host Open",
                 EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(1),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT);
         em.flush();
@@ -1257,7 +1298,7 @@ public class MatchJpaDaoTest {
 
         final List<Match> finished =
                 matchDao.findHostedMatches(
-                        hostUserId,
+                        host,
                         null,
                         null,
                         List.of(),
@@ -1283,7 +1324,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(
                 3,
                 matchDao.countHostedMatches(
-                        hostUserId,
+                        host,
                         null,
                         null,
                         List.of(),
@@ -1301,7 +1342,7 @@ public class MatchJpaDaoTest {
                 "Hosted Budget",
                 EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(2),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT,
                 BigDecimal.ZERO);
@@ -1309,7 +1350,7 @@ public class MatchJpaDaoTest {
                 "Hosted Premium",
                 EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(2),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT,
                 new BigDecimal("30"));
@@ -1318,7 +1359,7 @@ public class MatchJpaDaoTest {
 
         final List<Match> result =
                 matchDao.findHostedMatches(
-                        hostUserId,
+                        host,
                         null,
                         null,
                         List.of(),
@@ -1338,13 +1379,13 @@ public class MatchJpaDaoTest {
 
     @Test
     public void testFindUpcomingJoinedMatchesIncludesCancelledEvents() {
-        final long playerId = createUser("joined-player", "joined-player@test.com");
+        final User player = createUser("joined-player", "joined-player@test.com");
         final Match openMatch =
                 createMatchWithPolicy(
                         "Open Future",
                         EventStatus.OPEN,
                         ZonedDateTime.now().plusDays(2),
-                        hostUserId,
+                        host,
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT);
         final Match cancelledMatch =
@@ -1352,17 +1393,17 @@ public class MatchJpaDaoTest {
                         "Cancelled Future",
                         EventStatus.CANCELLED,
                         ZonedDateTime.now().plusDays(3),
-                        hostUserId,
+                        host,
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT);
-        joinPlayerById(openMatch.getId(), playerId, "joined");
-        joinPlayerById(cancelledMatch.getId(), playerId, "joined");
+        joinPlayerById(openMatch.getId(), player.getId(), "joined");
+        joinPlayerById(cancelledMatch.getId(), player.getId(), "joined");
         em.flush();
         em.clear();
 
         final List<Match> upcoming =
                 matchDao.findJoinedMatches(
-                        playerId,
+                        player,
                         Boolean.TRUE,
                         null,
                         List.of(),
@@ -1382,7 +1423,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(
-                        playerId,
+                        player,
                         Boolean.TRUE,
                         null,
                         List.of(),
@@ -1396,13 +1437,13 @@ public class MatchJpaDaoTest {
 
     @Test
     public void testFindPastJoinedMatchesReturnsOnlyPastInDescendingOrder() {
-        final long playerId = createUser("past-player", "past-player@test.com");
+        final User player = createUser("past-player", "past-player@test.com");
         final Match olderPast =
                 createMatchWithPolicy(
                         "Older Past",
                         EventStatus.COMPLETED,
                         ZonedDateTime.now().minusDays(4),
-                        hostUserId,
+                        host,
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT);
         final Match newerPast =
@@ -1410,24 +1451,24 @@ public class MatchJpaDaoTest {
                         "Newer Past",
                         EventStatus.OPEN,
                         ZonedDateTime.now().minusDays(2),
-                        hostUserId,
+                        host,
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT);
         createMatchWithPolicy(
                 "Future Open",
                 EventStatus.OPEN,
                 ZonedDateTime.now().plusDays(2),
-                hostUserId,
+                host,
                 EventVisibility.PUBLIC,
                 EventJoinPolicy.DIRECT);
-        joinPlayerById(olderPast.getId(), playerId, "checked_in");
-        joinPlayerById(newerPast.getId(), playerId, "joined");
+        joinPlayerById(olderPast.getId(), player.getId(), "checked_in");
+        joinPlayerById(newerPast.getId(), player.getId(), "joined");
         em.flush();
         em.clear();
 
         final List<Match> past =
                 matchDao.findJoinedMatches(
-                        playerId,
+                        player,
                         Boolean.FALSE,
                         null,
                         List.of(),
@@ -1448,7 +1489,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(
-                        playerId,
+                        player,
                         Boolean.FALSE,
                         null,
                         List.of(),
@@ -1462,13 +1503,13 @@ public class MatchJpaDaoTest {
 
     @Test
     public void testFindUpcomingJoinedMatchesAppliesPriceFilter() {
-        final long playerId = createUser("price-player", "price-player@test.com");
+        final User player = createUser("price-player", "price-player@test.com");
         final Match budget =
                 createMatchWithPolicyAndPrice(
                         "Upcoming Budget",
                         EventStatus.OPEN,
                         ZonedDateTime.now().plusDays(2),
-                        hostUserId,
+                        host,
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT,
                         BigDecimal.ZERO);
@@ -1477,18 +1518,18 @@ public class MatchJpaDaoTest {
                         "Upcoming Premium",
                         EventStatus.OPEN,
                         ZonedDateTime.now().plusDays(2),
-                        hostUserId,
+                        host,
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT,
                         new BigDecimal("25"));
-        joinPlayerById(budget.getId(), playerId, "joined");
-        joinPlayerById(premium.getId(), playerId, "joined");
+        joinPlayerById(budget.getId(), player.getId(), "joined");
+        joinPlayerById(premium.getId(), player.getId(), "joined");
         em.flush();
         em.clear();
 
         final List<Match> result =
                 matchDao.findJoinedMatches(
-                        playerId,
+                        player,
                         Boolean.TRUE,
                         null,
                         List.of(),
@@ -1542,7 +1583,7 @@ public class MatchJpaDaoTest {
     private Match createOpenMatch(
             final String title, final ZonedDateTime startsAt, final int maxPlayers) {
         return matchDao.createMatch(
-                hostUserId,
+                host,
                 "Test Address",
                 title,
                 "Description",
@@ -1564,7 +1605,7 @@ public class MatchJpaDaoTest {
             final int maxPlayers,
             final ZonedDateTime startsAt) {
         return matchDao.createMatch(
-                hostUserId,
+                host,
                 "Test Address",
                 title,
                 description,
@@ -1587,7 +1628,7 @@ public class MatchJpaDaoTest {
             final ZonedDateTime startsAt,
             final BigDecimal price) {
         return matchDao.createMatch(
-                hostUserId,
+                host,
                 "Test Address",
                 title,
                 description,
@@ -1606,23 +1647,23 @@ public class MatchJpaDaoTest {
             final String title,
             final EventStatus status,
             final ZonedDateTime startsAt,
-            final long hostId,
+            final User host,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy) {
         return createMatchWithPolicyAndPrice(
-                title, status, startsAt, hostId, visibility, joinPolicy, BigDecimal.ZERO);
+                title, status, startsAt, host, visibility, joinPolicy, BigDecimal.ZERO);
     }
 
     private Match createMatchWithPolicyAndPrice(
             final String title,
             final EventStatus status,
             final ZonedDateTime startsAt,
-            final long hostId,
+            final User host,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final BigDecimal pricePerPlayer) {
         return matchDao.createMatch(
-                hostId,
+                host,
                 "Test Address",
                 title,
                 "Description",
@@ -1666,7 +1707,7 @@ public class MatchJpaDaoTest {
                 .executeUpdate();
     }
 
-    private long createUser(final String username, final String email) {
+    private User createUser(final String username, final String email) {
         final long userId = System.nanoTime();
         em.createNativeQuery(
                         "INSERT INTO users (id, username, email, created_at, updated_at)"
@@ -1677,7 +1718,7 @@ public class MatchJpaDaoTest {
                 .executeUpdate();
         em.flush();
         em.clear();
-        return userId;
+        return new User(userId, email, username, null, null, null, null, null);
     }
 
     private List<Match> findPublicMatchesByQuery(final String query) {

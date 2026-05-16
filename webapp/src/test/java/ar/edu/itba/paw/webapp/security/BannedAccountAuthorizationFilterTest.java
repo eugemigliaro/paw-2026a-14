@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.UserBanDao;
+import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -70,7 +71,7 @@ class BannedAccountAuthorizationFilterTest {
     private static ModerationReport sampleReport() {
         return new ModerationReport(
                 1L,
-                7L,
+                UserUtils.getUser(7L),
                 ReportTargetType.USER,
                 7L,
                 ReportReason.SPAM,

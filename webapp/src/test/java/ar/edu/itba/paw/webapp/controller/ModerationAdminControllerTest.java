@@ -10,17 +10,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.services.utils.UserUtils;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -30,8 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -86,24 +82,7 @@ class ModerationAdminControllerTest {
                                 Mockito.eq(AppealDecision.UPHELD)))
                 .thenReturn(sampleAppealedReport());
 
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                99L,
-                                                "admin@test.com",
-                                                "admin",
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                UserRole.ADMIN_MOD,
-                                                Instant.parse("2026-04-11T18:00:00Z"),
-                                                UserLanguages.DEFAULT_LANGUAGE)),
-                                "ignored",
-                                List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
+        AuthenticationUtils.authenticateAdmin(99L, "ignored");
 
         mockMvc.perform(post("/admin/reports/17/finalize-appeal").param("appealDecision", "upheld"))
                 .andExpect(status().is3xxRedirection())
@@ -146,7 +125,7 @@ class ModerationAdminControllerTest {
     private static ModerationReport sampleAppealedReport() {
         return new ModerationReport(
                 17L,
-                7L,
+                UserUtils.getUser(7L),
                 ReportTargetType.USER,
                 44L,
                 ReportReason.HARASSMENT,
@@ -154,7 +133,7 @@ class ModerationAdminControllerTest {
                 ReportStatus.APPEALED,
                 ReportResolution.DISMISSED,
                 "Original warning",
-                99L,
+                UserUtils.getUser(99L),
                 Instant.parse("2026-04-12T10:00:00Z"),
                 "I disagree with this decision",
                 (short) 1,
@@ -167,9 +146,10 @@ class ModerationAdminControllerTest {
     }
 
     private static ModerationReport samplePendingReport() {
+
         return new ModerationReport(
                 3L,
-                7L,
+                UserUtils.getUser(7L),
                 ReportTargetType.USER,
                 44L,
                 ReportReason.HARASSMENT,
