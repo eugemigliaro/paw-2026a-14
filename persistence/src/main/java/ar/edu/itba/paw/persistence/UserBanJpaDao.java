@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportTargetType;
@@ -34,19 +35,25 @@ public class UserBanJpaDao implements UserBanDao {
     }
 
     @Override
-    public Optional<UserBan> findLatestBanForUser(final Long userId) {
+    public Optional<UserBan> findLatestBanForUser(final User user) {
+        if (user == null) {
+            return Optional.empty();
+        }
         return findFirstBan(
                 "FROM UserBan ub "
                         + "WHERE ub.moderationReport.targetType = :targetType "
                         + "AND ub.moderationReport.targetId = :userId "
                         + "ORDER BY ub.id DESC",
-                userId,
+                user.getId(),
                 ReportTargetType.USER,
                 null);
     }
 
     @Override
-    public Optional<UserBan> findActiveBanForUser(final Long userId, final Instant now) {
+    public Optional<UserBan> findActiveBanForUser(final User user, final Instant now) {
+        if (user == null) {
+            return Optional.empty();
+        }
         return findFirstBan(
                 "FROM UserBan ub "
                         + "WHERE ub.moderationReport.targetType = :targetType "
@@ -55,7 +62,7 @@ public class UserBanJpaDao implements UserBanDao {
                         + "AND (ub.moderationReport.appealDecision IS NULL "
                         + "OR ub.moderationReport.appealDecision <> :liftedAppealDecision) "
                         + "ORDER BY ub.id DESC",
-                userId,
+                user.getId(),
                 ReportTargetType.USER,
                 now);
     }

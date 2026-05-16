@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -35,6 +36,9 @@ public class UserBanJpaDaoTest {
     private ModerationReport report3;
     private ModerationReport report4;
 
+    private User user2;
+    private User user3;
+
     @BeforeEach
     public void setUp() {
         em.createNativeQuery(
@@ -60,6 +64,9 @@ public class UserBanJpaDaoTest {
         report2 = em.find(ModerationReport.class, 2L);
         report3 = em.find(ModerationReport.class, 3L);
         report4 = em.find(ModerationReport.class, 4L);
+
+        user2 = em.find(User.class, 2L);
+        user3 = em.find(User.class, 3L);
     }
 
     @Test
@@ -131,12 +138,11 @@ public class UserBanJpaDaoTest {
 
     @Test
     public void shouldFindLatestBanForUser_WhenBansExist() {
-        final long bannedUserId = 2L;
         final UserBan expired = userBanDao.createBan(report1, PAST);
         final UserBan latest = userBanDao.createBan(report2, FUTURE);
         flushAndClear();
 
-        final Optional<UserBan> result = userBanDao.findLatestBanForUser(bannedUserId);
+        final Optional<UserBan> result = userBanDao.findLatestBanForUser(user2);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(latest.getId(), result.get().getId());
@@ -147,9 +153,7 @@ public class UserBanJpaDaoTest {
 
     @Test
     public void shouldFindLatestBanForUser_WhenNoBansExist() {
-        final long userWithoutBan = 3L;
-
-        final Optional<UserBan> result = userBanDao.findLatestBanForUser(userWithoutBan);
+        final Optional<UserBan> result = userBanDao.findLatestBanForUser(user3);
 
         Assertions.assertTrue(result.isEmpty());
         Assertions.assertEquals(0, countUserBans());
@@ -157,14 +161,12 @@ public class UserBanJpaDaoTest {
 
     @Test
     public void shouldFindLatestBanForUser_OnlyForSpecificUser() {
-        final long user1 = 2L;
-        final long user2 = 3L;
         final UserBan user1Ban = userBanDao.createBan(report1, FUTURE);
         final UserBan user2Ban = userBanDao.createBan(report3, FUTURE.plus(1, ChronoUnit.DAYS));
         flushAndClear();
 
-        final Optional<UserBan> result1 = userBanDao.findLatestBanForUser(user1);
-        final Optional<UserBan> result2 = userBanDao.findLatestBanForUser(user2);
+        final Optional<UserBan> result1 = userBanDao.findLatestBanForUser(user2);
+        final Optional<UserBan> result2 = userBanDao.findLatestBanForUser(user3);
 
         Assertions.assertTrue(result1.isPresent());
         Assertions.assertEquals(user1Ban.getId(), result1.get().getId());
@@ -177,11 +179,10 @@ public class UserBanJpaDaoTest {
 
     @Test
     public void shouldFindActiveBanForUser_WhenBanIsActive() {
-        final long bannedUserId = 2L;
         final UserBan ban = userBanDao.createBan(report1, FUTURE);
         flushAndClear();
 
-        final Optional<UserBan> result = userBanDao.findActiveBanForUser(bannedUserId, NOW);
+        final Optional<UserBan> result = userBanDao.findActiveBanForUser(user2, NOW);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(ban.getId(), result.get().getId());
@@ -194,7 +195,7 @@ public class UserBanJpaDaoTest {
         final UserBan ban = userBanDao.createBan(report1, PAST);
         flushAndClear();
 
-        final Optional<UserBan> result = userBanDao.findActiveBanForUser(2L, NOW);
+        final Optional<UserBan> result = userBanDao.findActiveBanForUser(user2, NOW);
 
         Assertions.assertTrue(result.isEmpty(), "Expired ban should not be active");
         Assertions.assertEquals(1, countUserBans());
@@ -208,7 +209,7 @@ public class UserBanJpaDaoTest {
         final UserBan ban = userBanDao.createBan(report1, almostExpired);
         flushAndClear();
 
-        final Optional<UserBan> result = userBanDao.findActiveBanForUser(2L, exactNow);
+        final Optional<UserBan> result = userBanDao.findActiveBanForUser(user2, exactNow);
 
         Assertions.assertTrue(result.isPresent(), "Ban should be active at boundary time");
         Assertions.assertEquals(ban.getId(), result.get().getId());
@@ -221,7 +222,7 @@ public class UserBanJpaDaoTest {
         final UserBan ban = userBanDao.createBan(report1, FUTURE);
         markReportAppealDecision(report1.getId(), "lifted");
 
-        final Optional<UserBan> result = userBanDao.findActiveBanForUser(2L, NOW);
+        final Optional<UserBan> result = userBanDao.findActiveBanForUser(user2, NOW);
 
         Assertions.assertTrue(result.isEmpty(), "Lifted ban should not be active");
         Assertions.assertEquals(1, countUserBans());
@@ -233,7 +234,7 @@ public class UserBanJpaDaoTest {
         final UserBan ban = userBanDao.createBan(report1, FUTURE);
         markReportAppealDecision(report1.getId(), "upheld");
 
-        final Optional<UserBan> result = userBanDao.findActiveBanForUser(2L, NOW);
+        final Optional<UserBan> result = userBanDao.findActiveBanForUser(user2, NOW);
 
         Assertions.assertTrue(result.isPresent(), "Upheld ban should remain active");
         Assertions.assertEquals(ban.getId(), result.get().getId());
@@ -246,7 +247,7 @@ public class UserBanJpaDaoTest {
         final UserBan ban = userBanDao.createBan(report1, FUTURE);
         flushAndClear();
 
-        final Optional<UserBan> result = userBanDao.findActiveBanForUser(2L, NOW);
+        final Optional<UserBan> result = userBanDao.findActiveBanForUser(user2, NOW);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(ban.getId(), result.get().getId());
@@ -258,7 +259,7 @@ public class UserBanJpaDaoTest {
     public void shouldUpliftBan_WhenBanExists() {
         final UserBan ban = userBanDao.createBan(report1, FUTURE);
         flushAndClear();
-        final Optional<UserBan> activeBefore = userBanDao.findActiveBanForUser(2L, NOW);
+        final Optional<UserBan> activeBefore = userBanDao.findActiveBanForUser(user2, NOW);
         final Instant beforeUplift = Instant.now();
 
         userBanDao.upliftBan(ban.getId());
@@ -273,7 +274,7 @@ public class UserBanJpaDaoTest {
         Assertions.assertFalse(persisted.getBannedUntil().isAfter(afterUplift));
 
         final Optional<UserBan> activeBanAfter =
-                userBanDao.findActiveBanForUser(2L, afterUplift.plus(1, ChronoUnit.SECONDS));
+                userBanDao.findActiveBanForUser(user2, afterUplift.plus(1, ChronoUnit.SECONDS));
         Assertions.assertTrue(
                 activeBanAfter.isEmpty(), "Uplifted ban should not be active after uplift");
     }
@@ -309,12 +310,12 @@ public class UserBanJpaDaoTest {
     public void shouldUpliftBan_MakesExpiredBanInactive() {
         final UserBan ban = userBanDao.createBan(report1, FUTURE);
         flushAndClear();
-        final Optional<UserBan> activeBefore = userBanDao.findActiveBanForUser(2L, NOW);
+        final Optional<UserBan> activeBefore = userBanDao.findActiveBanForUser(user2, NOW);
 
         userBanDao.upliftBan(ban.getId());
 
         final Instant queryTime = Instant.now().plus(1, ChronoUnit.SECONDS);
-        final Optional<UserBan> activeAfter = userBanDao.findActiveBanForUser(2L, queryTime);
+        final Optional<UserBan> activeAfter = userBanDao.findActiveBanForUser(user2, queryTime);
         Assertions.assertTrue(activeBefore.isPresent());
         Assertions.assertTrue(activeAfter.isEmpty(), "Uplifted ban should not be active");
         Assertions.assertEquals(1, countUserBans());
@@ -326,13 +327,12 @@ public class UserBanJpaDaoTest {
 
     @Test
     public void shouldHandleMultipleBansPerUser_ReturnsMostRecent() {
-        final long bannedUserId = 2L;
         final UserBan ban1 = userBanDao.createBan(report1, NOW.plus(1, ChronoUnit.DAYS));
         final UserBan ban2 = userBanDao.createBan(report2, NOW.plus(2, ChronoUnit.DAYS));
         final UserBan ban3 = userBanDao.createBan(report4, NOW.plus(3, ChronoUnit.DAYS));
         flushAndClear();
 
-        final Optional<UserBan> latest = userBanDao.findLatestBanForUser(bannedUserId);
+        final Optional<UserBan> latest = userBanDao.findLatestBanForUser(user2);
 
         Assertions.assertTrue(latest.isPresent());
         Assertions.assertEquals(ban3.getId(), latest.get().getId());
@@ -344,12 +344,11 @@ public class UserBanJpaDaoTest {
 
     @Test
     public void shouldFindActiveBanForUser_WithMultipleBans_ReturnsLatestActive() {
-        final long bannedUserId = 2L;
         final UserBan expiredBan = userBanDao.createBan(report1, PAST);
         final UserBan activeBan = userBanDao.createBan(report2, FUTURE);
         flushAndClear();
 
-        final Optional<UserBan> result = userBanDao.findActiveBanForUser(bannedUserId, NOW);
+        final Optional<UserBan> result = userBanDao.findActiveBanForUser(user2, NOW);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(activeBan.getId(), result.get().getId());
