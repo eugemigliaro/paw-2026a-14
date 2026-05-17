@@ -653,7 +653,9 @@ public class EventController {
                                                             .atZone(ZoneId.systemDefault())),
                                     eventStateLabel(state, locale),
                                     state.tone(),
-                                    occurrence.getId().equals(currentMatch.getId()));
+                                    occurrence.getId().equals(currentMatch.getId()),
+                                    buildSpotsLabel(occurrence, state, locale),
+                                    buildSpotsTone(occurrence, state));
                         })
                 .toList();
     }
@@ -836,6 +838,37 @@ public class EventController {
 
     private String eventStateLabel(final EventDisplayState state, final Locale locale) {
         return messageSource.getMessage("match.status." + state.key(), null, locale);
+    }
+
+    private String buildSpotsLabel(
+            final Match occurrence, final EventDisplayState state, final Locale locale) {
+        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
+            return null;
+        }
+        final int spots = occurrence.getAvailableSpots();
+        if (spots <= 0) {
+            return null;
+        }
+        if (spots == 1) {
+            return messageSource.getMessage("event.occurrence.spots.one", null, locale);
+        }
+        return messageSource.getMessage(
+                "event.occurrence.spots.many", new Object[] {spots}, locale);
+    }
+
+    private String buildSpotsTone(final Match occurrence, final EventDisplayState state) {
+        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
+            return null;
+        }
+        final int spots = occurrence.getAvailableSpots();
+        if (spots <= 0) {
+            return null;
+        }
+        if (spots == 1) {
+            return "last";
+        }
+        final int max = occurrence.getMaxPlayers();
+        return (double) spots / max <= 0.33 ? "scarce" : "plenty";
     }
 
     private String eventStateNotice(final Match match, final Locale locale) {

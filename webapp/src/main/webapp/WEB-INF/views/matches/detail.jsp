@@ -1084,6 +1084,11 @@
 												</c:choose>
 											</div>
 											<div class="recurrence-schedule__badges">
+												<c:if test="${not empty occurrence.spotsLabel}">
+													<span class="recurrence-schedule__spots recurrence-schedule__spots--${occurrence.spotsTone}">
+														<c:out value="${occurrence.spotsLabel}" />
+													</span>
+												</c:if>
 												<c:if test="${not empty occurrence.statusLabel}">
 													<span class="recurrence-schedule__status recurrence-schedule__status--${occurrence.statusTone}">
 														<c:out value="${occurrence.statusLabel}" />

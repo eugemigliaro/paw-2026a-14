@@ -282,6 +282,29 @@
 	color: #405c8d;
 }
 
+.recurrence-schedule__spots {
+	border-radius: 999px;
+	font-size: 0.73rem;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	padding: 0.3rem 0.55rem;
+}
+
+.recurrence-schedule__spots--plenty {
+	background: rgba(0, 100, 90, 0.07);
+	color: #007a6e;
+}
+
+.recurrence-schedule__spots--scarce {
+	background: rgba(171, 107, 0, 0.11);
+	color: #8f5c00;
+}
+
+.recurrence-schedule__spots--last {
+	background: rgba(173, 54, 43, 0.1);
+	color: #a33329;
+}
+
 .participant-list {
 	display: grid;
 	gap: 0.8rem;
