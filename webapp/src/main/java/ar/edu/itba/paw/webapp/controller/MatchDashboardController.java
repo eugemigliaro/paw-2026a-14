@@ -4,18 +4,18 @@ import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
-import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.currentUserIdOrNull;
-import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
-import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
@@ -52,7 +52,6 @@ public class MatchDashboardController {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
-    private final UserService userService;
     private final MessageSource messageSource;
 
     @Autowired
@@ -60,12 +59,10 @@ public class MatchDashboardController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
-            final UserService userService,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
-        this.userService = userService;
         this.messageSource = messageSource;
     }
 
@@ -85,7 +82,7 @@ public class MatchDashboardController {
             @RequestParam(value = "filter", defaultValue = "upcoming") final String filter,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
-        final long userId = requireAuthenticatedUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final List<String> selectedSports = normalizeSports(sports);
         final List<String> selectedStatuses =
                 normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
@@ -103,7 +100,7 @@ public class MatchDashboardController {
 
         final PaginatedResult<Match> result =
                 getAllUserEventsForFilter(
-                        userId,
+                        user,
                         context,
                         searchQuery,
                         encodeCsv(selectedSports),
@@ -165,7 +162,7 @@ public class MatchDashboardController {
         final ModelAndView mav = new ModelAndView(view);
         final ZoneId zoneId = ZoneId.of(timezone);
         final DateRangeBounds dateBounds = dateRangeBounds(path, ZoneId.of(timezone));
-        final Long currentUserId = currentUserIdOrNull();
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         mav.addObject("shell", shell);
         mav.addObject("pageTitleCode", pageTitleCode);
@@ -210,7 +207,7 @@ public class MatchDashboardController {
                                                 match,
                                                 zoneId,
                                                 locale,
-                                                currentUserId,
+                                                currentUser,
                                                 messageSource.getMessage(
                                                         "match.status."
                                                                 + match.getStatus().getValue(),
@@ -218,7 +215,6 @@ public class MatchDashboardController {
                                                         match.getStatus().getValue(),
                                                         locale),
                                                 messageSource,
-                                                userService,
                                                 matchParticipationService,
                                                 matchReservationService))
                         .toList());
@@ -281,7 +277,7 @@ public class MatchDashboardController {
     }
 
     private PaginatedResult<Match> getAllUserEventsForFilter(
-            final long userId,
+            final User user,
             final DateRangeContext context,
             final String searchQuery,
             final String sports,
@@ -309,7 +305,7 @@ public class MatchDashboardController {
         final List<Match> pendingMatches =
                 !allowPending
                         ? List.of()
-                        : matchParticipationService.findPendingRequestMatches(userId).stream()
+                        : matchParticipationService.findPendingRequestMatches(user).stream()
                                 .filter(match -> belongsToContext(match, context, today, timezone))
                                 .filter(
                                         match ->
@@ -324,7 +320,7 @@ public class MatchDashboardController {
         final List<Match> invitedMatches =
                 !allowInvited
                         ? List.of()
-                        : matchParticipationService.findInvitedMatches(userId).stream()
+                        : matchParticipationService.findInvitedMatches(user).stream()
                                 .filter(match -> belongsToContext(match, context, today, timezone))
                                 .filter(
                                         match ->
@@ -346,7 +342,7 @@ public class MatchDashboardController {
                 !allowJoined
                         ? new PaginatedResult<>(List.of(), 0, requestedPage, fetchPageSize)
                         : matchService.findJoinedMatches(
-                                userId,
+                                user,
                                 isUpcoming,
                                 searchQuery,
                                 sports,
@@ -365,7 +361,7 @@ public class MatchDashboardController {
                 !allowHosted
                         ? new PaginatedResult<>(List.of(), 0, requestedPage, fetchPageSize)
                         : matchService.findHostedMatches(
-                                userId,
+                                user,
                                 isUpcoming,
                                 searchQuery,
                                 sports,
@@ -1264,7 +1260,9 @@ public class MatchDashboardController {
         final List<String> normalized = normalizeCsvValues(rawSports);
         final List<String> sports = new ArrayList<>();
         for (final String sport : normalized) {
-            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(sports::add);
+            PersistableEnum.fromDbValue(Sport.class, sport)
+                    .map(Sport::getDbValue)
+                    .ifPresent(sports::add);
         }
         return List.copyOf(sports);
     }

@@ -5,7 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import java.util.Locale;
@@ -53,12 +53,12 @@ class AuthenticatedLocalePersistenceInterceptorTest {
         final AtomicReference<String> capturedLanguage = new AtomicReference<>();
         Mockito.doAnswer(
                         invocation -> {
-                            capturedUserId.set(invocation.getArgument(0));
+                            capturedUserId.set(invocation.<User>getArgument(0).getId());
                             capturedLanguage.set(invocation.getArgument(1));
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -92,7 +92,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -124,7 +124,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -157,7 +157,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                             return null;
                         })
                 .when(userService)
-                .updatePreferredLanguage(Mockito.anyLong(), Mockito.anyString());
+                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
 
         mockMvc.perform(get("/ping").param("lang", "es")).andExpect(status().isOk());
 

@@ -9,20 +9,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventVisibility;
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.PlayerReviewFilter;
-import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
+import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
@@ -50,6 +52,9 @@ import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.MatchUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import java.io.IOException;
@@ -76,8 +81,6 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -166,7 +169,7 @@ class UiRouteTest {
                 new Match(
                         42L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
                         -34.61,
                         -58.38,
@@ -182,13 +185,19 @@ class UiRouteTest {
                         2,
                         null,
                         null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
         final Match footballMatch =
                 new Match(
                         43L,
                         Sport.FOOTBALL,
-                        8L,
+                        UserUtils.getUser(8L),
                         "North Arena",
+                        null,
+                        null,
                         "Afterwork Football",
                         "Fast 5v5",
                         Instant.parse("2026-04-07T19:00:00Z"),
@@ -199,13 +208,21 @@ class UiRouteTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         4,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
         final Match completedMatch =
                 new Match(
                         44L,
                         Sport.BASKETBALL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "South Sports Center",
+                        null,
+                        null,
                         "Weekend Basketball",
                         "Completed tournament",
                         Instant.parse("2026-04-03T19:00:00Z"),
@@ -216,13 +233,21 @@ class UiRouteTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.COMPLETED,
                         10,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
         final Match cancelledFutureMatch =
                 new Match(
                         45L,
                         Sport.TENNIS,
-                        7L,
+                        UserUtils.getUser(7L),
                         "City Tennis Club",
+                        null,
+                        null,
                         "Sunday Tennis",
                         "Cancelled due to weather",
                         Instant.parse("2026-04-08T12:00:00Z"),
@@ -233,13 +258,21 @@ class UiRouteTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.CANCELLED,
                         2,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
         final Match privateInviteOnlyMatch =
                 new Match(
                         51L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Members Club",
+                        null,
+                        null,
                         "Invite Night Padel",
                         "Private doubles session",
                         Instant.parse("2026-04-10T21:00:00Z"),
@@ -250,13 +283,21 @@ class UiRouteTest {
                         EventJoinPolicy.INVITE_ONLY,
                         EventStatus.OPEN,
                         2,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
         final Match recurringMatch =
                 new Match(
                         46L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Weekly Padel",
                         "Friendly recurring session",
                         Instant.parse("2026-04-09T18:00:00Z"),
@@ -268,14 +309,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         1,
                         null,
-                        600L,
-                        1);
+                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
+                        1,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match recurringSecondOccurrence =
                 new Match(
                         47L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Weekly Padel",
                         "Friendly recurring session",
                         Instant.parse("2026-04-16T18:00:00Z"),
@@ -287,14 +334,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         0,
                         null,
-                        600L,
-                        2);
+                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
+                        2,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match recurringPastOccurrence =
                 new Match(
                         48L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Weekly Padel",
                         "Friendly recurring session",
                         Instant.parse("2026-03-26T18:00:00Z"),
@@ -306,14 +359,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         4,
                         null,
-                        600L,
-                        0);
+                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
+                        0,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match recurringInProgressOccurrence =
                 new Match(
                         55L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Weekly Padel",
                         "Friendly recurring session",
                         Instant.parse("2026-04-04T23:00:00Z"),
@@ -325,14 +384,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         4,
                         null,
-                        600L,
-                        1);
+                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
+                        1,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match recurringFullOccurrence =
                 new Match(
                         49L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Weekly Padel",
                         "Friendly recurring session",
                         Instant.parse("2026-04-23T18:00:00Z"),
@@ -344,14 +409,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         8,
                         null,
-                        600L,
-                        3);
+                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
+                        3,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match recurringCancelledOccurrence =
                 new Match(
                         50L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Weekly Padel",
                         "Friendly recurring session",
                         Instant.parse("2026-04-30T18:00:00Z"),
@@ -363,14 +434,20 @@ class UiRouteTest {
                         EventStatus.CANCELLED,
                         0,
                         null,
-                        600L,
-                        4);
+                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
+                        4,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match approvalRecurringMatch =
                 new Match(
                         52L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Approval Weekly Padel",
                         "Recurring session with host approval",
                         Instant.parse("2026-04-09T20:00:00Z"),
@@ -382,14 +459,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         1,
                         null,
-                        700L,
-                        1);
+                        MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)),
+                        1,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match approvalRecurringSecondOccurrence =
                 new Match(
                         53L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Approval Weekly Padel",
                         "Recurring session with host approval",
                         Instant.parse("2026-04-16T20:00:00Z"),
@@ -401,14 +484,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         0,
                         null,
-                        700L,
-                        2);
+                        MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)),
+                        2,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match approvalRecurringPastOccurrence =
                 new Match(
                         54L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Approval Weekly Padel",
                         "Recurring session with host approval",
                         Instant.parse("2026-03-26T20:00:00Z"),
@@ -420,14 +509,20 @@ class UiRouteTest {
                         EventStatus.OPEN,
                         4,
                         null,
-                        700L,
-                        0);
+                        MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)),
+                        0,
+                        false,
+                        null,
+                        null,
+                        null);
         final Match pendingFutureMatch =
                 new Match(
                         56L,
                         Sport.PADEL,
-                        7L,
+                        UserUtils.getUser(7L),
                         "Downtown Club",
+                        null,
+                        null,
                         "Approval Future Padel",
                         "Future session with host approval",
                         Instant.parse("2030-04-09T20:00:00Z"),
@@ -438,6 +533,12 @@ class UiRouteTest {
                         EventJoinPolicy.APPROVAL_REQUIRED,
                         EventStatus.OPEN,
                         1,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
                         null);
 
         final MatchService matchService =
@@ -452,8 +553,10 @@ class UiRouteTest {
                         return new Match(
                                 43L,
                                 request.getSport(),
-                                request.getHostUserId(),
+                                request.getHost(),
                                 request.getAddress(),
+                                null,
+                                null,
                                 request.getTitle(),
                                 request.getDescription(),
                                 request.getStartsAt(),
@@ -465,8 +568,14 @@ class UiRouteTest {
                                 request.getStatus(),
                                 0,
                                 null,
-                                request.isRecurring() ? 600L : null,
-                                request.isRecurring() ? 1 : null);
+                                request.isRecurring()
+                                        ? MatchUtils.getMatchSeries(700L, request.getHost())
+                                        : null,
+                                request.isRecurring() ? 1 : null,
+                                false,
+                                null,
+                                null,
+                                null);
                     }
 
                     @Override
@@ -544,29 +653,20 @@ class UiRouteTest {
                     @Override
                     public List<User> findConfirmedParticipants(final Long matchId) {
                         return matchId == 42L
-                                ? List.of(
-                                        new User(
-                                                2L,
-                                                "first@test.com",
-                                                "first-player",
-                                                "First",
-                                                "Player",
-                                                null,
-                                                77L),
-                                        new User(3L, "second@test.com", "second-player"))
+                                ? List.of(UserUtils.getUser(2L), UserUtils.getUser(3L))
                                 : List.of();
                     }
 
                     @Override
                     public Match updateMatch(
                             final Long matchId,
-                            final Long actingUserId,
+                            final User actingUser,
                             final UpdateMatchRequest request) {
                         if (matchId != 42L) {
                             throw new MatchUpdateException(
                                     MatchUpdateFailureReason.MATCH_NOT_FOUND, "Missing match");
                         }
-                        if (actingUserId != 7L) {
+                        if (actingUser.getId() != 7L) {
                             throw new MatchUpdateException(
                                     MatchUpdateFailureReason.FORBIDDEN, "Forbidden");
                         }
@@ -586,8 +686,10 @@ class UiRouteTest {
                                 new Match(
                                         matchId,
                                         request.getSport(),
-                                        actingUserId,
+                                        actingUser,
                                         request.getAddress(),
+                                        null,
+                                        null,
                                         request.getTitle(),
                                         request.getDescription(),
                                         request.getStartsAt(),
@@ -598,7 +700,13 @@ class UiRouteTest {
                                         joinPolicy,
                                         request.getStatus(),
                                         0,
-                                        request.getBannerImageId());
+                                        request.getBannerImageMetadata(),
+                                        null,
+                                        null,
+                                        false,
+                                        null,
+                                        null,
+                                        null);
                         lastUpdatedMatch.set(result);
                         return result;
                     }
@@ -606,13 +714,13 @@ class UiRouteTest {
                     @Override
                     public List<Match> updateSeriesFromOccurrence(
                             final Long matchId,
-                            final Long actingUserId,
+                            final User actingUser,
                             final UpdateMatchRequest request) {
                         if (matchId != 46L && matchId != 47L) {
                             throw new MatchUpdateException(
                                     MatchUpdateFailureReason.MATCH_NOT_FOUND, "Missing match");
                         }
-                        if (actingUserId != 7L) {
+                        if (actingUser.getId() != 7L) {
                             throw new MatchUpdateException(
                                     MatchUpdateFailureReason.FORBIDDEN, "Forbidden");
                         }
@@ -622,7 +730,7 @@ class UiRouteTest {
                                     "Capacity too low");
                         }
                         lastHostSeriesUpdatedMatchId.set(matchId);
-                        lastHostSeriesUpdatedUserId.set(actingUserId);
+                        lastHostSeriesUpdatedUserId.set(actingUser.getId());
                         lastUpdateMatchRequest.set(request);
                         final EventJoinPolicy joinPolicy =
                                 EventVisibility.PRIVATE == request.getVisibility()
@@ -632,8 +740,10 @@ class UiRouteTest {
                                 new Match(
                                         matchId,
                                         request.getSport(),
-                                        actingUserId,
+                                        actingUser,
                                         request.getAddress(),
+                                        null,
+                                        null,
                                         request.getTitle(),
                                         request.getDescription(),
                                         request.getStartsAt(),
@@ -644,31 +754,37 @@ class UiRouteTest {
                                         joinPolicy,
                                         request.getStatus(),
                                         0,
-                                        request.getBannerImageId(),
-                                        600L,
-                                        matchId == 46L ? 1 : 2);
+                                        request.getBannerImageMetadata(),
+                                        MatchUtils.getMatchSeries(600L, actingUser),
+                                        matchId == 46L ? 1 : 2,
+                                        false,
+                                        null,
+                                        null,
+                                        null);
                         lastUpdatedMatch.set(result);
                         return List.of(result);
                     }
 
                     @Override
-                    public Match cancelMatch(final Long matchId, final Long actingUserId) {
+                    public Match cancelMatch(final Long matchId, final User actingUser) {
                         if (matchId != 42L && matchId != 47L) {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                     "Missing match");
                         }
-                        if (actingUserId != 7L) {
+                        if (actingUser.getId() != 7L) {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.FORBIDDEN, "Forbidden");
                         }
                         lastHostCancelledMatchId.set(matchId);
-                        lastHostCancelledUserId.set(actingUserId);
+                        lastHostCancelledUserId.set(actingUser.getId());
                         return new Match(
                                 matchId,
                                 Sport.PADEL,
-                                actingUserId,
+                                actingUser,
                                 "Downtown Club",
+                                null,
+                                null,
                                 "Cancelled Match",
                                 "Cancelled Description",
                                 Instant.parse("2026-04-06T10:00:00Z"),
@@ -680,30 +796,36 @@ class UiRouteTest {
                                 EventStatus.CANCELLED,
                                 2,
                                 null,
-                                matchId == 47L ? 600L : null,
-                                matchId == 47L ? 2 : null);
+                                matchId == 47L ? MatchUtils.getMatchSeries(600L, actingUser) : null,
+                                matchId == 47L ? 2 : null,
+                                false,
+                                null,
+                                null,
+                                null);
                     }
 
                     @Override
                     public List<Match> cancelSeriesFromOccurrence(
-                            final Long matchId, final Long actingUserId) {
+                            final Long matchId, final User actingUser) {
                         if (matchId != 46L && matchId != 47L) {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                     "Missing match");
                         }
-                        if (actingUserId != 7L) {
+                        if (actingUser.getId() != 7L) {
                             throw new MatchCancellationException(
                                     MatchCancellationFailureReason.FORBIDDEN, "Forbidden");
                         }
                         lastHostSeriesCancelledMatchId.set(matchId);
-                        lastHostSeriesCancelledUserId.set(actingUserId);
+                        lastHostSeriesCancelledUserId.set(actingUser.getId());
                         return List.of(
                                 new Match(
                                         matchId,
                                         Sport.PADEL,
-                                        actingUserId,
+                                        actingUser,
                                         "Downtown Club",
+                                        null,
+                                        null,
                                         "Cancelled Series",
                                         "Cancelled Description",
                                         Instant.parse("2026-04-09T18:00:00Z"),
@@ -715,13 +837,17 @@ class UiRouteTest {
                                         EventStatus.CANCELLED,
                                         1,
                                         null,
-                                        600L,
-                                        matchId == 46L ? 1 : 2));
+                                        MatchUtils.getMatchSeries(600L, actingUser),
+                                        matchId == 46L ? 1 : 2,
+                                        false,
+                                        null,
+                                        null,
+                                        null));
                     }
 
                     @Override
                     public PaginatedResult<Match> findHostedMatches(
-                            final Long hostUserId,
+                            final User host,
                             final Boolean upcoming,
                             final String query,
                             final String sport,
@@ -736,7 +862,9 @@ class UiRouteTest {
                             final int page,
                             final int pageSize) {
                         final List<Match> items =
-                                status != null && status.contains(EventStatus.COMPLETED.getValue())
+                                status != null
+                                                && status.contains(
+                                                        EventStatus.COMPLETED.getDbValue())
                                         ? List.of(completedMatch)
                                         : List.of(realMatch);
                         return new PaginatedResult<>(items, items.size(), 1, pageSize);
@@ -744,7 +872,7 @@ class UiRouteTest {
 
                     @Override
                     public PaginatedResult<Match> findJoinedMatches(
-                            final Long userId,
+                            final User user,
                             final Boolean upcoming,
                             final String query,
                             final String sport,
@@ -790,22 +918,26 @@ class UiRouteTest {
         final MatchReservationService matchReservationService =
                 new MatchReservationService() {
                     @Override
-                    public boolean hasActiveReservation(final Long matchId, final Long userId) {
+                    public boolean hasActiveReservation(final Long matchId, final User user) {
+                        if (user == null) {
+                            return false;
+                        }
                         if (Boolean.TRUE.equals(currentUserHasReservation.get())
-                                && (userId == 9L || userId == 7L)
+                                && (user.getId() == 9L || user.getId() == 7L)
                                 && (matchId == 42L || matchId == 51L)) {
                             return true;
                         }
                         return Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
-                                && userId == 9L
+                                && user.getId() == 9L
                                 && (matchId == 46L || matchId == 47L);
                     }
 
                     @Override
                     public Set<Long> findActiveFutureReservationMatchIdsForSeries(
-                            final Long seriesId, final Long userId) {
+                            final Long seriesId, final User user) {
                         if (Boolean.TRUE.equals(currentUserHasSeriesReservation.get())
-                                && userId == 9L
+                                && user != null
+                                && user.getId() == 9L
                                 && seriesId == 600L) {
                             return Set.of(46L, 47L);
                         }
@@ -813,86 +945,108 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public void reserveSpot(final Long matchId, final Long userId) {
+                    public void reserveSpot(final Long matchId, final User user) {
                         final MatchReservationException failure = reservationFailure.get();
                         if (failure != null) {
                             throw failure;
                         }
 
+                        if (user == null) {
+                            throw new MatchReservationException(
+                                    null, "User must be authenticated to reserve a spot");
+                        }
+
                         lastReservedMatchId.set(matchId);
-                        lastReservedUserId.set(userId);
+                        lastReservedUserId.set(user.getId());
                     }
 
                     @Override
-                    public void reserveSeries(final Long matchId, final Long userId) {
+                    public void reserveSeries(final Long matchId, final User user) {
                         final MatchReservationException failure = seriesReservationFailure.get();
                         if (failure != null) {
                             throw failure;
                         }
 
+                        if (user == null) {
+                            throw new MatchReservationException(
+                                    null, "User must be authenticated to reserve a spot");
+                        }
+
                         lastReservedMatchId.set(matchId);
-                        lastReservedUserId.set(userId);
+                        lastReservedUserId.set(user.getId());
                     }
 
                     @Override
-                    public void cancelSeriesReservations(final Long matchId, final Long userId) {
+                    public void cancelSeriesReservations(final Long matchId, final User user) {
                         final MatchReservationException failure = seriesCancellationFailure.get();
                         if (failure != null) {
                             throw failure;
                         }
 
+                        if (user == null) {
+                            throw new MatchReservationException(
+                                    null, "User must be authenticated to reserve a spot");
+                        }
+
                         lastCancelledSeriesMatchId.set(matchId);
-                        lastCancelledSeriesUserId.set(userId);
+                        lastCancelledSeriesUserId.set(user.getId());
                     }
                 };
 
         final MatchParticipationService matchParticipationService =
                 new MatchParticipationService() {
                     @Override
-                    public void requestToJoin(final Long matchId, final Long userId) {
+                    public void requestToJoin(final Long matchId, final User user) {
                         // No-op for route rendering tests.
                     }
 
                     @Override
-                    public void requestToJoinSeries(final Long matchId, final Long userId) {
+                    public void requestToJoinSeries(final Long matchId, final User user) {
                         final MatchParticipationException failure = seriesJoinRequestFailure.get();
                         if (failure != null) {
                             throw failure;
                         }
 
+                        if (user == null) {
+                            throw new MatchParticipationException(
+                                    null, "User must be authenticated to request to join a match");
+                        }
+
                         lastSeriesJoinRequestMatchId.set(matchId);
-                        lastSeriesJoinRequestUserId.set(userId);
+                        lastSeriesJoinRequestUserId.set(user.getId());
                     }
 
                     @Override
-                    public void cancelJoinRequest(final Long matchId, final Long userId) {
+                    public void cancelJoinRequest(final Long matchId, final User user) {
                         // No-op for route rendering tests.
                     }
 
                     @Override
-                    public boolean hasPendingRequest(final Long matchId, final Long userId) {
-                        if (Boolean.TRUE.equals(currentUserHasJoinRequest.get())
-                                && userId == 9L
-                                && matchId == 56L) {
-                            return true;
+                    public boolean hasPendingRequest(final Long matchId, final User user) {
+                        if (user == null) {
+                            throw new MatchParticipationException(
+                                    null, "User must be authenticated to check pending requests");
                         }
-                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
-                                && userId == 9L
-                                && (matchId == 52L || matchId == 53L);
+
+                        return Boolean.TRUE.equals(currentUserHasJoinRequest.get())
+                                && user.getId() == 9L
+                                && (matchId == 52L || matchId == 53L || matchId == 56L);
                     }
 
                     @Override
-                    public boolean hasPendingSeriesRequest(final Long matchId, final Long userId) {
+                    public boolean hasPendingSeriesRequest(final Long matchId, final User user) {
                         return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
-                                && userId == 9L
+                                && user != null
+                                && user.getId() == 9L
                                 && (matchId == 52L || matchId == 53L);
                     }
 
                     @Override
                     public Set<Long> findPendingFutureRequestMatchIdsForSeries(
-                            final Long seriesId, final Long userId) {
+                            final Long seriesId, final User user) {
                         if (Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
-                                && userId == 9L
+                                && user != null
+                                && user.getId() == 9L
                                 && seriesId == 700L) {
                             return Set.of(52L, 53L);
                         }
@@ -901,20 +1055,20 @@ class UiRouteTest {
 
                     @Override
                     public void approveRequest(
-                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                            final Long matchId, final User host, final User targetUser) {
                         // No-op for route rendering tests.
                     }
 
                     @Override
                     public void rejectRequest(
-                            final Long matchId, final Long hostUserId, final Long targetUserId) {
+                            final Long matchId, final User host, final User targetUser) {
                         // No-op for route rendering tests.
                     }
 
                     @Override
                     public void removeParticipant(
-                            final Long matchId, final Long hostUserId, final Long targetUserId) {
-                        if (hostUserId.equals(targetUserId)) {
+                            final Long matchId, final User host, final User target) {
+                        if (host.equals(target)) {
                             final MatchParticipationException failure =
                                     reservationCancellationFailure.get();
                             if (failure != null) {
@@ -922,87 +1076,75 @@ class UiRouteTest {
                             }
 
                             lastCancelledReservationMatchId.set(matchId);
-                            lastCancelledReservationUserId.set(targetUserId);
+                            lastCancelledReservationUserId.set(target.getId());
                         }
                     }
 
                     @Override
-                    public List<User> findPendingRequests(
-                            final Long matchId, final Long hostUserId) {
+                    public List<User> findPendingRequests(final Long matchId, final User host) {
                         return List.of();
                     }
 
                     @Override
-                    public List<PendingJoinRequest> findPendingRequestsForHost(
-                            final Long hostUserId) {
+                    public List<PendingJoinRequest> findPendingRequestsForHost(final User host) {
                         return List.of(
                                 new PendingJoinRequest(
-                                        approvalRecurringMatch,
-                                        new User(9L, "player@test.com", "player-account"),
-                                        true));
+                                        approvalRecurringMatch, UserUtils.getUser(9L), true));
                     }
 
                     @Override
                     public List<User> findConfirmedParticipants(
-                            final Long matchId, final Long hostUserId) {
+                            final Long matchId, final User host) {
                         return List.of();
                     }
 
                     @Override
-                    public List<Match> findPendingRequestMatches(final Long userId) {
+                    public List<Match> findPendingRequestMatches(final User user) {
                         return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest.get())
-                                        && userId == 9L
+                                        && user != null
+                                        && user.getId() == 9L
                                 ? List.of(pendingFutureMatch)
                                 : List.of();
                     }
 
                     @Override
                     public void inviteUser(
-                            final Long matchId, final Long hostUserId, final String email) {}
+                            final Long matchId, final User host, final String email) {}
 
                     @Override
-                    public void acceptInvite(final Long matchId, final Long userId) {}
+                    public void acceptInvite(final Long matchId, final User user) {}
 
                     @Override
-                    public void declineInvite(final Long matchId, final Long userId) {}
+                    public void declineInvite(final Long matchId, final User user) {}
 
                     @Override
-                    public boolean hasInvitation(final Long matchId, final Long userId) {
+                    public boolean hasInvitation(final Long matchId, final User user) {
                         return false;
                     }
 
                     @Override
-                    public List<User> findInvitedUsers(final Long matchId, final Long hostUserId) {
+                    public List<User> findInvitedUsers(final Long matchId, final User host) {
                         return List.of();
                     }
 
                     @Override
-                    public List<User> findDeclinedInvitees(
-                            final Long matchId, final Long hostUserId) {
+                    public List<User> findDeclinedInvitees(final Long matchId, final User host) {
                         return List.of();
                     }
 
                     @Override
-                    public List<Match> findInvitedMatches(final Long userId) {
+                    public List<Match> findInvitedMatches(final User user) {
                         return List.of();
                     }
                 };
 
         final UserService userService =
                 new UserService() {
-                    private User currentUser =
-                            new User(
-                                    9L,
-                                    "host@test.com",
-                                    "host-player",
-                                    "Jamie",
-                                    "Rivera",
-                                    "+1 555 123 4567",
-                                    null);
+                    private User currentUser = UserUtils.getUser(9L);
 
                     @Override
                     public User createUser(final String email, final String username) {
-                        return new User(9L, email, username);
+                        return UserUtils.getUser(9L);
                     }
 
                     @Override
@@ -1012,43 +1154,7 @@ class UiRouteTest {
 
                     @Override
                     public Optional<User> findById(final Long id) {
-                        if (id.equals(currentUser.getId())) {
-                            return Optional.of(currentUser);
-                        }
-                        if (id.equals(2L)) {
-                            return Optional.of(
-                                    new User(
-                                            2L,
-                                            "first@test.com",
-                                            "first-player",
-                                            "First",
-                                            "Player",
-                                            null,
-                                            77L));
-                        }
-                        if (id.equals(3L)) {
-                            return Optional.of(
-                                    new User(
-                                            3L,
-                                            "second@test.com",
-                                            "second-player",
-                                            "Second",
-                                            "Player",
-                                            null,
-                                            null));
-                        }
-                        if (id.equals(7L)) {
-                            return Optional.of(
-                                    new User(
-                                            7L,
-                                            "host@test.com",
-                                            "host-player",
-                                            "Jamie",
-                                            "Rivera",
-                                            "+1 555 123 4567",
-                                            88L));
-                        }
-                        return Optional.of(new User(id, "host@test.com", "host-player"));
+                        return Optional.of(UserUtils.getUser(id));
                     }
 
                     @Override
@@ -1073,6 +1179,7 @@ class UiRouteTest {
                                             "Second",
                                             "Player",
                                             null,
+                                            null,
                                             null));
                         }
                         if ("host-player".equals(username)) {
@@ -1084,14 +1191,15 @@ class UiRouteTest {
                                             "Jamie",
                                             "Rivera",
                                             "+1 555 123 4567",
-                                            currentUser.getProfileImageId()));
+                                            currentUser.getProfileImageMetadata(),
+                                            null));
                         }
                         return Optional.empty();
                     }
 
                     @Override
                     public User updateProfile(
-                            final Long id,
+                            final User user,
                             final String username,
                             final String name,
                             final String lastName,
@@ -1105,15 +1213,19 @@ class UiRouteTest {
                         }
                         currentUser =
                                 new User(
-                                        id,
+                                        user.getId(),
                                         currentUser.getEmail(),
                                         username.trim().toLowerCase(Locale.ROOT),
                                         name.trim(),
                                         lastName.trim(),
                                         phone == null || phone.isBlank() ? null : phone.trim(),
                                         profileImageContentLength > 0
-                                                ? Long.valueOf(500L)
-                                                : currentUser.getProfileImageId());
+                                                ? new ImageMetadata(
+                                                        500L,
+                                                        profileImageContentType,
+                                                        profileImageContentLength)
+                                                : currentUser.getProfileImageMetadata(),
+                                        null);
                         return currentUser;
                     }
 
@@ -1131,13 +1243,14 @@ class UiRouteTest {
                                         currentUser.getName(),
                                         currentUser.getLastName(),
                                         currentUser.getPhone(),
-                                        500L);
+                                        new ImageMetadata(500L, contentType, contentLength),
+                                        null);
                         return currentUser;
                     }
 
                     @Override
                     public void updatePreferredLanguage(
-                            final Long id, final String preferredLanguage) {
+                            final User user, final String preferredLanguage) {
                         currentUser =
                                 new User(
                                         currentUser.getId(),
@@ -1146,7 +1259,7 @@ class UiRouteTest {
                                         currentUser.getName(),
                                         currentUser.getLastName(),
                                         currentUser.getPhone(),
-                                        currentUser.getProfileImageId(),
+                                        currentUser.getProfileImageMetadata(),
                                         preferredLanguage);
                     }
                 };
@@ -1154,7 +1267,7 @@ class UiRouteTest {
         final PlayerReviewService playerReviewService =
                 new PlayerReviewService() {
                     private PlayerReview viewerReview =
-                            new PlayerReview(
+                            createPlayerReview(
                                     1L,
                                     9L,
                                     3L,
@@ -1164,6 +1277,33 @@ class UiRouteTest {
                                     FIXED_NOW,
                                     null);
 
+                    private PlayerReview createPlayerReview(
+                            Long id,
+                            Long reviewerId,
+                            Long reviewedId,
+                            PlayerReviewReaction reaction,
+                            String comment,
+                            Instant createdAt,
+                            Instant updatedAt,
+                            Instant deletedAt) {
+                        User reviewer = Mockito.mock(User.class);
+                        User reviewed = Mockito.mock(User.class);
+                        Mockito.when(reviewer.getId()).thenReturn(reviewerId);
+                        Mockito.when(reviewed.getId()).thenReturn(reviewedId);
+                        return new PlayerReview(
+                                id,
+                                reviewer,
+                                reviewed,
+                                reaction,
+                                comment,
+                                createdAt,
+                                updatedAt,
+                                deletedAt != null,
+                                deletedAt,
+                                null,
+                                null);
+                    }
+
                     @Override
                     public Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId) {
                         return Optional.empty();
@@ -1171,19 +1311,21 @@ class UiRouteTest {
 
                     @Override
                     public PlayerReview submitReview(
-                            final Long reviewerUserId,
-                            final Long reviewedUserId,
+                            final User reviewer,
+                            final User reviewed,
                             final PlayerReviewReaction reaction,
                             final String comment) {
-                        if (!canReview(reviewerUserId, reviewedUserId)) {
+                        if (reviewer == null
+                                || reviewed == null
+                                || !canReview(reviewer, reviewed)) {
                             throw new PlayerReviewException(
                                     PlayerReviewException.NOT_ELIGIBLE, "Not eligible");
                         }
                         viewerReview =
-                                new PlayerReview(
+                                createPlayerReview(
                                         1L,
-                                        reviewerUserId,
-                                        reviewedUserId,
+                                        reviewer.getId(),
+                                        reviewed.getId(),
                                         reaction,
                                         comment == null || comment.isBlank()
                                                 ? null
@@ -1195,10 +1337,12 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public void deleteReview(final Long reviewerUserId, final Long reviewedUserId) {
+                    public void deleteReview(final User reviewer, final User reviewed) {
                         if (viewerReview == null
-                                || !reviewerUserId.equals(viewerReview.getReviewerUserId())
-                                || !reviewedUserId.equals(viewerReview.getReviewedUserId())) {
+                                || reviewer == null
+                                || reviewed == null
+                                || !reviewer.getId().equals(viewerReview.getReviewer().getId())
+                                || !reviewed.getId().equals(viewerReview.getReviewed().getId())) {
                             throw new PlayerReviewException(
                                     PlayerReviewException.NOT_FOUND, "Missing review");
                         }
@@ -1207,29 +1351,33 @@ class UiRouteTest {
 
                     @Override
                     public Optional<PlayerReview> findReviewByPair(
-                            final Long reviewerUserId, final Long reviewedUserId) {
+                            final User reviewer, final User reviewed) {
                         return viewerReview == null
-                                        || !reviewerUserId.equals(viewerReview.getReviewerUserId())
-                                        || !reviewedUserId.equals(viewerReview.getReviewedUserId())
+                                        || reviewer == null
+                                        || reviewed == null
+                                        || !reviewer.getId()
+                                                .equals(viewerReview.getReviewer().getId())
+                                        || !reviewed.getId()
+                                                .equals(viewerReview.getReviewed().getId())
                                 ? Optional.empty()
                                 : Optional.of(viewerReview);
                     }
 
                     @Override
-                    public PlayerReviewSummary findSummaryForUser(final Long reviewedUserId) {
-                        return reviewedUserId.equals(3L)
+                    public PlayerReviewSummary findSummaryForUser(final User reviewed) {
+                        return reviewed.getId().equals(3L)
                                 ? new PlayerReviewSummary(3L, 1, 0, 1)
-                                : new PlayerReviewSummary(reviewedUserId, 0, 0, 0);
+                                : new PlayerReviewSummary(3L, 0, 0, 0);
                     }
 
                     @Override
                     public PaginatedResult<PlayerReview> findReviewsForUser(
-                            final Long reviewedUserId,
+                            final User reviewed,
                             final PlayerReviewFilter filter,
                             final int page,
                             final int pageSize) {
                         final List<PlayerReview> reviews;
-                        if (reviewedUserId.equals(3L) && viewerReview != null) {
+                        if (reviewed.getId().equals(3L) && viewerReview != null) {
                             if (filter != null
                                     && filter.getReaction().isPresent()
                                     && filter.getReaction().get() != viewerReview.getReaction()) {
@@ -1241,7 +1389,7 @@ class UiRouteTest {
                             reviews = List.of();
                         }
                         final int totalCount =
-                                reviewedUserId.equals(3L)
+                                reviewed.getId().equals(3L)
                                                 && filter == PlayerReviewFilter.BOTH
                                                 && viewerReview != null
                                         ? 21
@@ -1255,16 +1403,16 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
-                        return reviewerUserId != null
-                                && reviewedUserId != null
-                                && reviewerUserId.equals(9L)
-                                && reviewedUserId.equals(3L);
+                    public boolean canReview(final User reviewer, final User reviewed) {
+                        return reviewer != null
+                                && reviewed != null
+                                && reviewer.getId().equals(9L)
+                                && reviewed.getId().equals(3L);
                     }
 
                     @Override
-                    public Set<Long> findReviewableUserIds(final Long reviewerUserId) {
-                        return reviewerUserId != null && reviewerUserId.equals(9L)
+                    public Set<Long> findReviewableUserIds(final User reviewer) {
+                        return reviewer != null && reviewer.getId().equals(9L)
                                 ? Set.of(3L)
                                 : Set.of();
                     }
@@ -1317,9 +1465,14 @@ class UiRouteTest {
                                         9L,
                                         "player@test.com",
                                         "player-account",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW),
+                                        FIXED_NOW,
+                                        UserLanguages.DEFAULT_LANGUAGE),
                                 "/",
                                 "done");
                     }
@@ -1350,9 +1503,14 @@ class UiRouteTest {
                                         9L,
                                         email,
                                         "host-player",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW));
+                                        FIXED_NOW,
+                                        UserLanguages.DEFAULT_LANGUAGE));
                     }
                 };
 
@@ -1383,7 +1541,7 @@ class UiRouteTest {
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
         final ModerationService moderationService = Mockito.mock(ModerationService.class);
-        Mockito.when(moderationService.findActiveBan(Mockito.anyLong()))
+        Mockito.when(moderationService.findActiveBan(Mockito.any(User.class)))
                 .thenReturn(Optional.empty());
 
         mockMvc =
@@ -1392,14 +1550,12 @@ class UiRouteTest {
                                         matchService,
                                         matchParticipationService,
                                         matchReservationService,
-                                        userService,
                                         messageSource),
                                 new EventController(
                                         matchService,
                                         matchReservationService,
                                         matchParticipationService,
                                         playerReviewService,
-                                        userService,
                                         messageSource,
                                         fixedClock,
                                         true,
@@ -1414,12 +1570,14 @@ class UiRouteTest {
                                 new HostController(
                                         matchService, imageService, fixedClock, messageSource),
                                 new HostParticipationController(
-                                        matchService, matchParticipationService, messageSource),
+                                        matchService,
+                                        matchParticipationService,
+                                        userService,
+                                        messageSource),
                                 new MatchDashboardController(
                                         matchService,
                                         matchParticipationService,
                                         matchReservationService,
-                                        userService,
                                         messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(accountAuthService, messageSource))
@@ -1587,13 +1745,13 @@ class UiRouteTest {
                         model().attribute(
                                         "eventPage",
                                         Matchers.hasProperty(
-                                                "hostProfileHref",
-                                                Matchers.is("/users/host-player"))))
+                                                "hostProfileHref", Matchers.is("/users/user7"))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
                                         Matchers.hasProperty(
-                                                "hostProfileImageUrl", Matchers.is("/images/88"))))
+                                                "hostProfileImageUrl",
+                                                Matchers.is("/assets/default-profile-avatar.svg"))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1620,15 +1778,16 @@ class UiRouteTest {
                                                                 Matchers.hasProperty(
                                                                         "profileHref",
                                                                         Matchers.is(
-                                                                                "/users/first-player")),
+                                                                                "/users/user2")),
                                                                 Matchers.hasProperty(
                                                                         "profileImageUrl",
-                                                                        Matchers.is("/images/77"))),
+                                                                        Matchers.is(
+                                                                                "/assets/default-profile-avatar.svg"))),
                                                         Matchers.allOf(
                                                                 Matchers.hasProperty(
                                                                         "profileHref",
                                                                         Matchers.is(
-                                                                                "/users/second-player")),
+                                                                                "/users/user3")),
                                                                 Matchers.hasProperty(
                                                                         "profileImageUrl",
                                                                         Matchers.is(
@@ -1637,7 +1796,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteForAuthenticatedUsersEnablesDirectReservation() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
@@ -1655,13 +1814,13 @@ class UiRouteTest {
                                                                 "reviewHref",
                                                                 Matchers.is(
                                                                         "/users/"
-                                                                                + "second-player?reviewForm=open#reviews"))))));
+                                                                                + "user3?reviewForm=open#reviews"))))));
     }
 
     @Test
     void getRealMatchDetailsRouteForJoinedUserExposesReservationCancellation() throws Exception {
         currentUserHasReservation.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
@@ -1678,7 +1837,7 @@ class UiRouteTest {
     void getPrivateInviteOnlyMatchDetailsForJoinedUserExposesReservationCancellation()
             throws Exception {
         currentUserHasReservation.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/51"))
                 .andExpect(status().isOk())
@@ -1693,7 +1852,7 @@ class UiRouteTest {
 
     @Test
     void getPrivateInviteOnlyMatchDetailsForHostExposesDirectReservation() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/51"))
                 .andExpect(status().isOk())
@@ -1782,7 +1941,7 @@ class UiRouteTest {
     @Test
     void getRecurringApprovalRequiredMatchDetailsRouteExposesSingleAndSeriesJoinRequests()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
@@ -1801,7 +1960,7 @@ class UiRouteTest {
     void getRecurringApprovalRequiredMatchDetailsRouteShowsSeriesJoinPendingNotice()
             throws Exception {
         currentUserHasSeriesJoinRequest.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
@@ -1816,7 +1975,7 @@ class UiRouteTest {
     void getRecurringApprovalRequiredMatchDetailsRouteHidesReservationErrorWhenJoinRequestPending()
             throws Exception {
         currentUserHasSeriesJoinRequest.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/52").param("reservationError", "closed"))
                 .andExpect(status().isOk())
@@ -1829,7 +1988,7 @@ class UiRouteTest {
     void getApprovalRequiredMatchDetailsRouteShowsOneTimeJoinRequestedNoticeFromFlash()
             throws Exception {
         currentUserHasJoinRequest.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/56").flashAttr("joinRequested", true))
                 .andExpect(status().isOk())
@@ -1842,7 +2001,7 @@ class UiRouteTest {
     void getApprovalRequiredMatchDetailsRouteHidesJoinRequestedNoticeAfterRefresh()
             throws Exception {
         currentUserHasJoinRequest.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/56"))
                 .andExpect(status().isOk())
@@ -1853,7 +2012,7 @@ class UiRouteTest {
 
     @Test
     void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
@@ -1876,7 +2035,7 @@ class UiRouteTest {
     @Test
     void getRecurringMatchDetailsRouteForJoinedUserExposesSeriesCancellation() throws Exception {
         currentUserHasSeriesReservation.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
@@ -1896,7 +2055,7 @@ class UiRouteTest {
     @Test
     void getRealMatchDetailsRouteHidesStaleReservationConfirmedNoticeWhenUserWasRemoved()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/42").param("reservation", "confirmed"))
                 .andExpect(status().isOk())
@@ -1910,7 +2069,7 @@ class UiRouteTest {
     void getRealMatchDetailsRouteShowsReservationConfirmedNoticeWhenUserIsStillJoined()
             throws Exception {
         currentUserHasReservation.set(true);
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/42").param("reservation", "confirmed"))
                 .andExpect(status().isOk())
@@ -1923,7 +2082,7 @@ class UiRouteTest {
     @Test
     void getRecurringMatchDetailsRouteHidesStaleSeriesReservationConfirmedNoticeWhenUserWasRemoved()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/matches/46").param("reservation", "recurringConfirmed"))
                 .andExpect(status().isOk())
@@ -1945,7 +2104,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteForHostExposesManagementActions() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
@@ -1962,7 +2121,7 @@ class UiRouteTest {
 
     @Test
     void getRecurringMatchDetailsRouteForHostExposesSeriesManagementActions() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
@@ -1979,7 +2138,7 @@ class UiRouteTest {
 
     @Test
     void getApprovalRequiredMatchDetailsRouteForHostHidesJoinRequestActions() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
@@ -1993,7 +2152,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteForHostDisablesManagementOnCompletedEvent() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/44"))
                 .andExpect(status().isOk())
@@ -2004,7 +2163,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteWithSpanishHostActionLocalizesNotice() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/42").flashAttr("hostAction", "updated").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -2016,7 +2175,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteWithSpanishSeriesHostActionLocalizesNotice() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         get("/matches/46")
@@ -2032,7 +2191,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteHidesUpdatedNoticeAfterRefresh() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
@@ -2046,7 +2205,7 @@ class UiRouteTest {
 
     @Test
     void postReservationRequestAsAuthenticatedUserRedirectsToConfirmedEvent() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/42/reservations"))
                 .andExpect(status().is3xxRedirection())
@@ -2059,7 +2218,7 @@ class UiRouteTest {
 
     @Test
     void postReservationRequestWithSpanishLocaleLocalizesReservationErrors() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
         reservationFailure.set(new MatchReservationException("already_joined", "Already reserved"));
 
         mockMvc.perform(post("/matches/42/reservations").param("lang", "es"))
@@ -2080,7 +2239,7 @@ class UiRouteTest {
 
     @Test
     void postReservationCancelAsAuthenticatedUserRedirectsToCancelledEvent() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/42/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -2094,7 +2253,7 @@ class UiRouteTest {
     @Test
     void postRecurringOccurrenceReservationCancelAsAuthenticatedUserCancelsOnlySelectedDate()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/46/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -2109,7 +2268,7 @@ class UiRouteTest {
 
     @Test
     void postPrivateInviteOnlyReservationCancelRedirectsToUpcomingMatches() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/51/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -2121,7 +2280,7 @@ class UiRouteTest {
 
     @Test
     void postPrivateInviteDeclineRedirectsToUpcomingMatches() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/51/invites/decline"))
                 .andExpect(status().is3xxRedirection())
@@ -2130,7 +2289,7 @@ class UiRouteTest {
 
     @Test
     void postReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
         reservationCancellationFailure.set(
                 new MatchParticipationException("not_joined", "No active reservation"));
 
@@ -2153,7 +2312,7 @@ class UiRouteTest {
     @Test
     void postSeriesReservationRequestAsAuthenticatedUserRedirectsToConfirmedEvent()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/46/recurring-reservations"))
                 .andExpect(status().is3xxRedirection())
@@ -2167,7 +2326,7 @@ class UiRouteTest {
     @Test
     void postSeriesReservationRequestWithSpanishLocaleLocalizesReservationErrors()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
         seriesReservationFailure.set(
                 new MatchReservationException("series_already_joined", "Already joined"));
 
@@ -2190,7 +2349,7 @@ class UiRouteTest {
     @Test
     void postSeriesReservationCancelAsAuthenticatedUserRedirectsToCancelledEvent()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -2203,7 +2362,7 @@ class UiRouteTest {
 
     @Test
     void postSeriesReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
         seriesCancellationFailure.set(
                 new MatchReservationException("series_not_joined", "No future reservations"));
 
@@ -2218,7 +2377,7 @@ class UiRouteTest {
 
     @Test
     void postJoinRequestAsAuthenticatedUserRedirectsWithOneTimeNotice() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/56/join-requests"))
                 .andExpect(status().is3xxRedirection())
@@ -2235,7 +2394,7 @@ class UiRouteTest {
     @Test
     void postSeriesJoinRequestAsAuthenticatedUserRedirectsToRecurringRequestedEvent()
             throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/matches/52/recurring-join-requests"))
                 .andExpect(status().is3xxRedirection())
@@ -2248,7 +2407,7 @@ class UiRouteTest {
 
     @Test
     void postSeriesJoinRequestFailureRedirectsWithJoinErrorCode() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
         seriesJoinRequestFailure.set(
                 new MatchParticipationException("series_already_pending", "Already requested"));
 
@@ -2281,7 +2440,8 @@ class UiRouteTest {
         Assertions.assertEquals(
                 9L,
                 ((AuthenticatedUserPrincipal) securityContext.getAuthentication().getPrincipal())
-                        .getUserId());
+                        .getUser()
+                        .getId());
     }
 
     @Test
@@ -2360,7 +2520,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishCreatesAndRedirectsForAuthenticatedUsers() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2385,7 +2545,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishPassesValidCoordinatesToService() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2413,7 +2573,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishRejectsPartialCoordinates() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2439,7 +2599,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishRejectsOutOfRangeCoordinates() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2466,7 +2626,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishCreatesRecurringMatchWithOccurrenceCount() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2492,13 +2652,13 @@ class UiRouteTest {
         final CreateMatchRequest request = lastCreateMatchRequest.get();
         Assertions.assertNotNull(request);
         Assertions.assertTrue(request.isRecurring());
-        Assertions.assertEquals("weekly", request.getRecurrence().getFrequency().getValue());
+        Assertions.assertEquals("weekly", request.getRecurrence().getFrequency().getDbValue());
         Assertions.assertEquals(3, request.getRecurrence().getOccurrenceCount());
     }
 
     @Test
     void postHostPublishCreatesRecurringMatchWithUntilDate() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2524,13 +2684,13 @@ class UiRouteTest {
         final CreateMatchRequest request = lastCreateMatchRequest.get();
         Assertions.assertNotNull(request);
         Assertions.assertTrue(request.isRecurring());
-        Assertions.assertEquals("until_date", request.getRecurrence().getEndMode().getValue());
+        Assertions.assertEquals("until_date", request.getRecurrence().getEndMode().getDbValue());
         Assertions.assertEquals(LocalDate.of(2099, 4, 24), request.getRecurrence().getUntilDate());
     }
 
     @Test
     void postHostPublishRejectsInvalidRecurrenceFrequency() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2558,7 +2718,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishRejectsRecurringUntilDateTooSoonForFrequency() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2586,7 +2746,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishAcceptsOtherSportOption() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2608,7 +2768,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithInvalidEndTimeRerendersFormWithError() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2631,7 +2791,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithEndEqualToStartRerendersFormWithFriendlyError() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2654,7 +2814,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithEndBeforeStartRerendersFormWithFriendlyError() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2677,7 +2837,7 @@ class UiRouteTest {
 
     @Test
     void getHostEditRouteRendersPrefilledFormForHost() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/host/matches/42/edit"))
                 .andExpect(status().isOk())
@@ -2712,28 +2872,28 @@ class UiRouteTest {
 
     @Test
     void getHostEditRouteForNonHostReturnsNotFound() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isNotFound());
     }
 
     @Test
     void getHostEditRouteForCompletedMatchReturnsNotFound() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/host/matches/44/edit")).andExpect(status().isNotFound());
     }
 
     @Test
     void getHostEditRouteForCancelledMatchReturnsNotFound() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/host/matches/45/edit")).andExpect(status().isNotFound());
     }
 
     @Test
     void getHostSeriesEditRouteRendersPrefilledFormForHost() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/host/matches/47/series/edit"))
                 .andExpect(status().isOk())
@@ -2751,14 +2911,14 @@ class UiRouteTest {
 
     @Test
     void getHostSeriesEditRouteForSingleEventReturnsNotFound() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/host/matches/42/series/edit")).andExpect(status().isNotFound());
     }
 
     @Test
     void postHostEditRedirectsToDetailOnSuccess() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -2781,7 +2941,7 @@ class UiRouteTest {
 
     @Test
     void postHostSeriesEditRedirectsToDetailOnSuccess() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/47/series/edit")
@@ -2808,7 +2968,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditPersistsPrivateVisibilityAsInviteOnly() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -2836,7 +2996,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditWithCapacityBelowConfirmedRerendersFormWithError() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -2859,7 +3019,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditWithEndBeforeStartRerendersFormWithErrorOnEndTime() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -2880,7 +3040,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithPrivateEventSucceedsRegardlessOfJoinPolicy() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2901,7 +3061,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditForCompletedMatchReturnsNotFound() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/44/edit")
@@ -2920,7 +3080,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditForCancelledMatchReturnsNotFound() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/45/edit")
@@ -2944,14 +3104,14 @@ class UiRouteTest {
 
     @Test
     void postHostCancelForNonHostReturnsNotFound() throws Exception {
-        authenticateUser(9L, "player@test.com", "player-account");
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
         mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isNotFound());
     }
 
     @Test
     void postHostCancelRedirectsToDetailOnSuccess() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(post("/host/matches/42/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -2962,7 +3122,7 @@ class UiRouteTest {
     @Test
     void postHostCancelRecurringOccurrenceRedirectsToSelectedOccurrence() throws Exception {
         // Arrange
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         // Exercise and Assert
         mockMvc.perform(post("/host/matches/47/cancel"))
@@ -2975,7 +3135,7 @@ class UiRouteTest {
 
     @Test
     void postHostCancelRecurringSeriesRedirectsToSelectedOccurrence() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(post("/host/matches/47/series/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -2988,21 +3148,21 @@ class UiRouteTest {
 
     @Test
     void postHostCancelRecurringSeriesForSingleEventReturnsNotFound() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(post("/host/matches/42/series/cancel")).andExpect(status().isNotFound());
     }
 
     @Test
     void postHostCancelForCompletedEventReturnsNotFound() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(post("/host/matches/44/cancel")).andExpect(status().isNotFound());
     }
 
     @Test
     void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/host/requests"))
                 .andExpect(status().isOk())
@@ -3014,7 +3174,7 @@ class UiRouteTest {
 
     @Test
     void removedDashboardRoutesAreNotMapped() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/host/matches")).andExpect(status().isNotFound());
         mockMvc.perform(get("/host/matches/finished")).andExpect(status().isNotFound());
@@ -3026,7 +3186,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteRendersEventsPage() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/events"))
                 .andExpect(status().isOk())
@@ -3037,7 +3197,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteDoesNotIncludePendingCategoryByDefault() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
         currentUserHasSeriesJoinRequest.set(true);
 
         final MvcResult result =
@@ -3054,7 +3214,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteIncludesPendingOnlyWhenPendingCategorySelected() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
         currentUserHasSeriesJoinRequest.set(true);
 
         final MvcResult result =
@@ -3071,7 +3231,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteShowsHostedAndGoingBadgesTogether() throws Exception {
-        authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
         currentUserHasReservation.set(true);
 
         final MvcResult result =
@@ -3096,7 +3256,7 @@ class UiRouteTest {
 
     @Test
     void getAccountRouteRendersPrivateAccountPageForAuthenticatedUsers() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/account"))
                 .andExpect(status().isOk())
@@ -3108,7 +3268,7 @@ class UiRouteTest {
 
     @Test
     void getAccountRouteWithSpanishLocaleLocalizesPublicProfileAction() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/account").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -3135,7 +3295,7 @@ class UiRouteTest {
 
     @Test
     void postAccountEditRouteUpdatesProfileAndRedirects() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/account/edit")
@@ -3150,7 +3310,7 @@ class UiRouteTest {
 
     @Test
     void postAccountEditRouteUpdatesPictureAndRedirects() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         multipart("/account/edit")
@@ -3171,7 +3331,7 @@ class UiRouteTest {
 
     @Test
     void postAccountEditRouteShowsLocalizedImageErrorForUnsupportedFormat() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
         final String expectedMessage =
                 messageSource()
                         .getMessage(
@@ -3240,7 +3400,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteShowsReviewActionsForEligibleAuthenticatedViewer() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player"))
                 .andExpect(status().isOk())
@@ -3262,7 +3422,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteFiltersPositiveReviews() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player").param("reviewFilter", "positive"))
                 .andExpect(status().isOk())
@@ -3292,7 +3452,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRoutePaginatesReviews() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player").param("reviewPage", "2"))
                 .andExpect(status().isOk())
@@ -3319,7 +3479,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteFallsBackForInvalidReviewPage() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player").param("reviewPage", "bad"))
                 .andExpect(status().isOk())
@@ -3332,7 +3492,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteOpensReviewFormWhenRequested() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         get("/users/second-player")
@@ -3351,7 +3511,7 @@ class UiRouteTest {
 
     @Test
     void postPublicProfileReviewSavesReviewAndRedirects() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/users/second-player/reviews")
@@ -3364,7 +3524,7 @@ class UiRouteTest {
 
     @Test
     void postPublicProfileReviewDeleteRemovesReviewAndRedirects() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(post("/users/second-player/reviews/delete"))
                 .andExpect(status().is3xxRedirection())
@@ -3374,7 +3534,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteUsesUploadedProfileImageWhenPresent() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         multipart("/account/edit")
@@ -3401,7 +3561,7 @@ class UiRouteTest {
 
     @Test
     void getOwnPublicProfileRouteShowsEditAction() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/host-player"))
                 .andExpect(status().isOk())
@@ -3411,7 +3571,7 @@ class UiRouteTest {
 
     @Test
     void getOtherPublicProfileRouteDoesNotShowEditAction() throws Exception {
-        authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player"))
                 .andExpect(status().isOk())
@@ -3442,17 +3602,6 @@ class UiRouteTest {
     @SuppressWarnings("unchecked")
     private List<EventCardViewModel> getEventsModel(final MvcResult result) {
         return (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
-    }
-
-    private void authenticateUser(final Long userId, final String email, final String username) {
-        final AuthenticatedUserPrincipal principal =
-                new AuthenticatedUserPrincipal(
-                        new UserAccount(
-                                userId, email, username, "{bcrypt}hash", UserRole.USER, FIXED_NOW));
-        final UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private static MessageSource messageSource() {

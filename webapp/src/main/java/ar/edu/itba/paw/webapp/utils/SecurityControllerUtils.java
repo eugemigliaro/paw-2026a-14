@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.utils;
 
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import org.springframework.http.HttpStatus;
@@ -14,13 +15,11 @@ public final class SecurityControllerUtils {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
-    public static long requireAuthenticatedUserId() {
-        return requireAuthenticatedPrincipal().getUserId();
+    public static User requireAuthenticatedUser() {
+        return requireAuthenticatedPrincipal().getUser();
     }
 
-    public static Long currentUserIdOrNull() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElse(null);
+    public static User currentUserOrNull() {
+        return CurrentAuthenticatedUser.get().map(AuthenticatedUserPrincipal::getUser).orElse(null);
     }
 }

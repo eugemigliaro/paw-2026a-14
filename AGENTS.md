@@ -37,7 +37,7 @@ The implemented stack today is:
 - JSP + JSTL + EL
 - custom JSP tags under `webapp/src/main/webapp/WEB-INF/tags`
 - Spring dependency injection
-- JDBC via `JdbcTemplate` / `SimpleJdbcInsert`
+- Hibernate / JPA for persistence (with Flyway for migrations)
 - PostgreSQL at runtime
 - HSQLDB + Spring Test for persistence tests
 - JUnit 5 + Mockito for tests
@@ -69,7 +69,6 @@ In scope when requested or required by the current phase:
 
 Still out of scope unless the user explicitly asks otherwise:
 
-- Hibernate / JPA
 - Jersey / JAX-RS
 - platform payments
 - a SPA frontend or frontend framework migration
@@ -98,8 +97,8 @@ Rules:
 - use email/password as the baseline identity flow unless the user explicitly requests additional providers
 - manual user/host mode switching remains a product UX concept; it is not a substitute for security roles
 - support two authorization levels unless the task explicitly asks for a different model:
-  - regular authenticated user
-  - elevated admin/mod role with near-full platform access
+    - regular authenticated user
+    - elevated admin/mod role with near-full platform access
 - the elevated admin/mod role can intervene across ownership boundaries, including editing or deleting any event and handling moderation/reporting flows
 - regular users should only manage their own profile, reservations, and hosted content unless an explicit business rule expands access
 - keep authentication and authorization logic centralized in Spring Security configuration, dedicated policy helpers, or services instead of scattering ownership rules through JSPs
@@ -114,9 +113,9 @@ Respect the existing layered structure:
 - `webapp`: controllers, request handling, view models, JSPs, navigation
 - `services`: business rules and orchestration
 - `service-contracts`: service interfaces
-- `persistence`: JDBC DAOs and SQL-backed access
-- `persistence-contracts`: DAO interfaces
-- `models`: domain objects
+- `persistence`: JPA repositories and Hibernate entity mappings
+- `persistence-contracts`: repository/DAO interfaces
+- `models`: JPA entities and domain objects
 
 Rules:
 
@@ -129,22 +128,23 @@ Rules:
 
 ## 7. Persistence Rules
 
-The current persistence path is JDBC, not Hibernate.
+The persistence layer uses Hibernate / JPA with Flyway for migrations.
 
 Rules:
 
-- use DAOs in `persistence`
-- use `JdbcTemplate`, `SimpleJdbcInsert`, and explicit SQL
-- keep schema changes in `persistence/src/main/resources/schema.sql`
-- when changing persistence behavior, update or add DAO tests
+- use JPA repositories in `persistence`
+- define JPA entities in `models` or `persistence` as appropriate; keep entity classes clean and framework-light
+- use Hibernate annotations (`@Entity`, `@Table`, `@Column`, `@OneToMany`, `@ManyToOne`, etc.) for mapping
+- keep database migrations in `persistence/src/main/resources/db/migration` managed by Flyway
+- transaction management is handled by Spring's `@Transactional`
+- when changing persistence behavior, update or add repository tests
+- prefer Spring Data JPA repository patterns where applicable, but keep custom queries in named queries or `@Query` annotations for clarity
 
 Do not introduce:
 
-- JPA entities
-- Hibernate mappings
-- Spring Data repositories
-
-Those may matter later, but they are not part of the current default implementation path.
+- JDBC / JdbcTemplate for new data access code
+- Hibernate session management outside of Spring's declarative transaction handling
+- direct SQL outside of migration scripts
 
 ## 8. Web And View Rules
 
@@ -218,13 +218,14 @@ At minimum, run:
 
 If formatting is needed, use the existing Spotless setup rather than ad hoc formatting.
 
-## 11. Deferred Technology Notes
+## 11. Technology Status
 
 Spring Security is now an allowed part of the stack for authentication and authorization work.
 
+Hibernate / JPA is now the active persistence technology. Code written during this phase should follow the Hibernate/JPA patterns defined in § 7.
+
 The following technologies are still future concerns and should be kept in mind, but not implemented now unless the user explicitly asks for them:
 
-- Hibernate / JPA
 - Jersey / JAX-RS
 
 Code written for the current product phase should not make those future additions harder, but it also should not partially implement them ahead of time.

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.UserDao;
@@ -68,7 +69,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User updateProfile(
-            final Long id,
+            final User user,
             final String username,
             final String name,
             final String lastName,
@@ -78,38 +79,36 @@ public class UserServiceImpl implements UserService {
             final InputStream profileImageContentStream)
             throws IOException {
         final Locale locale = currentLocale();
-        final User existingUser =
-                userDao.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        nonNullUser(user);
 
-        final String normalizedUsername = normalizeUsername(existingUser, username, locale);
+        final String normalizedUsername = normalizeUsername(user, username, locale);
         final String normalizedName = normalizeRequiredText(name, 150, "name", locale);
         final String normalizedLastName = normalizeRequiredText(lastName, 150, "lastName", locale);
         final String normalizedPhone = normalizePhone(phone, locale);
-        final Long profileImageId =
-                resolveProfileImageId(
-                        existingUser,
+        final ImageMetadata profileImageMetadata =
+                resolveProfileImageMetadata(
+                        user,
                         profileImageContentType,
                         profileImageContentLength,
                         profileImageContentStream);
 
         final Optional<User> userWithUsername = userDao.findByUsername(normalizedUsername);
-        if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(id)) {
+        if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(user.getId())) {
             throw new AccountRegistrationException(
                     "username_taken", message("profile.edit.error.usernameTaken", locale));
         }
 
         try {
             userDao.updateProfile(
-                    id,
+                    user.getId(),
                     normalizedUsername,
                     normalizedName,
                     normalizedLastName,
                     normalizedPhone,
-                    profileImageId);
+                    profileImageMetadata);
         } catch (final DataIntegrityViolationException exception) {
             if (userDao.findByUsername(normalizedUsername)
-                    .filter(user -> !user.getId().equals(id))
+                    .filter(u -> !u.getId().equals(user.getId()))
                     .isPresent()) {
                 throw new AccountRegistrationException(
                         "username_taken", message("profile.edit.error.usernameTaken", locale));
@@ -118,14 +117,14 @@ public class UserServiceImpl implements UserService {
         }
 
         return new User(
-                existingUser.getId(),
-                existingUser.getEmail(),
+                user.getId(),
+                user.getEmail(),
                 normalizedUsername,
                 normalizedName,
                 normalizedLastName,
                 normalizedPhone,
-                profileImageId,
-                existingUser.getPreferredLanguage());
+                profileImageMetadata,
+                user.getPreferredLanguage());
     }
 
     @Override
@@ -140,7 +139,9 @@ public class UserServiceImpl implements UserService {
                 userDao.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("User not found"));
         final Long profileImageId = imageService.store(contentType, contentLength, contentStream);
-        userDao.updateProfileImage(id, profileImageId);
+        final ImageMetadata profileImageMetadata =
+                new ImageMetadata(profileImageId, contentType, contentLength);
+        userDao.updateProfileImage(id, profileImageMetadata);
         return new User(
                 existingUser.getId(),
                 existingUser.getEmail(),
@@ -148,29 +149,35 @@ public class UserServiceImpl implements UserService {
                 existingUser.getName(),
                 existingUser.getLastName(),
                 existingUser.getPhone(),
-                profileImageId,
+                profileImageMetadata,
                 existingUser.getPreferredLanguage());
     }
 
     @Override
     @Transactional
-    public void updatePreferredLanguage(final Long id, final String preferredLanguage) {
-        userDao.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        userDao.updatePreferredLanguage(id, UserLanguages.normalizeLanguage(preferredLanguage));
+    public void updatePreferredLanguage(final User user, final String preferredLanguage) {
+        nonNullUser(user);
+        userDao.updatePreferredLanguage(
+                user.getId(), UserLanguages.normalizeLanguage(preferredLanguage));
     }
 
-    private Long resolveProfileImageId(
+    private ImageMetadata resolveProfileImageMetadata(
             final User existingUser,
             final String profileImageContentType,
             final long profileImageContentLength,
             final InputStream profileImageContentStream)
             throws IOException {
         if (profileImageContentStream == null || profileImageContentLength <= 0) {
-            return existingUser.getProfileImageId();
+            return existingUser.getProfileImageMetadata();
         }
 
-        return imageService.store(
-                profileImageContentType, profileImageContentLength, profileImageContentStream);
+        final Long profileImageId =
+                imageService.store(
+                        profileImageContentType,
+                        profileImageContentLength,
+                        profileImageContentStream);
+        return new ImageMetadata(
+                profileImageId, profileImageContentType, profileImageContentLength);
     }
 
     private String normalizeUsername(
@@ -190,6 +197,12 @@ public class UserServiceImpl implements UserService {
                     "username_invalid", message("profile.edit.error.usernameInvalid", locale));
         }
         return normalized;
+    }
+
+    private void nonNullUser(final User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
+        }
     }
 
     private String normalizeRequiredText(

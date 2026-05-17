@@ -20,7 +20,7 @@ public interface UserService {
     Optional<User> findByUsername(final String username);
 
     User updateProfile(
-            Long id,
+            User user,
             String username,
             String name,
             String lastName,
@@ -34,5 +34,5 @@ public interface UserService {
             Long id, String contentType, long contentLength, InputStream contentStream)
             throws IOException;
 
-    void updatePreferredLanguage(Long id, String preferredLanguage);
+    void updatePreferredLanguage(User user, String preferredLanguage);
 }

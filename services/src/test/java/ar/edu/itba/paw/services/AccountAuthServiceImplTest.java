@@ -1,11 +1,12 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
-import ar.edu.itba.paw.models.EmailActionStatus;
-import ar.edu.itba.paw.models.EmailActionType;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.EmailActionStatus;
+import ar.edu.itba.paw.models.types.EmailActionType;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
@@ -15,6 +16,7 @@ import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import ar.edu.itba.paw.services.mail.VerificationMailTemplateData;
+import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -121,7 +123,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
                                 ArgumentMatchers.eq("new@test.com"),
-                                ArgumentMatchers.eq(9L),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -130,7 +132,7 @@ public class AccountAuthServiceImplTest {
                                 20L,
                                 EmailActionType.ACCOUNT_VERIFICATION,
                                 "new@test.com",
-                                9L,
+                                UserUtils.getUser(9L),
                                 "token-hash",
                                 "{}",
                                 EmailActionStatus.PENDING,
@@ -236,11 +238,8 @@ public class AccountAuthServiceImplTest {
     @Test
     public void testRegisterRejectsTakenUsername() {
         Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
-        Mockito.when(userDao.findByUsername("taken_name"))
-                .thenReturn(
-                        Optional.of(
-                                new ar.edu.itba.paw.models.User(
-                                        7L, "other@test.com", "taken_name")));
+        final User userWithTakenName = UserUtils.getUser(7L);
+        Mockito.when(userDao.findByUsername("user7")).thenReturn(Optional.of(userWithTakenName));
 
         final AccountRegistrationException exception =
                 Assertions.assertThrows(
@@ -249,7 +248,7 @@ public class AccountAuthServiceImplTest {
                                 accountAuthService.register(
                                         new RegisterAccountRequest(
                                                 "new@test.com",
-                                                "taken_name",
+                                                "user7",
                                                 "Jamie",
                                                 "Rivera",
                                                 "+1 555 123 4567",
@@ -292,7 +291,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
                                 ArgumentMatchers.eq("new@test.com"),
-                                ArgumentMatchers.eq(9L),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -301,7 +300,7 @@ public class AccountAuthServiceImplTest {
                                 20L,
                                 EmailActionType.ACCOUNT_VERIFICATION,
                                 "new@test.com",
-                                9L,
+                                UserUtils.getUser(9L),
                                 "token-hash",
                                 "{}",
                                 EmailActionStatus.PENDING,
@@ -367,7 +366,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
                                 ArgumentMatchers.eq("pending@test.com"),
-                                ArgumentMatchers.eq(4L),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -376,7 +375,7 @@ public class AccountAuthServiceImplTest {
                                 21L,
                                 EmailActionType.ACCOUNT_VERIFICATION,
                                 "pending@test.com",
-                                4L,
+                                pendingAccount.toUser(),
                                 "token-hash",
                                 "{}",
                                 EmailActionStatus.PENDING,
@@ -408,7 +407,7 @@ public class AccountAuthServiceImplTest {
                         31L,
                         EmailActionType.ACCOUNT_VERIFICATION,
                         "verify@test.com",
-                        5L,
+                        UserUtils.getUser(5L),
                         "token-hash",
                         "{}",
                         EmailActionStatus.PENDING,
@@ -426,9 +425,14 @@ public class AccountAuthServiceImplTest {
                                         5L,
                                         "verify@test.com",
                                         "verified_user",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        null)));
+                                        null,
+                                        UserLanguages.DEFAULT_LANGUAGE)));
         Mockito.doAnswer(
                         invocation -> {
                             verificationTimestamp.set(invocation.getArgument(1));
@@ -445,7 +449,7 @@ public class AccountAuthServiceImplTest {
                 .updateStatus(
                         ArgumentMatchers.eq(31L),
                         ArgumentMatchers.any(),
-                        ArgumentMatchers.eq(5L),
+                        ArgumentMatchers.any(User.class),
                         ArgumentMatchers.any());
 
         final VerificationConfirmationResult result =
@@ -483,7 +487,7 @@ public class AccountAuthServiceImplTest {
                         emailActionRequestDao.create(
                                 ArgumentMatchers.eq(EmailActionType.PASSWORD_RESET),
                                 ArgumentMatchers.eq("legacy@test.com"),
-                                ArgumentMatchers.eq(6L),
+                                ArgumentMatchers.any(User.class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.eq("{}"),
                                 ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
@@ -492,7 +496,7 @@ public class AccountAuthServiceImplTest {
                                 40L,
                                 EmailActionType.PASSWORD_RESET,
                                 "legacy@test.com",
-                                6L,
+                                UserUtils.getUser(6L),
                                 "token-hash",
                                 "{}",
                                 EmailActionStatus.PENDING,
@@ -526,9 +530,14 @@ public class AccountAuthServiceImplTest {
                                         7L,
                                         "pending@test.com",
                                         "pending",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        null)));
+                                        null,
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final Optional<VerificationRequestResult> result =
                 accountAuthService.requestPasswordReset("pending@test.com");
@@ -543,7 +552,7 @@ public class AccountAuthServiceImplTest {
                         50L,
                         EmailActionType.PASSWORD_RESET,
                         "player@test.com",
-                        8L,
+                        UserUtils.getUser(8L),
                         "token-hash",
                         "{}",
                         EmailActionStatus.PENDING,
@@ -561,9 +570,14 @@ public class AccountAuthServiceImplTest {
                                         8L,
                                         "player@test.com",
                                         "player",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         "{bcrypt}hash",
                                         UserRole.USER,
-                                        FIXED_NOW.minusSeconds(10))));
+                                        FIXED_NOW.minusSeconds(10),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final PasswordResetPreview preview =
                 accountAuthService.getPasswordResetPreview("raw-token");
@@ -581,7 +595,7 @@ public class AccountAuthServiceImplTest {
                         60L,
                         EmailActionType.PASSWORD_RESET,
                         "player@test.com",
-                        9L,
+                        UserUtils.getUser(9L),
                         "token-hash",
                         "{}",
                         EmailActionStatus.PENDING,
@@ -600,8 +614,13 @@ public class AccountAuthServiceImplTest {
                                         "player@test.com",
                                         "player",
                                         null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
                                         UserRole.USER,
-                                        FIXED_NOW.minusSeconds(60))));
+                                        FIXED_NOW.minusSeconds(60),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
         Mockito.doAnswer(
                         invocation -> {
                             capturedPasswordHash.set(invocation.getArgument(1));
@@ -618,7 +637,7 @@ public class AccountAuthServiceImplTest {
                 .updateStatus(
                         ArgumentMatchers.eq(60L),
                         ArgumentMatchers.any(),
-                        ArgumentMatchers.eq(9L),
+                        ArgumentMatchers.any(User.class),
                         ArgumentMatchers.any());
 
         final VerificationConfirmationResult result =

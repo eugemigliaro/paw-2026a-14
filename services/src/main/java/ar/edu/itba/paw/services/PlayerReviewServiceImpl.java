@@ -2,10 +2,12 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.PlayerReviewFilter;
-import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
+import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import java.util.HashSet;
 import java.util.List;
@@ -30,29 +32,31 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     @Override
     @Transactional
     public PlayerReview submitReview(
-            final Long reviewerUserId,
-            final Long reviewedUserId,
+            final User reviewer,
+            final User reviewed,
             final PlayerReviewReaction reaction,
             final String comment) {
-        validateReviewRequest(reviewerUserId, reviewedUserId, reaction);
+        validateReviewRequest(reviewer, reviewed, reaction);
         final String normalizedComment = normalizeComment(comment);
-        return playerReviewDao.upsertReview(
-                reviewerUserId, reviewedUserId, reaction, normalizedComment);
+        return playerReviewDao.upsertReview(reviewer, reviewed, reaction, normalizedComment);
     }
 
     @Override
     @Transactional
-    public void deleteReview(final Long reviewerUserId, final Long reviewedUserId) {
-        if (!playerReviewDao.softDeleteReview(reviewerUserId, reviewedUserId)) {
+    public void deleteReview(final User reviewer, final User reviewed) {
+        nonNullUser(reviewer);
+        nonNullUser(reviewed);
+        if (!playerReviewDao.softDeleteReview(reviewer, reviewed)) {
             throw new PlayerReviewException(
                     PlayerReviewException.NOT_FOUND, "Player review not found.");
         }
     }
 
     @Override
-    public Optional<PlayerReview> findReviewByPair(
-            final Long reviewerUserId, final Long reviewedUserId) {
-        return playerReviewDao.findByPair(reviewerUserId, reviewedUserId);
+    public Optional<PlayerReview> findReviewByPair(final User reviewer, final User reviewed) {
+        nonNullUser(reviewer);
+        nonNullUser(reviewed);
+        return playerReviewDao.findByPair(reviewer, reviewed);
     }
 
     @Override
@@ -61,59 +65,66 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
-    public PlayerReviewSummary findSummaryForUser(final Long reviewedUserId) {
-        return playerReviewDao.getSummaryForUser(reviewedUserId);
+    public PlayerReviewSummary findSummaryForUser(final User reviewed) {
+        nonNullUser(reviewed);
+        return playerReviewDao.getSummaryForUser(reviewed);
     }
 
     @Override
     public PaginatedResult<PlayerReview> findReviewsForUser(
-            final Long reviewedUserId,
+            final User reviewed,
             final PlayerReviewFilter filter,
             final int page,
             final int pageSize) {
+        nonNullUser(reviewed);
         final int safePage = page > 0 ? page : 1;
         final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_RECENT_LIMIT;
         final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
-        final int totalCount = playerReviewDao.countReviewsForUser(reviewedUserId, safeFilter);
+        final int totalCount = playerReviewDao.countReviewsForUser(reviewed, safeFilter);
         final int totalPages =
                 totalCount == 0 ? 1 : (int) Math.ceil((double) totalCount / safePageSize);
         final int clampedPage = Math.min(safePage, totalPages);
         final int offset = (clampedPage - 1) * safePageSize;
         final List<PlayerReview> items =
-                playerReviewDao.findReviewsForUser(
-                        reviewedUserId, safeFilter, safePageSize, offset);
+                playerReviewDao.findReviewsForUser(reviewed, safeFilter, safePageSize, offset);
         return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
     }
 
     @Override
-    public boolean canReview(final Long reviewerUserId, final Long reviewedUserId) {
-        return reviewerUserId != null
-                && reviewedUserId != null
-                && !reviewerUserId.equals(reviewedUserId)
-                && playerReviewDao.canReview(reviewerUserId, reviewedUserId);
+    public boolean canReview(final User reviewer, final User reviewed) {
+        return reviewer != null
+                && reviewed != null
+                && !reviewer.equals(reviewed)
+                && playerReviewDao.canReview(reviewer, reviewed);
     }
 
     @Override
-    public Set<Long> findReviewableUserIds(final Long reviewerUserId) {
-        if (reviewerUserId == null) {
+    public Set<Long> findReviewableUserIds(final User reviewer) {
+        if (reviewer == null) {
             return Set.of();
         }
-        return new HashSet<>(playerReviewDao.findReviewableUserIds(reviewerUserId));
+        return new HashSet<>(playerReviewDao.findReviewableUserIds(reviewer));
+    }
+
+    private void nonNullUser(final User user) {
+        if (user == null) {
+            throw new ModerationException("invalid_report", "Reporter user is required.");
+        }
     }
 
     private void validateReviewRequest(
-            final Long reviewerUserId,
-            final Long reviewedUserId,
-            final PlayerReviewReaction reaction) {
+            final User reviewer, final User reviewed, final PlayerReviewReaction reaction) {
+        nonNullUser(reviewer);
+        nonNullUser(reviewed);
         if (reaction == null) {
             throw new PlayerReviewException(
                     PlayerReviewException.INVALID_REACTION, "Review reaction is required.");
         }
-        if (reviewerUserId != null && reviewerUserId.equals(reviewedUserId)) {
+        if (reviewer != null && reviewer.getId().equals(reviewed.getId())) {
             throw new PlayerReviewException(
                     PlayerReviewException.SELF_REVIEW, "Users cannot review themselves.");
         }
-        if (!canReview(reviewerUserId, reviewedUserId)) {
+        if (!canReview(reviewer, reviewed)) {
             throw new PlayerReviewException(
                     PlayerReviewException.NOT_ELIGIBLE,
                     "Users must share a completed match to review each other.");

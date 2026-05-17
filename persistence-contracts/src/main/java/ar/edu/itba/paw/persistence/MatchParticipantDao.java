@@ -7,71 +7,71 @@ import java.util.List;
 
 public interface MatchParticipantDao {
 
-    boolean hasActiveReservation(Long matchId, Long userId);
+    boolean hasActiveReservation(Long matchId, User user);
 
     List<Long> findActiveFutureReservationMatchIdsForSeries(
-            Long seriesId, Long userId, Instant startsAfter);
+            Long seriesId, User user, Instant startsAfter);
 
     List<Long> findPendingFutureRequestMatchIdsForSeries(
-            Long seriesId, Long userId, Instant startsAfter);
+            Long seriesId, User user, Instant startsAfter);
 
-    boolean createReservationIfSpace(Long matchId, Long userId);
+    boolean createReservationIfSpace(Long matchId, User user);
 
-    int createSeriesReservationsIfSpace(Long seriesId, Long userId, Instant startsAfter);
+    int createSeriesReservationsIfSpace(Long seriesId, User user, Instant startsAfter);
 
-    int cancelFutureSeriesReservations(Long seriesId, Long userId, Instant startsAfter);
+    int cancelFutureSeriesReservations(Long seriesId, User user, Instant startsAfter);
 
     List<User> findConfirmedParticipants(Long matchId);
 
-    boolean hasPendingRequest(Long matchId, Long userId);
+    boolean hasPendingRequest(Long matchId, User user);
 
-    boolean createJoinRequest(Long matchId, Long userId);
+    boolean createJoinRequest(Long matchId, User user);
 
-    boolean createSeriesJoinRequestIfSpace(Long matchId, Long userId);
+    boolean createSeriesJoinRequestIfSpace(Long matchId, User user);
 
     List<User> findPendingRequests(Long matchId);
 
     int countPendingRequests(Long matchId);
 
-    List<PendingJoinRequest> findPendingRequestsForHost(Long hostUserId);
+    List<PendingJoinRequest> findPendingRequestsForHost(User host);
 
-    boolean approveRequest(Long matchId, Long userId);
+    boolean approveRequest(Long matchId, User user);
 
     int approveAllPendingRequests(Long matchId);
 
-    int approveSeriesJoinRequest(Long seriesId, Long userId, Instant startsAfter);
+    int approveSeriesJoinRequest(Long seriesId, User user, Instant startsAfter);
 
-    boolean isSeriesJoinRequest(Long matchId, Long userId);
+    boolean isSeriesJoinRequest(Long matchId, User user);
 
-    boolean hasPendingSeriesRequest(Long seriesId, Long userId);
+    boolean hasPendingSeriesRequest(Long seriesId, User user);
 
-    boolean rejectRequest(Long matchId, Long userId);
+    boolean rejectRequest(Long matchId, User user);
 
-    boolean removeParticipant(Long matchId, Long userId);
+    boolean removeParticipant(Long matchId, User user);
 
-    boolean cancelJoinRequest(Long matchId, Long userId);
+    boolean cancelJoinRequest(Long matchId, User user);
 
     int cancelPendingRequests(Long matchId);
 
-    List<Long> findPendingMatchIds(Long userId);
+    List<Long> findPendingMatchIds(User user);
 
     // Invite-only flow
 
-    boolean inviteUser(Long matchId, Long userId);
+    boolean inviteUser(Long matchId, User user);
 
-    boolean inviteUser(Long matchId, Long userId, boolean seriesInvitation);
+    boolean inviteUser(Long matchId, User user, boolean seriesInvitation);
 
-    boolean hasInvitation(Long matchId, Long userId);
+    boolean hasInvitation(Long matchId, User user);
 
-    boolean isSeriesInvitation(Long matchId, Long userId);
+    boolean isSeriesInvitation(Long matchId, User user);
 
-    boolean acceptInvite(Long matchId, Long userId);
+    boolean acceptInvite(Long matchId, User user);
 
-    int acceptSeriesInvite(Long seriesId, Long userId, Instant startsAfter);
+    int acceptSeriesInvite(Long seriesId, User user, Instant startsAfter);
 
-    boolean declineInvite(Long matchId, Long userId);
+    boolean declineInvite(Long matchId, User user);
 
-    int declineSeriesInvite(Long seriesId, Long userId);
+    int declineSeriesInvite(Long seriesId, User user);
 
     List<User> findInvitedUsers(Long matchId);
 
@@ -79,5 +79,5 @@ public interface MatchParticipantDao {
 
     List<User> findDeclinedInvitees(Long matchId);
 
-    List<Long> findInvitedMatchIds(Long userId);
+    List<Long> findInvitedMatchIds(User user);
 }

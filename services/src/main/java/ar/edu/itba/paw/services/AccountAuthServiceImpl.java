@@ -1,11 +1,11 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
-import ar.edu.itba.paw.models.EmailActionStatus;
-import ar.edu.itba.paw.models.EmailActionType;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.EmailActionStatus;
+import ar.edu.itba.paw.models.types.EmailActionType;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
@@ -183,7 +183,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         }
 
         emailActionRequestDao.updateStatus(
-                request.getId(), EmailActionStatus.COMPLETED, account.getId(), now);
+                request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
         final UserAccount verifiedAccount =
                 account.isEmailVerified()
@@ -240,7 +240,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
 
         userDao.updatePasswordHash(account.getId(), passwordEncoder.encode(newPassword));
         emailActionRequestDao.updateStatus(
-                request.getId(), EmailActionStatus.COMPLETED, account.getId(), now);
+                request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
         return new VerificationConfirmationResult(
                 account.getId(),
@@ -297,7 +297,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         emailActionRequestDao.create(
                 actionType,
                 account.getEmail(),
-                account.getId(),
+                account.toUser(),
                 tokenHash,
                 EMPTY_PAYLOAD_JSON,
                 expiresAt);
@@ -343,7 +343,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Instant now = Instant.now(clock);
         if (request.getStatus() == EmailActionStatus.EXPIRED || request.isExpired(now)) {
             emailActionRequestDao.updateStatus(
-                    request.getId(), EmailActionStatus.EXPIRED, request.getUserId(), now);
+                    request.getId(), EmailActionStatus.EXPIRED, request.getUser(), now);
             throw new VerificationFailureException(
                     VerificationFailureReason.EXPIRED,
                     message("verification.message.expired", locale));
@@ -363,27 +363,25 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final String invalidActionCode,
             final boolean requireVerifiedAccount) {
         final Optional<UserAccount> account =
-                request.getUserId() == null
+                request.getUser().getId() == null
                         ? userDao.findAccountByEmail(request.getEmail())
-                        : userDao.findAccountById(request.getUserId());
+                        : userDao.findAccountById(request.getUser().getId());
 
         if (account.isEmpty()) {
-            throw invalidateRequest(
-                    request, request.getUserId(), message(invalidActionCode, locale));
+            throw invalidateRequest(request, message(invalidActionCode, locale));
         }
 
         if (requireVerifiedAccount && !account.get().isEmailVerified()) {
-            throw invalidateRequest(
-                    request, account.get().getId(), message(invalidActionCode, locale));
+            throw invalidateRequest(request, message(invalidActionCode, locale));
         }
 
         return account.get();
     }
 
     private VerificationFailureException invalidateRequest(
-            final EmailActionRequest request, final Long userId, final String message) {
+            final EmailActionRequest request, final String message) {
         emailActionRequestDao.updateStatus(
-                request.getId(), EmailActionStatus.FAILED, userId, Instant.now(clock));
+                request.getId(), EmailActionStatus.FAILED, null, Instant.now(clock));
         return new VerificationFailureException(VerificationFailureReason.INVALID_ACTION, message);
     }
 

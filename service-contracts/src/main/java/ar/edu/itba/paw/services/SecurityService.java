@@ -1,10 +1,12 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.User;
+
 public interface SecurityService {
 
     boolean isAuthenticated();
 
-    Long currentUserId();
+    User currentUser();
 
     boolean isHost(Long matchId);
 

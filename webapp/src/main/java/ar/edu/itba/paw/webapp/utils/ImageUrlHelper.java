@@ -10,12 +10,12 @@ public final class ImageUrlHelper {
     private ImageUrlHelper() {}
 
     public static String bannerUrlFor(final Match match) {
-        return match.getBannerImageId() == null ? null : "/images/" + match.getBannerImageId();
+        return match.hasBannerImage() ? "/images/" + match.getBannerImageMetadata().getId() : null;
     }
 
     public static String profileUrlFor(final User user) {
-        return user.getProfileImageId() == null
+        return user.getProfileImageMetadata() == null
                 ? DEFAULT_PROFILE_IMAGE_URL
-                : "/images/" + user.getProfileImageId();
+                : "/images/" + user.getProfileImageMetadata().getId();
     }
 }

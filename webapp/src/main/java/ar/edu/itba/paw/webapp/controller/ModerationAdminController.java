@@ -3,21 +3,21 @@ package ar.edu.itba.paw.webapp.controller;
 import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
-import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.ReportResolution;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportResolution;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
@@ -46,17 +46,17 @@ public class ModerationAdminController {
     private static final int PAGE_SIZE = 4;
 
     private final ModerationService moderationService;
-    private final MessageSource messageSource;
     private final UserService userService;
+    private final MessageSource messageSource;
 
     @Autowired
     public ModerationAdminController(
             final ModerationService moderationService,
-            final MessageSource messageSource,
-            final UserService userService) {
+            final UserService userService,
+            final MessageSource messageSource) {
         this.moderationService = moderationService;
-        this.messageSource = messageSource;
         this.userService = userService;
+        this.messageSource = messageSource;
     }
 
     @ModelAttribute("resolutionForm")
@@ -73,9 +73,13 @@ public class ModerationAdminController {
             final Locale locale) {
 
         final List<ReportTargetType> selectedTypes =
-                parseEnumFilters(typeFilters, ReportTargetType::fromDbValue);
+                parseEnumFilters(
+                        typeFilters,
+                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
         final List<ReportStatus> selectedStatuses =
-                parseEnumFilters(statusFilters, ReportStatus::fromDbValue);
+                parseEnumFilters(
+                        statusFilters,
+                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
 
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReports(selectedTypes, selectedStatuses, page, PAGE_SIZE);
@@ -178,25 +182,13 @@ public class ModerationAdminController {
             mav.addObject("userBan", userBanViewModel(report, locale));
         }
 
-        Optional<User> reporterUsername = userService.findById(report.getReporterUserId());
-        Optional<User> reviewerUsername = userService.findById(report.getReviewedByUserId());
+        String reporterUsername =
+                report.getReporter() != null ? report.getReporter().getUsername() : "";
+        String reviewerUsername =
+                report.getReviewer() != null ? report.getReviewer().getUsername() : "";
 
-        mav.addObject(
-                "reporterUsername",
-                reporterUsername.isPresent()
-                        ? reporterUsername.get().getUsername()
-                        : messageSource.getMessage(
-                                "moderation.target.user.fallback",
-                                new Object[] {report.getReporterUserId()},
-                                locale));
-        mav.addObject(
-                "reviewerUsername",
-                reviewerUsername.isPresent()
-                        ? reviewerUsername.get().getUsername()
-                        : messageSource.getMessage(
-                                "moderation.target.user.fallback",
-                                new Object[] {report.getReviewedByUserId()},
-                                locale));
+        mav.addObject("reporterUsername", reporterUsername);
+        mav.addObject("reviewerUsername", reviewerUsername);
 
         return mav;
     }
@@ -207,7 +199,8 @@ public class ModerationAdminController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         try {
-            moderationService.markReportUnderReview(reportId, currentAdminUserId());
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+            moderationService.markReportUnderReview(reportId, currentAdminUser);
             return redirectToReports("reviewed", redirectAttributes);
         } catch (final ModerationException ex) {
             return redirectToReportsError("report_not_found");
@@ -273,12 +266,14 @@ public class ModerationAdminController {
             final Locale locale) {
 
         final AppealDecision parsedAppealDecision =
-                AppealDecision.fromDbValue(appealResolution)
+                PersistableEnum.fromDbValue(AppealDecision.class, appealResolution)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
         try {
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+
             moderationService.finalizeReportAppeal(
-                    reportId, currentAdminUserId(), parsedAppealDecision);
+                    reportId, currentAdminUser, parsedAppealDecision);
 
             final String action =
                     parsedAppealDecision == AppealDecision.UPHELD
@@ -300,10 +295,12 @@ public class ModerationAdminController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         try {
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+
             final ModerationReport report =
                     moderationService.resolveReport(
                             reportId,
-                            currentAdminUserId(),
+                            currentAdminUser,
                             resolution,
                             resolutionDetails,
                             ReportStatus.RESOLVED);
@@ -326,17 +323,11 @@ public class ModerationAdminController {
         return new ModelAndView("redirect:/admin/reports?error=" + errorCode);
     }
 
-    private long currentAdminUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-    }
-
     private ModerationReportViewModel toViewModel(
             final ModerationReport report, final Locale locale) {
         return new ModerationReportViewModel(
                 report.getId(),
-                report.getReporterUserId(),
+                report.getReporter(),
                 report.getTargetType() == null ? "" : report.getTargetType().getDbValue(),
                 moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()),
                 report.getReason() == null ? "" : report.getReason().getDbValue(),
@@ -350,10 +341,10 @@ public class ModerationAdminController {
                 formatInstant(report.getUpdatedAt(), locale),
                 formatInstant(report.getAppealedAt(), locale),
                 formatInstant(report.getReviewedAt(), locale),
-                report.getReviewedByUserId(),
+                report.getReviewer(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
                 formatInstant(report.getAppealResolvedAt(), locale),
-                report.getAppealResolvedByUserId(),
+                report.getAppealResolvedBy(),
                 isAppealed(report));
     }
 
@@ -366,17 +357,21 @@ public class ModerationAdminController {
             return null;
         }
 
+        final User targetUser =
+                userService
+                        .findById(report.getTargetId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
         final Optional<UserBan> latestBanForUser =
-                moderationService.findLatestBanForUser(report.getTargetId());
+                moderationService.findLatestBanForUser(targetUser);
 
         if (latestBanForUser.isEmpty()
-                || !latestBanForUser.get().getModerationReportId().equals(report.getId())) {
+                || !latestBanForUser.get().getModerationReport().getId().equals(report.getId())) {
             return null;
         }
 
         final UserBan ban = latestBanForUser.get();
-        return new UserBanViewModel(
-                latestBanForUser.get().getId(), formatInstant(ban.getBannedUntil(), locale));
+        return new UserBanViewModel(ban.getId(), formatInstant(ban.getBannedUntil(), locale));
     }
 
     public static final class UserBanViewModel {
@@ -399,7 +394,7 @@ public class ModerationAdminController {
 
     public static final class ModerationReportViewModel {
         private final Long id;
-        private final Long reporterUserId;
+        private final User reporter;
         private final String targetTypeCode;
         private final String targetKey;
         private final String reasonCode;
@@ -413,15 +408,15 @@ public class ModerationAdminController {
         private final String updatedAtLabel;
         private final String appealedAtLabel;
         private final String reviewedAtLabel;
-        private final Long reviewedByUserId;
+        private final User reviewedBy;
         private final String appealDecisionCode;
         private final String appealResolvedAtLabel;
-        private final Long appealResolvedByUserId;
+        private final User appealResolvedBy;
         private final boolean appealed;
 
         private ModerationReportViewModel(
                 final Long id,
-                final Long reporterUserId,
+                final User reporter,
                 final String targetTypeCode,
                 final String targetKey,
                 final String reasonCode,
@@ -435,13 +430,13 @@ public class ModerationAdminController {
                 final String updatedAtLabel,
                 final String appealedAtLabel,
                 final String reviewedAtLabel,
-                final Long reviewedByUserId,
+                final User reviewedByUser,
                 final String appealDecisionCode,
                 final String appealResolvedAtLabel,
-                final Long appealResolvedByUserId,
+                final User appealResolvedByUser,
                 final boolean appealed) {
             this.id = id;
-            this.reporterUserId = reporterUserId;
+            this.reporter = reporter;
             this.targetTypeCode = targetTypeCode;
             this.targetKey = targetKey;
             this.reasonCode = reasonCode;
@@ -455,10 +450,10 @@ public class ModerationAdminController {
             this.updatedAtLabel = updatedAtLabel;
             this.appealedAtLabel = appealedAtLabel;
             this.reviewedAtLabel = reviewedAtLabel;
-            this.reviewedByUserId = reviewedByUserId;
+            this.reviewedBy = reviewedByUser;
             this.appealDecisionCode = appealDecisionCode;
             this.appealResolvedAtLabel = appealResolvedAtLabel;
-            this.appealResolvedByUserId = appealResolvedByUserId;
+            this.appealResolvedBy = appealResolvedByUser;
             this.appealed = appealed;
         }
 
@@ -466,8 +461,8 @@ public class ModerationAdminController {
             return id;
         }
 
-        public Long getReporterUserId() {
-            return reporterUserId;
+        public User getReporter() {
+            return reporter;
         }
 
         public String getTargetTypeCode() {
@@ -522,8 +517,8 @@ public class ModerationAdminController {
             return reviewedAtLabel;
         }
 
-        public Long getReviewedByUserId() {
-            return reviewedByUserId;
+        public User getReviewedBy() {
+            return reviewedBy;
         }
 
         public String getAppealDecisionCode() {
@@ -534,8 +529,8 @@ public class ModerationAdminController {
             return appealResolvedAtLabel;
         }
 
-        public Long getAppealResolvedByUserId() {
-            return appealResolvedByUserId;
+        public User getAppealResolvedBy() {
+            return appealResolvedBy;
         }
 
         public boolean isAppealed() {
