@@ -441,7 +441,9 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.createMatchSeries(host, "weekly", startsAt, endsAt, "UTC", null, 3))
+        Mockito.when(
+                        matchDao.createMatchSeries(
+                                host, RecurrenceFrequency.WEEKLY, startsAt, endsAt, "UTC", null, 3))
                 .thenReturn(77L);
         Mockito.when(
                         matchDao.createMatch(
@@ -595,7 +597,13 @@ public class MatchServiceImplTest {
                         null);
         Mockito.when(
                         matchDao.createMatchSeries(
-                                host, "weekly", startsAt, endsAt, "UTC", untilDate, null))
+                                host,
+                                RecurrenceFrequency.WEEKLY,
+                                startsAt,
+                                endsAt,
+                                "UTC",
+                                untilDate,
+                                null))
                 .thenReturn(88L);
         Mockito.when(
                         matchDao.createMatch(

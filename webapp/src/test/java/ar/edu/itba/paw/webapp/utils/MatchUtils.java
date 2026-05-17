@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.time.Instant;
 
@@ -40,6 +41,16 @@ public class MatchUtils {
     }
 
     public static MatchSeries getMatchSeries(Long seriesId, User host) {
-        return new MatchSeries(seriesId, host, null, null, null, null, null, null, null, null);
+        return new MatchSeries(
+                seriesId,
+                host,
+                RecurrenceFrequency.WEEKLY,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null);
     }
 }

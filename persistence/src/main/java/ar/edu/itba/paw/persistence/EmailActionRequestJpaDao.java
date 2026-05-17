@@ -101,7 +101,6 @@ public class EmailActionRequestJpaDao implements EmailActionRequestDao {
                     request.setConsumedAt(consumedAt);
                     request.setUpdatedAt(consumedAt);
                 });
-        em.flush();
     }
 
     private Optional<EmailActionRequest> findEntityByTokenHash(

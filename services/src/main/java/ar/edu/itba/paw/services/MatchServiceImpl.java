@@ -93,7 +93,7 @@ public class MatchServiceImpl implements MatchService {
         final Long seriesId =
                 matchDao.createMatchSeries(
                         request.getHost(),
-                        recurrence.getFrequency().getValue(),
+                        recurrence.getFrequency(),
                         request.getStartsAt(),
                         request.getEndsAt(),
                         resolveZone(recurrence.getZoneId()).getId(),
@@ -108,7 +108,7 @@ public class MatchServiceImpl implements MatchService {
                 new MatchSeries(
                         seriesId,
                         request.getHost(),
-                        recurrence.getFrequency().getValue(),
+                        recurrence.getFrequency(),
                         request.getStartsAt(),
                         request.getEndsAt(),
                         resolveZone(recurrence.getZoneId()).getId(),

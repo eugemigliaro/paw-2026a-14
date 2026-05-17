@@ -187,31 +187,34 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
 
     @Override
     public List<User> findConfirmedParticipants(final Long matchId) {
-        final Match match = em.find(Match.class, matchId);
-        if (match == null) {
-            return Collections.emptyList();
-        }
-
-        return match.getParticipants().stream()
-                .filter(mp -> ACTIVE_RESERVATION_STATUSES.contains(mp.getStatus()))
-                .map(MatchParticipant::getUser)
-                .toList();
+        return em.createQuery(
+                        "SELECT u FROM MatchParticipant mp"
+                                + " JOIN mp.user u"
+                                + " WHERE mp.match.id = :matchId"
+                                + " AND mp.status IN :statuses",
+                        User.class)
+                .setParameter("matchId", matchId)
+                .setParameter("statuses", ACTIVE_RESERVATION_STATUSES)
+                .getResultList();
     }
 
     @Override
     public boolean hasPendingRequest(final Long matchId, final User user) {
-        final Match match = em.find(Match.class, matchId);
-        if (match == null) {
+        if (user == null) {
             return false;
         }
 
-        return !match.getParticipants().stream()
-                .filter(
-                        mp ->
-                                mp.getUser().equals(user)
-                                        && mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
-                .findFirst()
-                .isEmpty();
+        return em.createQuery(
+                                "SELECT COUNT(mp) FROM MatchParticipant mp"
+                                        + " WHERE mp.match.id = :matchId"
+                                        + " AND mp.user.id = :userId"
+                                        + " AND mp.status = :status",
+                                Long.class)
+                        .setParameter("matchId", matchId)
+                        .setParameter("userId", user.getId())
+                        .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
+                        .getSingleResult()
+                > 0;
     }
 
     @Override
@@ -246,15 +249,15 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
 
     @Override
     public List<User> findPendingRequests(final Long matchId) {
-        final Match match = em.find(Match.class, matchId);
-        if (match == null) {
-            return Collections.emptyList();
-        }
-
-        return match.getParticipants().stream()
-                .filter(mp -> mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
-                .map(MatchParticipant::getUser)
-                .toList();
+        return em.createQuery(
+                        "SELECT u FROM MatchParticipant mp"
+                                + " JOIN mp.user u"
+                                + " WHERE mp.match.id = :matchId"
+                                + " AND mp.status = :status",
+                        User.class)
+                .setParameter("matchId", matchId)
+                .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
+                .getResultList();
     }
 
     @Override
@@ -321,27 +324,20 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
 
     @Override
     public int approveAllPendingRequests(final Long matchId) {
-        final Match match = em.find(Match.class, matchId, LockModeType.PESSIMISTIC_WRITE);
-
-        if (match == null) {
-            return 0;
-        }
-
-        Instant now = Instant.now();
-
-        final List<MatchParticipant> toBeUpdated =
-                match.getParticipants().stream()
-                        .filter(mp -> mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
-                        .toList();
-
-        toBeUpdated.forEach(
-                mp -> {
-                    mp.setStatus(ParticipantStatus.JOINED);
-                    mp.setScope(ParticipantScope.MATCH);
-                    mp.setJoinedAt(now);
-                });
-
-        return toBeUpdated.size();
+        return em.createQuery(
+                        "UPDATE MatchParticipant mp"
+                                + " SET mp.status = :joinedStatus,"
+                                + " mp.scope = :matchScope,"
+                                + " mp.joinedAt = :now,"
+                                + " mp.version = mp.version + 1"
+                                + " WHERE mp.match.id = :matchId"
+                                + " AND mp.status = :pendingStatus")
+                .setParameter("joinedStatus", ParticipantStatus.JOINED)
+                .setParameter("matchScope", ParticipantScope.MATCH)
+                .setParameter("now", Instant.now())
+                .setParameter("matchId", matchId)
+                .setParameter("pendingStatus", ParticipantStatus.PENDING_APPROVAL)
+                .executeUpdate();
     }
 
     @Override
@@ -469,23 +465,18 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
 
     @Override
     public int cancelPendingRequests(final Long matchId) {
-        final Match match = em.find(Match.class, matchId, LockModeType.PESSIMISTIC_WRITE);
-        if (match == null) {
-            return 0;
-        }
-
-        List<MatchParticipant> toBeUpdated =
-                match.getParticipants().stream()
-                        .filter(mp -> mp.getStatus() == ParticipantStatus.PENDING_APPROVAL)
-                        .toList();
-
-        toBeUpdated.forEach(
-                mp -> {
-                    mp.setStatus(ParticipantStatus.CANCELLED);
-                    mp.setScope(ParticipantScope.MATCH);
-                });
-
-        return toBeUpdated.size();
+        return em.createQuery(
+                        "UPDATE MatchParticipant mp"
+                                + " SET mp.status = :cancelledStatus,"
+                                + " mp.scope = :matchScope,"
+                                + " mp.version = mp.version + 1"
+                                + " WHERE mp.match.id = :matchId"
+                                + " AND mp.status = :pendingStatus")
+                .setParameter("cancelledStatus", ParticipantStatus.CANCELLED)
+                .setParameter("matchScope", ParticipantScope.MATCH)
+                .setParameter("matchId", matchId)
+                .setParameter("pendingStatus", ParticipantStatus.PENDING_APPROVAL)
+                .executeUpdate();
     }
 
     @Override
@@ -656,15 +647,15 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
 
     @Override
     public List<User> findDeclinedInvitees(final Long matchId) {
-        final Match match = em.find(Match.class, matchId);
-        if (match == null) {
-            return Collections.emptyList();
-        }
-
-        return match.getParticipants().stream()
-                .filter(mp -> mp.getStatus() == ParticipantStatus.DECLINED_INVITE)
-                .map(MatchParticipant::getUser)
-                .toList();
+        return em.createQuery(
+                        "SELECT u FROM MatchParticipant mp"
+                                + " JOIN mp.user u"
+                                + " WHERE mp.match.id = :matchId"
+                                + " AND mp.status = :status",
+                        User.class)
+                .setParameter("matchId", matchId)
+                .setParameter("status", ParticipantStatus.DECLINED_INVITE)
+                .getResultList();
     }
 
     @Override

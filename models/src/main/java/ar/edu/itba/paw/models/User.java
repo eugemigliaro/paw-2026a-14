@@ -16,6 +16,7 @@ import javax.persistence.Table;
 @Table(name = "users")
 public class User {
 
+    // Same table as UserAccount by design: this is the lightweight public/profile projection.
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_userid_seq")
     @SequenceGenerator(

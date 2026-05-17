@@ -25,7 +25,6 @@ public class ImageJpaDao implements ImageDao {
         final Image image = new Image(null, contentType, contentLength, content, Instant.now());
 
         em.persist(image);
-        em.flush();
 
         final Long id = image.getId();
         if (id == null) {

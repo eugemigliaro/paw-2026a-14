@@ -154,6 +154,13 @@ public class PlayerReviewJpaDaoTest {
     }
 
     @Test
+    public void testFindByIdIncludingDeletedReturnsEmptyWhenReviewDoesNotExist() {
+        final Optional<PlayerReview> found = playerReviewDao.findByIdIncludingDeleted(9999L);
+
+        Assertions.assertTrue(found.isEmpty());
+    }
+
+    @Test
     public void testSoftDeleteReviewWithAdminDetails() {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);

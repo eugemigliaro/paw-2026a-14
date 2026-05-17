@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantScope;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -740,7 +741,7 @@ public class MatchParticipantJpaDaoTest {
                 new MatchSeries(
                         null,
                         host,
-                        "weekly",
+                        RecurrenceFrequency.WEEKLY,
                         Instant.now(),
                         Instant.now().plusSeconds(86400 * 30),
                         "UTC",

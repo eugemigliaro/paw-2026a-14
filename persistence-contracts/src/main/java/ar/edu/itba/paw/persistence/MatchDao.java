@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -146,7 +147,7 @@ public interface MatchDao {
 
     Long createMatchSeries(
             User host,
-            String frequency,
+            RecurrenceFrequency frequency,
             Instant startsAt,
             Instant endsAt,
             String timezone,

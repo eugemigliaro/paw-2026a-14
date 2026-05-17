@@ -23,7 +23,6 @@ public class UserBanJpaDao implements UserBanDao {
         final UserBan ban = new UserBan(null, moderationReport, bannedUntil);
 
         em.persist(ban);
-        em.flush();
 
         return ban;
     }

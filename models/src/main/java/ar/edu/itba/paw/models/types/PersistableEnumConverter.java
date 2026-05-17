@@ -18,6 +18,15 @@ public abstract class PersistableEnumConverter<T extends Enum<T> & PersistableEn
 
     @Override
     public T convertToEntityAttribute(final String dbData) {
-        return dbData == null ? null : PersistableEnum.fromDbValue(enumType, dbData).orElseThrow();
+        return dbData == null
+                ? null
+                : PersistableEnum.fromDbValue(enumType, dbData)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Unknown "
+                                                        + enumType.getSimpleName()
+                                                        + " database value: "
+                                                        + dbData));
     }
 }

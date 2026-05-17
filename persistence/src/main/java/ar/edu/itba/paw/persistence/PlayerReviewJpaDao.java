@@ -111,7 +111,7 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
 
     @Override
     public Optional<PlayerReview> findByIdIncludingDeleted(final Long reviewId) {
-        return Optional.of(em.find(PlayerReview.class, reviewId));
+        return Optional.ofNullable(em.find(PlayerReview.class, reviewId));
     }
 
     @Override

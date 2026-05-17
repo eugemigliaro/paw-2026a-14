@@ -19,6 +19,7 @@ import javax.persistence.Table;
 @Table(name = "users")
 public class UserAccount {
 
+    // Same table as User by design: this entity owns authentication and account-management fields.
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_userid_seq")
     @SequenceGenerator(

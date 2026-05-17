@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -94,7 +95,7 @@ public class MatchJpaDaoTest {
         final Long seriesId =
                 matchDao.createMatchSeries(
                         host,
-                        "weekly",
+                        RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),
@@ -105,7 +106,7 @@ public class MatchJpaDaoTest {
                 new MatchSeries(
                         seriesId,
                         host,
-                        "weekly",
+                        RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),
@@ -175,9 +176,11 @@ public class MatchJpaDaoTest {
                                         .setParameter("matchId", second.getId())
                                         .getSingleResult())
                         .intValue();
+        final MatchSeries persistedSeries = em.find(MatchSeries.class, seriesId);
         final List<Match> occurrences = matchDao.findSeriesOccurrences(seriesId);
 
         Assertions.assertEquals(1, seriesCount);
+        Assertions.assertEquals(RecurrenceFrequency.WEEKLY, persistedSeries.getFrequency());
         Assertions.assertEquals(2, occurrencesCount);
         Assertions.assertEquals(2, secondOccurrenceIndex);
         Assertions.assertEquals(2, occurrences.size());
@@ -246,7 +249,7 @@ public class MatchJpaDaoTest {
         final Long seriesId =
                 matchDao.createMatchSeries(
                         host,
-                        "weekly",
+                        RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),
@@ -257,7 +260,7 @@ public class MatchJpaDaoTest {
                 new MatchSeries(
                         seriesId,
                         host,
-                        "weekly",
+                        RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),
@@ -1071,7 +1074,7 @@ public class MatchJpaDaoTest {
         final Long seriesId =
                 matchDao.createMatchSeries(
                         host,
-                        "weekly",
+                        RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),
@@ -1082,7 +1085,7 @@ public class MatchJpaDaoTest {
                 new MatchSeries(
                         seriesId,
                         host,
-                        "weekly",
+                        RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
                         ZoneId.systemDefault().getId(),

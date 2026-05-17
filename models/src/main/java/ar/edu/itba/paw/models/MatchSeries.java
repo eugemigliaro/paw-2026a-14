@@ -1,10 +1,13 @@
 package ar.edu.itba.paw.models;
 
+import ar.edu.itba.paw.models.converters.RecurrenceFrequencyConverter;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import javax.persistence.Column;
+import javax.persistence.Convert;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -34,7 +37,8 @@ public class MatchSeries {
     private User host;
 
     @Column(name = "frequency", length = 30, nullable = false)
-    private String frequency;
+    @Convert(converter = RecurrenceFrequencyConverter.class)
+    private RecurrenceFrequency frequency;
 
     @Column(name = "starts_at", nullable = false)
     private Instant startsAt;
@@ -65,7 +69,7 @@ public class MatchSeries {
     public MatchSeries(
             final Long id,
             final User host,
-            final String frequency,
+            final RecurrenceFrequency frequency,
             final Instant startsAt,
             final Instant endsAt,
             final String timezone,
@@ -87,6 +91,46 @@ public class MatchSeries {
 
     public Long getId() {
         return id;
+    }
+
+    public User getHost() {
+        return host;
+    }
+
+    public RecurrenceFrequency getFrequency() {
+        return frequency;
+    }
+
+    public Instant getStartsAt() {
+        return startsAt;
+    }
+
+    public Instant getEndsAt() {
+        return endsAt;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public LocalDate getUntilDate() {
+        return untilDate;
+    }
+
+    public Integer getOccurrenceCount() {
+        return occurrenceCount;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public List<Match> getOccurrences() {
+        return occurrences;
     }
 
     public void setHost(final User host) {

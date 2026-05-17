@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -104,7 +105,7 @@ public class MatchJpaDao implements MatchDao {
     @Override
     public Long createMatchSeries(
             final User host,
-            final String frequency,
+            final RecurrenceFrequency frequency,
             final Instant startsAt,
             final Instant endsAt,
             final String timezone,
