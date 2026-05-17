@@ -1056,8 +1056,6 @@
 				<c:if test="${not empty eventPage.occurrences}">
 					<section class="detail-layout">
 						<div class="detail-layout__main">
-							<c:set var="recurrencePreviewLimit" value="3" />
-							<c:set var="recurrenceScheduleCollapsed" value="${fn:length(eventPage.occurrences) > recurrencePreviewLimit}" />
 							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
 								<div class="section-head section-head--detail-compact">
 									<div>
@@ -1068,13 +1066,8 @@
 									</div>
 								</div>
 								<ul id="recurrence-schedule-list" class="recurrence-schedule__list">
-									<c:forEach var="occurrence" items="${eventPage.occurrences}" varStatus="occurrenceStatus">
-										<li
-											class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}"
-											<c:if test="${recurrenceScheduleCollapsed and occurrenceStatus.index >= recurrencePreviewLimit and not occurrence.current}">
-												hidden="hidden"
-												data-recurrence-extra-date="true"
-											</c:if>>
+									<c:forEach var="occurrence" items="${eventPage.occurrences}">
+										<li class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}">
 											<div class="recurrence-schedule__date">
 												<c:choose>
 													<c:when test="${not empty occurrence.href}">
@@ -1100,19 +1093,63 @@
 										</li>
 									</c:forEach>
 								</ul>
-								<c:if test="${recurrenceScheduleCollapsed}">
-									<spring:message var="showMoreRecurringDatesLabel" code="event.recurrence.showMore" />
-									<spring:message var="showLessRecurringDatesLabel" code="event.recurrence.showLess" />
-									<button
-										type="button"
-										class="btn btn--secondary btn--sm recurrence-schedule__toggle"
-										data-recurrence-toggle="true"
-										data-show-more-label="${showMoreRecurringDatesLabel}"
-										data-show-less-label="${showLessRecurringDatesLabel}"
-										aria-controls="recurrence-schedule-list"
-										aria-expanded="false">
-										<c:out value="${showMoreRecurringDatesLabel}" />
-									</button>
+								<c:if test="${not empty recurrencePaginationItems}">
+									<spring:message var="previousLabel" code="pagination.previous" />
+									<spring:message var="nextLabel" code="pagination.next" />
+									<section class="feed-pagination" aria-label="${recurrenceScheduleTitle}">
+										<nav class="feed-pagination__nav">
+											<div>
+												<c:choose>
+													<c:when test="${recurrenceHasPreviousPage}">
+														<c:url var="recurrencePrevHref" value="${recurrencePreviousPageHref}" />
+														<a class="feed-pagination__control" href="${recurrencePrevHref}">
+															<c:out value="${previousLabel}" />
+														</a>
+													</c:when>
+													<c:otherwise>
+														<span class="feed-pagination__control feed-pagination__control--disabled">
+															<c:out value="${previousLabel}" />
+														</span>
+													</c:otherwise>
+												</c:choose>
+											</div>
+											<div class="feed-pagination__pages">
+												<c:forEach var="item" items="${recurrencePaginationItems}">
+													<c:choose>
+														<c:when test="${item.ellipsis}">
+															<span class="feed-pagination__ellipsis">${item.label}</span>
+														</c:when>
+														<c:when test="${item.current}">
+															<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">
+																<c:out value="${item.label}" />
+															</span>
+														</c:when>
+														<c:otherwise>
+															<c:url var="recurrencePageHref" value="${item.href}" />
+															<a class="feed-pagination__page" href="${recurrencePageHref}">
+																<c:out value="${item.label}" />
+															</a>
+														</c:otherwise>
+													</c:choose>
+												</c:forEach>
+											</div>
+											<div>
+												<c:choose>
+													<c:when test="${recurrenceHasNextPage}">
+														<c:url var="recurrenceNextHref" value="${recurrenceNextPageHref}" />
+														<a class="feed-pagination__control" href="${recurrenceNextHref}">
+															<c:out value="${nextLabel}" />
+														</a>
+													</c:when>
+													<c:otherwise>
+														<span class="feed-pagination__control feed-pagination__control--disabled">
+															<c:out value="${nextLabel}" />
+														</span>
+													</c:otherwise>
+												</c:choose>
+											</div>
+										</nav>
+									</section>
 								</c:if>
 							</section>
 						</div>

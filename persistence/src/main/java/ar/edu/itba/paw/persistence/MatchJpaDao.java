@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.query.MatchSort;
@@ -270,6 +271,38 @@ public class MatchJpaDao implements MatchDao {
         }
 
         return matches;
+    }
+
+    @Override
+    public PaginatedResult<Match> findSeriesOccurrencesPage(
+            final Long seriesId, final int page, final int pageSize) {
+        final int safePage = page > 0 ? page : 1;
+
+        final int totalCount =
+                ((Number)
+                                em.createQuery(
+                                                "SELECT COUNT(m) FROM Match m WHERE m.series.id = :seriesId")
+                                        .setParameter("seriesId", seriesId)
+                                        .getSingleResult())
+                        .intValue();
+
+        final int safeOffset = Math.max(0, (safePage - 1) * pageSize);
+        final List<Match> matches =
+                em.createQuery(
+                                "FROM Match m WHERE m.series.id = :seriesId ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
+                                Match.class)
+                        .setParameter("seriesId", seriesId)
+                        .setFirstResult(safeOffset)
+                        .setMaxResults(pageSize)
+                        .getResultList();
+
+        for (final Match match : matches) {
+            if (match != null) {
+                enrichMatchReadModel(match);
+            }
+        }
+
+        return new PaginatedResult<>(matches, totalCount, safePage, pageSize);
     }
 
     @Override
