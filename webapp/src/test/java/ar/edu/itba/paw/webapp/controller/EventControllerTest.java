@@ -6,31 +6,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.Sport;
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import java.math.BigDecimal;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -42,9 +36,10 @@ class EventControllerTest {
     private MatchReservationService matchReservationService;
     private MatchParticipationService matchParticipationService;
     private PlayerReviewService playerReviewService;
-    private UserService userService;
     private MessageSource messageSource;
     private Clock clock;
+
+    private User host;
 
     @BeforeEach
     void setUp() {
@@ -52,7 +47,6 @@ class EventControllerTest {
         matchReservationService = Mockito.mock(MatchReservationService.class);
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
         playerReviewService = Mockito.mock(PlayerReviewService.class);
-        userService = Mockito.mock(UserService.class);
         messageSource = Mockito.mock(MessageSource.class);
         clock = Mockito.mock(Clock.class);
 
@@ -63,10 +57,20 @@ class EventControllerTest {
                                         matchReservationService,
                                         matchParticipationService,
                                         playerReviewService,
-                                        userService,
                                         messageSource,
                                         clock))
                         .build();
+
+        host =
+                new User(
+                        2L,
+                        "host@test.com",
+                        "hostUser",
+                        "hostName",
+                        "hostLastName",
+                        null,
+                        null,
+                        UserLanguages.DEFAULT_LANGUAGE);
     }
 
     @AfterEach
@@ -83,45 +87,15 @@ class EventControllerTest {
 
     @Test
     void postReservationRedirectsWithSuccess() throws Exception {
-        authenticateUser(2L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
         final Match match =
-                new Match(
-                        Long.valueOf(42),
-                        Sport.FOOTBALL,
-                        Long.valueOf(1),
-                        "Address",
-                        "Title",
-                        "Desc",
-                        Instant.now().plusSeconds(3600),
-                        Instant.now().plusSeconds(4600),
-                        10,
-                        BigDecimal.ZERO,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        0,
-                        null);
+                MatchUtils.createMatchWithId(
+                        42L, host.getId(), Sport.FOOTBALL, Instant.now().plusSeconds(3600), 10);
         Mockito.when(matchService.findMatchById(42L)).thenReturn(Optional.of(match));
 
         mockMvc.perform(post("/matches/42/reservations"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
                 .andExpect(flash().attribute("reservationStatus", "confirmed"));
-    }
-
-    private static void authenticateUser(final Long userId) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"))),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
 }

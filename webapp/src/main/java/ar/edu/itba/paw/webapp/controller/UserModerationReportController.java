@@ -5,13 +5,14 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
@@ -51,14 +52,18 @@ public class UserModerationReportController {
             @RequestParam(value = "status", required = false) final List<String> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
-        final long userId = currentUserId();
+        final User user = SecurityControllerUtils.currentUserOrNull();
         final List<ReportTargetType> selectedTypes =
-                parseEnumFilters(typeFilters, ReportTargetType::fromDbValue);
+                parseEnumFilters(
+                        typeFilters,
+                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
         final List<ReportStatus> selectedStatuses =
-                parseEnumFilters(statusFilters, ReportStatus::fromDbValue);
+                parseEnumFilters(
+                        statusFilters,
+                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
-                        userId, selectedTypes, selectedStatuses, page, PAGE_SIZE);
+                        user, selectedTypes, selectedStatuses, page, PAGE_SIZE);
         final List<UserReportViewModel> reports =
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
@@ -114,11 +119,11 @@ public class UserModerationReportController {
     @GetMapping("/{reportId:\\d+}")
     public ModelAndView showMyReportDetail(
             @PathVariable("reportId") final Long reportId, final Model model, final Locale locale) {
-        final long userId = currentUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final ModerationReport report =
                 moderationService
                         .findReportById(reportId)
-                        .filter(found -> found.getReporterUserId().equals(userId))
+                        .filter(found -> found.getReporter().getId().equals(user.getId()))
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
@@ -155,12 +160,6 @@ public class UserModerationReportController {
             return new ModelAndView(
                     "redirect:/reports/mine/" + reportId + "?error=" + exception.getCode());
         }
-    }
-
-    private long currentUserId() {
-        return CurrentAuthenticatedUser.get()
-                .map(AuthenticatedUserPrincipal::getUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private UserReportViewModel toViewModel(final ModerationReport report, final Locale locale) {

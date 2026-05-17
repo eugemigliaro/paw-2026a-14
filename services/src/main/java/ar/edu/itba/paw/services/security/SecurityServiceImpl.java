@@ -39,30 +39,29 @@ public class SecurityServiceImpl implements SecurityService {
         final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return false;
         final Object principal = auth.getPrincipal();
-        return principal != null && extractUserIdFromPrincipal(principal) != null;
+        return principal != null && extractUserFromPrincipal(principal) != null;
     }
 
     @Override
-    public Long currentUserId() {
+    public User currentUser() {
         final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {
             return null;
         }
         final Object principal = auth.getPrincipal();
-        return extractUserIdFromPrincipal(principal);
+        return extractUserFromPrincipal(principal);
     }
 
-    private Long extractUserIdFromPrincipal(final Object principal) {
+    private User extractUserFromPrincipal(final Object principal) {
         if (principal == null) return null;
         try {
-            final Method m = principal.getClass().getMethod("getUserId");
+            final Method m = principal.getClass().getMethod("getUser");
             final Object id = m.invoke(principal);
-            if (id instanceof Long) return (Long) id;
-            if (id instanceof Integer) return ((Integer) id).longValue();
+            if (id instanceof User) return (User) id;
             return null;
         } catch (final Exception e) {
             LOGGER.debug(
-                    "Unable to extract user id from principal of type {}",
+                    "Unable to extract user from principal of type {}",
                     principal.getClass().getName(),
                     e);
             return null;
@@ -74,25 +73,21 @@ public class SecurityServiceImpl implements SecurityService {
         if (matchId == null) {
             return false;
         }
-        final Long current = currentUserId();
+        final User current = currentUser();
         if (current == null) {
             return false;
         }
         final Optional<Match> match = matchDao.findById(matchId);
-        return match.map(m -> current.equals(m.getHostUserId())).orElse(false);
+        return match.map(m -> current.getId().equals(m.getHost().getId())).orElse(false);
     }
 
     @Override
     public boolean hasReviewed(final String username) {
         if (username == null) return false;
-        final Long current = currentUserId();
+        final User current = currentUser();
         if (current == null) return false;
         final Optional<User> reviewed = userService.findByUsername(username);
-        return reviewed.map(
-                        user ->
-                                playerReviewService
-                                        .findReviewByPair(current, user.getId())
-                                        .isPresent())
+        return reviewed.map(user -> playerReviewService.findReviewByPair(current, user).isPresent())
                 .orElse(false);
     }
 }

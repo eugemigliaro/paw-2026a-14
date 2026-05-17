@@ -1,16 +1,18 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
-import ar.edu.itba.paw.models.EventStatus;
-import ar.edu.itba.paw.models.EventVisibility;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.Sport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
+import ar.edu.itba.paw.services.utils.MatchUtils;
+import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -46,11 +48,7 @@ public class MatchNotificationServiceImplTest {
         mailDispatchService = new RecordingMailDispatchService();
         matchNotificationService =
                 new MatchNotificationServiceImpl(
-                        matchParticipantDao,
-                        mailDispatchService,
-                        templateRenderer,
-                        messageSource,
-                        userService);
+                        matchParticipantDao, mailDispatchService, templateRenderer, messageSource);
         Mockito.lenient()
                 .when(
                         messageSource.getMessage(
@@ -69,10 +67,7 @@ public class MatchNotificationServiceImplTest {
     @Test
     public void testNotifyMatchUpdatedSendsOneMailPerParticipant() {
         final Match match = createMatch(40L, "Updated Match", EventStatus.OPEN);
-        final List<User> participants =
-                List.of(
-                        new User(2L, "first@test.com", "first"),
-                        new User(3L, "second@test.com", "second"));
+        final List<User> participants = List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));
         final MailContent firstMail = new MailContent("updated-1", "<p>1</p>", "1");
         final MailContent secondMail = new MailContent("updated-2", "<p>2</p>", "2");
         Mockito.when(matchParticipantDao.findConfirmedParticipants(40L)).thenReturn(participants);
@@ -82,7 +77,8 @@ public class MatchNotificationServiceImplTest {
         matchNotificationService.notifyMatchUpdated(match);
 
         Assertions.assertEquals(
-                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
+                List.of(participants.get(0).getEmail(), participants.get(1).getEmail()),
+                mailDispatchService.recipients);
         Assertions.assertSame(firstMail, mailDispatchService.contents.get(0));
         Assertions.assertSame(secondMail, mailDispatchService.contents.get(1));
     }
@@ -90,10 +86,7 @@ public class MatchNotificationServiceImplTest {
     @Test
     public void testNotifyMatchCancelledSendsOneMailPerParticipant() {
         final Match match = createMatch(41L, "Cancelled Match", EventStatus.CANCELLED);
-        final List<User> participants =
-                List.of(
-                        new User(2L, "first@test.com", "first"),
-                        new User(3L, "second@test.com", "second"));
+        final List<User> participants = List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));
         final MailContent firstMail = new MailContent("cancelled-1", "<p>1</p>", "1");
         final MailContent secondMail = new MailContent("cancelled-2", "<p>2</p>", "2");
         Mockito.when(matchParticipantDao.findConfirmedParticipants(41L)).thenReturn(participants);
@@ -103,7 +96,8 @@ public class MatchNotificationServiceImplTest {
         matchNotificationService.notifyMatchCancelled(match);
 
         Assertions.assertEquals(
-                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
+                List.of(participants.get(0).getEmail(), participants.get(1).getEmail()),
+                mailDispatchService.recipients);
         Assertions.assertSame(firstMail, mailDispatchService.contents.get(0));
         Assertions.assertSame(secondMail, mailDispatchService.contents.get(1));
     }
@@ -126,8 +120,8 @@ public class MatchNotificationServiceImplTest {
                 createRecurringMatch(50L, "Weekly Padel", EventStatus.OPEN, 600L, 1);
         final Match secondOccurrence =
                 createRecurringMatch(51L, "Weekly Padel", EventStatus.OPEN, 600L, 2);
-        final User firstParticipant = new User(2L, "first@test.com", "first");
-        final User secondParticipant = new User(3L, "second@test.com", "second");
+        final User firstParticipant = UserUtils.getUser(2L);
+        final User secondParticipant = UserUtils.getUser(3L);
         final MailContent mail = new MailContent("series-updated", "<p>updated</p>", "updated");
         Mockito.when(matchParticipantDao.findConfirmedParticipants(50L))
                 .thenReturn(List.of(firstParticipant));
@@ -144,7 +138,8 @@ public class MatchNotificationServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals(
-                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
+                List.of(firstParticipant.getEmail(), secondParticipant.getEmail()),
+                mailDispatchService.recipients);
     }
 
     @Test
@@ -154,8 +149,8 @@ public class MatchNotificationServiceImplTest {
                 createRecurringMatch(52L, "Weekly Padel", EventStatus.CANCELLED, 600L, 1);
         final Match secondOccurrence =
                 createRecurringMatch(53L, "Weekly Padel", EventStatus.CANCELLED, 600L, 2);
-        final User firstParticipant = new User(2L, "first@test.com", "first");
-        final User secondParticipant = new User(3L, "second@test.com", "second");
+        final User firstParticipant = UserUtils.getUser(2L);
+        final User secondParticipant = UserUtils.getUser(3L);
         final MailContent mail =
                 new MailContent("series-cancelled", "<p>cancelled</p>", "cancelled");
         final List<Integer> affectedCounts = new ArrayList<>();
@@ -178,39 +173,37 @@ public class MatchNotificationServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals(
-                List.of("first@test.com", "second@test.com"), mailDispatchService.recipients);
+                List.of(firstParticipant.getEmail(), secondParticipant.getEmail()),
+                mailDispatchService.recipients);
         Assertions.assertEquals(List.of(2, 1), affectedCounts);
     }
 
     @Test
     public void testNotifyHostPlayerLeftSendsMailToHost() {
         final Match match = createMatch(60L, "Weekly Padel", EventStatus.OPEN);
-        final User player =
-                new User(2L, "player@test.com", "player", "Jamie", "Rivera", null, null);
-        final User host = new User(1L, "host@test.com", "host", "Host", "User", null, null);
+        final User player = UserUtils.getUser(2L);
+        final User host = UserUtils.getUser(1L);
         final MailContent mail = new MailContent("player-left", "<p>left</p>", "left");
-        Mockito.when(userService.findById(1L)).thenReturn(java.util.Optional.of(host));
         Mockito.when(templateRenderer.renderPlayerLeftNotification(ArgumentMatchers.any()))
                 .thenReturn(mail);
 
         matchNotificationService.notifyHostPlayerLeft(match, player);
 
-        Assertions.assertEquals(List.of("host@test.com"), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of(host.getEmail()), mailDispatchService.recipients);
         Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
     }
 
     @Test
     public void testNotifyPlayerRemovedByHostSendsMailToPlayer() {
         final Match match = createMatch(61L, "Weekly Padel", EventStatus.OPEN);
-        final User player =
-                new User(2L, "player@test.com", "player", "Jamie", "Rivera", null, null);
+        final User player = UserUtils.getUser(2L);
         final MailContent mail = new MailContent("removed", "<p>removed</p>", "removed");
         Mockito.when(templateRenderer.renderParticipantRemovedNotification(ArgumentMatchers.any()))
                 .thenReturn(mail);
 
         matchNotificationService.notifyPlayerRemovedByHost(match, player);
 
-        Assertions.assertEquals(List.of("player@test.com"), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of(player.getEmail()), mailDispatchService.recipients);
         Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
     }
 
@@ -262,22 +255,11 @@ public class MatchNotificationServiceImplTest {
     }
 
     private static Match createMatch(final long id, final String title, final EventStatus status) {
-        return new Match(
-                id,
-                Sport.PADEL,
-                1L,
-                "Downtown Club",
-                title,
-                "Description",
-                Instant.parse("2026-04-06T18:00:00Z"),
-                Instant.parse("2026-04-06T19:00:00Z"),
-                10,
-                BigDecimal.ZERO,
-                EventVisibility.PUBLIC,
-                EventJoinPolicy.DIRECT,
-                status,
-                0,
-                null);
+        Match match =
+                MatchUtils.createMatchWithId(
+                        id, 1L, Sport.PADEL, Instant.parse("2026-04-06T18:00:00Z"), 10);
+        match.setStatus(status);
+        return match;
     }
 
     private static Match createRecurringMatch(
@@ -289,8 +271,10 @@ public class MatchNotificationServiceImplTest {
         return new Match(
                 id,
                 Sport.PADEL,
-                1L,
+                UserUtils.getUser(1L),
                 "Downtown Club",
+                null,
+                null,
                 title,
                 "Description",
                 Instant.parse("2026-04-06T18:00:00Z").plusSeconds(604800L * occurrenceIndex),
@@ -302,7 +286,11 @@ public class MatchNotificationServiceImplTest {
                 status,
                 0,
                 null,
-                seriesId,
-                occurrenceIndex);
+                MatchUtils.getMatchSeries(seriesId, UserUtils.getUser(1L)),
+                occurrenceIndex,
+                false,
+                null,
+                null,
+                null);
     }
 }

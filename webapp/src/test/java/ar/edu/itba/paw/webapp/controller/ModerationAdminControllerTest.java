@@ -8,18 +8,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import ar.edu.itba.paw.models.AppealDecision;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportResolution;
-import ar.edu.itba.paw.models.ReportStatus;
-import ar.edu.itba.paw.models.ReportTargetType;
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportResolution;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -29,8 +29,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -57,7 +55,7 @@ class ModerationAdminControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new ModerationAdminController(
-                                        moderationService, messageSource(), userService))
+                                        moderationService, userService, messageSource()))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
@@ -78,26 +76,15 @@ class ModerationAdminControllerTest {
 
     @Test
     void postFinalizeAppealRedirectsToQueue() throws Exception {
+        final User adminUser = UserUtils.getUser(99L);
         Mockito.when(
                         moderationService.finalizeReportAppeal(
                                 Mockito.eq(17L),
-                                Mockito.eq(99L),
+                                Mockito.eq(adminUser),
                                 Mockito.eq(AppealDecision.UPHELD)))
                 .thenReturn(sampleAppealedReport());
 
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                99L,
-                                                "admin@test.com",
-                                                "admin",
-                                                null,
-                                                UserRole.ADMIN_MOD,
-                                                Instant.parse("2026-04-11T18:00:00Z"))),
-                                "ignored",
-                                List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
+        AuthenticationUtils.authenticateAdmin(99L, "ignored");
 
         mockMvc.perform(post("/admin/reports/17/finalize-appeal").param("appealDecision", "upheld"))
                 .andExpect(status().is3xxRedirection())
@@ -107,6 +94,9 @@ class ModerationAdminControllerTest {
 
     @Test
     void getReportDetailRendersDetailPage() throws Exception {
+        Mockito.when(userService.findById(44L)).thenReturn(Optional.of(UserUtils.getUser(44L)));
+        Mockito.when(moderationService.findLatestBanForUser(Mockito.any()))
+                .thenReturn(Optional.empty());
         Mockito.when(moderationService.findReportById(17L))
                 .thenReturn(Optional.of(sampleAppealedReport()));
 
@@ -114,6 +104,20 @@ class ModerationAdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reports/detail"))
                 .andExpect(model().attributeExists("report"));
+    }
+
+    @Test
+    void getReportDetailRendersPendingReportWithoutReviewer() throws Exception {
+        Mockito.when(userService.findById(44L)).thenReturn(Optional.of(UserUtils.getUser(44L)));
+        Mockito.when(moderationService.findLatestBanForUser(Mockito.any()))
+                .thenReturn(Optional.empty());
+        Mockito.when(moderationService.findReportById(3L))
+                .thenReturn(Optional.of(samplePendingReport()));
+
+        mockMvc.perform(get("/admin/reports/3").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/reports/detail"))
+                .andExpect(model().attribute("reviewerUsername", ""));
     }
 
     @Test
@@ -127,7 +131,7 @@ class ModerationAdminControllerTest {
     private static ModerationReport sampleAppealedReport() {
         return new ModerationReport(
                 17L,
-                7L,
+                UserUtils.getUser(7L),
                 ReportTargetType.USER,
                 44L,
                 ReportReason.HARASSMENT,
@@ -135,16 +139,40 @@ class ModerationAdminControllerTest {
                 ReportStatus.APPEALED,
                 ReportResolution.DISMISSED,
                 "Original warning",
-                99L,
+                UserUtils.getUser(99L),
                 Instant.parse("2026-04-12T10:00:00Z"),
                 "I disagree with this decision",
-                1,
+                (short) 1,
                 Instant.parse("2026-04-13T10:00:00Z"),
                 null,
                 null,
                 null,
                 Instant.parse("2026-04-12T09:00:00Z"),
                 Instant.parse("2026-04-13T10:00:00Z"));
+    }
+
+    private static ModerationReport samplePendingReport() {
+
+        return new ModerationReport(
+                3L,
+                UserUtils.getUser(7L),
+                ReportTargetType.USER,
+                44L,
+                ReportReason.HARASSMENT,
+                "Harassing messages",
+                ReportStatus.PENDING,
+                null,
+                null,
+                null,
+                null,
+                null,
+                (short) 0,
+                null,
+                null,
+                null,
+                null,
+                Instant.parse("2026-04-12T09:00:00Z"),
+                Instant.parse("2026-04-12T09:00:00Z"));
     }
 
     private static MessageSource messageSource() {

@@ -35,7 +35,7 @@ public class AuthenticatedLocalePersistenceInterceptor implements HandlerInterce
                         principal -> {
                             final String preferredLanguage = resolvedLanguage(language);
                             userService.updatePreferredLanguage(
-                                    principal.getUserId(), preferredLanguage);
+                                    principal.getUser(), preferredLanguage);
                         });
         return true;
     }
