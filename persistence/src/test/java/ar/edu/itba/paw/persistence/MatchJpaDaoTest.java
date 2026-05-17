@@ -188,6 +188,58 @@ public class MatchJpaDaoTest {
     }
 
     @Test
+    public void findByIdReturnsCompletedForOpenMatchWithPastStartAndNoEnd() {
+        final Match match =
+                createMatchWithPolicy(
+                        "Past Open",
+                        EventStatus.OPEN,
+                        ZonedDateTime.now().minusDays(1),
+                        host,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
+        em.flush();
+        em.clear();
+
+        final Match found = matchDao.findById(match.getId()).orElseThrow();
+
+        Assertions.assertEquals(EventStatus.COMPLETED, found.getStatus());
+        Assertions.assertEquals(EventStatus.OPEN, found.getStoredStatus());
+        em.flush();
+        em.clear();
+        Assertions.assertEquals(EventStatus.OPEN, em.find(Match.class, match.getId()).getStatus());
+    }
+
+    @Test
+    public void findByIdReturnsCompletedForOpenMatchWithPastEnd() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().minusDays(1);
+        final Match match =
+                matchDao.createMatch(
+                        host,
+                        "Test Address",
+                        "Past Ended",
+                        "Description",
+                        startsAt.toInstant(),
+                        startsAt.plusHours(1).toInstant(),
+                        10,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        null);
+        em.flush();
+        em.clear();
+
+        final Match found = matchDao.findById(match.getId()).orElseThrow();
+
+        Assertions.assertEquals(EventStatus.COMPLETED, found.getStatus());
+        Assertions.assertEquals(EventStatus.OPEN, found.getStoredStatus());
+        em.flush();
+        em.clear();
+        Assertions.assertEquals(EventStatus.OPEN, em.find(Match.class, match.getId()).getStatus());
+    }
+
+    @Test
     public void shouldCreateRecurringOccurrenceWithNullSeriesOccurrenceIndex() {
         final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
         final ZonedDateTime endsAt = startsAt.plusMinutes(90);
@@ -1438,14 +1490,22 @@ public class MatchJpaDaoTest {
                         host,
                         EventVisibility.PUBLIC,
                         EventJoinPolicy.DIRECT);
+        final ZonedDateTime newerPastStart = ZonedDateTime.now().minusDays(2);
         final Match newerPast =
-                createMatchWithPolicy(
-                        "Newer Past",
-                        EventStatus.OPEN,
-                        ZonedDateTime.now().minusDays(2),
+                matchDao.createMatch(
                         host,
+                        "Test Address",
+                        "Newer Past",
+                        "Description",
+                        newerPastStart.toInstant(),
+                        newerPastStart.plusHours(1).toInstant(),
+                        10,
+                        BigDecimal.ZERO,
+                        Sport.FOOTBALL,
                         EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT);
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        null);
         createMatchWithPolicy(
                 "Future Open",
                 EventStatus.OPEN,

@@ -320,6 +320,40 @@ public class MatchParticipantJpaDaoTest {
     }
 
     @Test
+    public void testFindInvitedUsersReturnsInvitedUser() {
+        final boolean invited = matchParticipantDao.inviteUser(match.getId(), player);
+        Assertions.assertTrue(invited);
+        flushAndClear();
+
+        final List<User> invitedUsers = matchParticipantDao.findInvitedUsers(match.getId());
+
+        Assertions.assertEquals(1, invitedUsers.size());
+        Assertions.assertEquals(player.getId(), invitedUsers.get(0).getId());
+        Assertions.assertEquals(player.getUsername(), invitedUsers.get(0).getUsername());
+    }
+
+    @Test
+    public void testFindInvitedUsersOrdersByInviteTimeAndUsername() {
+        final User zeta = createUser("zeta", "zeta@test.com");
+        final User alpha = createUser("alpha", "alpha@test.com");
+        final Instant firstInvite = Instant.now().minusSeconds(60);
+        final Instant secondInvite = Instant.now();
+        createParticipant(
+                match, player, ParticipantStatus.INVITED, ParticipantScope.MATCH, secondInvite);
+        createParticipant(
+                match, zeta, ParticipantStatus.INVITED, ParticipantScope.MATCH, firstInvite);
+        createParticipant(
+                match, alpha, ParticipantStatus.INVITED, ParticipantScope.MATCH, firstInvite);
+        flushAndClear();
+
+        final List<User> invitedUsers = matchParticipantDao.findInvitedUsers(match.getId());
+
+        Assertions.assertEquals(
+                List.of("alpha", "zeta", "player"),
+                invitedUsers.stream().map(User::getUsername).toList());
+    }
+
+    @Test
     public void testAcceptSeriesInviteJoinsOnlySeriesInvitationRows() {
         final Instant now = Instant.now();
         final MatchSeries series = createSeries(host);
@@ -731,9 +765,18 @@ public class MatchParticipantJpaDaoTest {
 
     private void createParticipant(
             Match m, User user, ParticipantStatus status, ParticipantScope scope) {
+        createParticipant(m, user, status, scope, Instant.now());
+    }
+
+    private void createParticipant(
+            Match m,
+            User user,
+            ParticipantStatus status,
+            ParticipantScope scope,
+            Instant joinedAt) {
         MatchParticipant participant =
                 new MatchParticipant(
-                        em.find(Match.class, m.getId()), user, status, Instant.now(), scope);
+                        em.find(Match.class, m.getId()), user, status, joinedAt, scope);
         em.persist(participant);
     }
 

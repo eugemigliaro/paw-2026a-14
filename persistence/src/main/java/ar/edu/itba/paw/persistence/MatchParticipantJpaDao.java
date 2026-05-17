@@ -339,7 +339,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                     mp.setStatus(ParticipantStatus.JOINED);
                     mp.setScope(ParticipantScope.MATCH);
                     mp.setJoinedAt(now);
-                    mp.setVersion(mp.getVersion() + 1);
                 });
 
         return toBeUpdated.size();
@@ -484,7 +483,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                 mp -> {
                     mp.setStatus(ParticipantStatus.CANCELLED);
                     mp.setScope(ParticipantScope.MATCH);
-                    mp.setVersion(mp.getVersion() + 1);
                 });
 
         return toBeUpdated.size();
@@ -630,7 +628,7 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     @Override
     public List<User> findInvitedUsers(final Long matchId) {
         return em.createQuery(
-                        "SELECT new ar.edu.itba.paw.models.User(u.id, u.email, u.username)"
+                        "SELECT u"
                                 + " FROM MatchParticipant mp"
                                 + " JOIN mp.user u"
                                 + " WHERE mp.match.id = :matchId"

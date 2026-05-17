@@ -89,6 +89,8 @@ public class Match {
 
     @Transient private int joinedPlayers;
 
+    @Transient private EventStatus derivedStatus;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "banner_image_id")
     private ImageMetadata bannerImageMetadata;
@@ -238,6 +240,10 @@ public class Match {
     }
 
     public EventStatus getStatus() {
+        return derivedStatus == null ? status : derivedStatus;
+    }
+
+    public EventStatus getStoredStatus() {
         return status;
     }
 
@@ -339,6 +345,11 @@ public class Match {
 
     public void setStatus(final EventStatus status) {
         this.status = status;
+        this.derivedStatus = null;
+    }
+
+    public void setDerivedStatus(final EventStatus derivedStatus) {
+        this.derivedStatus = derivedStatus;
     }
 
     public void setBannerImageMetadata(final ImageMetadata bannerImageMetadata) {

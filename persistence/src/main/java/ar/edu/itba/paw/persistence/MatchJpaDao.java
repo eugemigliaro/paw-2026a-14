@@ -231,7 +231,7 @@ public class MatchJpaDao implements MatchDao {
             return Optional.empty();
         }
 
-        match.setJoinedPlayers(countJoinedPlayers(match));
+        enrichMatchReadModel(match);
 
         return Optional.of(match);
     }
@@ -264,7 +264,7 @@ public class MatchJpaDao implements MatchDao {
 
         for (final Match match : matches) {
             if (match != null) {
-                match.setJoinedPlayers(countJoinedPlayers(match));
+                enrichMatchReadModel(match);
             }
         }
 
@@ -510,12 +510,7 @@ public class MatchJpaDao implements MatchDao {
                 .map(
                         m -> {
                             if (m != null) {
-                                m.setJoinedPlayers(countJoinedPlayers(m));
-                                if (m.getEndsAt() == null
-                                        && m.getStartsAt().isBefore(Instant.now())
-                                        && m.getStatus() == EventStatus.OPEN) {
-                                    m.setStatus(EventStatus.COMPLETED);
-                                }
+                                enrichMatchReadModel(m);
                             }
                             return m;
                         })
@@ -542,6 +537,17 @@ public class MatchJpaDao implements MatchDao {
                 .setParameter("activeStatuses", ACTIVE_PARTICIPANT_STATUSES)
                 .getSingleResult()
                 .intValue();
+    }
+
+    private void enrichMatchReadModel(final Match match) {
+        match.setJoinedPlayers(countJoinedPlayers(match));
+        if (match.getStoredStatus() == EventStatus.OPEN) {
+            final Instant effectiveEnd =
+                    match.getEndsAt() == null ? match.getStartsAt() : match.getEndsAt();
+            if (!effectiveEnd.isAfter(Instant.now())) {
+                match.setDerivedStatus(EventStatus.COMPLETED);
+            }
+        }
     }
 
     private static QueryParts joinedParts(final Long userId) {
