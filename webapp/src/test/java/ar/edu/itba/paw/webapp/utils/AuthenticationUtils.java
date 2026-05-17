@@ -49,6 +49,12 @@ public class AuthenticationUtils {
                 List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
 
+    public static void authenticateUser(Long id, String username, String email) {
+        final User user = new User(id, email, username, null, null, null, null, null);
+
+        authenticateUser(user, "hashedPassword", UserRole.USER, true);
+    }
+
     public static void authenticateUser(Long id) {
         authenticateUser(UserUtils.getUser(id), "hashedPassword", UserRole.USER, true);
     }

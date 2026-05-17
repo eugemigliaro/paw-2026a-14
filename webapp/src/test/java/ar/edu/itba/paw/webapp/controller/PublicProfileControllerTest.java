@@ -72,12 +72,15 @@ class PublicProfileControllerTest {
 
     @Test
     void getProfileDoesNotLinkUnknownReviewers() throws Exception {
-        final User user = UserUtils.getUser(42L);
+        final User targetUser = UserUtils.getUser(42L);
+        final User unknownReviewer =
+                new User(99L, "unknown@test.com", null, null, null, null, null, null);
+
         final PlayerReview review =
                 new PlayerReview(
                         11L,
-                        UserUtils.getUser(99L),
-                        UserUtils.getUser(42L),
+                        unknownReviewer,
+                        targetUser,
                         PlayerReviewReaction.LIKE,
                         "Helpful",
                         Instant.parse("2026-04-10T10:00:00Z"),
@@ -86,15 +89,15 @@ class PublicProfileControllerTest {
                         null,
                         null,
                         null);
-        Mockito.when(userService.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
-        Mockito.when(playerReviewService.findSummaryForUser(UserUtils.getUser(42L)))
+
+        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(targetUser));
+        Mockito.when(playerReviewService.findSummaryForUser(targetUser))
                 .thenReturn(new PlayerReviewSummary(42L, 1, 0, 1));
         Mockito.when(
                         playerReviewService.findReviewsForUser(
-                                UserUtils.getUser(42L), PlayerReviewFilter.BOTH, 1, 10))
+                                targetUser, PlayerReviewFilter.BOTH, 1, 10))
                 .thenReturn(new PaginatedResult<>(List.of(review), 1, 1, 10));
-        Mockito.when(userService.findByIds(List.of(99L))).thenReturn(List.of());
-        Mockito.when(moderationService.findActiveBan(user)).thenReturn(Optional.empty());
+        Mockito.when(moderationService.findActiveBan(targetUser)).thenReturn(Optional.empty());
         Mockito.when(
                         messageSource.getMessage(
                                 Mockito.eq("profile.reviews.unknownReviewer"),
@@ -119,7 +122,7 @@ class PublicProfileControllerTest {
     void postReviewRedirectsWithSuccess() throws Exception {
         AuthenticationUtils.authenticateUser(1L);
         final User user = UserUtils.getUser(42L);
-        Mockito.when(userService.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
 
         mockMvc.perform(
                         post("/users/target/reviews")
@@ -134,7 +137,7 @@ class PublicProfileControllerTest {
     void deleteReviewRedirectsWithSuccess() throws Exception {
         AuthenticationUtils.authenticateUser(1L);
         final User user = UserUtils.getUser(42L);
-        Mockito.when(userService.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
 
         mockMvc.perform(post("/users/target/reviews/delete"))
                 .andExpect(status().is3xxRedirection())

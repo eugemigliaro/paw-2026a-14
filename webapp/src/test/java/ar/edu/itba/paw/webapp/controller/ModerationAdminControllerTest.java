@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
@@ -75,10 +76,11 @@ class ModerationAdminControllerTest {
 
     @Test
     void postFinalizeAppealRedirectsToQueue() throws Exception {
+        final User adminUser = UserUtils.getUser(99L);
         Mockito.when(
                         moderationService.finalizeReportAppeal(
                                 Mockito.eq(17L),
-                                UserUtils.getUser(99L),
+                                Mockito.eq(adminUser),
                                 Mockito.eq(AppealDecision.UPHELD)))
                 .thenReturn(sampleAppealedReport());
 
@@ -92,6 +94,9 @@ class ModerationAdminControllerTest {
 
     @Test
     void getReportDetailRendersDetailPage() throws Exception {
+        Mockito.when(userService.findById(44L)).thenReturn(Optional.of(UserUtils.getUser(44L)));
+        Mockito.when(moderationService.findLatestBanForUser(Mockito.any()))
+                .thenReturn(Optional.empty());
         Mockito.when(moderationService.findReportById(17L))
                 .thenReturn(Optional.of(sampleAppealedReport()));
 
@@ -103,10 +108,11 @@ class ModerationAdminControllerTest {
 
     @Test
     void getReportDetailRendersPendingReportWithoutReviewer() throws Exception {
+        Mockito.when(userService.findById(44L)).thenReturn(Optional.of(UserUtils.getUser(44L)));
+        Mockito.when(moderationService.findLatestBanForUser(Mockito.any()))
+                .thenReturn(Optional.empty());
         Mockito.when(moderationService.findReportById(3L))
                 .thenReturn(Optional.of(samplePendingReport()));
-        Mockito.when(userService.findById(Mockito.isNull()))
-                .thenThrow(new IllegalArgumentException("id to load is required for loading"));
 
         mockMvc.perform(get("/admin/reports/3").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())

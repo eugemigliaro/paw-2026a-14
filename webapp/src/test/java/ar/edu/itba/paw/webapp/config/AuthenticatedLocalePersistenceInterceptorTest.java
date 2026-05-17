@@ -53,7 +53,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
         final AtomicReference<String> capturedLanguage = new AtomicReference<>();
         Mockito.doAnswer(
                         invocation -> {
-                            capturedUserId.set(invocation.getArgument(0));
+                            capturedUserId.set(invocation.<User>getArgument(0).getId());
                             capturedLanguage.set(invocation.getArgument(1));
                             return null;
                         })

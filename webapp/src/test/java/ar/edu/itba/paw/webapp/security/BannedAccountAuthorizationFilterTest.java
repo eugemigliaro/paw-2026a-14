@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
@@ -31,7 +32,8 @@ class BannedAccountAuthorizationFilterTest {
     @Test
     void redirectsBannedUserToBanPageForProtectedRoute() throws Exception {
         final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
-        Mockito.when(userBanDao.findActiveBanForUser(UserUtils.getUser(7L), Mockito.any()))
+        final User u = UserUtils.getUser(7L);
+        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(u), Mockito.any()))
                 .thenReturn(Optional.of(sampleBan()));
         AuthenticationUtils.authenticateUser(7L);
 
@@ -48,7 +50,8 @@ class BannedAccountAuthorizationFilterTest {
     @Test
     void allowsBannedUserAppealRoute() throws Exception {
         final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
-        Mockito.when(userBanDao.findActiveBanForUser(UserUtils.getUser(7L), Mockito.any()))
+        final User u = UserUtils.getUser(7L);
+        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(u), Mockito.any()))
                 .thenReturn(Optional.of(sampleBan()));
         AuthenticationUtils.authenticateUser(7L);
 

@@ -182,8 +182,13 @@ public class ModerationAdminController {
             mav.addObject("userBan", userBanViewModel(report, locale));
         }
 
-        mav.addObject("reporterUsername", report.getReporter().getUsername());
-        mav.addObject("reviewerUsername", report.getReviewer().getUsername());
+        String reporterUsername =
+                report.getReporter() != null ? report.getReporter().getUsername() : "";
+        String reviewerUsername =
+                report.getReviewer() != null ? report.getReviewer().getUsername() : "";
+
+        mav.addObject("reporterUsername", reporterUsername);
+        mav.addObject("reviewerUsername", reviewerUsername);
 
         return mav;
     }

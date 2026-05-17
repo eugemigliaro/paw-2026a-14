@@ -320,8 +320,14 @@ public class EventController {
                         ? matchService.findSeriesOccurrences(match.getSeries().getId())
                         : List.of();
         final SeriesReservationUiState seriesReservationState =
-                buildSeriesReservationUiState(
-                        match.getSeries().getId(), seriesOccurrences, currentUser, isHostViewer);
+                match.isRecurringOccurrence()
+                        ? buildSeriesReservationUiState(
+                                match.getSeries().getId(),
+                                seriesOccurrences,
+                                currentUser,
+                                isHostViewer)
+                        : buildSeriesReservationUiState(
+                                null, seriesOccurrences, currentUser, isHostViewer);
         final SeriesJoinRequestUiState seriesJoinRequestState =
                 isHostViewer
                         ? new SeriesJoinRequestUiState(false, false)
