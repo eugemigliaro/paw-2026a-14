@@ -262,7 +262,15 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
 
     @Override
     public int countPendingRequests(final Long matchId) {
-        return findPendingRequests(matchId).size();
+        return em.createQuery(
+                        "SELECT COUNT(mp) FROM MatchParticipant mp"
+                                + " WHERE mp.match.id = :matchId"
+                                + " AND mp.status = :status",
+                        Long.class)
+                .setParameter("matchId", matchId)
+                .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
+                .getSingleResult()
+                .intValue();
     }
 
     @Override
