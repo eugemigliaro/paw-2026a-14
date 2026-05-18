@@ -262,17 +262,16 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
     private static String displayName(final User user) {
         final String firstName = clean(user.getName());
         final String lastName = clean(user.getLastName());
-        final String fullName =
-                firstName == null
-                        ? lastName
-                        : lastName == null ? firstName : firstName + " " + lastName;
-        if (fullName != null) {
-            return fullName;
+
+        if (firstName != null && lastName != null) {
+            return firstName + " " + lastName;
         }
+
         final String username = clean(user.getUsername());
         if (username != null) {
             return username;
         }
+
         return user.getEmail();
     }
 
