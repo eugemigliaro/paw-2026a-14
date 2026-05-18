@@ -70,7 +70,7 @@ Page reloads (or modal closes + state refreshes) showing:
 
 - The "Join the pool" action is idempotent — a user already in the pool sees the success state immediately without an error.
 - "Leave the solo pool" works at any point during the REGISTRATION phase. After phase changes to LOCKED_BRACKET, the button is hidden.
-- The dual-channel notification fires immediately: in-app record + email.
+- The email notification fires immediately. Persisted in-app notifications are a separate future feature.
 
 ### Edge cases
 
@@ -101,7 +101,7 @@ On submit:
 
 1. A `TournamentTeamDraft` row is created with status OPEN.
 2. A `TournamentDraftInvite` row is created per invitee with status PENDING.
-3. Each invitee receives a dual-channel notification (in-app + email).
+3. Each invitee receives an email notification.
 
 **Step B — Monitor the draft**
 
@@ -139,15 +139,15 @@ When the Nth (last) invitee accepts, automatically:
 
 ### Invitee side
 
-The invitee's path is symmetric with how the existing match invitations work — see `MatchParticipationServiceImpl.dispatchMatchInvitation` for the dual-channel pattern.
+The invitee's path is symmetric with how existing match invitations are meant to feel, but the current app only has email notifications. Persisted in-app notifications require a separate notification-center feature.
 
-**Step 1 — Notification arrives** (in-app + email simultaneously)
+**Step 1 — Email notification arrives**
 
-The in-app notification appears in the bell dropdown with a `1` badge. The email arrives in parallel with the same content and a CTA that opens the in-app view.
+The user receives an email with a CTA that opens the invite-review screen in the app.
 
 **Step 2 — Invite review screen**
 
-Tapping the notification opens an invite-review screen:
+Following the email CTA opens an invite-review screen:
 
 - Eyebrow: "TEAM INVITE"
 - Title: "Diego invited you to Los Galácticos"
@@ -155,7 +155,7 @@ Tapping the notification opens an invite-review screen:
 - Two buttons: Accept (primary) / Decline (secondary)
 - Below: "Team status: 3/5 confirmed · 1 pending · 1 declined" (so they know what they're walking into)
 
-Accept and Decline are immediate. Either action fires a notification back to the captain (dual-channel).
+Accept and Decline are immediate. Either action fires an email notification back to the captain.
 
 ### Acceptance criteria
 

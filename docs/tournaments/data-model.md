@@ -1,5 +1,11 @@
 # Tournaments — Data Model
 
+> Implementation note: read [`feature-brief.md`](./feature-brief.md) and
+> [`implementation-plan.md`](./implementation-plan.md) first. This document is
+> still useful for entity relationships, but the newer docs clarify the first
+> implementation spine and the decision not to model tournament fixtures as
+> `Match` rows or subclasses.
+
 This document outlines the new entities, their relationships to the existing schema, and key fields. Names use the project's `snake_case` SQL / `camelCase` Java conventions and follow Flyway migration numbering.
 
 > **Note:** Field-level types and constraints below are recommendations, not prescriptions — the implementer should reconcile with the existing `Match`, `MatchParticipant`, `User`, and `Series` models before committing the schema. The shapes are designed to integrate with the existing `MatchParticipationService` and `MatchNotificationService`.

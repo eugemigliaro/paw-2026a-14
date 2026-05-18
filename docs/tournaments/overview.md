@@ -1,5 +1,9 @@
 # Tournaments — Overview
 
+> Implementation note: read [`feature-brief.md`](./feature-brief.md) first.
+> This original overview is useful product context, but the brief contains the
+> corrected implementation scope, lifecycle names, and sequencing decisions.
+
 ## What this feature is
 
 A **Host** can publish a tournament — a structured competition between teams of players, organised as a single-elimination bracket. **Users** sign up either solo (the host assigns them to a team) or as part of a team they drafted with friends. The host runs the tournament during play by declaring a winner per match; results automatically advance teams up the bracket.
@@ -45,8 +49,8 @@ The existing platform supports single matches and recurring matches well, but us
 ## How it fits the existing app
 
 - **Reuses** the existing event feed, search, filtering, and "My Events" tab structure.
-- **Reuses** the existing notification infrastructure (`MatchNotificationService`, `ThymeleafMailTemplateRenderer`). New notification types are added; the dual-channel delivery (in-app + email) and per-recipient locale handling are unchanged.
-- **Reuses** the `EventJoinPolicy.INVITE_ONLY` pattern as the inspiration for team-draft invites (in-app record + parallel email, accept/decline happens in-app).
+- **Reuses** the existing email notification infrastructure (`MatchNotificationService`, `ThymeleafMailTemplateRenderer`). New notification types are added with per-recipient locale handling.
+- **Reuses** the `EventJoinPolicy.INVITE_ONLY` pattern as the inspiration for team-draft invites, but email is the existing channel. Persisted in-app notifications would require a separate notification-center feature.
 - **Reuses** the existing Host mode toggle and create-event shell as the chrome for the create-tournament wizard.
 - **Adds** new entities (see `data-model.md`) and a new top-level entity type that wraps a set of matches.
 - **Does not** change auth, profiles, reviews, or reporting flows beyond a single new review-trigger point (the tournament completion).

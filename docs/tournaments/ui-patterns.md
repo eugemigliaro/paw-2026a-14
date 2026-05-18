@@ -1,5 +1,9 @@
 # Tournaments — UI Patterns
 
+> Implementation note: this repository is JSP/server-rendered. Component names
+> in this document should be implemented as JSP tags, JSP fragments, Java view
+> models, and CSS classes. Do not interpret them as React components.
+
 This document captures the UI variants picked during wireframe planning and maps them to the existing design system. Follow these patterns; do not invent alternatives unless `open-questions.md` flags them for re-decision.
 
 ## Picked variants

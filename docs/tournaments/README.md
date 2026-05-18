@@ -1,40 +1,77 @@
-# Tournaments Feature — Implementation Guide
+# Tournaments Feature - Implementation Guide
 
-This folder is the source of truth for building the Tournaments feature. It captures the decisions reached during wireframe planning so that whoever implements (Claude Code or human) can do so without re-litigating product questions.
+This folder documents the tournaments feature. Start with the two canonical
+implementation documents below, then use the older flow documents for detailed
+wireframe behavior.
 
-Read [`overview.md`](./overview.md) first.
+## Start Here
+
+| File | Purpose |
+| --- | --- |
+| [`feature-brief.md`](./feature-brief.md) | Corrected, implementation-facing explanation of the feature and key technical decisions. |
+| [`implementation-plan.md`](./implementation-plan.md) | Detailed staged backlog for building tournaments in this repository. |
 
 ## TL;DR
 
-A Host can publish a **single-elimination bracket tournament** of **8 teams** (configurable to 4 or 16). Players join either **solo** (going into a pool the Host later groups into teams) or as part of a **team draft** (a captain invites N–1 friends, the team only locks once 5/5 accept). When registration closes, the Host generates the bracket, can drag-swap seeds, schedules each round, and then declares winners one match at a time — there is **no score handling**, only winner declaration. Tournaments live inside the existing event feed with a 🏆 badge.
+A tournament is an event-like aggregate hosted by a user. Players register
+before the window closes, teams are locked, a single-elimination bracket is
+generated, and the host advances the bracket by declaring winners or walkovers.
+There is no score handling in v1.
 
-## File index
+The important architecture decision is that bracket fixtures are not normal
+matches:
+
+- `Match` remains the standalone event users reserve/join directly.
+- `Tournament` is the public event-like container.
+- `TournamentMatch` is an internal bracket fixture between tournament teams.
+- `TournamentMatch` must not reuse the `matches` table and must not extend
+  `Match`.
+
+Build the feature incrementally. The first working spine should support host
+creation, feed/detail visibility, solo registration, manual registration close,
+team formation, bracket generation, round-one scheduling, winner propagation,
+completion, and minimum email notifications. Team drafts, drag reseeding, scheduled
+automation, full notification catalog, and polished My Events integration should
+come after that spine works.
+
+## File Index
 
 | File | What it covers |
-|---|---|
-| [`overview.md`](./overview.md) | Feature scope, goals, non-goals, how it fits the existing app |
-| [`lifecycle.md`](./lifecycle.md) | The 5 phases every tournament moves through + transitions |
-| [`data-model.md`](./data-model.md) | New entities, relationships, suggested schema |
-| [`notifications.md`](./notifications.md) | Dual-channel (email + in-app) pattern + notification catalog |
-| [`ui-patterns.md`](./ui-patterns.md) | Picked UI variants + design-system mapping |
-| [`open-questions.md`](./open-questions.md) | Edge cases & decisions still pending |
-| [`flows/host.md`](./flows/host.md) | Host flows: create → seed bracket → run tournament |
-| [`flows/user-joining.md`](./flows/user-joining.md) | Discover → join solo OR start team draft |
-| [`flows/player-during-play.md`](./flows/player-during-play.md) | Player views once the bracket is live |
+| --- | --- |
+| [`feature-brief.md`](./feature-brief.md) | Canonical feature explanation, corrected decisions, recommended first scope |
+| [`implementation-plan.md`](./implementation-plan.md) | Detailed phase-by-phase implementation checklist |
+| [`overview.md`](./overview.md) | Original feature scope, goals, non-goals, and app fit |
+| [`lifecycle.md`](./lifecycle.md) | Original lifecycle write-up; prefer `feature-brief.md` for implementation status names |
+| [`data-model.md`](./data-model.md) | Original entity and schema recommendations |
+| [`notifications.md`](./notifications.md) | Email-first notification catalog and future in-app notification note |
+| [`ui-patterns.md`](./ui-patterns.md) | UI variants and design-system mapping; adapt component names to JSP tags/fragments |
+| [`open-questions.md`](./open-questions.md) | Edge cases and unresolved/future decisions |
+| [`flows/host.md`](./flows/host.md) | Host flows: create, seed bracket, run tournament |
+| [`flows/user-joining.md`](./flows/user-joining.md) | Discover, join solo, and team-draft paths |
+| [`flows/player-during-play.md`](./flows/player-during-play.md) | Player views after the bracket is live |
 
-## Key decisions at a glance
+## Key Implementation Decisions
 
-1. **Format:** single-elimination only for v1. Double-elim and round-robin explicitly deferred.
-2. **Bracket size:** medium (4 / 8 / 16). Default 8.
-3. **Team formation:** users join solo, OR a captain starts a team draft and invites others. No "join an existing public team" path.
-4. **Team draft lock:** a team takes a bracket slot only when its roster reaches `team_size` accepted invites. Until then it occupies no slot.
-5. **Tournament as event type:** tournaments live in the existing event feed with a `🏆 TOURNAMENT` badge, not in a separate tab. Card uses the same chrome as a regular event.
-6. **Scores:** none. Host only declares a winner per match.
-7. **Authentication:** no email-link confirmations (the platform now has proper auth). Joins are immediate; notifications are sent in parallel via email + in-app.
-8. **Bracket UI:** "bracket + match focus" — bracket on the left, a context rail on the right showing the selected match.
-9. **Re-seeding window:** Host can drag-swap seeds only before round 1 starts.
-10. **Lifecycle:** strict phases (`DRAFT → REGISTRATION → LOCKED · BRACKET → IN PROGRESS → COMPLETED`). Each phase changes which actions are permitted.
+1. Format: single elimination only for the first implementation.
+2. Bracket size: 4, 8, or 16 teams.
+3. First spine: solo registration only. Add captain-led team drafts after the
+   bracket lifecycle works end to end.
+4. Scores: none. Host declares winner or walkover only.
+5. Lifecycle statuses for new code: `DRAFT`, `REGISTRATION`, `BRACKET_SETUP`,
+   `IN_PROGRESS`, `COMPLETED`, `CANCELLED`.
+6. Public tournament detail URL: `/tournaments/{id}`.
+7. Under-capacity registration close: cancel the tournament for v1; do not
+   implement byes.
+8. Roster changes after registration close: not allowed.
+9. Winner undo: defer. Use confirmation first; admin correction can be designed
+   later.
+10. UI: server-rendered JSP with reusable tags/fragments, not React components.
+11. Notifications: implement minimum essential tournament emails first. A
+    persisted in-app notification center does not exist today and should be a
+    separate foundation if required later.
 
 ## Reference
 
-The interactive wireframes that produced this spec are in `Tournaments Wireframes.html` (storyboard canvas with 9 sections). Whenever a flow doc says "see §N", it means that numbered section in the wireframes.
+The interactive wireframes that produced the original spec are in
+`Tournaments Wireframes.html` if present in the project materials. Whenever a
+flow doc says "see section N", it refers to that storyboard.

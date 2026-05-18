@@ -89,7 +89,7 @@ A focused single-card screen (not the bracket):
 - Eyebrow: "QUARTER-FINAL · MATCH 1"
 - Both teams stacked, "vs" between them
 - Status pill: "⏳ awaiting host"
-- Tinted info card: "Match has played. {Host name} needs to confirm who won. You'll get a notification (in-app + email) the moment they do."
+- Tinted info card: "Match has played. {Host name} needs to confirm who won. You'll get an email notification the moment they do."
 - Secondary action: "Report a problem to host" (opens a simple message form to the host)
 
 ### Acceptance criteria
@@ -200,7 +200,7 @@ After `COMPLETED`:
 
 ## Notifications relevant to this flow
 
-All dual-channel. See `notifications.md` for full copy.
+Email-first for the current app. See `notifications.md` for full copy and the future in-app notification note.
 
 - `bracket_generated` → "Your first match is scheduled"
 - `match_scheduled` (when later-round match's schedule is finalised)

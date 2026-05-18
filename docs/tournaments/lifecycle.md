@@ -1,5 +1,10 @@
 # Tournament Lifecycle
 
+> Implementation note: read [`feature-brief.md`](./feature-brief.md) first.
+> This lifecycle document is the original wireframe-era model. New code should
+> use the implementation statuses defined in the brief, especially
+> `BRACKET_SETUP` instead of `LOCKED_BRACKET`.
+
 Every tournament moves through five phases. The phase determines what is visible to whom and which actions are allowed. **All other documents in this folder assume the lifecycle below; treat it as the foundation.**
 
 ## State machine

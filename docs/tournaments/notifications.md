@@ -1,86 +1,116 @@
-# Tournaments — Notifications
+# Tournaments - Notifications
 
-The platform already has a robust notification pattern via `MatchNotificationService` and `ThymeleafMailTemplateRenderer`. **Tournaments must follow the same pattern**: every event-driven notification is dispatched simultaneously via in-app record and templated email. There is no email-link confirmation flow — accept/decline actions are taken in-app on either entry point.
+> Implementation note: this catalog is the long-term target. The first
+> tournament spine should implement only the minimum notifications listed in
+> [`feature-brief.md`](./feature-brief.md), then expand toward this catalog.
+> The current application has email notifications, but no persisted in-app
+> notification center or bell inbox.
 
-## Dual-channel principle
+The platform currently has an email notification pattern through
+`MatchNotificationService`, `ThymeleafMailTemplateRenderer`, and
+`MailDispatchService`. Tournaments should follow that email pattern first.
 
-For every notification type listed below:
+Do not assume dual-channel delivery exists. The `email_action_requests` table is
+for token/action flows, not a generic notification inbox. Persisted in-app
+notifications require a separate foundation: notification table, recipient
+queries, unread counts, header UI, mark-read behavior, and authorization.
 
-1. The system writes an in-app record (visible in the notification bell + relevant view).
-2. The system dispatches a templated email to the recipient.
-3. Both contain the same information and the same call-to-action.
-4. The CTA from the email opens the in-app view for the user to act.
+## Email-First Principle
 
-This matches `MatchParticipationServiceImpl.dispatchMatchInvitation` precisely.
+For every tournament notification implemented in the first spine:
 
-## Notification catalog
+1. The system dispatches a localized templated email to the recipient.
+2. The email contains the relevant information and a call-to-action.
+3. The CTA opens the in-app page where the user can view or act.
 
-### Registration phase
+Accept/decline actions, when team drafts are added, happen in the application
+after the user follows the email CTA. There is no email-link confirmation flow.
 
-| Event | Recipient | In-app copy hint | Email subject hint |
-|---|---|---|---|
-| Tournament published in feed | (none — passive discovery) | — | — |
-| Player joined solo pool | Host | "Mariana joined Spring Cup as a solo player" | "New solo sign-up for Spring Cup" |
-| Player left solo pool | Host | "Mariana left the solo pool for Spring Cup" | "Solo sign-up withdrew from Spring Cup" |
-| Team-draft invitation sent | Invited user | "Diego invited you to Los Galácticos for Spring Cup" | "Diego invited you to Los Galácticos" |
-| Team-draft invite accepted | Captain | "Mariana accepted your invite to Los Galácticos" | "Mariana joined your team" |
-| Team-draft invite declined | Captain | "Mariana declined your invite to Los Galácticos" | "Mariana declined your team invite" |
-| Team locked in (5/5 confirmed) | All team members | "Los Galácticos is in the bracket. Spring Cup starts Apr 23." | "Your team has secured a tournament slot" |
-| Team-draft disbanded by captain | All invited / accepted members | "Diego disbanded Los Galácticos" | "Team draft cancelled" |
-| Registration closes within 24h | Players in solo pool + drafts still open | "Spring Cup registration closes tomorrow" | "Last day to lock in your team" |
+## First-Spine Email Set
 
-### Transition: registration → bracket
+Implement only these first:
 
-| Event | Recipient | In-app copy hint | Email subject hint |
-|---|---|---|---|
-| Solo player auto-assigned to team | Assigned player + the other 4 squad members | "You're on Solo squad #1 — your first match is Apr 23 · 18:00 vs The Reds" | "Your tournament team is set" |
-| Bracket generated and scheduled | All players in the tournament | "Spring Cup bracket is live. Your first match: today · 18:00 vs FC Pampa." | "Your first tournament match is scheduled" |
-| Tournament under-capacity → cancelled | All players | "Spring Cup was cancelled — not enough teams." | "Spring Cup has been cancelled" |
+| Event | Recipient | Email/body copy hint | Subject hint |
+| --- | --- | --- | --- |
+| Bracket generated and round one scheduled | All assigned tournament players | "Spring Cup bracket is live. Your first match: today at 18:00 vs FC Pampa." | "Your first tournament match is scheduled" |
+| Tournament under-capacity cancelled | All registered players | "Spring Cup was cancelled because there were not enough teams." | "Spring Cup has been cancelled" |
+| Winner declared - you won | Winning team's players | "You beat FC Pampa. Next: vs Norte United." | "You advanced to the semi-finals" |
+| Winner declared - you lost | Losing team's players | "FC Pampa took it. Spring Cup keeps going." | "Your tournament run has ended" |
+| Walkover recorded against you | Forfeiting team's players | "A walkover was recorded for your quarter-final." | "Walkover recorded" |
+| Tournament completed - champion | Champion team's players | "Your team won Spring Cup." | "You won Spring Cup" |
+| Tournament completed - participant | Players who lost earlier | "Spring Cup is over. Los Galacticos took it." | "Spring Cup has concluded" |
+| Tournament cancelled mid-play | All remaining players | "Spring Cup was cancelled by the host." | "Tournament cancelled" |
 
-### In progress
+## Expanded Catalog
 
-| Event | Recipient | In-app copy hint | Email subject hint |
-|---|---|---|---|
-| Match rescheduled by host | Both teams' players | "Your match has been moved to Apr 24 · 19:30" | "Tournament match rescheduled" |
-| Winner declared (you won) | Winning team's players | "You beat FC Pampa. Next: vs Norte United on Apr 24 · 18:00" | "You advanced to the semi-finals" |
-| Winner declared (you lost) | Losing team's players | "FC Pampa took it. Spring Cup keeps going — follow the bracket." | "Your tournament run has ended" |
-| Walkover recorded against you | Forfeiting team | "You were marked as a no-show for the Spring Cup quarter-final" | "Walkover recorded — tournament run ended" |
-| Round complete, next round unlocked | All remaining players | "Round 1 complete. Semi-finals are scheduled for Apr 24." | "Tournament: semi-finals scheduled" |
-| Tournament completed (you won the cup) | Champion team's players | "🏆 Los Galácticos won Spring Cup" | "You won the Spring Cup" |
-| Tournament completed (you watched) | All players who participated and lost earlier | "Spring Cup is over — Los Galácticos took it. Leave a review for Diego." | "Spring Cup has concluded" |
-| Tournament cancelled mid-play | All remaining players | "Spring Cup was cancelled by the host" | "Tournament cancelled" |
+Add these after the first spine is stable:
 
-### Edge: kicks and removals
+### Registration Phase
 
-| Event | Recipient | In-app copy hint | Email subject hint |
-|---|---|---|---|
-| Player removed from team by host | The removed player | "You were removed from Los Galácticos for Spring Cup" | "You were removed from a tournament team" |
-| Captain leaves their own team | All other team members (one of them is promoted) | "Diego left. Mariana is now captain of Los Galácticos." | "New team captain" |
+| Event | Recipient | Email/body copy hint | Subject hint |
+| --- | --- | --- | --- |
+| Player joined solo pool | Host | "Mariana joined Spring Cup as a solo player." | "New solo sign-up for Spring Cup" |
+| Player left solo pool | Host | "Mariana left the solo pool for Spring Cup." | "Solo sign-up withdrew from Spring Cup" |
+| Team-draft invitation sent | Invited user | "Diego invited you to Los Galacticos for Spring Cup." | "Diego invited you to Los Galacticos" |
+| Team-draft invite accepted | Captain | "Mariana accepted your invite to Los Galacticos." | "Mariana joined your team" |
+| Team-draft invite declined | Captain | "Mariana declined your invite to Los Galacticos." | "Mariana declined your team invite" |
+| Team locked in | All team members | "Los Galacticos is in the bracket." | "Your team has secured a tournament slot" |
+| Team-draft disbanded by captain | All invited/accepted members | "Diego disbanded Los Galacticos." | "Team draft cancelled" |
+| Registration closes within 24h | Players in solo pool and open drafts | "Spring Cup registration closes tomorrow." | "Last day to lock in your team" |
 
-See `open-questions.md` for what happens when a player is removed or a captain leaves *after* the bracket has been locked.
+### In Progress
 
-## Implementation notes
+| Event | Recipient | Email/body copy hint | Subject hint |
+| --- | --- | --- | --- |
+| Match rescheduled by host | Both teams' players | "Your match has been moved to Apr 24 at 19:30." | "Tournament match rescheduled" |
+| Round complete, next round unlocked | Remaining players | "Round 1 complete. Semi-finals are scheduled." | "Tournament: semi-finals scheduled" |
 
-- Add `TournamentNotificationService` interface mirroring `MatchNotificationService`. Each method takes the tournament + relevant participants and delegates to `ThymeleafMailTemplateRenderer.renderTournament*Notification(...)` for email content + writes an in-app record.
-- Follow the per-recipient preferred-language pattern from `MatchNotificationServiceImpl.testNotifyMatchUpdatedUsesRecipientPreferredLanguage`. Both Spanish and English templates must exist for every notification type.
-- For batch notifications (e.g. "bracket generated → notify all 40 players"), reuse the deduplication pattern from `MatchNotificationServiceImpl.testNotifyRecurringMatchesUpdatedDeduplicatesAffectedParticipants` so that one row per recipient is created even if a player is on multiple drafts within the same tournament (shouldn't happen but defend anyway).
-- The notification bell badge counts unread tournament notifications the same way it counts match invites today — no separate counter.
-- Email throttling: do not send the "you advanced" + "next round scheduled" notifications as two separate emails to the same player — combine into a single email when both fire within a short window. (Same as how match-updated emails are combined today.)
+### Edge Cases
 
-## Templates to add to `ThymeleafMailTemplateRenderer`
+| Event | Recipient | Email/body copy hint | Subject hint |
+| --- | --- | --- | --- |
+| Player removed from team by host | Removed player | "You were removed from Los Galacticos for Spring Cup." | "You were removed from a tournament team" |
+| Captain leaves their own team | Other team members | "Diego left. Mariana is now captain." | "New team captain" |
 
-```
-renderTournamentDraftInvitationNotification(...)
-renderTournamentDraftInviteResponseNotification(...)    // accepted | declined
-renderTournamentTeamLockedNotification(...)
+See [`open-questions.md`](./open-questions.md) for roster-change semantics after
+the bracket is locked.
+
+## Implementation Notes
+
+- Add `TournamentNotificationService` mirroring the shape of
+  `MatchNotificationService`, but email-only for the first implementation.
+- Each method should take the tournament plus relevant participants and delegate
+  to `ThymeleafMailTemplateRenderer.renderTournament*Notification(...)`.
+- Follow the per-recipient preferred-language pattern from
+  `MatchNotificationServiceImpl`.
+- Both Spanish and English templates must exist for every email.
+- Deduplicate batch recipients so only one email per user is sent.
+- Do not log email bodies, raw personal data, tokens, or secrets.
+- Do not implement email throttling/coalescing unless the existing mail
+  infrastructure already supports it cleanly.
+
+## Templates To Add
+
+First spine:
+
+```text
 renderTournamentBracketGeneratedNotification(...)
-renderTournamentMatchScheduledNotification(...)
-renderTournamentMatchResultNotification(...)            // win | loss
+renderTournamentMatchResultNotification(...)
 renderTournamentMatchWalkoverNotification(...)
-renderTournamentRoundCompleteNotification(...)
-renderTournamentCompletedNotification(...)              // champion | participant
+renderTournamentCompletedNotification(...)
 renderTournamentCancelledNotification(...)
 renderSoloPoolAssignmentNotification(...)
 ```
 
-Each `MailContent`-returning method must localise via the existing `message(key, locale)` helper and include the tournament-detail URL in the CTA.
+Expanded team-draft slice:
+
+```text
+renderTournamentDraftInvitationNotification(...)
+renderTournamentDraftInviteResponseNotification(...)
+renderTournamentTeamLockedNotification(...)
+renderTournamentRoundCompleteNotification(...)
+renderTournamentMatchScheduledNotification(...)
+```
+
+Each `MailContent`-returning method must localize through the existing message
+helper pattern and include the tournament detail URL in the CTA.

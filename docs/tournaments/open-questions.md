@@ -1,5 +1,10 @@
 # Tournaments — Open Questions and Edge Cases
 
+> Implementation note: several questions below are answered for the first
+> implementation in [`feature-brief.md`](./feature-brief.md). Treat this file as
+> historical context plus future product discussion, not as a blocker list for
+> the first solo-registration spine.
+
 This document lists decisions that are intentionally **not** resolved in v1 wireframes/specs. Each item has enough context for the implementer to either escalate or pick a sensible default — but make the choice explicit, do not silently invent one.
 
 Items are tagged:
@@ -115,7 +120,7 @@ Single-elim with non-power-of-two team counts requires BYE slots. v1 hard-codes 
 
 A player on a 16-team tournament could receive 6+ notifications in a single evening (their match advances, opponents change, schedule edits). Do we want a daily digest option?
 
-v1: no digest, every event triggers immediate dual-channel delivery. (Same as match invites today.) Revisit if user feedback shows fatigue.
+v1: no digest, every implemented notification sends an immediate email. Persisted in-app notifications are a separate future feature. Revisit frequency if user feedback shows fatigue.
 
 ### Notification preferences per channel [POST-V1]
 

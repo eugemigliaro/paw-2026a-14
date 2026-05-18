@@ -149,7 +149,7 @@ The host's home for a live tournament is the [bracket + match focus](../ui-patte
    - Persist `winner_team_id` on the match.
    - Propagate winner into the child match's appropriate slot.
    - Update the child match's status from PENDING to SCHEDULED (using the round defaults if no per-match override exists).
-   - Fire `match_result` notifications to all players on both teams (winner and loser variants).
+   - Fire `match_result` email notifications to all players on both teams (winner and loser variants).
    - Fire `round_complete` notification if this was the last un-played match in the round.
    - If this was the final match, transition tournament to `COMPLETED` and fire `tournament_completed` notifications.
 
@@ -191,7 +191,7 @@ After all matches in round N are DONE or WALKOVER:
 ### Edge cases
 
 - "Cancel match…" button — semantics unresolved, see [open-questions.md → per-match cancellation](../open-questions.md#per-match-cancellation-blocking).
-- "Notify players" button — sends a custom manual notification to all participants. Implementation: a simple textarea modal + dual-channel dispatch. No formatting beyond plain text in v1.
+- "Notify players" button — sends a custom manual email to all participants. Implementation: a simple textarea modal + email dispatch. No formatting beyond plain text in v1.
 
 ### Completed state
 
