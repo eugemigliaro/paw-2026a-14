@@ -1113,7 +1113,7 @@ I18n:
 - [x] Add JPA entities.
 - [x] Add DAO contracts and implementations.
 - [x] Add persistence tests.
-- [ ] Add service contracts, request objects, exceptions, and failure reasons.
+- [x] Add service contracts, request objects, exceptions, and failure reasons.
 - [ ] Implement `TournamentService`.
 - [ ] Implement `TournamentRegistrationService`.
 - [ ] Implement `TournamentBracketService`.
