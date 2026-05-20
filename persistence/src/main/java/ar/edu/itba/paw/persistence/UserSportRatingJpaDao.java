@@ -14,8 +14,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class UserSportRatingJpaDao implements UserSportRatingDao {
 
-    static final int INITIAL_ELO = 1000;
-
     @PersistenceContext private EntityManager em;
 
     @Override
@@ -38,7 +36,7 @@ public class UserSportRatingJpaDao implements UserSportRatingDao {
     }
 
     @Override
-    public UserSportRating getOrCreate(final User user, final Sport sport) {
+    public UserSportRating getOrCreate(final User user, final Sport sport, final int initialElo) {
         assertRatedSport(sport);
 
         final Optional<UserSportRating> existing =
@@ -60,8 +58,7 @@ public class UserSportRatingJpaDao implements UserSportRatingDao {
         }
 
         final Instant now = Instant.now();
-        final UserSportRating rating =
-                new UserSportRating(null, user, sport, INITIAL_ELO, now, now);
+        final UserSportRating rating = new UserSportRating(null, user, sport, initialElo, now, now);
         em.persist(rating);
         return rating;
     }

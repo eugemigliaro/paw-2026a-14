@@ -47,10 +47,10 @@ public class UserSportRatingJpaDaoTest {
     }
 
     @Test
-    public void testGetOrCreateCreatesRatingWithInitialElo() {
+    public void testGetOrCreateCreatesRatingWithProvidedInitialElo() {
         final User user = createUser("rated", "rated@test.com");
 
-        final UserSportRating rating = userSportRatingDao.getOrCreate(user, Sport.FOOTBALL);
+        final UserSportRating rating = userSportRatingDao.getOrCreate(user, Sport.FOOTBALL, 1000);
 
         Assertions.assertNotNull(rating.getId());
         Assertions.assertEquals(user.getId(), rating.getUser().getId());
@@ -63,9 +63,9 @@ public class UserSportRatingJpaDaoTest {
     @Test
     public void testGetOrCreateReturnsExistingRating() {
         final User user = createUser("existing_rating", "existing_rating@test.com");
-        final UserSportRating initial = userSportRatingDao.getOrCreate(user, Sport.TENNIS);
+        final UserSportRating initial = userSportRatingDao.getOrCreate(user, Sport.TENNIS, 1000);
 
-        final UserSportRating existing = userSportRatingDao.getOrCreate(user, Sport.TENNIS);
+        final UserSportRating existing = userSportRatingDao.getOrCreate(user, Sport.TENNIS, 1500);
 
         Assertions.assertEquals(initial.getId(), existing.getId());
         Assertions.assertEquals(1L, countRatings());
@@ -77,7 +77,7 @@ public class UserSportRatingJpaDaoTest {
 
         Assertions.assertThrows(
                 IllegalArgumentException.class,
-                () -> userSportRatingDao.getOrCreate(user, Sport.OTHER));
+                () -> userSportRatingDao.getOrCreate(user, Sport.OTHER, 1000));
     }
 
     @Test
@@ -93,7 +93,7 @@ public class UserSportRatingJpaDaoTest {
     @Test
     public void testSavePersistsEloChange() {
         final User user = createUser("save_rating", "save_rating@test.com");
-        final UserSportRating rating = userSportRatingDao.getOrCreate(user, Sport.PADEL);
+        final UserSportRating rating = userSportRatingDao.getOrCreate(user, Sport.PADEL, 1000);
         rating.setElo(1175);
 
         userSportRatingDao.save(rating);
@@ -109,8 +109,8 @@ public class UserSportRatingJpaDaoTest {
     @Test
     public void testFindByUserReturnsEstablishedRatingsOnly() {
         final User user = createUser("profile_ratings", "profile_ratings@test.com");
-        userSportRatingDao.getOrCreate(user, Sport.FOOTBALL);
-        userSportRatingDao.getOrCreate(user, Sport.BASKETBALL);
+        userSportRatingDao.getOrCreate(user, Sport.FOOTBALL, 1000);
+        userSportRatingDao.getOrCreate(user, Sport.BASKETBALL, 1000);
 
         final List<UserSportRating> ratings = userSportRatingDao.findByUser(user);
 
@@ -142,7 +142,7 @@ public class UserSportRatingJpaDaoTest {
     @Test
     public void testFindTopBySportReturnsEmptyForOtherSport() {
         final User user = createUser("other_leader", "other_leader@test.com");
-        userSportRatingDao.getOrCreate(user, Sport.FOOTBALL);
+        userSportRatingDao.getOrCreate(user, Sport.FOOTBALL, 1000);
 
         final List<UserSportRating> leaders = userSportRatingDao.findTopBySport(Sport.OTHER, 10);
 
@@ -154,7 +154,7 @@ public class UserSportRatingJpaDaoTest {
     }
 
     private void setElo(final User user, final Sport sport, final int elo) {
-        final UserSportRating rating = userSportRatingDao.getOrCreate(user, sport);
+        final UserSportRating rating = userSportRatingDao.getOrCreate(user, sport, 1000);
         rating.setElo(elo);
         userSportRatingDao.save(rating);
     }

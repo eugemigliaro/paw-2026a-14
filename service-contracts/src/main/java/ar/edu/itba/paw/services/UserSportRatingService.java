@@ -11,9 +11,9 @@ public interface UserSportRatingService {
 
     Optional<UserSportRating> findRating(User user, Sport sport);
 
+    int getEffectiveElo(User user, Sport sport);
+
     List<UserSportRating> findRatingsForUser(User user);
 
-    List<UserSportRating> findLeaderboard(Sport sport, int limit);
-
-    EloUpdatedResult applyMatchResult(User winner, User loser, Sport sport);
+    EloUpdatedResult applyMatchResult(List<User> winners, List<User> losers, Sport sport);
 }
