@@ -13,12 +13,13 @@ public final class UiViewModels {
         private final NavItemViewModel hostAction;
         private final NavItemViewModel hostMatchNav;
         private final List<NavItemViewModel> primaryNav;
+        private final List<NavItemViewModel> settingsMenuItems;
 
         public ShellViewModel(
                 final String brandLabel,
                 final NavItemViewModel hostAction,
                 final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, null, primaryNav);
+            this(brandLabel, hostAction, null, primaryNav, List.of());
         }
 
         public ShellViewModel(
@@ -26,10 +27,20 @@ public final class UiViewModels {
                 final NavItemViewModel hostAction,
                 final NavItemViewModel hostMatchNav,
                 final List<NavItemViewModel> primaryNav) {
+            this(brandLabel, hostAction, hostMatchNav, primaryNav, List.of());
+        }
+
+        public ShellViewModel(
+                final String brandLabel,
+                final NavItemViewModel hostAction,
+                final NavItemViewModel hostMatchNav,
+                final List<NavItemViewModel> primaryNav,
+                final List<NavItemViewModel> settingsMenuItems) {
             this.brandLabel = brandLabel;
             this.hostAction = hostAction;
             this.hostMatchNav = hostMatchNav;
             this.primaryNav = primaryNav;
+            this.settingsMenuItems = settingsMenuItems;
         }
 
         public String getBrandLabel() {
@@ -46,6 +57,10 @@ public final class UiViewModels {
 
         public List<NavItemViewModel> getPrimaryNav() {
             return primaryNav;
+        }
+
+        public List<NavItemViewModel> getSettingsMenuItems() {
+            return settingsMenuItems;
         }
     }
 

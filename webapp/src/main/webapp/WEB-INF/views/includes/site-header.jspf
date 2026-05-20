@@ -11,8 +11,6 @@
 <c:url var="siteHeaderBrandHref" value="/" />
 <c:url var="loginHref" value="/login" />
 <c:url var="registerHref" value="/register" />
-<c:url var="accountHref" value="/account" />
-<c:url var="logoutAction" value="/logout" />
 <c:set var="currentLanguage" value="${pageContext.response.locale.language}" />
 <c:set var="currentRequestUri" value="${requestScope['javax.servlet.forward.request_uri']}" />
 <c:if test="${empty currentRequestUri}">
@@ -107,13 +105,46 @@
       </c:if>
       <c:choose>
         <c:when test="${pageContext.request.userPrincipal ne null}">
-          <spring:message var="accountLabel" code="nav.account" text="Account" />
-          <a class="site-header__account-link" href="${accountHref}" aria-label="${accountLabel}" title="${accountLabel}">
-            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-              <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
-              <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
-            </svg>
-          </a>
+          <spring:message var="settingsLabel" code="nav.settings" text="Settings" />
+          <div class="site-header__settings-menu" data-overflow-menu="true">
+            <button
+              type="button"
+              class="site-header__settings-link"
+              aria-label="${settingsLabel}"
+              title="${settingsLabel}"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              data-overflow-menu-trigger="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
+                <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
+              </svg>
+            </button>
+            <div
+              class="site-header__settings-panel"
+              role="menu"
+              aria-label="${settingsLabel}"
+              hidden="hidden"
+              data-overflow-menu-panel="true">
+              <c:forEach var="settingsItem" items="${shell.settingsMenuItems}" varStatus="settingsItemStatus">
+                <c:url var="settingsItemHref" value="${settingsItem.href}" />
+                <a
+                  class="site-header__settings-item ${settingsItem.active ? 'site-header__settings-item--active' : ''}"
+                  href="${settingsItemHref}"
+                  role="menuitem">
+                  <c:if test="${settingsItemStatus.first}">
+                    <span class="site-header__settings-item-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
+                        <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
+                      </svg>
+                    </span>
+                  </c:if>
+                  <span><c:out value="${settingsItem.label}" /></span>
+                </a>
+              </c:forEach>
+            </div>
+          </div>
         </c:when>
         <c:otherwise>
           <spring:message var="loginLabel" code="nav.login" />
