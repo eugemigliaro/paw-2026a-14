@@ -1114,7 +1114,7 @@ I18n:
 - [x] Add DAO contracts and implementations.
 - [x] Add persistence tests.
 - [x] Add service contracts, request objects, exceptions, and failure reasons.
-- [ ] Implement `TournamentService`.
+- [x] Implement `TournamentService`.
 - [ ] Implement `TournamentRegistrationService`.
 - [ ] Implement `TournamentBracketService`.
 - [ ] Add service tests for lifecycle, registration, grouping, generation, and propagation.
