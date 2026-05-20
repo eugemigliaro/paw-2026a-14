@@ -6,9 +6,7 @@ import java.util.Optional;
 
 public interface TournamentService {
 
-    Tournament createDraft(User host, CreateTournamentRequest request);
-
-    Tournament publish(long tournamentId, User actingUser);
+    Tournament createTournament(User host, CreateTournamentRequest request);
 
     Optional<Tournament> findPublicTournament(long tournamentId);
 

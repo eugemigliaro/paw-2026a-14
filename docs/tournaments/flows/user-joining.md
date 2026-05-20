@@ -16,7 +16,7 @@ The participant's complete journey from discovery to being locked into a team / 
 - The main event feed. Tournaments appear inline with regular events, differentiated only by a small `🏆 TOURNAMENT` badge on the card (see [ui-patterns.md → feed card](../ui-patterns.md#tournament-card-in-feed--same-as-event-card)).
 - The `🏆 Tournaments` filter chip on the feed (filters to type=tournament only).
 - Direct URL share.
-- Search (when a user searches for a sport or location that matches a published tournament).
+- Search (when a user searches for a sport or location that matches a public tournament).
 
 ### The detail page
 
@@ -69,7 +69,7 @@ Page reloads (or modal closes + state refreshes) showing:
 ### Acceptance criteria
 
 - The "Join the pool" action is idempotent — a user already in the pool sees the success state immediately without an error.
-- "Leave the solo pool" works at any point during the REGISTRATION phase. After phase changes to LOCKED_BRACKET, the button is hidden.
+- "Leave the solo pool" works at any point during the REGISTRATION phase. After phase changes to BRACKET_SETUP, the button is hidden.
 - The email notification fires immediately. Persisted in-app notifications are a separate future feature.
 
 ### Edge cases

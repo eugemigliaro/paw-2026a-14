@@ -44,7 +44,7 @@ public class TournamentServiceImpl implements TournamentService {
 
     @Override
     @Transactional
-    public Tournament createDraft(final User host, final CreateTournamentRequest request) {
+    public Tournament createTournament(final User host, final CreateTournamentRequest request) {
         validateHost(host);
         validateRequest(request);
 
@@ -67,28 +67,7 @@ public class TournamentServiceImpl implements TournamentService {
                 request.isAllowTeamDraft(),
                 request.getRegistrationOpensAt(),
                 request.getRegistrationClosesAt(),
-                TournamentStatus.DRAFT);
-    }
-
-    @Override
-    @Transactional
-    public Tournament publish(final long tournamentId, final User actingUser) {
-        final Tournament tournament = findByIdOrThrow(tournamentId);
-        validateCanMutate(tournament, actingUser);
-
-        if (TournamentStatus.DRAFT != tournament.getStatus()) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.NOT_PUBLISHABLE,
-                    "tournament.lifecycle.error.notPublishable");
-        }
-
-        validateTournamentForPublication(tournament);
-
-        final Instant now = Instant.now(clock);
-        tournament.setStatus(TournamentStatus.REGISTRATION);
-        tournament.setPublishedAt(now);
-        tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+                TournamentStatus.REGISTRATION);
     }
 
     @Override
@@ -221,6 +200,7 @@ public class TournamentServiceImpl implements TournamentService {
         validateJoinMode(request.isAllowSoloSignup(), request.isAllowTeamDraft());
         validateRegistrationWindow(
                 request.getRegistrationOpensAt(), request.getRegistrationClosesAt());
+        validateFutureRegistrationClose(request.getRegistrationClosesAt());
     }
 
     private void validateUpdateRequest(final UpdateTournamentRequest request) {
@@ -242,30 +222,6 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getRegistrationOpensAt(), request.getRegistrationClosesAt());
     }
 
-    private void validateTournamentForPublication(final Tournament tournament) {
-        validateCommonFields(
-                tournament.getSport(),
-                tournament.getTitle(),
-                tournament.getAddress(),
-                tournament.getStartsAt(),
-                tournament.getEndsAt(),
-                tournament.getPricePerPlayer(),
-                tournament.getLatitude(),
-                tournament.getLongitude());
-        validateFormat(tournament.getFormat());
-        validateBracketSize(tournament.getBracketSize());
-        validateTeamSize(tournament.getTeamSize());
-        validateJoinMode(tournament.isAllowSoloSignup(), tournament.isAllowTeamDraft());
-        validateRegistrationWindow(
-                tournament.getRegistrationOpensAt(), tournament.getRegistrationClosesAt());
-
-        if (!tournament.getRegistrationClosesAt().isAfter(Instant.now(clock))) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                    "tournament.lifecycle.error.invalidRegistrationWindow");
-        }
-    }
-
     private void validateCommonFields(
             final Sport sport,
             final String title,
@@ -277,13 +233,13 @@ public class TournamentServiceImpl implements TournamentService {
             final Double longitude) {
         if (sport == null || isBlank(title) || isBlank(address)) {
             throw lifecycleException(
-                    TournamentLifecycleFailureReason.NOT_PUBLISHABLE,
-                    "tournament.lifecycle.error.notPublishable");
+                    TournamentLifecycleFailureReason.INVALID_DETAILS,
+                    "tournament.lifecycle.error.invalidDetails");
         }
         if (pricePerPlayer != null && pricePerPlayer.signum() < 0) {
             throw lifecycleException(
-                    TournamentLifecycleFailureReason.NOT_PUBLISHABLE,
-                    "tournament.lifecycle.error.notPublishable");
+                    TournamentLifecycleFailureReason.INVALID_DETAILS,
+                    "tournament.lifecycle.error.invalidDetails");
         }
         if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
             throw lifecycleException(
@@ -344,6 +300,14 @@ public class TournamentServiceImpl implements TournamentService {
         if (registrationOpensAt == null
                 || registrationClosesAt == null
                 || !registrationClosesAt.isAfter(registrationOpensAt)) {
+            throw lifecycleException(
+                    TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
+                    "tournament.lifecycle.error.invalidRegistrationWindow");
+        }
+    }
+
+    private void validateFutureRegistrationClose(final Instant registrationClosesAt) {
+        if (!registrationClosesAt.isAfter(Instant.now(clock))) {
             throw lifecycleException(
                     TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
                     "tournament.lifecycle.error.invalidRegistrationWindow");

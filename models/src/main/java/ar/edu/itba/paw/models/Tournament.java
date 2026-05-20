@@ -99,9 +99,6 @@ public class Tournament {
     @Convert(converter = TournamentStatusConverter.class)
     private TournamentStatus status;
 
-    @Column(name = "published_at")
-    private Instant publishedAt;
-
     @Column(name = "registration_closed_at")
     private Instant registrationClosedAt;
 
@@ -289,10 +286,6 @@ public class Tournament {
         return status;
     }
 
-    public Instant getPublishedAt() {
-        return publishedAt;
-    }
-
     public Instant getRegistrationClosedAt() {
         return registrationClosedAt;
     }
@@ -403,10 +396,6 @@ public class Tournament {
 
     public void setStatus(final TournamentStatus status) {
         this.status = status;
-    }
-
-    public void setPublishedAt(final Instant publishedAt) {
-        this.publishedAt = publishedAt;
     }
 
     public void setRegistrationClosedAt(final Instant registrationClosedAt) {

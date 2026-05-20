@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.models.types;
 
 public enum TournamentStatus implements PersistableEnum {
-    DRAFT("draft"),
     REGISTRATION("registration"),
     BRACKET_SETUP("bracket_setup"),
     IN_PROGRESS("in_progress"),

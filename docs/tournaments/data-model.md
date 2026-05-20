@@ -82,8 +82,8 @@ The top-level entity. One row per tournament.
 | allow_solo_signup | BOOLEAN | Default `TRUE`. |
 | allow_team_draft | BOOLEAN | Default `TRUE`. At least one must be true. |
 | registration_opens_at | TIMESTAMPTZ | When players can start signing up. |
-| registration_closes_at | TIMESTAMPTZ | Auto-transition trigger to `LOCKED_BRACKET`. |
-| status | ENUM | `DRAFT`, `REGISTRATION`, `LOCKED_BRACKET`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. |
+| registration_closes_at | TIMESTAMPTZ | Auto-transition trigger to `BRACKET_SETUP`. |
+| status | ENUM | `REGISTRATION`, `BRACKET_SETUP`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. |
 | default_venue | TEXT or JSONB | Reuse the existing event location structure. |
 | price | NUMERIC(10,2) | Nullable. Informational only (no payment processing). |
 | created_at / updated_at | TIMESTAMPTZ | |
@@ -92,7 +92,7 @@ The top-level entity. One row per tournament.
 
 One row per team that takes a slot in the bracket. A team is created when:
 - A team draft reaches `team_size` accepted invites and locks in, **OR**
-- The host or the auto-bundling job groups solo-pool entries into a synthetic team during the `LOCKED_BRACKET` transition.
+- The host or the auto-bundling job groups solo-pool entries into a synthetic team during the `BRACKET_SETUP` transition.
 
 | Field | Type | Notes |
 |---|---|---|

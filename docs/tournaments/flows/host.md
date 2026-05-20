@@ -50,27 +50,26 @@ Fields:
 
 The per-round defaults are just defaults — the host can override per-match later.
 
-**Step 4 — Review & publish**
+**Step 4 — Review & create**
 
-Read-only summary of all fields with a single "Publish" button. Clicking Publish:
+Read-only summary of all fields with a single "Create tournament" button. Clicking it:
 
 1. Persists the tournament as `status = REGISTRATION`.
 2. The tournament becomes visible in the feed and at its public URL.
-3. A schedule job is registered to flip status to `LOCKED_BRACKET` at `registration_closes_at`.
+3. A schedule job is registered to flip status to `BRACKET_SETUP` at `registration_closes_at`.
 
-Also visible on this step: "Save as draft" (persists as `status = DRAFT`, no fan-out) and "Back to schedule" (return to step 3).
+Also visible on this step: "Back to schedule" (return to step 3).
 
 ### Acceptance criteria
 
 - Wizard validates each step before allowing Continue.
-- Refresh during the wizard restores the user to the same step with same field values (persist as DRAFT or hold in session).
-- Publishing a tournament with no banner is allowed (placeholder rendered in the feed card).
+- Refresh during the wizard can restore the user to the same step with same field values by holding state in session.
+- Creating a tournament with no banner is allowed (placeholder rendered in the feed card).
 - All wizard fields except description and banner are required.
 
 ### Edge cases
 
-- If the host backs out of step 2 after publishing, do **not** allow changing `bracket_size`, `team_size`, or `format`. Show those fields as disabled with a tooltip ("Set when published").
-- If the host saves as draft, the draft is visible only to them under a "My drafts" link in Host mode.
+- After creation, do **not** allow changing `bracket_size`, `team_size`, or `format`. Show those fields as disabled with a tooltip ("Set at creation").
 
 ---
 
@@ -80,7 +79,7 @@ Also visible on this step: "Save as draft" (persists as `status = DRAFT`, no fan
 
 Two ways to land here:
 
-1. The host clicks the "🎲 Generate bracket" CTA on the tournament page once it has transitioned to `LOCKED_BRACKET`.
+1. The host clicks the "🎲 Generate bracket" CTA on the tournament page once it has transitioned to `BRACKET_SETUP`.
 2. The auto-transition job fires a notification ("Spring Cup registration closed — generate your bracket"); the in-app/email CTA brings them here.
 
 ### Steps

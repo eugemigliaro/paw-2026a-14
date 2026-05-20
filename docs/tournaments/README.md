@@ -57,7 +57,7 @@ come after that spine works.
 3. First spine: solo registration only. Add captain-led team drafts after the
    bracket lifecycle works end to end.
 4. Scores: none. Host declares winner or walkover only.
-5. Lifecycle statuses for new code: `DRAFT`, `REGISTRATION`, `BRACKET_SETUP`,
+5. Lifecycle statuses for new code: `REGISTRATION`, `BRACKET_SETUP`,
    `IN_PROGRESS`, `COMPLETED`, `CANCELLED`.
 6. Public tournament detail URL: `/tournaments/{id}`.
 7. Under-capacity registration close: cancel the tournament for v1; do not

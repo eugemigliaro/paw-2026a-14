@@ -6,7 +6,7 @@
 
 ## What this feature is
 
-A **Host** can publish a tournament — a structured competition between teams of players, organised as a single-elimination bracket. **Users** sign up either solo (the host assigns them to a team) or as part of a team they drafted with friends. The host runs the tournament during play by declaring a winner per match; results automatically advance teams up the bracket.
+A **Host** can create a tournament — a structured competition between teams of players, organised as a single-elimination bracket. **Users** sign up either solo (the host assigns them to a team) or as part of a team they drafted with friends. The host runs the tournament during play by declaring a winner per match; results automatically advance teams up the bracket.
 
 The feature extends the existing matches platform; it does not replace it. A tournament reuses many of the same primitives a regular match has (sport, venue, date, host, capacity) but adds bracket and team-roster structure on top.
 
@@ -59,7 +59,7 @@ The existing platform supports single matches and recurring matches well, but us
 
 The feature is considered shipped when:
 
-1. A host can create, publish, seed, run, and complete a full 8-team tournament end-to-end.
+1. A host can create, seed, run, and complete a full 8-team tournament end-to-end.
 2. Players can discover it, join it (both paths), see their next match throughout, and reach a clear post-tournament state.
 3. All notifications listed in `notifications.md` are delivered via both channels.
 4. The wireframed flows in §1–§7 are implemented matching the picked UI variants (§8B, §9A).

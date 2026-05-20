@@ -1,158 +1,158 @@
 # Tournament Lifecycle
 
 > Implementation note: read [`feature-brief.md`](./feature-brief.md) first.
-> This lifecycle document is the original wireframe-era model. New code should
-> use the implementation statuses defined in the brief, especially
-> `BRACKET_SETUP` instead of `LOCKED_BRACKET`.
+> New code should use `BRACKET_SETUP`, not the older `LOCKED_BRACKET` wording.
 
-Every tournament moves through five phases. The phase determines what is visible to whom and which actions are allowed. **All other documents in this folder assume the lifecycle below; treat it as the foundation.**
+Every tournament moves through four active phases plus terminal outcomes. The
+phase determines what is visible to whom and which actions are allowed.
 
-## State machine
+## State Machine
 
 ```
-+--------+   publish    +--------------+  close reg   +-----------------+  unlock R1   +---------------+   final winner   +-----------+
-| DRAFT  | -----------> | REGISTRATION | -----------> | LOCKED·BRACKET  | -----------> | IN PROGRESS   | --------------> | COMPLETED |
-+--------+              +--------------+              +-----------------+              +---------------+                 +-----------+
-                              ^                                ^
-                              |                                |
-                              +-- (auto) on reg-window opens   +-- (auto / host) when reg closes
++--------------+  close reg   +---------------+  unlock R1   +-------------+  final winner  +-----------+
+| REGISTRATION | -----------> | BRACKET_SETUP | -----------> | IN_PROGRESS | ------------> | COMPLETED |
++--------------+              +---------------+              +-------------+               +-----------+
+       ^
+       |
+       +-- created by host from a valid tournament form
 ```
 
-Transitions are one-way. There is no "reopen registration" or "rewind to draft" path in v1.
-
-## DRAFT
-
-The Host is still in the wizard. The tournament does **not** appear in the feed. Nobody but the host can see it.
-
-Allowed actions:
-
-- Edit any field in the wizard
-- Save and resume later
-- Delete the draft
-- Publish (only when all required wizard fields are valid)
-
-Disallowed:
-
-- Players cannot discover or join it (it has no public URL yet)
+Transitions are one-way. There is no save-and-resume draft state and no reopen
+registration path in v1.
 
 ## REGISTRATION
 
-The tournament is live in the feed. Players can join solo or start team drafts. Bracket has not been generated.
+The tournament is live in the feed. Players can join solo or start team drafts.
+Bracket matches have not been generated.
 
 Allowed actions for the host:
 
-- Edit non-structural fields (description, banner, venue defaults)
-- Cancel the tournament (with notification to all signed-up players)
-- View the live participant list and team drafts
-- **Cannot** edit `team_size`, `bracket_size`, or `format` after publishing
+- Edit non-structural fields, such as description, banner, and venue defaults.
+- Cancel the tournament, with notification to signed-up players.
+- View the live participant list and team drafts.
+- Cannot edit `team_size`, `bracket_size`, or `format` after creation.
 
 Allowed actions for players:
 
-- Join the solo pool (instant, no approval)
-- Leave the solo pool
-- Start a team draft, invite others, swap declined invitees, disband
-- Accept / decline an invitation to someone else's draft
-- A user can be in at most one team or in the solo pool per tournament
+- Join the solo pool.
+- Leave the solo pool.
+- Start a team draft, invite others, swap declined invitees, or disband.
+- Accept or decline an invitation to another user's draft.
+- A user can be in at most one team or in the solo pool per tournament.
 
 Auto-triggers:
 
-- When the registration window's `closes_at` is reached, the tournament transitions to **LOCKED · BRACKET** automatically.
+- When the registration window's `closes_at` is reached, the tournament
+  transitions to `BRACKET_SETUP`.
 
-## LOCKED · BRACKET
+## BRACKET_SETUP
 
-Registration closed. The bracket exists but matches have not started. The host shapes the bracket here.
+Registration is closed. The bracket exists or is being shaped, but matches have
+not started.
 
 Allowed actions for the host:
 
-- Generate the initial bracket (auto-seed: random ordering of locked teams + auto-built teams from the solo pool)
-- Drag-swap any two teams in the bracket
-- Re-shuffle / undo
-- Set or override date / time / venue per round-1 match
-- Confirm the bracket → fires "unlock R1" notification + transitions to **IN PROGRESS**
+- Generate the initial bracket.
+- Drag-swap any two teams in the bracket.
+- Re-shuffle or undo.
+- Set or override date, time, and venue per round-one match.
+- Confirm the bracket and transition to `IN_PROGRESS`.
 
 Disallowed for the host:
 
-- Re-opening registration
-- Adding or removing teams individually (the only "delete a team" path is to cancel the entire tournament)
+- Re-opening registration.
+- Adding or removing teams individually. The only team-removal path is to
+  cancel the entire tournament.
 
 Player-facing during this phase:
 
-- Tournament status shows "Bracket forming" in the feed
-- Players see their team and squad, but **not** their opponent yet (no leaking of in-progress seeding decisions)
-- Players cannot leave their team during this phase (commitment is locked)
+- Tournament status shows bracket setup in the feed.
+- Players see their team and squad, but not their opponent until the bracket is
+  published.
+- Players cannot leave their team during this phase.
 
-## IN PROGRESS
+## IN_PROGRESS
 
 Matches are being played. The host advances the bracket one match at a time.
 
 Allowed actions for the host:
 
-- Edit date/time/venue for any **future** match
-- Declare a winner for any **awaiting** match (no scores, just a winner)
-- Record a walkover / forfeit for a match (counts as a winner declaration)
-- Cancel a match (special — see open-questions.md)
-- Send a manual notification to all participants
+- Edit date, time, and venue for any future match.
+- Declare a winner for any awaiting match.
+- Record a walkover or forfeit for a match.
+- Cancel the tournament.
+- Send a manual notification to all participants.
 
 Disallowed for the host:
 
-- **Cannot** re-seed the bracket (seeds are locked once round 1 starts)
-- **Cannot** change the winner of a previous match (manual override is a future ask — see open-questions.md)
+- Re-seed the bracket.
+- Change the winner of a previous match. Manual override is a future ask.
 
 Player-facing during this phase:
 
-- Live bracket with player's team highlighted
-- "Your next match" rail with date / venue / opponent / countdown
-- After a loss: "eliminated" view; can still follow the bracket
-- After a round-end: "advanced" view with next match details
+- Live bracket with player's team highlighted.
+- "Your next match" rail with date, venue, opponent, and countdown.
+- After a loss, an eliminated view that still allows following the bracket.
+- After a round ends, an advanced view with next match details.
 
-Sub-states (informational, not enforced as separate enum values):
+Sub-states are informational, not separate enum values:
 
-- *Active match available* — at least one match in the current round is past its scheduled time but has no winner yet
-- *Between rounds* — current round complete, next round not yet unlocked
-- *Final pending* — only the final match remains
+- *Active match available* - at least one match in the current round is past its
+  scheduled time but has no winner yet.
+- *Between rounds* - current round is complete and the next round has not
+  started.
+- *Final pending* - only the final match remains.
 
 ## COMPLETED
 
-The final match has a declared winner. The tournament is read-only forever.
+The final match has a declared winner. The tournament is read-only.
 
 Allowed actions:
 
-- Anyone can view the final bracket
-- Winning team gets the 🏆 CHAMPION view
-- Players can leave a review for the host (one per user per host, per existing PRD §14)
+- Anyone can view the final bracket.
+- Winning team gets the champion view.
+- Players can leave a review for the host, following the existing review rules.
 
 Disallowed:
 
-- No edits of any kind. (Admin/mod elevated role retains the ability to delete the entire tournament if it must be moderated — same as any event today.)
+- No regular edits of any kind. Admin/mod users retain moderation powers.
 
-## Allowed actions matrix
+## CANCELLED
 
-| Action | DRAFT | REG | LOCKED | IN PROGRESS | COMPLETED |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Host: edit format / team size | ✓ | ✗ | ✗ | ✗ | ✗ |
-| Host: edit description / banner | ✓ | ✓ | ✓ | ✓ | ✗ |
-| Host: cancel tournament | ✓ | ✓ | ✓ | ✓ | ✗ |
-| Host: generate bracket | ✗ | ✗ | ✓ | ✗ | ✗ |
-| Host: re-seed / drag-swap | ✗ | ✗ | ✓ | ✗ | ✗ |
-| Host: edit match schedule | ✗ | ✗ | ✓ (R1) | ✓ (future only) | ✗ |
-| Host: declare winner / walkover | ✗ | ✗ | ✗ | ✓ | ✗ |
-| Player: join solo / leave pool | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Player: start / disband team draft | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Player: accept / decline invite | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Player: leave team | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Player: view bracket | ✗ | partial | ✓ | ✓ | ✓ |
-| Player: leave review | ✗ | ✗ | ✗ | ✗ | ✓ |
+The tournament was cancelled before completion. It remains readable where the
+product chooses to show cancelled events, but no participation or bracket
+actions are available.
 
-"Partial" in REG = sees teams forming list, not the bracket (it doesn't exist yet).
+## Allowed Actions Matrix
 
-## Trigger summary
+| Action | REGISTRATION | BRACKET_SETUP | IN_PROGRESS | COMPLETED |
+|---|:---:|:---:|:---:|:---:|
+| Host: edit format / team size | no | no | no | no |
+| Host: edit description / banner | yes | yes | yes | no |
+| Host: cancel tournament | yes | yes | yes | no |
+| Host: generate bracket | no | yes | no | no |
+| Host: re-seed / drag-swap | no | yes | no | no |
+| Host: edit match schedule | no | yes (R1) | yes (future only) | no |
+| Host: declare winner / walkover | no | no | yes | no |
+| Player: join solo / leave pool | yes | no | no | no |
+| Player: start / disband team draft | yes | no | no | no |
+| Player: accept / decline invite | yes | no | no | no |
+| Player: leave team | yes | no | no | no |
+| Player: view bracket | partial | yes | yes | yes |
+| Player: leave review | no | no | no | yes |
+
+"Partial" in `REGISTRATION` means players see a teams-forming list, not a
+bracket.
+
+## Trigger Summary
 
 | Trigger | From | To | Source |
 |---|---|---|---|
-| Publish | DRAFT | REGISTRATION | Manual (host clicks "Publish") |
-| Reg window closes | REGISTRATION | LOCKED · BRACKET | Auto (scheduled task at `registration_closes_at`) |
-| Confirm bracket | LOCKED · BRACKET | IN PROGRESS | Manual (host clicks "Unlock & notify · semis/Round 1") |
-| Final declared | IN PROGRESS | COMPLETED | Auto (when winner of final match is declared) |
-| Cancel | any of REG/LOCKED/IN PROGRESS | (deleted / CANCELLED — TBD) | Manual (host or admin) |
+| Create tournament | none | REGISTRATION | Manual host submit |
+| Reg window closes | REGISTRATION | BRACKET_SETUP | Auto scheduled task or host action |
+| Confirm bracket | BRACKET_SETUP | IN_PROGRESS | Manual host action |
+| Final declared | IN_PROGRESS | COMPLETED | Auto when winner of final match is declared |
+| Cancel | REGISTRATION/BRACKET_SETUP/IN_PROGRESS | CANCELLED | Manual host or admin action |
 
-See `open-questions.md` for: what to do when registration closes under-capacity, whether cancellation is a state or a deletion, and per-match cancellation semantics.
+See `open-questions.md` for under-capacity registration close behavior and
+per-match cancellation semantics.

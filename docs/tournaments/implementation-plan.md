@@ -52,7 +52,6 @@ Confirmed route convention:
   - `POST /host/tournaments`
   - `GET /host/tournaments/{tournamentId}/edit`
   - `POST /host/tournaments/{tournamentId}`
-  - `POST /host/tournaments/{tournamentId}/publish`
   - `POST /host/tournaments/{tournamentId}/close-registration`
   - `POST /host/tournaments/{tournamentId}/bracket/generate`
   - `GET /host/tournaments/{tournamentId}/bracket/setup`
@@ -84,8 +83,8 @@ Likely files:
 
 Recommended enum values:
 
-- `TournamentStatus`: `DRAFT`, `REGISTRATION`, `BRACKET_SETUP`,
-  `IN_PROGRESS`, `COMPLETED`, `CANCELLED`
+- `TournamentStatus`: `REGISTRATION`, `BRACKET_SETUP`, `IN_PROGRESS`,
+  `COMPLETED`, `CANCELLED`
 - `TournamentFormat`: `SINGLE_ELIMINATION`
 - `TournamentTeamOrigin`: `SOLO_POOL`, `TEAM_DRAFT`
 - `TournamentSoloEntryStatus`: `IN_POOL`, `LEFT`, `ASSIGNED`, `UNASSIGNED`
@@ -322,7 +321,6 @@ Likely files:
 
 - `CreateTournamentRequest`
 - `UpdateTournamentRequest`
-- `TournamentPublishRequest` if publish has separate validation
 - `TournamentBracketView`
 - `TournamentMatchScheduleRequest`
 - `TournamentWinnerDeclarationRequest`
@@ -362,8 +360,7 @@ Acceptance criteria:
 
 Responsibilities:
 
-- create draft
-- publish
+- create tournament directly in registration
 - find public tournament
 - find host tournament
 - update editable fields
@@ -372,8 +369,7 @@ Responsibilities:
 
 Suggested methods:
 
-- `Tournament createDraft(User host, CreateTournamentRequest request)`
-- `Tournament publish(long tournamentId, User actingUser)`
+- `Tournament createTournament(User host, CreateTournamentRequest request)`
 - `Optional<Tournament> findPublicTournament(long tournamentId)`
 - `Optional<Tournament> findTournamentForHost(long tournamentId, User host)`
 - `Tournament update(long tournamentId, User actingUser, UpdateTournamentRequest request)`
@@ -382,19 +378,17 @@ Suggested methods:
 Rules:
 
 - Only host or admin/mod can mutate.
-- `DRAFT` is visible only to host/admin.
 - Public read allows `REGISTRATION`, `BRACKET_SETUP`, `IN_PROGRESS`,
   `COMPLETED`, and `CANCELLED` as appropriate.
-- Structural fields cannot change after publish.
+- Structural fields cannot change after creation.
 - Completed tournaments are read-only.
 
 Tests:
 
-- host can create draft
-- non-host cannot publish
-- host can publish valid draft
-- publish fails with invalid bracket size/team size/window
-- structural update after publish fails
+- host can create a valid tournament in registration
+- create fails with invalid bracket size/team size/window
+- non-host cannot update/cancel
+- structural update after creation fails
 - cancel fails after completed
 - admin/mod path if current auth model supports it
 
@@ -519,7 +513,7 @@ Tests:
 
 ## Phase 3: Host Create And Publish UI
 
-Goal: hosts can create and publish tournaments from server-rendered pages.
+Goal: hosts can create tournaments from server-rendered pages.
 
 Likely files:
 
@@ -556,8 +550,7 @@ Message bundle examples:
 - `tournament.form.teamSize.label`
 - `tournament.form.registrationOpens.label`
 - `tournament.form.registrationCloses.label`
-- `tournament.form.submit.publish`
-- `tournament.form.submit.saveDraft`
+- `tournament.form.submit.create`
 - validation error keys for every service failure reason
 
 Tests:
@@ -607,8 +600,7 @@ Detail page sections:
 
 Tests:
 
-- public detail renders for published tournament
-- draft tournament is not public
+- public detail renders for a registration tournament
 - logged-out join redirects to login
 - cancelled/completed public behavior matches decision
 
@@ -1118,7 +1110,7 @@ I18n:
 - [ ] Implement `TournamentRegistrationService`.
 - [ ] Implement `TournamentBracketService`.
 - [ ] Add service tests for lifecycle, registration, grouping, generation, and propagation.
-- [ ] Add host create/publish form, controller, JSP, and messages.
+- [ ] Add host create form, controller, JSP, and messages.
 - [ ] Add public tournament detail page.
 - [ ] Add solo join/leave actions.
 - [ ] Add host close-registration action.

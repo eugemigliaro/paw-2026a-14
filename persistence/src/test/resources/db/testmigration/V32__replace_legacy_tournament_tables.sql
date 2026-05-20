@@ -26,8 +26,7 @@ CREATE TABLE tournaments (
 	allow_team_draft BOOLEAN NOT NULL DEFAULT FALSE,
 	registration_opens_at TIMESTAMP NOT NULL,
 	registration_closes_at TIMESTAMP NOT NULL,
-	status VARCHAR(40) NOT NULL DEFAULT 'draft',
-	published_at TIMESTAMP,
+	status VARCHAR(40) NOT NULL DEFAULT 'registration',
 	registration_closed_at TIMESTAMP,
 	bracket_generated_at TIMESTAMP,
 	started_at TIMESTAMP,
@@ -49,7 +48,7 @@ CREATE TABLE tournaments (
 	CONSTRAINT ck_tournaments_registration_window CHECK (registration_closes_at > registration_opens_at),
 	CONSTRAINT ck_tournaments_play_window CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at),
 	CONSTRAINT ck_tournaments_status CHECK (
-		status IN ('draft', 'registration', 'bracket_setup', 'in_progress', 'completed', 'cancelled')
+		status IN ('registration', 'bracket_setup', 'in_progress', 'completed', 'cancelled')
 	),
 	CONSTRAINT ck_tournaments_coordinates_pair CHECK (
 		(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)

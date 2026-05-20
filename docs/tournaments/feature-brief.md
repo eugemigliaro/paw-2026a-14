@@ -76,7 +76,7 @@ Build the tournament feature in two layers.
 The first working version should prove the whole tournament lifecycle with the
 fewest moving parts:
 
-- host creates and publishes a tournament
+- host creates a tournament that opens for registration immediately
 - tournament appears in the feed and has a public detail page
 - authenticated players join or leave the solo pool
 - host manually closes registration
@@ -132,7 +132,6 @@ Recommended persisted statuses:
 
 | Status | Meaning |
 | --- | --- |
-| `DRAFT` | Private host draft. Not visible in feed. |
 | `REGISTRATION` | Public tournament. Players can join or start drafts. |
 | `BRACKET_SETUP` | Registration is closed. Teams are fixed. Host prepares the bracket and round-one schedule. Players do not see unstable seeding. |
 | `IN_PROGRESS` | Bracket is public. Host can declare winners and edit future fixture schedules. |
@@ -143,7 +142,6 @@ Add timestamp fields so the status history is explainable:
 
 - `created_at`
 - `updated_at`
-- `published_at`
 - `registration_closed_at`
 - `bracket_generated_at`
 - `started_at`
@@ -152,7 +150,7 @@ Add timestamp fields so the status history is explainable:
 
 The main transitions are:
 
-- `DRAFT -> REGISTRATION`: host publishes
+- `none -> REGISTRATION`: host creates a valid tournament
 - `REGISTRATION -> BRACKET_SETUP`: host manually closes registration in the
   first implementation; scheduled auto-close can come later
 - `BRACKET_SETUP -> IN_PROGRESS`: host publishes the bracket and round-one
@@ -185,11 +183,11 @@ These decisions remove ambiguity from the current docs.
 
 ### Host
 
-The host can create, publish, close registration, generate the bracket, schedule
+The host can create, close registration, generate the bracket, schedule
 round-one fixtures, publish the bracket, declare winners or walkovers, cancel
 before completion, and complete the tournament through the final result.
 
-The host cannot change format, bracket size, or team size after publishing;
+The host cannot change format, bracket size, or team size after creation;
 reopen registration; reseed after bracket publication; or change a winner
 through the normal host UI after declaration.
 
@@ -370,7 +368,7 @@ Use the repository's existing test style:
 
 The first tournament spine is done when:
 
-1. A host can create and publish a tournament.
+1. A host can create a tournament that opens for registration.
 2. The tournament appears in discovery and has a public detail page.
 3. An authenticated player can join and leave the solo pool.
 4. The host can close registration.

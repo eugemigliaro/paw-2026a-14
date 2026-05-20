@@ -79,21 +79,10 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
-    public void shouldNotFindDraftTournamentAsPublic() {
-        final Tournament tournament = createTournament(TournamentStatus.DRAFT);
-
-        em.flush();
-        em.clear();
-
-        Assertions.assertTrue(tournamentDao.findById(tournament.getId()).isPresent());
-        Assertions.assertTrue(tournamentDao.findPublicById(tournament.getId()).isEmpty());
-    }
-
-    @Test
     public void shouldFindHostedAndPublicActiveTournaments() {
         final Tournament first = createTournament(TournamentStatus.REGISTRATION);
         final Tournament second = createTournament(TournamentStatus.IN_PROGRESS);
-        createTournament(TournamentStatus.DRAFT);
+        createTournament(TournamentStatus.COMPLETED);
 
         em.flush();
         em.clear();
