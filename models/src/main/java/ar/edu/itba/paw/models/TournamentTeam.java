@@ -46,7 +46,7 @@ public class TournamentTeam {
     private TournamentTeamOrigin origin;
 
     @Column(name = "seed_position")
-    private Integer seedPosition;
+    private Short seedPosition;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -71,7 +71,7 @@ public class TournamentTeam {
         this.tournament = tournament;
         this.name = name;
         this.origin = origin;
-        this.seedPosition = seedPosition;
+        this.seedPosition = seedPosition == null ? null : seedPosition.shortValue();
         this.createdAt = createdAt;
     }
 
@@ -92,7 +92,7 @@ public class TournamentTeam {
     }
 
     public Integer getSeedPosition() {
-        return seedPosition;
+        return seedPosition == null ? null : seedPosition.intValue();
     }
 
     public Instant getCreatedAt() {
@@ -120,7 +120,7 @@ public class TournamentTeam {
     }
 
     public void setSeedPosition(final Integer seedPosition) {
-        this.seedPosition = seedPosition;
+        this.seedPosition = seedPosition == null ? null : seedPosition.shortValue();
     }
 
     @Override

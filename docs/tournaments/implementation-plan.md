@@ -1108,11 +1108,11 @@ I18n:
 
 ## First Spine Checklist
 
-- [ ] Add tournament enums and converters.
-- [ ] Add Flyway migrations for first-spine tables.
-- [ ] Add JPA entities.
-- [ ] Add DAO contracts and implementations.
-- [ ] Add persistence tests.
+- [x] Add tournament enums and converters.
+- [x] Add Flyway migrations for first-spine tables.
+- [x] Add JPA entities.
+- [x] Add DAO contracts and implementations.
+- [x] Add persistence tests.
 - [ ] Add service contracts, request objects, exceptions, and failure reasons.
 - [ ] Implement `TournamentService`.
 - [ ] Implement `TournamentRegistrationService`.

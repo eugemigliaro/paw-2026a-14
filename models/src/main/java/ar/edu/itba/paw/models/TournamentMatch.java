@@ -40,10 +40,10 @@ public class TournamentMatch {
     private Tournament tournament;
 
     @Column(name = "round_number", nullable = false)
-    private int roundNumber;
+    private Short roundNumber;
 
     @Column(name = "match_index", nullable = false)
-    private int matchIndex;
+    private Short matchIndex;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_a_id")
@@ -116,8 +116,8 @@ public class TournamentMatch {
             final Instant updatedAt) {
         this.id = id;
         this.tournament = tournament;
-        this.roundNumber = roundNumber;
-        this.matchIndex = matchIndex;
+        this.roundNumber = (short) roundNumber;
+        this.matchIndex = (short) matchIndex;
         this.teamA = teamA;
         this.teamB = teamB;
         this.winnerTeam = winnerTeam;

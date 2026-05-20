@@ -78,10 +78,10 @@ public class Tournament {
     private TournamentFormat format;
 
     @Column(name = "bracket_size", nullable = false)
-    private int bracketSize;
+    private Short bracketSize;
 
     @Column(name = "team_size", nullable = false)
-    private int teamSize;
+    private Short teamSize;
 
     @Column(name = "allow_solo_signup", nullable = false)
     private boolean allowSoloSignup;
@@ -190,8 +190,8 @@ public class Tournament {
         this.pricePerPlayer = pricePerPlayer;
         this.bannerImageMetadata = bannerImageMetadata;
         this.format = format;
-        this.bracketSize = bracketSize;
-        this.teamSize = teamSize;
+        this.bracketSize = (short) bracketSize;
+        this.teamSize = (short) teamSize;
         this.allowSoloSignup = allowSoloSignup;
         this.allowTeamDraft = allowTeamDraft;
         this.registrationOpensAt = registrationOpensAt;
