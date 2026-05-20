@@ -8,6 +8,10 @@
 
 This document outlines the new entities, their relationships to the existing schema, and key fields. Names use the project's `snake_case` SQL / `camelCase` Java conventions and follow Flyway migration numbering.
 
+Enum names below refer to Java constants. Persisted database enum values should
+follow the existing project convention: lowercase strings and lower snake case
+for multi-word values.
+
 > **Note:** Field-level types and constraints below are recommendations, not prescriptions — the implementer should reconcile with the existing `Match`, `MatchParticipant`, `User`, and `Series` models before committing the schema. The shapes are designed to integrate with the existing `MatchParticipationService` and `MatchNotificationService`.
 
 ## Entity overview

@@ -95,7 +95,8 @@ Recommended enum values:
 Tasks:
 
 - Add enum converters following existing converter patterns.
-- Keep database values stable uppercase strings.
+- Keep Java enum constants uppercase, but persist database values as stable
+  lowercase or lower snake case strings, matching the existing project enums.
 - Add unit tests for converters if converter tests already exist.
 
 ### 1.2 Flyway Migrations
