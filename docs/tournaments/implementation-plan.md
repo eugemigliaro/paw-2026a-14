@@ -511,6 +511,19 @@ Tests:
 - final declaration completes tournament
 - walkover advances non-forfeiting team
 
+Implemented backend status:
+
+- `TournamentBracketServiceImpl` now implements generation, publication,
+  bracket loading, winner declaration, walkovers, propagation, completion, and
+  host/admin authorization checks.
+- Service tests cover generation sizes, no duplicate round-one teams, parent
+  links, under-capacity and lifecycle guards, duplicate generation, non-host
+  denial, admin/mod mutation, publication schedules, bracket read
+  authorization, viewer focus, propagation, final completion, walkovers, and a
+  service-level bracket run from generation to completion.
+- Web controllers, JSPs, routes, UI messages, and notification dispatch remain
+  future phases.
+
 ## Phase 3: Host Create And Publish UI
 
 Goal: hosts can create tournaments from server-rendered pages.
@@ -1108,8 +1121,8 @@ I18n:
 - [x] Add service contracts, request objects, exceptions, and failure reasons.
 - [x] Implement `TournamentService`.
 - [x] Implement `TournamentRegistrationService`.
-- [ ] Implement `TournamentBracketService`.
-- [ ] Add service tests for lifecycle, registration, grouping, generation, and propagation.
+- [x] Implement `TournamentBracketService`.
+- [x] Add service tests for lifecycle, registration, grouping, generation, and propagation.
 - [ ] Add host create form, controller, JSP, and messages.
 - [ ] Add public tournament detail page.
 - [ ] Add solo join/leave actions.
