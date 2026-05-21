@@ -294,6 +294,25 @@ public class PublicProfileController {
         mav.addObject(
                 "reviewSectionPath",
                 buildReviewPageUrl(user, selectedFilter, reviewResult.getPage()));
+        if (reviewCanSubmit) {
+            mav.addObject(
+                    "reviewCommentPromptLabel",
+                    messageSource.getMessage(
+                            "profile.reviews.commentPrompt",
+                            new Object[] {user.getUsername()},
+                            locale));
+        }
+        final boolean isSelf = currentUser != null && currentUser.getId().equals(user.getId());
+        if (!reviewCanSubmit && !isSelf) {
+            final String lockedKey =
+                    currentUser == null
+                            ? "profile.reviews.locked.anonymous"
+                            : "profile.reviews.locked.authenticated";
+            final Object[] lockedArgs =
+                    currentUser == null ? null : new Object[] {user.getUsername()};
+            mav.addObject(
+                    "reviewLockedMessage", messageSource.getMessage(lockedKey, lockedArgs, locale));
+        }
     }
 
     private List<FilterOptionViewModel> reviewFilterOptions(
