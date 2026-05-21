@@ -420,11 +420,6 @@
 								</article>
 
 								<article class="panel player-actions-panel">
-									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
-										<p class="booking-panel__notice booking-panel__notice--success">
-											<spring:message code="event.booking.confirmed" />
-										</p>
-									</c:if>
 									<c:if test="${reservationCancelled}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<c:choose>
@@ -467,9 +462,11 @@
 									<c:if test="${not hostViewer or isConfirmedParticipant or reservationEnabled or seriesReservationEnabled or seriesCancellationEnabled}">
 										<c:choose>
 											<c:when test="${isConfirmedParticipant}">
-												<p class="booking-panel__notice booking-panel__notice--success">
-													<spring:message code="event.booking.confirmed" />
-												</p>
+												<c:if test="${reservationConfirmed}">
+													<p class="booking-panel__notice booking-panel__notice--success">
+														<spring:message code="event.booking.confirmed" />
+													</p>
+												</c:if>
 												<c:if test="${reservationCancellationEnabled}">
 													<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
 													<c:choose>
@@ -800,11 +797,6 @@
 								</article>
 
 								<article class="panel booking-panel">
-									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
-										<p class="booking-panel__notice booking-panel__notice--success">
-											<spring:message code="event.booking.confirmed" />
-										</p>
-									</c:if>
 									<c:if test="${reservationCancelled}">
 										<p class="booking-panel__notice booking-panel__notice--info">
 											<c:choose>
@@ -848,9 +840,11 @@
 									<c:if test="${not hostViewer or isConfirmedParticipant or reservationEnabled or seriesReservationEnabled or seriesCancellationEnabled}">
 										<c:choose>
 											<c:when test="${isConfirmedParticipant}">
-												<p class="booking-panel__notice booking-panel__notice--success">
-													<spring:message code="event.booking.confirmed" />
-												</p>
+												<c:if test="${reservationConfirmed}">
+													<p class="booking-panel__notice booking-panel__notice--success">
+														<spring:message code="event.booking.confirmed" />
+													</p>
+												</c:if>
 												<c:if test="${reservationCancellationEnabled}">
 													<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
 													<c:choose>
