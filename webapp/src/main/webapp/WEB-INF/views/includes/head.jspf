@@ -22,6 +22,7 @@
 <c:url var="cssProfileHref" value="/css/profile.css" />
 <c:url var="cssEventPageHref" value="/css/event-page.css" />
 <c:url var="cssReportsHref" value="/css/reports.css" />
+<c:url var="cssTournamentsHref" value="/css/tournaments.css" />
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
 <c:url var="accountEditFormHref" value="/js/account-edit-form.js" />
 <c:url var="passwordToggleHref" value="/js/password-visibility-toggle.js" />
@@ -54,6 +55,7 @@
 <link rel="stylesheet" href="${cssProfileHref}" />
 <link rel="stylesheet" href="${cssEventPageHref}" />
 <link rel="stylesheet" href="${cssReportsHref}" />
+<link rel="stylesheet" href="${cssTournamentsHref}" />
 <link rel="stylesheet" href="${leafletCssHref}" />
 <script defer src="${leafletJsHref}"></script>
 <script defer src="${formSubmitGuardHref}"></script>

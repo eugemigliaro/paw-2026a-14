@@ -60,6 +60,10 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(
                                                 new AntPathRequestMatcher(
+                                                        "/tournaments/**", HttpMethod.GET.name()))
+                                        .permitAll()
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher(
                                                         "/images/**", HttpMethod.GET.name()))
                                         .permitAll()
                                         .requestMatchers(
@@ -102,6 +106,12 @@ public class SecurityConfig {
                                                         "/users/*/reviews", HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
                                                         "/users/*/reviews/delete",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/tournaments/*/solo-entry",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/tournaments/*/solo-entry/leave",
                                                         HttpMethod.POST.name()))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
