@@ -293,6 +293,11 @@ a {
 	stroke: currentColor;
 }
 
+.site-header__settings-item-icon svg circle {
+	fill: currentColor;
+	stroke: none;
+}
+
 .page-shell {
 	margin: 0 auto;
 	max-width: 1360px;
