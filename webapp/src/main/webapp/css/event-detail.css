@@ -381,7 +381,19 @@
 }
 
 .participant-list__item--managed {
-	justify-content: space-between;
+	justify-content: flex-start;
+}
+
+.participant-list__item--managed .participant-list__copy {
+	flex: 1 1 auto;
+	justify-items: start;
+	text-align: left;
+}
+
+.participant-list__item--managed > .participant-list__action-form {
+	display: flex;
+	flex: 0 0 auto;
+	margin-left: auto;
 }
 
 .participant-list__avatar {
