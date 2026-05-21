@@ -1,8 +1,13 @@
 .page-shell--detail {
+	--event-detail-border: #c9d5d2;
 	display: flex;
 	flex-direction: column;
 	gap: 2rem;
 	padding-top: 1rem;
+}
+
+.page-shell--detail .panel {
+	border-color: var(--event-detail-border);
 }
 
 .detail-top {
@@ -363,9 +368,24 @@
 }
 
 .participant-empty-state {
+	align-items: center;
 	display: grid;
-	gap: 0.35rem;
-	padding: 1.15rem 1.2rem;
+	gap: 0.5rem;
+	justify-items: center;
+	padding: clamp(1.55rem, 3vw, 2rem) 1.5rem;
+	text-align: center;
+}
+
+.participant-empty-state__icon {
+	color: #b8c3bf;
+	display: inline-flex;
+	height: 3.6rem;
+	width: 3.6rem;
+}
+
+.participant-empty-state__icon svg {
+	height: 100%;
+	width: 100%;
 }
 
 .participant-empty-state__title {
@@ -418,10 +438,6 @@
 
 .player-actions-panel {
 	animation-delay: 0.16s;
-}
-
-.player-actions-panel__title {
-	margin: 0;
 }
 
 .host-panel {
@@ -521,7 +537,7 @@ a.event-info-panel__host-name:hover {
 
 .event-detail-map {
 	background: #dfe8e5;
-	border: 1px solid rgba(15, 74, 67, 0.12);
+	border: 1px solid var(--event-detail-border);
 	border-radius: 24px;
 	height: 11rem;
 	overflow: hidden;
@@ -648,6 +664,15 @@ a.event-info-panel__host-name:hover {
 	font-size: 0.8rem;
 	line-height: 1.6;
 	margin: 0;
+	text-align: center;
+}
+
+.booking-panel__divider {
+	border: 0;
+	border-top: 1px solid var(--event-detail-border);
+	justify-self: center;
+	margin: 0.55rem 0 0.25rem;
+	width: calc(100% - 2rem);
 }
 
 .booking-panel__notice {
@@ -725,7 +750,7 @@ margin-bottom: 0 !important;
 }
 
 .detail-section--participants {
-gap: 0.3rem !important;
+gap: 0.75rem !important;
 margin-top: 0.3rem;
 }
 

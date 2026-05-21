@@ -42,7 +42,6 @@
 						>
 							<div class="section-head section-head--detail-compact">
 								<div>
-									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
 									<h2 id="about-event-title" class="detail-section__title">
 										<spring:message code="event.detail.aboutEvent" />
 									</h2>
@@ -71,6 +70,15 @@
 							<c:choose>
 								<c:when test="${empty eventPage.participants}">
 									<div class="panel participant-empty-state">
+										<span class="participant-empty-state__icon" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+												<circle cx="9" cy="7" r="4" />
+												<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+												<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+												<line x1="3" y1="3" x2="21" y2="21" />
+											</svg>
+										</span>
 										<p class="participant-empty-state__title">
 											<spring:message code="event.detail.noPlayers" />
 										</p>
@@ -240,7 +248,6 @@
 									</ui:overflowMenu>
 
 									<div class="host-panel__note">
-										<p class="detail-label"><spring:message code="host.manage.label" /></p>
 										<p><c:out value="${hostManageDetailLabel}" /></p>
 									</div>
 
@@ -413,9 +420,6 @@
 								</article>
 
 								<article class="panel player-actions-panel">
-									<p class="detail-label player-actions-panel__title">
-										<spring:message code="event.booking.playerActions" />
-									</p>
 									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
@@ -796,9 +800,6 @@
 								</article>
 
 								<article class="panel booking-panel">
-									<p class="detail-label player-actions-panel__title">
-										<spring:message code="event.booking.playerActions" />
-									</p>
 									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.booking.confirmed" />
@@ -1042,6 +1043,7 @@
 										</form>
 									</c:if>
 									<c:if test="${not empty pageContext.request.userPrincipal}">
+										<hr class="booking-panel__divider" />
 										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
 										<spring:message var="reportMatchLabel" code="moderation.report.match.menu" />
 										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" />
