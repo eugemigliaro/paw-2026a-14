@@ -144,7 +144,6 @@
 									<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
 									<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
 									<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
-									<spring:message var="reportMenuLabel" code="moderation.report.match.menu" />
 									<ui:overflowMenu
 										ariaLabel="${hostManageMenuTriggerLabel}"
 										menuAriaLabel="${hostManageMenuLabel}"
@@ -241,10 +240,6 @@
 												</c:choose>
 											</form>
 										</c:if>
-										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
-										<a class="overflow-menu__item overflow-menu__item--danger" href="${reportMatchHref}" role="menuitem">
-											<c:out value="${reportMenuLabel}" />
-										</a>
 									</ui:overflowMenu>
 
 									<div class="host-panel__note">
@@ -658,6 +653,10 @@
 											<ui:button label="${leaveRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
 										</form>
 									</c:if>
+									<hr class="booking-panel__divider" />
+									<c:url var="hostReportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+									<spring:message var="hostReportMatchLabel" code="moderation.report.match.menu" />
+									<ui:button label="${hostReportMatchLabel}" href="${hostReportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
 								</article>
 							</c:when>
 							<c:otherwise>
