@@ -557,7 +557,7 @@
 														<c:out value="${inviteError}" />
 													</p>
 												</c:if>
-												<p class="booking-panel__notice booking-panel__notice--info">
+												<p class="booking-panel__notice booking-panel__notice--info" data-invite-refresh-notice="true">
 													<spring:message code="event.invite.pendingLabel" />
 												</p>
 												<c:url var="acceptInviteAction" value="${acceptInvitePath}" />
@@ -938,7 +938,7 @@
 														<c:out value="${inviteError}" />
 													</p>
 												</c:if>
-												<p class="booking-panel__notice booking-panel__notice--info">
+												<p class="booking-panel__notice booking-panel__notice--info" data-invite-refresh-notice="true">
 													<spring:message code="event.invite.pendingLabel" />
 												</p>
 												<c:url var="acceptInviteAction" value="${acceptInvitePath}" />
