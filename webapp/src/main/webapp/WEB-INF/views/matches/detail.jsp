@@ -448,7 +448,7 @@
 										</p>
 									</c:if>
 									<c:if test="${joinCancelled}">
-										<p class="booking-panel__notice booking-panel__notice--info">
+										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.joinRequest.cancelled" />
 										</p>
 									</c:if>
@@ -826,7 +826,7 @@
 										</p>
 									</c:if>
 									<c:if test="${joinCancelled}">
-										<p class="booking-panel__notice booking-panel__notice--info">
+										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.joinRequest.cancelled" />
 										</p>
 									</c:if>
