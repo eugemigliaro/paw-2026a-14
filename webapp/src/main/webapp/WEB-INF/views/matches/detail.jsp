@@ -1046,7 +1046,7 @@
 										<hr class="booking-panel__divider" />
 										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
 										<spring:message var="reportMatchLabel" code="moderation.report.match.menu" />
-										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" />
+										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
 									</c:if>
 								</article>
 							</c:otherwise>

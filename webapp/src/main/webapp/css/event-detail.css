@@ -675,6 +675,18 @@ a.event-info-panel__host-name:hover {
 	width: calc(100% - 2rem);
 }
 
+.booking-panel__report-button.btn--danger {
+	--btn-background: var(--bg-surface);
+	--btn-border: #a53928;
+	--btn-color: #a53928;
+	--btn-focus-ring: rgba(165, 57, 40, 0.16);
+	box-shadow: none;
+}
+
+.booking-panel__report-button.btn--danger:hover {
+	--btn-background: rgba(165, 57, 40, 0.06);
+}
+
 .booking-panel__notice {
 	border-radius: 16px;
 	font-size: 0.95rem;
