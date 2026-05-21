@@ -103,6 +103,26 @@
 					</div>
 
 				</section>
+				<section class="panel public-profile-panel public-profile-ratings">
+					<header class="public-profile-ratings__header">
+						<h2 class="public-profile-ratings__title">${profileRatingsTitle}</h2>
+					</header>
+					<c:choose>
+						<c:when test="${empty profileRatings}">
+							<p class="public-profile-ratings__empty">${profileRatingsEmpty}</p>
+						</c:when>
+						<c:otherwise>
+							<ul class="public-profile-ratings__list">
+								<c:forEach var="rating" items="${profileRatings}">
+									<li class="public-profile-ratings__item">
+										<span class="public-profile-ratings__sport">${rating.sportLabel}</span>
+										<span class="public-profile-ratings__elo">${rating.elo}</span>
+									</li>
+								</c:forEach>
+							</ul>
+						</c:otherwise>
+					</c:choose>
+				</section>
 				<section id="reviews" class="panel public-profile-panel public-profile-reviews">
 					<header class="page-heading public-profile-reviews__header">
 						<h2 class="public-profile-reviews__title"><spring:message code="profile.reviews.title" /></h2>

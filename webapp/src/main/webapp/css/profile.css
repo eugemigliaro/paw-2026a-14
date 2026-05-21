@@ -81,6 +81,56 @@
 	font-size: 1.25rem;
 }
 
+.public-profile-ratings {
+	margin-top: 1.5rem;
+}
+
+.public-profile-ratings__header {
+	margin: 0;
+}
+
+.public-profile-ratings__title {
+	font-family: "Plus Jakarta Sans", sans-serif;
+	font-size: 1.6rem;
+	margin: 0;
+}
+
+.public-profile-ratings__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.public-profile-ratings__item {
+	align-items: baseline;
+	border-bottom: 1px solid rgba(28, 46, 43, 0.08);
+	display: flex;
+	justify-content: space-between;
+	padding: 0.75rem 0;
+}
+
+.public-profile-ratings__item:first-child {
+	border-top: 1px solid rgba(28, 46, 43, 0.08);
+}
+
+.public-profile-ratings__sport {
+	color: var(--text-primary);
+}
+
+.public-profile-ratings__elo {
+	color: var(--text-primary);
+	font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+	font-size: 1.1rem;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+}
+
+.public-profile-ratings__empty {
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+	margin: 0;
+}
+
 .public-profile-reviews {
 	margin-top: 1.5rem;
 }

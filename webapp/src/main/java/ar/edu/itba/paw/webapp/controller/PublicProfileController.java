@@ -5,12 +5,14 @@ import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.UserSportRatingService;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
@@ -20,10 +22,12 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PublicProfilePageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SportRatingViewModel;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -49,16 +53,19 @@ public class PublicProfileController {
     private final UserService userService;
     private final PlayerReviewService playerReviewService;
     private final ModerationService moderationService;
+    private final UserSportRatingService userSportRatingService;
     private final MessageSource messageSource;
 
     public PublicProfileController(
             final UserService userService,
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
+            final UserSportRatingService userSportRatingService,
             final MessageSource messageSource) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
         this.moderationService = moderationService;
+        this.userSportRatingService = userSportRatingService;
         this.messageSource = messageSource;
     }
 
@@ -149,6 +156,7 @@ public class PublicProfileController {
                                             "Edit profile",
                                             resolvedLocale));
                         });
+        addRatingsModel(mav, user, resolvedLocale);
         return mav;
     }
 
@@ -189,6 +197,30 @@ public class PublicProfileController {
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
         }
+    }
+
+    private void addRatingsModel(final ModelAndView mav, final User user, final Locale locale) {
+        final List<SportRatingViewModel> ratings =
+                userSportRatingService.findRatingsForUser(user).stream()
+                        .sorted(Comparator.comparingInt(UserSportRating::getElo).reversed())
+                        .map(
+                                r ->
+                                        new SportRatingViewModel(
+                                                messageSource.getMessage(
+                                                        "sport." + r.getSport().getDbValue(),
+                                                        null,
+                                                        r.getSport().getDisplayName(),
+                                                        locale),
+                                                r.getElo()))
+                        .toList();
+        mav.addObject("profileRatings", ratings);
+        mav.addObject(
+                "profileRatingsTitle",
+                messageSource.getMessage("profile.ratings.title", null, "Sport ratings", locale));
+        mav.addObject(
+                "profileRatingsEmpty",
+                messageSource.getMessage(
+                        "profile.ratings.empty", null, "No sport ratings yet.", locale));
     }
 
     private void addReviewModel(
