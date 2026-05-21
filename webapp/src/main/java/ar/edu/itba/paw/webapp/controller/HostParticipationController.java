@@ -4,7 +4,6 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
-import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
@@ -12,13 +11,7 @@ import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.InviteParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.RosterParticipantViewModel;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -57,38 +50,19 @@ public class HostParticipationController {
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/participants")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showRoster(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        final List<User> participants =
-                matchParticipationService.findConfirmedParticipants(matchId, host);
-
-        final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
-        final boolean isApprovalRequired =
-                match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
-        final ModelAndView mav = new ModelAndView("host/participation/roster");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
-        mav.addObject("match", match);
-        addParticipationHeader(mav, match, locale);
-        mav.addObject("matchId", matchId);
-        mav.addObject("participants", toRosterViewModels(participants, matchId));
-        mav.addObject("emptyMessage", messageSource.getMessage("host.roster.empty", null, locale));
-        mav.addObject("isPrivateEvent", isPrivateEvent);
-        mav.addObject("isApprovalRequired", isApprovalRequired);
-        mav.addObject("requestsUrl", "/host/matches/" + matchId + "/requests");
-        mav.addObject("invitesUrl", "/host/matches/" + matchId + "/invites");
-        return mav;
+        SecurityControllerUtils.requireAuthenticatedUser();
+        ensureMatchExists(matchId);
+        return new ModelAndView("redirect:/matches/" + matchId + "#participants");
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/requests")
+    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showPendingRequests(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        SecurityControllerUtils.requireAuthenticatedUser();
         final Match match =
                 matchService
                         .findMatchById(matchId)
@@ -98,18 +72,7 @@ public class HostParticipationController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        final List<User> pending = matchParticipationService.findPendingRequests(matchId, host);
-
-        final ModelAndView mav = new ModelAndView("host/participation/requests");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
-        mav.addObject("match", match);
-        addParticipationHeader(mav, match, locale);
-        mav.addObject("matchId", matchId);
-        mav.addObject("pendingRequests", toPendingRequestViewModels(pending, matchId));
-        mav.addObject(
-                "emptyMessage", messageSource.getMessage("host.requests.empty", null, locale));
-        mav.addObject("rosterUrl", "/host/matches/" + matchId + "/participants");
-        return mav;
+        return new ModelAndView("redirect:/matches/" + matchId + "#pending-requests");
     }
 
     @GetMapping("/host/requests")
@@ -118,7 +81,7 @@ public class HostParticipationController {
         final List<PendingJoinRequest> pending =
                 matchParticipationService.findPendingRequestsForHost(host);
 
-        final ModelAndView mav = new ModelAndView("host/participation/requests");
+        final ModelAndView mav = new ModelAndView("host/participation/aggregate-requests");
         mav.addObject(
                 "shell", ShellViewModelFactory.hostShell(messageSource, locale, "/host/requests"));
         mav.addObject("aggregateRequests", true);
@@ -152,11 +115,13 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.approveRequest(matchId, host, user);
-            redirectAttributes.addFlashAttribute("action", "approved");
-            return new ModelAndView("redirect:/host/matches/" + matchId + "/requests");
+            redirectAttributes.addFlashAttribute("hostAction", "requestApproved");
+            return redirectToMatch(matchId);
         } catch (final MatchParticipationException e) {
-            return new ModelAndView(
-                    "redirect:/host/matches/" + matchId + "/requests?error=" + e.getCode());
+            redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
+            redirectAttributes.addFlashAttribute(
+                    "hostActionError", requestErrorMessage(e.getCode(), locale));
+            return redirectToMatch(matchId);
         }
     }
 
@@ -183,11 +148,13 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.rejectRequest(matchId, host, user);
-            redirectAttributes.addFlashAttribute("action", "rejected");
-            return new ModelAndView("redirect:/host/matches/" + matchId + "/requests");
+            redirectAttributes.addFlashAttribute("hostAction", "requestRejected");
+            return redirectToMatch(matchId);
         } catch (final MatchParticipationException e) {
-            return new ModelAndView(
-                    "redirect:/host/matches/" + matchId + "/requests?error=" + e.getCode());
+            redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
+            redirectAttributes.addFlashAttribute(
+                    "hostActionError", requestErrorMessage(e.getCode(), locale));
+            return redirectToMatch(matchId);
         }
     }
 
@@ -200,7 +167,7 @@ public class HostParticipationController {
     @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showInvitePage(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        SecurityControllerUtils.requireAuthenticatedUser();
         final Match match =
                 matchService
                         .findMatchById(matchId)
@@ -210,7 +177,7 @@ public class HostParticipationController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        return buildInviteView(match, matchId, host, new InviteForm(), null, locale);
+        return new ModelAndView("redirect:/matches/" + matchId + "#pending-invitations");
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/invites")
@@ -232,7 +199,11 @@ public class HostParticipationController {
         }
 
         if (bindingResult.hasErrors()) {
-            return buildInviteView(match, matchId, host, inviteForm, null, locale);
+            redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
+            redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
+            redirectAttributes.addFlashAttribute(
+                    "hostActionError", inviteValidationErrorMessage(bindingResult, locale));
+            return redirectToMatch(matchId);
         }
 
         try {
@@ -241,57 +212,15 @@ public class HostParticipationController {
             matchParticipationService.inviteUser(
                     matchId, host, inviteForm.getEmail(), includeSeries);
             redirectAttributes.addFlashAttribute(
-                    "action", includeSeries ? "seriesInvited" : "invited");
-            return new ModelAndView("redirect:/host/matches/" + matchId + "/invites");
+                    "hostAction", includeSeries ? "seriesInviteSent" : "inviteSent");
+            return redirectToMatch(matchId);
         } catch (final MatchParticipationException e) {
             final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
-            return buildInviteView(match, matchId, host, inviteForm, errorMsg, locale);
+            redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
+            redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
+            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
+            return redirectToMatch(matchId);
         }
-    }
-
-    private ModelAndView buildInviteView(
-            final Match match,
-            final long matchId,
-            final User host,
-            final InviteForm form,
-            final String inviteError,
-            final Locale locale) {
-        final List<User> pending = matchParticipationService.findInvitedUsers(matchId, host);
-        final List<User> accepted =
-                matchParticipationService.findConfirmedParticipants(matchId, host);
-        final List<User> declined = matchParticipationService.findDeclinedInvitees(matchId, host);
-
-        final ModelAndView mav = new ModelAndView("host/participation/invites");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
-        mav.addObject("match", match);
-        addParticipationHeader(mav, match, locale);
-        mav.addObject("matchId", matchId);
-        mav.addObject("inviteForm", form);
-        mav.addObject("inviteError", inviteError);
-        mav.addObject("seriesInviteAvailable", match.isRecurringOccurrence());
-        mav.addObject("pendingInvites", toInviteParticipantViewModels(pending));
-        mav.addObject("acceptedParticipants", toRosterViewModels(accepted, matchId));
-        mav.addObject("declinedInvites", toInviteParticipantViewModels(declined));
-        mav.addObject("rosterUrl", "/host/matches/" + matchId + "/participants");
-        return mav;
-    }
-
-    private static void addParticipationHeader(
-            final ModelAndView mav, final Match match, final Locale locale) {
-        final ZoneId zoneId = ZoneId.systemDefault();
-        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
-        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
-        mav.addObject(
-                "participationEventDate",
-                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-                        .withLocale(resolvedLocale)
-                        .format(startsAt));
-        mav.addObject(
-                "participationEventTime",
-                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                        .withLocale(resolvedLocale)
-                        .format(startsAt));
-        mav.addObject("participationEventVenue", match.getAddress());
     }
 
     private String inviteErrorMessage(final String code, final String email, final Locale locale) {
@@ -344,62 +273,14 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.removeParticipant(matchId, host, user);
-            redirectAttributes.addFlashAttribute("action", "removed");
-            return new ModelAndView("redirect:/host/matches/" + matchId + "/participants");
+            redirectAttributes.addFlashAttribute("hostAction", "participantRemoved");
+            return redirectToMatch(matchId);
         } catch (final MatchParticipationException e) {
-            return new ModelAndView(
-                    "redirect:/host/matches/" + matchId + "/participants?error=" + e.getCode());
+            redirectAttributes.addFlashAttribute("hostActionTarget", "participants");
+            redirectAttributes.addFlashAttribute(
+                    "hostActionError", participantErrorMessage(e.getCode(), locale));
+            return redirectToMatch(matchId);
         }
-    }
-
-    private List<RosterParticipantViewModel> toRosterViewModels(
-            final List<User> participants, final long matchId) {
-        return participants.stream()
-                .map(
-                        u ->
-                                new RosterParticipantViewModel(
-                                        u.getUsername(),
-                                        avatarLabel(u.getUsername()),
-                                        "/host/matches/"
-                                                + matchId
-                                                + "/participants/"
-                                                + u.getId()
-                                                + "/remove",
-                                        profileHrefFor(u)))
-                .toList();
-    }
-
-    private List<InviteParticipantViewModel> toInviteParticipantViewModels(final List<User> users) {
-        return users.stream()
-                .map(
-                        u ->
-                                new InviteParticipantViewModel(
-                                        u.getUsername(),
-                                        avatarLabel(u.getUsername()),
-                                        profileHrefFor(u)))
-                .toList();
-    }
-
-    private List<PendingRequestViewModel> toPendingRequestViewModels(
-            final List<User> users, final long matchId) {
-        return users.stream()
-                .map(
-                        u ->
-                                new PendingRequestViewModel(
-                                        u.getUsername(),
-                                        avatarLabel(u.getUsername()),
-                                        "/host/matches/"
-                                                + matchId
-                                                + "/requests/"
-                                                + u.getId()
-                                                + "/approve",
-                                        "/host/matches/"
-                                                + matchId
-                                                + "/requests/"
-                                                + u.getId()
-                                                + "/reject",
-                                        profileHrefFor(u)))
-                .toList();
     }
 
     private List<PendingRequestViewModel> toHostPendingRequestViewModels(
@@ -430,8 +311,35 @@ public class HostParticipationController {
                 .toList();
     }
 
-    private static String profileHrefFor(final User user) {
-        return user.getUsername() == null ? null : "/users/" + user.getUsername();
+    private void ensureMatchExists(final Long matchId) {
+        matchService
+                .findMatchById(matchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    private ModelAndView redirectToMatch(final Long matchId) {
+        return new ModelAndView("redirect:/matches/" + matchId);
+    }
+
+    private String inviteValidationErrorMessage(
+            final BindingResult bindingResult, final Locale locale) {
+        return bindingResult.getAllErrors().stream()
+                .findFirst()
+                .map(error -> messageSource.getMessage(error, locale))
+                .orElseGet(
+                        () -> messageSource.getMessage("host.invites.error.generic", null, locale));
+    }
+
+    private String requestErrorMessage(final String code, final Locale locale) {
+        if ("full".equals(code)) {
+            return messageSource.getMessage("event.host.requests.error.full", null, locale);
+        }
+        return messageSource.getMessage("event.host.requests.error.noPendingRequest", null, locale);
+    }
+
+    private String participantErrorMessage(final String code, final Locale locale) {
+        return messageSource.getMessage(
+                "event.host.participants.error.notParticipant", null, locale);
     }
 
     private static String avatarLabel(final String username) {

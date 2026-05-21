@@ -1082,6 +1082,9 @@ class UiRouteTest {
 
                     @Override
                     public List<User> findPendingRequests(final Long matchId, final User host) {
+                        if (matchId == 52L && host != null && host.getId() == 7L) {
+                            return List.of(UserUtils.getUser(9L));
+                        }
                         return List.of();
                     }
 
@@ -1124,11 +1127,17 @@ class UiRouteTest {
 
                     @Override
                     public List<User> findInvitedUsers(final Long matchId, final User host) {
+                        if (matchId == 51L && host != null && host.getId() == 7L) {
+                            return List.of(UserUtils.getUser(9L));
+                        }
                         return List.of();
                     }
 
                     @Override
                     public List<User> findDeclinedInvitees(final Long matchId, final User host) {
+                        if (matchId == 51L && host != null && host.getId() == 7L) {
+                            return List.of(UserUtils.getUser(10L));
+                        }
                         return List.of();
                     }
 
@@ -1782,7 +1791,10 @@ class UiRouteTest {
                                                                 Matchers.hasProperty(
                                                                         "profileImageUrl",
                                                                         Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg"))),
+                                                                                "/assets/default-profile-avatar.svg")),
+                                                                Matchers.hasProperty(
+                                                                        "removeUrl",
+                                                                        Matchers.nullValue())),
                                                         Matchers.allOf(
                                                                 Matchers.hasProperty(
                                                                         "profileHref",
@@ -1791,7 +1803,10 @@ class UiRouteTest {
                                                                 Matchers.hasProperty(
                                                                         "profileImageUrl",
                                                                         Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg")))))));
+                                                                                "/assets/default-profile-avatar.svg")),
+                                                                Matchers.hasProperty(
+                                                                        "removeUrl",
+                                                                        Matchers.nullValue()))))));
     }
 
     @Test
@@ -1859,7 +1874,10 @@ class UiRouteTest {
                 .andExpect(model().attribute("hostCanManage", true))
                 .andExpect(model().attribute("reservationEnabled", true))
                 .andExpect(model().attribute("joinRequestEnabled", false))
-                .andExpect(model().attribute("isInvitedPlayer", false));
+                .andExpect(model().attribute("isInvitedPlayer", false))
+                .andExpect(model().attribute("hostPendingInviteCount", 1))
+                .andExpect(model().attribute("hostPendingInvitesOpen", true))
+                .andExpect(model().attribute("hostDeclinedInvites", Matchers.hasSize(1)));
     }
 
     @Test
@@ -2116,7 +2134,21 @@ class UiRouteTest {
                 .andExpect(model().attribute("seriesReservationEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
-                .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"));
+                .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "participants",
+                                                Matchers.contains(
+                                                        Matchers.hasProperty(
+                                                                "removeUrl",
+                                                                Matchers.is(
+                                                                        "/host/matches/42/participants/2/remove")),
+                                                        Matchers.hasProperty(
+                                                                "removeUrl",
+                                                                Matchers.is(
+                                                                        "/host/matches/42/participants/3/remove"))))));
     }
 
     @Test
@@ -2147,7 +2179,10 @@ class UiRouteTest {
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(model().attribute("joinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
-                .andExpect(model().attribute("hasPendingJoinRequest", false));
+                .andExpect(model().attribute("hasPendingJoinRequest", false))
+                .andExpect(model().attribute("hostPendingRequestCount", 1))
+                .andExpect(model().attribute("hostPendingRequestsOpen", true))
+                .andExpect(model().attribute("hostPendingRequests", Matchers.hasSize(1)));
     }
 
     @Test
@@ -3166,7 +3201,7 @@ class UiRouteTest {
 
         mockMvc.perform(get("/host/requests"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/participation/requests"))
+                .andExpect(view().name("host/participation/aggregate-requests"))
                 .andExpect(model().attribute("aggregateRequests", true))
                 .andExpect(model().attributeExists("pendingRequests"))
                 .andExpect(model().attribute("matchesUrl", "/events"));

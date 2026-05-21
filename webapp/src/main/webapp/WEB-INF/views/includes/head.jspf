@@ -37,6 +37,7 @@
 <c:url var="leafletJsHref" value="/js/vendor/leaflet.js" />
 <c:url var="locationPickerHref" value="/js/location-picker.js" />
 <c:url var="eventMapHref" value="/js/event-map.js" />
+<c:url var="eventDetailHostActionsHref" value="/js/event-detail-host-actions.js?v=20260521" />
 <c:url var="inviteNoticeHref" value="/js/invite-notice.js?v=20260521" />
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
 <c:url var="reportFiltersHref" value="/js/report-filters.js" />
@@ -70,6 +71,7 @@
 <script defer src="${exploreLocationHref}"></script>
 <script defer src="${locationPickerHref}"></script>
 <script defer src="${eventMapHref}"></script>
+<script defer src="${eventDetailHostActionsHref}"></script>
 <script defer src="${inviteNoticeHref}"></script>
 <script defer src="${reportDropdownsHref}"></script>
 <script defer src="${reportFiltersHref}"></script>
