@@ -67,6 +67,19 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
     }
 
     @Override
+    public List<TournamentTeamMember> findMembersByTournament(final long tournamentId) {
+        return em.createQuery(
+                        "SELECT ttm FROM TournamentTeamMember ttm"
+                                + " JOIN FETCH ttm.user"
+                                + " JOIN ttm.team tt"
+                                + " WHERE tt.tournament.id = :tournamentId"
+                                + " ORDER BY tt.id ASC, ttm.id ASC",
+                        TournamentTeamMember.class)
+                .setParameter("tournamentId", tournamentId)
+                .getResultList();
+    }
+
+    @Override
     public Optional<TournamentTeam> findUserTeam(final long tournamentId, final long userId) {
         return em.createQuery(
                         "SELECT tt FROM TournamentTeamMember ttm"

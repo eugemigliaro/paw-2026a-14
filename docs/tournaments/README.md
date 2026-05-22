@@ -30,8 +30,8 @@ matches:
 Build the feature incrementally. The first working spine should support host
 creation, feed/detail visibility, solo registration, manual registration close,
 team formation, bracket generation, round-one scheduling, winner propagation,
-completion, and minimum email notifications. Team drafts, drag reseeding, scheduled
-automation, full notification catalog, and polished My Events integration should
+completion, and minimum tournament emails. Team drafts, drag reseeding, scheduled
+automation, full email catalog, and polished My Events integration should
 come after that spine works.
 
 ## File Index
@@ -43,7 +43,7 @@ come after that spine works.
 | [`overview.md`](./overview.md) | Original feature scope, goals, non-goals, and app fit |
 | [`lifecycle.md`](./lifecycle.md) | Original lifecycle write-up; prefer `feature-brief.md` for implementation status names |
 | [`data-model.md`](./data-model.md) | Original entity and schema recommendations |
-| [`notifications.md`](./notifications.md) | Email-first notification catalog and future in-app notification note |
+| [`notifications.md`](./notifications.md) | Tournament email catalog |
 | [`ui-patterns.md`](./ui-patterns.md) | UI variants and design-system mapping; adapt component names to JSP tags/fragments |
 | [`open-questions.md`](./open-questions.md) | Edge cases and unresolved/future decisions |
 | [`flows/host.md`](./flows/host.md) | Host flows: create, seed bracket, run tournament |
@@ -66,9 +66,8 @@ come after that spine works.
 9. Winner undo: defer. Use confirmation first; admin correction can be designed
    later.
 10. UI: server-rendered JSP with reusable tags/fragments, not React components.
-11. Notifications: implement minimum essential tournament emails first. A
-    persisted in-app notification center does not exist today and should be a
-    separate foundation if required later.
+11. Emails: implement minimum essential tournament emails first. Do not add an
+    in-app notification center.
 
 ## Reference
 

@@ -1,23 +1,19 @@
-# Tournaments - Notifications
+# Tournaments - Emails
 
-> Implementation note: this catalog is the long-term target. The first
-> tournament spine should implement only the minimum notifications listed in
-> [`feature-brief.md`](./feature-brief.md), then expand toward this catalog.
-> The current application has email notifications, but no persisted in-app
-> notification center or bell inbox.
+> Implementation note: this catalog is email-only. The tournament feature should
+> not add a persisted in-app notification center, bell inbox, or site-visible
+> notification surface.
 
-The platform currently has an email notification pattern through
+The platform currently has an email pattern through
 `MatchNotificationService`, `ThymeleafMailTemplateRenderer`, and
-`MailDispatchService`. Tournaments should follow that email pattern first.
+`MailDispatchService`. Tournaments should follow that mail infrastructure.
 
 Do not assume dual-channel delivery exists. The `email_action_requests` table is
-for token/action flows, not a generic notification inbox. Persisted in-app
-notifications require a separate foundation: notification table, recipient
-queries, unread counts, header UI, mark-read behavior, and authorization.
+for token/action flows, not a generic notification inbox.
 
 ## Email-First Principle
 
-For every tournament notification implemented in the first spine:
+For every tournament email implemented in the first spine:
 
 1. The system dispatches a localized templated email to the recipient.
 2. The email contains the relevant information and a call-to-action.
@@ -77,10 +73,10 @@ the bracket is locked.
 
 ## Implementation Notes
 
-- Add `TournamentNotificationService` mirroring the shape of
-  `MatchNotificationService`, but email-only for the first implementation.
+- Add `TournamentMailService` for tournament emails. Do not add in-app
+  notification storage, badges, inboxes, or site-visible notification surfaces.
 - Each method should take the tournament plus relevant participants and delegate
-  to `ThymeleafMailTemplateRenderer.renderTournament*Notification(...)`.
+  to `ThymeleafMailTemplateRenderer.renderTournament*Email(...)`.
 - Follow the per-recipient preferred-language pattern from
   `MatchNotificationServiceImpl`.
 - Both Spanish and English templates must exist for every email.
@@ -94,22 +90,22 @@ the bracket is locked.
 First spine:
 
 ```text
-renderTournamentBracketGeneratedNotification(...)
-renderTournamentMatchResultNotification(...)
-renderTournamentMatchWalkoverNotification(...)
-renderTournamentCompletedNotification(...)
-renderTournamentCancelledNotification(...)
-renderSoloPoolAssignmentNotification(...)
+renderTournamentBracketGeneratedEmail(...)
+renderTournamentMatchResultEmail(...)
+renderTournamentMatchWalkoverEmail(...)
+renderTournamentCompletedEmail(...)
+renderTournamentCancelledEmail(...)
+renderSoloPoolAssignmentEmail(...)
 ```
 
 Expanded team-draft slice:
 
 ```text
-renderTournamentDraftInvitationNotification(...)
-renderTournamentDraftInviteResponseNotification(...)
-renderTournamentTeamLockedNotification(...)
-renderTournamentRoundCompleteNotification(...)
-renderTournamentMatchScheduledNotification(...)
+renderTournamentDraftInvitationEmail(...)
+renderTournamentDraftInviteResponseEmail(...)
+renderTournamentTeamLockedEmail(...)
+renderTournamentRoundCompleteEmail(...)
+renderTournamentMatchScheduledEmail(...)
 ```
 
 Each `MailContent`-returning method must localize through the existing message

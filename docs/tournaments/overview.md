@@ -24,7 +24,7 @@ The existing platform supports single matches and recurring matches well, but us
 - Host can re-seed the bracket via drag-swap before round 1 begins
 - Host declares the winner of each match (no scores)
 - Walkover / forfeit recording
-- In-app + email notifications mirroring existing match-invite pattern
+- Tournament emails mirroring the existing match mail pattern
 - Tournament card appears in the existing event feed
 - Tournaments appear in a "Tournaments" tab inside the existing "My Events" screen
 
@@ -49,8 +49,8 @@ The existing platform supports single matches and recurring matches well, but us
 ## How it fits the existing app
 
 - **Reuses** the existing event feed, search, filtering, and "My Events" tab structure.
-- **Reuses** the existing email notification infrastructure (`MatchNotificationService`, `ThymeleafMailTemplateRenderer`). New notification types are added with per-recipient locale handling.
-- **Reuses** the `EventJoinPolicy.INVITE_ONLY` pattern as the inspiration for team-draft invites, but email is the existing channel. Persisted in-app notifications would require a separate notification-center feature.
+- **Reuses** the existing mail infrastructure (`MailDispatchService`, `ThymeleafMailTemplateRenderer`). New tournament email types are added with per-recipient locale handling.
+- **Reuses** the `EventJoinPolicy.INVITE_ONLY` pattern as the inspiration for team-draft invites, but email is the only delivery channel.
 - **Reuses** the existing Host mode toggle and create-event shell as the chrome for the create-tournament wizard.
 - **Adds** new entities (see `data-model.md`) and a new top-level entity type that wraps a set of matches.
 - **Does not** change auth, profiles, reviews, or reporting flows beyond a single new review-trigger point (the tournament completion).
@@ -61,7 +61,7 @@ The feature is considered shipped when:
 
 1. A host can create, seed, run, and complete a full 8-team tournament end-to-end.
 2. Players can discover it, join it (both paths), see their next match throughout, and reach a clear post-tournament state.
-3. All notifications listed in `notifications.md` are delivered via both channels.
+3. All emails listed in `notifications.md` are delivered through the mail stack.
 4. The wireframed flows in §1–§7 are implemented matching the picked UI variants (§8B, §9A).
 
 Stretch goals (post-v1):

@@ -24,8 +24,8 @@ every UI flow. Build a vertical spine first, then expand it.
 - Add all user-facing copy to both message bundles.
 - Add tests with each behavioral slice.
 - Prefer full page POST/redirect/GET for v1. Partial updates can come later.
-- Treat notifications as email-only for the first spine. The current app does
-  not have a persisted in-app notification center.
+- Treat tournament updates as email-only. The current app does not have or need
+  a persisted in-app notification center.
 
 ## Phase 0: Product Decisions And Documentation Cleanup
 
@@ -521,7 +521,7 @@ Implemented backend status:
   denial, admin/mod mutation, publication schedules, bracket read
   authorization, viewer focus, propagation, final completion, walkovers, and a
   service-level bracket run from generation to completion.
-- Web controllers, JSPs, routes, UI messages, and notification dispatch remain
+- Web controllers, JSPs, routes, UI messages, and email dispatch remain
   future phases.
 
 ## Phase 3: Host Create And Publish UI
@@ -733,7 +733,7 @@ Tasks:
 - Persist schedule fields.
 - Transition to `IN_PROGRESS`.
 - Set `started_at`.
-- Dispatch minimum bracket-published notification after transaction.
+- Dispatch minimum bracket-published email after transaction.
 
 Tests:
 
@@ -795,7 +795,7 @@ Tasks:
 - Persist result.
 - Propagate winner.
 - Complete final.
-- Dispatch result/completion notifications after transaction.
+- Dispatch result/completion emails after transaction.
 - Redirect back to bracket.
 
 Tests:
@@ -813,26 +813,27 @@ Acceptance criteria:
 
 - An 8-team tournament can be completed end to end.
 
-## Phase 11: Minimum Notifications
+## Phase 11: Minimum Tournament Emails
 
-Goal: deliver the essential email notifications without implementing the entire
-long-term notification catalog.
+Goal: deliver the essential tournament emails. Do not implement any in-app
+notification center, notification table, bell, inbox, or site-visible
+notification shortcut.
 
 Likely files:
 
-- `service-contracts/.../TournamentNotificationService.java`
-- `services/.../TournamentNotificationServiceImpl.java`
+- `service-contracts/.../TournamentMailService.java`
+- `services/.../TournamentMailServiceImpl.java`
 - mail template renderer additions
 - mail templates under `services/src/main/resources/mail`
 - message bundle entries
 
-Minimum notification methods:
+Minimum mail methods:
 
-- `notifyBracketPublished(Tournament tournament)`
-- `notifyMatchResult(Tournament tournament, TournamentMatch match, TournamentTeam winner, TournamentTeam loser)`
-- `notifyWalkover(Tournament tournament, TournamentMatch match, TournamentTeam advancingTeam, TournamentTeam forfeitingTeam)`
-- `notifyTournamentCompleted(Tournament tournament, TournamentTeam champion)`
-- `notifyTournamentCancelled(Tournament tournament)`
+- `sendBracketPublishedEmail(Tournament tournament)`
+- `sendMatchResultEmail(Tournament tournament, TournamentMatch match, TournamentTeam winner, TournamentTeam loser)`
+- `sendWalkoverEmail(Tournament tournament, TournamentMatch match, TournamentTeam advancingTeam, TournamentTeam forfeitingTeam)`
+- `sendTournamentCompletedEmail(Tournament tournament, TournamentTeam champion)`
+- `sendTournamentCancelledEmail(Tournament tournament)`
 
 Tasks:
 
@@ -844,24 +845,16 @@ Tasks:
 
 Tests:
 
-- notifications deduplicate users
+- emails deduplicate users
 - recipient locale is used
 - completed sends champion and participant variants
-- no notification sent to unrelated users
+- no email sent to unrelated users
 
 Acceptance criteria:
 
-- Essential tournament state changes notify affected players.
+- Essential tournament state changes email affected players.
 
-Do not implement a tournament-specific in-app notification shortcut. If in-app
-notifications become required, add a generic notification foundation first:
-
-- `Notification` entity/table with recipient, type, title/body, target URL,
-  read timestamp, created timestamp, and metadata payload if needed
-- DAO/service APIs for create, list unread/recent, mark read, and count unread
-- header badge/dropdown integration
-- authorization so users can only read their own notifications
-- tests for unread counts, mark-read behavior, and locale-safe display
+Do not implement a tournament-specific in-app notification shortcut.
 
 ## Phase 12: Authorization And Security Hardening
 
@@ -955,7 +948,7 @@ Views:
 - invite review page
 - captain roster management
 
-Notifications:
+Emails:
 
 - draft invite sent
 - invite accepted/declined
@@ -1088,7 +1081,7 @@ Services:
 - solo grouping
 - bracket generation
 - winner propagation
-- notification recipient selection
+- email recipient selection
 
 Web:
 
@@ -1131,7 +1124,7 @@ I18n:
 - [x] Add bracket publication with round-one schedule.
 - [x] Add public/player bracket page.
 - [x] Add host winner/walkover actions.
-- [ ] Add minimum notification service and templates.
+- [x] Add minimum tournament mail service and templates.
 - [ ] Add controller/security tests.
 - [ ] Run `mvn test`.
 - [ ] Run Spotless if formatting fails.

@@ -49,6 +49,7 @@ public class TournamentBracketServiceImplTest {
     @Mock private TournamentDao tournamentDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMatchDao tournamentMatchDao;
+    @Mock private TournamentMailService tournamentMailService;
     @Mock private MessageSource messageSource;
 
     private TournamentBracketServiceImpl bracketService;
@@ -60,6 +61,7 @@ public class TournamentBracketServiceImplTest {
                         tournamentDao,
                         tournamentTeamDao,
                         tournamentMatchDao,
+                        tournamentMailService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()

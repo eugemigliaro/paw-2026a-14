@@ -195,8 +195,8 @@ You **may** reuse:
 - `EventCategory` and the existing skill-level enum for `Tournament.sport_category_id` and `skill_level`.
 - The existing location / venue JSONB shape.
 - The existing banner-image upload pipeline.
-- `MatchNotificationService` infrastructure (extend with new methods; see `notifications.md`).
-- The `ThymeleafMailTemplateRenderer` pattern (add new render methods for each notification type).
+- The existing mail dispatch infrastructure (see `notifications.md`).
+- The `ThymeleafMailTemplateRenderer` pattern (add new render methods for each email type).
 
 ## Suggested Flyway migrations
 
@@ -216,6 +216,6 @@ V25__add_tournament_indexes.sql
 | `TournamentService` | CRUD + status transitions + lifecycle guards |
 | `TournamentRegistrationService` | Solo pool, team drafts, invite send/accept/decline, cross-entity "one membership per user per tournament" |
 | `TournamentBracketService` | Generate, re-seed, swap, schedule rounds, propagate winners |
-| `TournamentNotificationService` | New notification types — wraps `MatchNotificationService` infrastructure |
+| `TournamentMailService` | Tournament email dispatch using the existing mail infrastructure |
 
 Keep `Tournament` and `Match` services independent — there is no `Tournament extends Match` inheritance, and conflating them in a base class will produce more friction than reuse.

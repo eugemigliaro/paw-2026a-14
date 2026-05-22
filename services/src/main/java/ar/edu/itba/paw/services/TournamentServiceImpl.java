@@ -30,14 +30,17 @@ public class TournamentServiceImpl implements TournamentService {
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDao tournamentDao;
+    private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
     private final Clock clock;
 
     public TournamentServiceImpl(
             final TournamentDao tournamentDao,
+            final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
+        this.tournamentMailService = tournamentMailService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -134,7 +137,9 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setCancelledAt(now);
         tournament.setCancelReason(reason);
         tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+        final Tournament updatedTournament = tournamentDao.update(tournament);
+        tournamentMailService.sendTournamentCancelledEmail(updatedTournament);
+        return updatedTournament;
     }
 
     private Tournament findByIdOrThrow(final long tournamentId) {

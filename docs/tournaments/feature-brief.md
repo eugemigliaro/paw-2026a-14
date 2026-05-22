@@ -49,7 +49,7 @@ Reuse smaller concepts instead:
 - price as informational only
 - banner image metadata
 - date/time formatting helpers
-- email notification delivery infrastructure
+- email delivery infrastructure
 - JSP tags and design tokens
 
 Keep service flows separate:
@@ -59,14 +59,14 @@ Keep service flows separate:
 - `TournamentRegistrationService` owns solo entries and team drafts.
 - `TournamentBracketService` owns bracket generation, scheduling, winner
   declaration, walkovers, and propagation.
-- `TournamentNotificationService` wraps the existing email notification
-  infrastructure for tournament events. A persisted in-app notification center
-  does not exist today and should be treated as a separate feature.
+- `TournamentMailService` wraps the existing mail infrastructure for tournament
+  emails. A persisted in-app notification center does not exist today and is
+  out of scope.
 
 ## Recommended V1 Scope
 
 The semester target can include solo signup, captain-led team drafts, bracket
-generation, host winner declaration, notifications, player states, and My Events
+generation, host winner declaration, emails, player states, and My Events
 integration. That is too large to implement as one uninterrupted slice.
 
 Build the tournament feature in two layers.
@@ -87,7 +87,7 @@ fewest moving parts:
 - host declares winners or walkovers
 - winners propagate to later rounds
 - final winner completes the tournament
-- minimum email notifications are sent for bracket publication, match result,
+- minimum emails are sent for bracket publication, match result,
   cancellation, and completion
 
 This first spine intentionally defers:
@@ -97,7 +97,7 @@ This first spine intentionally defers:
 - drag-swap reseeding
 - 30-second winner undo
 - partial page refresh/live updates
-- full notification catalog
+- full email catalog
 - polished My Events tournament tab
 - bracket sharing
 - public completed-tournament browsing
@@ -112,14 +112,12 @@ After the V1 spine works, add:
 - feed type filter for tournaments
 - My Events tournament tab
 - richer player states: next match, advanced, eliminated, champion
-- full notification catalog
-- optional persisted in-app notifications if the product decides to add a
-  notification center
+- full email catalog
 - optional scheduled jobs for close-registration reminders and automatic
   registration close
 - host reseeding before bracket publication
 
-This sequencing avoids a giant branch where data, UI, notifications, and edge
+This sequencing avoids a giant branch where data, UI, emails, and edge
 cases are all half-complete at the same time.
 
 ## Lifecycle
@@ -256,7 +254,7 @@ shape first.
 For solo grouping, capacity is measured in teams, not players. If a tournament
 needs eight teams of five players, only the first forty assignable solo entries
 can become bracket teams. Extra solo entries remain outside the bracket with
-`UNASSIGNED` status and must receive a clear notification.
+`UNASSIGNED` status and must receive a clear email.
 
 ## Bracket Rules
 
@@ -282,7 +280,7 @@ When a winner is declared:
 7. If the child now has both teams, mark it scheduled using round defaults or
    explicit schedule data.
 8. If this fixture is the final, complete the tournament.
-9. Dispatch result/completion notifications after the transaction succeeds.
+9. Dispatch result/completion emails after the transaction succeeds.
 
 ## UI Structure
 
@@ -314,12 +312,12 @@ Use existing tags like `button.tag`, `card.tag`, `textInput.tag`,
 `selectField.tag`, and existing CSS conventions before creating new primitives.
 All visible copy must be in both message bundles.
 
-## Notifications
+## Emails
 
-The current application has email notifications and email action requests, but
-it does not have a persisted in-app notification center or bell dropdown. The
+The current application has email delivery and email action requests, but it
+does not have a persisted in-app notification center or bell dropdown. The
 `email_action_requests` table is for token/action flows, not a general
-notification inbox.
+notification inbox. Tournament updates should use emails only.
 
 For the first spine, implement the smallest useful set:
 
@@ -329,12 +327,7 @@ For the first spine, implement the smallest useful set:
 - tournament cancelled
 - tournament completed: champion/participant
 
-Add draft-related notifications only when team drafts are implemented.
-
-If the product wants in-app notifications later, build them as a separate
-foundation first: `Notification` entity/table, unread state, recipient queries,
-header badge/dropdown, mark-read behavior, and tests. Do not hide that work
-inside tournament implementation.
+Add draft-related emails only when team drafts are implemented.
 
 Do not build digesting or short-window email coalescing unless the existing mail
 infrastructure already supports it cleanly. It is a separate subsystem.
@@ -380,6 +373,6 @@ The first tournament spine is done when:
 9. The host can declare winners and walkovers.
 10. Winners propagate correctly until a final champion is produced.
 11. The final winner completes the tournament.
-12. Required minimum email notifications are sent.
+12. Required minimum emails are sent.
 13. Tests cover allowed and denied paths.
 14. All new UI copy exists in English and Spanish.

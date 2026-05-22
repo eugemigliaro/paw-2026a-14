@@ -35,6 +35,7 @@ public class TournamentServiceImplTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @Mock private TournamentDao tournamentDao;
+    @Mock private TournamentMailService tournamentMailService;
     @Mock private MessageSource messageSource;
 
     private TournamentServiceImpl tournamentService;
@@ -43,7 +44,10 @@ public class TournamentServiceImplTest {
     public void setUp() {
         tournamentService =
                 new TournamentServiceImpl(
-                        tournamentDao, messageSource, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+                        tournamentDao,
+                        tournamentMailService,
+                        messageSource,
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
                 .when(
                         messageSource.getMessage(

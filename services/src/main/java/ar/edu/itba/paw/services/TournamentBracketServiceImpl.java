@@ -46,6 +46,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     private final TournamentDao tournamentDao;
     private final TournamentTeamDao tournamentTeamDao;
     private final TournamentMatchDao tournamentMatchDao;
+    private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -53,11 +54,13 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             final TournamentDao tournamentDao,
             final TournamentTeamDao tournamentTeamDao,
             final TournamentMatchDao tournamentMatchDao,
+            final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
         this.tournamentTeamDao = tournamentTeamDao;
         this.tournamentMatchDao = tournamentMatchDao;
+        this.tournamentMailService = tournamentMailService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -136,7 +139,9 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         tournament.setStatus(TournamentStatus.IN_PROGRESS);
         tournament.setStartedAt(now);
         tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+        final Tournament updatedTournament = tournamentDao.update(tournament);
+        tournamentMailService.sendBracketPublishedEmail(updatedTournament);
+        return updatedTournament;
     }
 
     @Override
@@ -185,7 +190,12 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         match.setUpdatedAt(now);
         final TournamentMatch updatedMatch = tournamentMatchDao.update(match);
 
-        propagateWinner(tournament, updatedMatch, winner, now);
+        final boolean completed = propagateWinner(tournament, updatedMatch, winner, now);
+        tournamentMailService.sendMatchResultEmail(
+                tournament, updatedMatch, winner, losingTeam(updatedMatch, winner));
+        if (completed) {
+            tournamentMailService.sendTournamentCompletedEmail(tournament, winner);
+        }
         return updatedMatch;
     }
 
@@ -210,7 +220,13 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         match.setUpdatedAt(now);
         final TournamentMatch updatedMatch = tournamentMatchDao.update(match);
 
-        propagateWinner(tournament, updatedMatch, advancingTeam, now);
+        final TournamentTeam forfeitingTeam = losingTeam(updatedMatch, advancingTeam);
+        final boolean completed = propagateWinner(tournament, updatedMatch, advancingTeam, now);
+        tournamentMailService.sendWalkoverEmail(
+                tournament, updatedMatch, advancingTeam, forfeitingTeam);
+        if (completed) {
+            tournamentMailService.sendTournamentCompletedEmail(tournament, advancingTeam);
+        }
         return updatedMatch;
     }
 
@@ -487,7 +503,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                 "tournament.bracket.error.forfeitingTeamNotInMatch");
     }
 
-    private void propagateWinner(
+    private boolean propagateWinner(
             final Tournament tournament,
             final TournamentMatch decidedMatch,
             final TournamentTeam winner,
@@ -501,7 +517,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             tournament.setCompletedAt(now);
             tournament.setUpdatedAt(now);
             tournamentDao.update(tournament);
-            return;
+            return true;
         }
 
         final TournamentMatch child = childMatch.get();
@@ -517,6 +533,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         }
         child.setUpdatedAt(now);
         tournamentMatchDao.update(child);
+        return false;
+    }
+
+    private TournamentTeam losingTeam(final TournamentMatch match, final TournamentTeam winner) {
+        if (sameId(match.getTeamA(), Objects.requireNonNull(winner.getId()))) {
+            return match.getTeamB();
+        }
+        return match.getTeamA();
     }
 
     private Optional<TournamentMatch> findChildMatch(

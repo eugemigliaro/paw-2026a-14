@@ -21,6 +21,8 @@ public interface TournamentTeamDao {
 
     List<TournamentTeam> findSeededByTournament(long tournamentId);
 
+    List<TournamentTeamMember> findMembersByTournament(long tournamentId);
+
     Optional<TournamentTeam> findUserTeam(long tournamentId, long userId);
 
     long countByTournament(long tournamentId);

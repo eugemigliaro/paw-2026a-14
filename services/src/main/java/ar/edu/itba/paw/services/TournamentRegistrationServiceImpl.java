@@ -36,6 +36,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     private final TournamentDao tournamentDao;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
     private final TournamentTeamDao tournamentTeamDao;
+    private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -43,11 +44,13 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
             final TournamentDao tournamentDao,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
             final TournamentTeamDao tournamentTeamDao,
+            final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
         this.tournamentTeamDao = tournamentTeamDao;
+        this.tournamentMailService = tournamentMailService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -270,7 +273,9 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         tournament.setCancelledAt(now);
         tournament.setCancelReason(message("tournament.registration.close.underCapacity"));
         tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+        final Tournament updatedTournament = tournamentDao.update(tournament);
+        tournamentMailService.sendTournamentCancelledEmail(updatedTournament);
+        return updatedTournament;
     }
 
     private String soloTeamName(final int index) {
