@@ -13,12 +13,12 @@
   <c:set var="classes" value="${classes} ${className}" />
 </c:if>
 
-<label class="${classes}" for="${resolvedId}">
+<label class="<c:out value='${classes}' />" for="<c:out value='${resolvedId}' />">
   <span class="field__label"><c:out value="${label}" /></span>
   <span class="field__select-wrap">
-    <select id="${resolvedId}" name="${name}" class="field__control field__control--select">
+    <select id="<c:out value='${resolvedId}' />" name="<c:out value='${name}' />" class="field__control field__control--select">
       <c:forEach var="option" items="${options}">
-        <option value="${option.value}" <c:if test="${option.selected}">selected="selected"</c:if>>
+        <option value="<c:out value='${option.value}' />" <c:if test="${option.selected}">selected="selected"</c:if>>
           <c:out value="${option.label}" />
         </option>
       </c:forEach>

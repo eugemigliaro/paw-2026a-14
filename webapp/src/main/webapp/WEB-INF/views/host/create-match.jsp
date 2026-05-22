@@ -251,19 +251,19 @@
 																data-duration-minutes="60">
 																<input type="radio" name="durationPresetUi" value="60"
 																	class="duration-option__input" />
-																<span>${durationOneHour}</span>
+																	<span><c:out value="${durationOneHour}" /></span>
 															</label>
 															<label class="chip duration-option"
 																data-duration-minutes="90">
 																<input type="radio" name="durationPresetUi" value="90"
 																	class="duration-option__input" />
-																<span>${durationNinetyMinutes}</span>
+																	<span><c:out value="${durationNinetyMinutes}" /></span>
 															</label>
 															<label class="chip duration-option"
 																data-duration-minutes="custom">
 																<input type="radio" name="durationPresetUi"
 																	value="custom" class="duration-option__input" />
-																<span>${durationCustom}</span>
+																	<span><c:out value="${durationCustom}" /></span>
 															</label>
 														</div>
 													</div>

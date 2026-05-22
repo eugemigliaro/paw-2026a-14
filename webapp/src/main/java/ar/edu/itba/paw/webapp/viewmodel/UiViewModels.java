@@ -1555,4 +1555,22 @@ public final class UiViewModels {
             return priceLabel;
         }
     }
+
+    public static final class SportRatingViewModel {
+        private final String sportLabel;
+        private final int elo;
+
+        public SportRatingViewModel(final String sportLabel, final int elo) {
+            this.sportLabel = sportLabel;
+            this.elo = elo;
+        }
+
+        public String getSportLabel() {
+            return sportLabel;
+        }
+
+        public int getElo() {
+            return elo;
+        }
+    }
 }

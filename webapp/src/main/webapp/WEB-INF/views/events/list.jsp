@@ -696,13 +696,13 @@
 																	<c:url var="prevHref" value="${previousPageHref}" />
 																	<a class="feed-pagination__control"
 																		href="${prevHref}">
-																		${previousLabel}
+																			<c:out value="${previousLabel}" />
 																	</a>
 																</c:when>
 																<c:otherwise>
 																	<span
 																		class="feed-pagination__control feed-pagination__control--disabled">
-																		${previousLabel}
+																			<c:out value="${previousLabel}" />
 																	</span>
 																</c:otherwise>
 															</c:choose>
@@ -711,14 +711,14 @@
 																<c:forEach var="item" items="${paginationItems}">
 																	<c:choose>
 																		<c:when test="${item.ellipsis}">
-																			<span
-																				class="feed-pagination__ellipsis">${item.label}</span>
+																				<span
+																					class="feed-pagination__ellipsis"><c:out value="${item.label}" /></span>
 																		</c:when>
 																		<c:when test="${item.current}">
 																			<span
 																				class="feed-pagination__page feed-pagination__page--current"
 																				aria-current="page">
-																				${item.label}
+																					<c:out value="${item.label}" />
 																			</span>
 																		</c:when>
 																		<c:otherwise>
@@ -726,7 +726,7 @@
 																				value="${item.href}" />
 																			<a class="feed-pagination__page"
 																				href="${pageHref}">
-																				${item.label}
+																					<c:out value="${item.label}" />
 																			</a>
 																		</c:otherwise>
 																	</c:choose>
@@ -738,13 +738,13 @@
 																	<c:url var="nextHref" value="${nextPageHref}" />
 																	<a class="feed-pagination__control"
 																		href="${nextHref}">
-																		${nextLabel}
+																			<c:out value="${nextLabel}" />
 																	</a>
 																</c:when>
 																<c:otherwise>
 																	<span
 																		class="feed-pagination__control feed-pagination__control--disabled">
-																		${nextLabel}
+																			<c:out value="${nextLabel}" />
 																	</span>
 																</c:otherwise>
 															</c:choose>

@@ -16,6 +16,7 @@ import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.UserSportRatingService;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
@@ -39,6 +40,7 @@ class PublicProfileControllerTest {
     private UserService userService;
     private PlayerReviewService playerReviewService;
     private ModerationService moderationService;
+    private UserSportRatingService userSportRatingService;
     private MessageSource messageSource;
 
     @BeforeEach
@@ -46,7 +48,11 @@ class PublicProfileControllerTest {
         userService = Mockito.mock(UserService.class);
         playerReviewService = Mockito.mock(PlayerReviewService.class);
         moderationService = Mockito.mock(ModerationService.class);
+        userSportRatingService = Mockito.mock(UserSportRatingService.class);
         messageSource = Mockito.mock(MessageSource.class);
+
+        Mockito.when(userSportRatingService.findRatingsForUser(Mockito.any()))
+                .thenReturn(java.util.List.of());
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -54,6 +60,7 @@ class PublicProfileControllerTest {
                                         userService,
                                         playerReviewService,
                                         moderationService,
+                                        userSportRatingService,
                                         messageSource))
                         .build();
     }

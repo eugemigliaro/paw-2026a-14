@@ -1566,6 +1566,10 @@ class UiRouteTest {
         final ModerationService moderationService = Mockito.mock(ModerationService.class);
         Mockito.when(moderationService.findActiveBan(Mockito.any(User.class)))
                 .thenReturn(Optional.empty());
+        final ar.edu.itba.paw.services.UserSportRatingService userSportRatingService =
+                Mockito.mock(ar.edu.itba.paw.services.UserSportRatingService.class);
+        Mockito.when(userSportRatingService.findRatingsForUser(Mockito.any()))
+                .thenReturn(java.util.List.of());
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -1586,8 +1590,11 @@ class UiRouteTest {
                                         "Local Buenos Aires map tiles",
                                         14),
                                 new PublicProfileController(
-                                        userService, playerReviewService,
-                                        moderationService, messageSource),
+                                        userService,
+                                        playerReviewService,
+                                        moderationService,
+                                        userSportRatingService,
+                                        messageSource),
                                 new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
