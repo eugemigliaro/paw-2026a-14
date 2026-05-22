@@ -449,10 +449,23 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("<c:when test=\"${not empty occurrence.href}\">"));
         assertTrue(detailView.contains("recurrence-schedule__text"));
         assertTrue(eventDetailCss.contains(".recurrence-schedule__text"));
+        assertTrue(detailView.contains("code=\"event.recurrence.pagination.aria\""));
+        assertTrue(
+                detailView.contains(
+                        "<section class=\"feed-pagination\" aria-label=\"${recurrenceScheduleTitle}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<nav class=\"feed-pagination__nav\" aria-label=\"${recurrenceScheduleTitle}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<span class=\"feed-pagination__ellipsis\" aria-hidden=\"true\">${item.label}</span>"));
+        assertFalse(detailView.contains("aria-label=\"\""));
         assertEquals("Previous", english.getProperty("pagination.previous"));
         assertEquals("Next", english.getProperty("pagination.next"));
         assertEquals("Anterior", spanish.getProperty("pagination.previous"));
         assertEquals("Siguiente", spanish.getProperty("pagination.next"));
+        assertNotNull(english.getProperty("event.recurrence.pagination.aria"));
+        assertNotNull(spanish.getProperty("event.recurrence.pagination.aria"));
     }
 
     @Test

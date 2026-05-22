@@ -1101,8 +1101,9 @@
 								<c:if test="${not empty recurrencePaginationItems}">
 									<spring:message var="previousLabel" code="pagination.previous" />
 									<spring:message var="nextLabel" code="pagination.next" />
+									<spring:message var="recurrenceScheduleTitle" code="event.recurrence.pagination.aria" />
 									<section class="feed-pagination" aria-label="${recurrenceScheduleTitle}">
-										<nav class="feed-pagination__nav">
+										<nav class="feed-pagination__nav" aria-label="${recurrenceScheduleTitle}">
 											<div>
 												<c:choose>
 													<c:when test="${recurrenceHasPreviousPage}">
@@ -1122,7 +1123,7 @@
 												<c:forEach var="item" items="${recurrencePaginationItems}">
 													<c:choose>
 														<c:when test="${item.ellipsis}">
-															<span class="feed-pagination__ellipsis">${item.label}</span>
+															<span class="feed-pagination__ellipsis" aria-hidden="true">${item.label}</span>
 														</c:when>
 														<c:when test="${item.current}">
 															<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">

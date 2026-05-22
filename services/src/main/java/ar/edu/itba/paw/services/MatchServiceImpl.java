@@ -674,7 +674,8 @@ public class MatchServiceImpl implements MatchService {
     public PaginatedResult<Match> findSeriesOccurrencesPage(
             final Long seriesId, final int page, final int pageSize) {
         if (seriesId == null) {
-            return new PaginatedResult<>(List.of(), 0, 1, pageSize);
+            final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
+            return new PaginatedResult<>(List.of(), 0, 1, safePageSize);
         }
         return matchDao.findSeriesOccurrencesPage(seriesId, page, pageSize);
     }

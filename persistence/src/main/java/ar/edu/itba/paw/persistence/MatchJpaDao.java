@@ -273,10 +273,12 @@ public class MatchJpaDao implements MatchDao {
         return matches;
     }
 
+    private static final int DEFAULT_SERIES_PAGE_SIZE = 5;
+
     @Override
     public PaginatedResult<Match> findSeriesOccurrencesPage(
             final Long seriesId, final int page, final int pageSize) {
-        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_SERIES_PAGE_SIZE;
 
         final int totalCount =
                 ((Number)
@@ -286,14 +288,28 @@ public class MatchJpaDao implements MatchDao {
                                         .getSingleResult())
                         .intValue();
 
-        final int safeOffset = Math.max(0, (safePage - 1) * pageSize);
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int safePage = Math.min(Math.max(page, 1), totalPages);
+
+        final List<Long> ids =
+                em.createQuery(
+                                "SELECT m.id FROM Match m WHERE m.series.id = :seriesId"
+                                        + " ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
+                                Long.class)
+                        .setParameter("seriesId", seriesId)
+                        .setFirstResult((safePage - 1) * safePageSize)
+                        .setMaxResults(safePageSize)
+                        .getResultList();
+
+        if (ids.isEmpty()) {
+            return new PaginatedResult<>(List.of(), totalCount, safePage, safePageSize);
+        }
+
         final List<Match> matches =
                 em.createQuery(
-                                "FROM Match m WHERE m.series.id = :seriesId ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
+                                "FROM Match m WHERE m.id IN :ids ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
                                 Match.class)
-                        .setParameter("seriesId", seriesId)
-                        .setFirstResult(safeOffset)
-                        .setMaxResults(pageSize)
+                        .setParameter("ids", ids)
                         .getResultList();
 
         for (final Match match : matches) {
@@ -302,7 +318,7 @@ public class MatchJpaDao implements MatchDao {
             }
         }
 
-        return new PaginatedResult<>(matches, totalCount, safePage, pageSize);
+        return new PaginatedResult<>(matches, totalCount, safePage, safePageSize);
     }
 
     @Override

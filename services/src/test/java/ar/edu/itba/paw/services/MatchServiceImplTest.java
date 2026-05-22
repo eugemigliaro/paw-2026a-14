@@ -2489,6 +2489,15 @@ public class MatchServiceImplTest {
         Assertions.assertTrue(result.getItems().isEmpty());
     }
 
+    @Test
+    public void
+            findSeriesOccurrencesPageReturnsEmptyResultForNullSeriesIdWithSafeDefaultPageSize() {
+        final PaginatedResult<Match> result = matchService.findSeriesOccurrencesPage(null, 1, 0);
+
+        Assertions.assertTrue(result.getItems().isEmpty());
+        Assertions.assertTrue(result.getPageSize() > 0);
+    }
+
     private Match recurringMatch(
             final Long id,
             final String title,

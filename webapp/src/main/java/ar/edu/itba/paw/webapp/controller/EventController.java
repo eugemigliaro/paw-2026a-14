@@ -325,15 +325,12 @@ public class EventController {
         final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
-        final List<Match> seriesOccurrences =
-                match.isRecurringOccurrence()
-                        ? matchService.findSeriesOccurrences(match.getSeries().getId())
-                        : List.of();
         final PaginatedResult<Match> seriesOccurrencesPage =
                 match.isRecurringOccurrence()
                         ? matchService.findSeriesOccurrencesPage(
                                 match.getSeries().getId(), seriesPage, SERIES_PAGE_SIZE)
                         : new PaginatedResult<>(List.of(), 0, 1, SERIES_PAGE_SIZE);
+        final List<Match> seriesOccurrences = seriesOccurrencesPage.getItems();
         final SeriesReservationUiState seriesReservationState =
                 match.isRecurringOccurrence()
                         ? buildSeriesReservationUiState(
