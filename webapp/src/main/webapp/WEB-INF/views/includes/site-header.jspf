@@ -11,8 +11,6 @@
 <c:url var="siteHeaderBrandHref" value="/" />
 <c:url var="loginHref" value="/login" />
 <c:url var="registerHref" value="/register" />
-<c:url var="accountHref" value="/account" />
-<c:url var="logoutAction" value="/logout" />
 <c:set var="currentLanguage" value="${pageContext.response.locale.language}" />
 <c:set var="currentRequestUri" value="${requestScope['javax.servlet.forward.request_uri']}" />
 <c:if test="${empty currentRequestUri}">
@@ -76,6 +74,16 @@
     </c:if>
 
     <div class="site-header__actions">
+      
+      <c:if test="${not empty shell.hostMatchNav}">
+        <c:url var="hostMatchNavHref" value="${shell.hostMatchNav.href}" />
+        <a
+          class="site-header__nav-link site-header__host-match-nav ${shell.hostMatchNav.active ? 'site-header__nav-link--active' : ''}"
+          href="${hostMatchNavHref}"
+          aria-label="${shell.hostMatchNav.label}">
+          <c:out value="${shell.hostMatchNav.label}" />
+        </a>
+      </c:if>
       <nav class="site-header__language-toggle" aria-label="${languageAria}">
         <a
           class="site-header__language-link ${currentLanguage eq 'en' ? 'site-header__language-link--active' : ''}"
@@ -96,24 +104,68 @@
           <c:out value="${spanishShortLabel}" />
         </a>
       </nav>
-      <c:if test="${not empty shell.hostMatchNav}">
-        <c:url var="hostMatchNavHref" value="${shell.hostMatchNav.href}" />
-        <a
-          class="site-header__nav-link site-header__host-match-nav ${shell.hostMatchNav.active ? 'site-header__nav-link--active' : ''}"
-          href="${hostMatchNavHref}"
-          aria-label="${shell.hostMatchNav.label}">
-          <c:out value="${shell.hostMatchNav.label}" />
-        </a>
-      </c:if>
       <c:choose>
         <c:when test="${pageContext.request.userPrincipal ne null}">
-          <spring:message var="accountLabel" code="nav.account" text="Account" />
-          <a class="site-header__account-link" href="${accountHref}" aria-label="${accountLabel}" title="${accountLabel}">
-            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-              <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
-              <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
-            </svg>
-          </a>
+          <spring:message var="settingsLabel" code="nav.settings" text="Settings" />
+          <div class="site-header__settings-menu" data-overflow-menu="true">
+            <button
+              type="button"
+              class="site-header__settings-link"
+              aria-label="${settingsLabel}"
+              title="${settingsLabel}"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              data-overflow-menu-trigger="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
+              </svg>
+            </button>
+            <div
+              class="site-header__settings-panel"
+              role="menu"
+              aria-label="${settingsLabel}"
+              hidden="hidden"
+              data-overflow-menu-panel="true">
+              <c:forEach var="settingsItem" items="${shell.settingsMenuItems}" varStatus="settingsItemStatus">
+                <c:url var="settingsItemHref" value="${settingsItem.href}" />
+                <a
+                  class="site-header__settings-item ${settingsItem.active ? 'site-header__settings-item--active' : ''}"
+                  href="${settingsItemHref}"
+                  role="menuitem">
+                  <span class="site-header__settings-item-icon" aria-hidden="true">
+                    <c:choose>
+                      <c:when test="${settingsItemStatus.first}">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
+                        <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
+                      </svg>
+                      </c:when>
+                      <c:when test="${settingsItemStatus.index eq 1}">
+                        <svg viewBox="0 0 40 52" focusable="false">
+                          <path d="M4 1 L24 1 L38 15 L38 48 Q38 50 36 50 L4 50 Q2 50 2 48 L2 3 Q2 1 4 1 Z" />
+                          <path d="M24 1 L24 15 L38 15" />
+                          <line x1="8" y1="24" x2="32" y2="24" />
+                          <line x1="8" y1="32" x2="32" y2="32" />
+                          <line x1="8" y1="40" x2="22" y2="40" />
+                        </svg>
+                      </c:when>
+                      <c:otherwise>
+                        <svg viewBox="0 0 40 56" focusable="false">
+                          <path d="M4 1 L24 1 L38 15 L38 52 Q38 54 36 54 L4 54 Q2 54 2 52 L2 3 Q2 1 4 1 Z" />
+                          <path d="M24 1 L24 15 L38 15" />
+                          <path d="M20 22 L8 42 L32 42 Z" />
+                          <line x1="20" y1="28" x2="20" y2="36" />
+                          <circle cx="20" cy="39.5" r="1.2" />
+                        </svg>
+                      </c:otherwise>
+                    </c:choose>
+                  </span>
+                  <span><c:out value="${settingsItem.label}" /></span>
+                </a>
+              </c:forEach>
+            </div>
+          </div>
         </c:when>
         <c:otherwise>
           <spring:message var="loginLabel" code="nav.login" />

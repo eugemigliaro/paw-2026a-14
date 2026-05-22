@@ -42,7 +42,6 @@
 						>
 							<div class="section-head section-head--detail-compact">
 								<div>
-									<span class="detail-label"><spring:message code="event.detail.overview" /></span>
 									<h2 id="about-event-title" class="detail-section__title">
 										<spring:message code="event.detail.aboutEvent" />
 									</h2>
@@ -55,7 +54,204 @@
 							</div>
 						</section>
 
+						<c:if test="${hostViewer && isApprovalRequired}">
+							<section
+								class="detail-section detail-section--host-collapsible"
+								aria-labelledby="pending-requests-title"
+							>
+								<details
+									id="pending-requests"
+									class="host-detail-accordion"
+									<c:if test="${hostPendingRequestsOpen}">open="open"</c:if>>
+									<summary class="host-detail-accordion__summary">
+										<h2 id="pending-requests-title" class="detail-section__title">
+											<spring:message code="event.host.requests.title" arguments="${hostPendingRequestCount}" />
+										</h2>
+										<span class="host-detail-accordion__chevron" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="6 15 12 9 18 15" />
+											</svg>
+										</span>
+									</summary>
+									<c:if test="${hostActionTarget eq 'requests' && not empty hostActionErrorNotice}">
+										<p class="booking-panel__notice booking-panel__notice--error host-detail-accordion__notice">
+											<c:out value="${hostActionErrorNotice}" />
+										</p>
+									</c:if>
+									<c:if test="${not empty hostPendingRequests}">
+										<ul class="participant-list participant-list--managed" aria-labelledby="pending-requests-title">
+											<c:forEach var="req" items="${hostPendingRequests}">
+												<li class="participant-list__item participant-list__item--managed">
+													<c:url var="requestProfileImageSrc" value="${req.profileImageUrl}" />
+													<img
+														class="participant-list__avatar"
+														src="${requestProfileImageSrc}"
+														alt=""
+														aria-hidden="true"
+														loading="lazy"
+														decoding="async" />
+													<div class="participant-list__copy">
+														<c:choose>
+															<c:when test="${not empty req.profileHref}">
+																<c:url var="requestProfileHref" value="${req.profileHref}" />
+																<a class="participant-list__name" href="${requestProfileHref}"><c:out value="${req.username}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="participant-list__name"><c:out value="${req.username}" /></span>
+															</c:otherwise>
+														</c:choose>
+													</div>
+													<div class="participant-list__actions">
+														<c:url var="approveAction" value="${req.approveUrl}" />
+														<spring:message var="approvingLabel" code="host.requests.approving" />
+														<form
+															method="post"
+															action="${approveAction}"
+															data-submit-guard="true"
+															data-submit-loading-label="${approvingLabel}"
+															class="participant-list__action-form">
+															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+															<spring:message var="approveLabel" code="host.requests.approve" />
+															<ui:button label="${approveLabel}" type="submit" size="sm" className="participant-list__action-button" />
+														</form>
+														<c:url var="rejectAction" value="${req.rejectUrl}" />
+														<spring:message var="rejectingLabel" code="host.requests.rejecting" />
+														<form
+															method="post"
+															action="${rejectAction}"
+															data-submit-guard="true"
+															data-submit-loading-label="${rejectingLabel}"
+															class="participant-list__action-form">
+															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+															<spring:message var="rejectLabel" code="host.requests.reject" />
+															<ui:button label="${rejectLabel}" type="submit" variant="secondary" size="sm" className="participant-list__action-button" />
+														</form>
+													</div>
+												</li>
+											</c:forEach>
+										</ul>
+									</c:if>
+								</details>
+							</section>
+						</c:if>
+
+						<c:if test="${hostViewer && isInviteOnly}">
+							<section
+								class="detail-section detail-section--host-collapsible"
+								aria-labelledby="pending-invitations-title"
+							>
+								<details
+									id="pending-invitations"
+									class="host-detail-accordion"
+									<c:if test="${hostPendingInvitesOpen}">open="open"</c:if>>
+									<summary class="host-detail-accordion__summary">
+										<h2 id="pending-invitations-title" class="detail-section__title">
+											<spring:message code="event.host.invites.title" arguments="${hostPendingInviteCount}" />
+										</h2>
+										<span class="host-detail-accordion__chevron" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="6 15 12 9 18 15" />
+											</svg>
+										</span>
+									</summary>
+									<c:if test="${hostActionTarget eq 'invites' && not empty hostActionErrorNotice}">
+										<p class="booking-panel__notice booking-panel__notice--error host-detail-accordion__notice">
+											<c:out value="${hostActionErrorNotice}" />
+										</p>
+									</c:if>
+									<c:url var="hostInviteAction" value="${hostInviteActionPath}" />
+									<spring:message var="invitingLabel" code="host.invites.inviting" />
+									<form
+										method="post"
+										action="${hostInviteAction}"
+										data-submit-guard="true"
+										data-submit-loading-label="${invitingLabel}"
+										class="host-invite-form"
+										novalidate="novalidate">
+										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+										<div class="host-invite-form__row">
+											<spring:message var="emailLabel" code="form.email.label" />
+											<spring:message var="emailPlaceholder" code="form.email.placeholder" />
+											<ui:textInput
+												label="${emailLabel}"
+												name="email"
+												id="host-invite-email"
+												type="email"
+												value="${hostInviteEmail}"
+												placeholder="${emailPlaceholder}"
+												className="host-invite-form__field" />
+											<spring:message var="inviteSubmitLabel" code="host.invites.invite" />
+											<ui:button label="${inviteSubmitLabel}" type="submit" className="host-invite-form__submit" disabled="${not hostCanManageParticipants}" />
+										</div>
+										<c:if test="${hostSeriesInviteAvailable}">
+											<label class="series-invite-option host-invite-form__series-option" for="host-invite-series">
+												<input
+													type="checkbox"
+													name="inviteSeries"
+													id="host-invite-series"
+													value="true"
+													class="series-invite-option__input" />
+												<span class="series-invite-option__copy">
+													<span class="series-invite-option__title">
+														<spring:message code="host.invites.inviteSeries" />
+													</span>
+													<span class="series-invite-option__hint">
+														<spring:message code="host.invites.inviteSeries.hint" />
+													</span>
+												</span>
+											</label>
+										</c:if>
+									</form>
+									<c:if test="${not empty hostPendingInvites or not empty hostDeclinedInvites}">
+										<ul class="participant-list participant-list--managed participant-list--invitations" aria-labelledby="pending-invitations-title">
+											<c:forEach var="invite" items="${hostPendingInvites}">
+												<li class="participant-list__item participant-list__item--managed">
+													<c:url var="pendingInviteProfileImageSrc" value="${invite.profileImageUrl}" />
+													<img class="participant-list__avatar" src="${pendingInviteProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+													<div class="participant-list__copy">
+														<c:choose>
+															<c:when test="${not empty invite.profileHref}">
+																<c:url var="pendingInviteProfileHref" value="${invite.profileHref}" />
+																<a class="participant-list__name" href="${pendingInviteProfileHref}"><c:out value="${invite.username}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="participant-list__name"><c:out value="${invite.username}" /></span>
+															</c:otherwise>
+														</c:choose>
+													</div>
+													<span class="participant-list__status participant-list__status--pending">
+														<spring:message code="host.invites.status.pending" />
+													</span>
+												</li>
+											</c:forEach>
+											<c:forEach var="invite" items="${hostDeclinedInvites}">
+												<li class="participant-list__item participant-list__item--managed">
+													<c:url var="declinedInviteProfileImageSrc" value="${invite.profileImageUrl}" />
+													<img class="participant-list__avatar" src="${declinedInviteProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+													<div class="participant-list__copy">
+														<c:choose>
+															<c:when test="${not empty invite.profileHref}">
+																<c:url var="declinedInviteProfileHref" value="${invite.profileHref}" />
+																<a class="participant-list__name" href="${declinedInviteProfileHref}"><c:out value="${invite.username}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="participant-list__name"><c:out value="${invite.username}" /></span>
+															</c:otherwise>
+														</c:choose>
+													</div>
+													<span class="participant-list__status participant-list__status--declined">
+														<spring:message code="host.invites.status.declined" />
+													</span>
+												</li>
+											</c:forEach>
+										</ul>
+									</c:if>
+								</details>
+							</section>
+						</c:if>
+
 						<section
+							id="participants"
 							class="detail-section detail-section--participants"
 							aria-labelledby="participant-section-title"
 						>
@@ -67,10 +263,24 @@
 								</div>
 								<span class="detail-section__meta"><c:out value="${eventPage.participantCountLabel}" /></span>
 							</div>
+							<c:if test="${hostActionTarget eq 'participants' && not empty hostActionErrorNotice}">
+								<p class="booking-panel__notice booking-panel__notice--error">
+									<c:out value="${hostActionErrorNotice}" />
+								</p>
+							</c:if>
 
 							<c:choose>
 								<c:when test="${empty eventPage.participants}">
 									<div class="panel participant-empty-state">
+										<span class="participant-empty-state__icon" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+												<circle cx="9" cy="7" r="4" />
+												<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+												<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+												<line x1="3" y1="3" x2="21" y2="21" />
+											</svg>
+										</span>
 										<p class="participant-empty-state__title">
 											<spring:message code="event.detail.noPlayers" />
 										</p>
@@ -82,7 +292,7 @@
 								<c:otherwise>
 									<ul class="participant-list" aria-label="${participantsAria}">
 										<c:forEach var="participant" items="${eventPage.participants}">
-											<li class="participant-list__item">
+											<li class="participant-list__item ${not empty participant.removeUrl ? 'participant-list__item--managed' : ''}">
 												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
 												<img
 													class="participant-list__avatar"
@@ -101,6 +311,20 @@
 														</a>
 													</c:if>
 												</div>
+												<c:if test="${not empty participant.removeUrl}">
+													<c:url var="participantRemoveAction" value="${participant.removeUrl}" />
+													<spring:message var="removingLabel" code="event.host.participants.removing" />
+													<form
+														method="post"
+														action="${participantRemoveAction}"
+														data-submit-guard="true"
+														data-submit-loading-label="${removingLabel}"
+														class="participant-list__action-form">
+														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+														<spring:message var="removeLabel" code="event.host.participants.remove" />
+														<ui:button label="${removeLabel}" type="submit" variant="danger" size="sm" className="participant-list__action-button participant-list__action-button--danger" />
+													</form>
+												</c:if>
 											</li>
 										</c:forEach>
 									</ul>
@@ -119,159 +343,170 @@
 										</p>
 									</c:if>
 
-									<spring:message var="hostManageEditLabel" code="host.manage.edit" />
-									<c:choose>
-										<c:when test="${not empty eventPage.occurrences}">
-											<spring:message var="hostManageEditLabel" code="host.manage.editOccurrence" />
-											<spring:message var="hostManageEditSeriesLabel" code="host.manage.editSeries" />
-											<spring:message var="hostManageCancelLabel" code="host.manage.cancelOccurrence" />
-											<spring:message var="hostManageCancelSeriesLabel" code="host.manage.cancelSeries" />
-											<spring:message var="hostManageDetailLabel" code="host.manage.detailOccurrence" />
-										</c:when>
-										<c:otherwise>
-											<spring:message var="hostManageCancelLabel" code="host.manage.cancel" />
-											<spring:message var="hostManageDetailLabel" code="host.manage.detail" />
-										</c:otherwise>
-									</c:choose>
-									<spring:message var="hostManageCancellingLabel" code="host.manage.cancelling" />
-									<spring:message var="hostManageMenuLabel" code="host.manage.menu" />
-									<spring:message var="hostManageMenuTriggerLabel" code="host.manage.menu.trigger" />
-									<spring:message var="reportMenuLabel" code="moderation.report.match.menu" />
-									<ui:overflowMenu
-										ariaLabel="${hostManageMenuTriggerLabel}"
-										menuAriaLabel="${hostManageMenuLabel}"
-										className="host-panel__overflow-menu">
-										<c:url var="hostEditHref" value="${hostEditPath}" />
+									<spring:message var="hostCancellingLabel" code="event.host.action.cancelling" />
+									<c:url var="hostEditHref" value="${hostEditPath}" />
+									<c:url var="hostSeriesEditHref" value="${hostSeriesEditPath}" />
+									<c:url var="hostCancelAction" value="${hostCancelPath}" />
+									<c:url var="hostSeriesCancelAction" value="${hostSeriesCancelPath}" />
+									<div class="host-action-card ${not empty eventPage.occurrences ? 'host-action-card--recurring' : ''} ${isInviteOnly && empty eventPage.occurrences ? 'host-action-card--three' : ''}">
 										<c:choose>
-											<c:when test="${hostCanEdit}">
-												<a class="overflow-menu__item" href="${hostEditHref}" role="menuitem">
-													<c:out value="${hostManageEditLabel}" />
-												</a>
-											</c:when>
-											<c:otherwise>
-												<span
-													class="overflow-menu__item overflow-menu__item--disabled"
-													role="menuitem"
-													aria-disabled="true">
-													<c:out value="${hostManageEditLabel}" />
-												</span>
-											</c:otherwise>
-										</c:choose>
-										<c:if test="${not empty eventPage.occurrences}">
-											<c:url var="hostSeriesEditHref" value="${hostSeriesEditPath}" />
-											<c:choose>
-												<c:when test="${hostCanEditSeries}">
-													<a class="overflow-menu__item" href="${hostSeriesEditHref}" role="menuitem">
-														<c:out value="${hostManageEditSeriesLabel}" />
-													</a>
-												</c:when>
-												<c:otherwise>
-													<span
-														class="overflow-menu__item overflow-menu__item--disabled"
-														role="menuitem"
-														aria-disabled="true">
-														<c:out value="${hostManageEditSeriesLabel}" />
-													</span>
-												</c:otherwise>
-											</c:choose>
-										</c:if>
-										<c:url var="hostCancelAction" value="${hostCancelPath}" />
-										<form
-											method="post"
-											action="${hostCancelAction}"
-											data-submit-guard="true"
-											data-submit-loading-label="${hostManageCancellingLabel}">
-											<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-											<c:choose>
-												<c:when test="${hostCanCancel}">
-													<button
-														class="overflow-menu__item overflow-menu__item--danger"
-														type="submit"
-														role="menuitem">
-														<c:out value="${hostManageCancelLabel}" />
-													</button>
-												</c:when>
-												<c:otherwise>
-													<button
-														class="overflow-menu__item overflow-menu__item--danger"
-														type="submit"
-														role="menuitem"
-														disabled="disabled"
-														aria-disabled="true">
-														<c:out value="${hostManageCancelLabel}" />
-													</button>
-												</c:otherwise>
-											</c:choose>
-										</form>
-										<c:if test="${not empty eventPage.occurrences}">
-											<c:url var="hostSeriesCancelAction" value="${hostSeriesCancelPath}" />
-											<form
-												method="post"
-												action="${hostSeriesCancelAction}"
-												data-submit-guard="true"
-												data-submit-loading-label="${hostManageCancellingLabel}">
-												<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+											<c:when test="${not empty eventPage.occurrences}">
+												<spring:message var="hostEditOccurrenceLabel" code="event.host.action.editOccurrence" />
+												<spring:message var="hostEditSeriesLabel" code="event.host.action.editSeries" />
+												<spring:message var="hostCancelOccurrenceLabel" code="event.host.action.cancelOccurrence" />
+												<spring:message var="hostCancelSeriesLabel" code="event.host.action.cancelSeries" />
 												<c:choose>
-													<c:when test="${hostCanCancelSeries}">
-														<button
-															class="overflow-menu__item overflow-menu__item--danger"
-															type="submit"
-															role="menuitem">
-															<c:out value="${hostManageCancelSeriesLabel}" />
-														</button>
+													<c:when test="${hostCanEdit}">
+														<a class="host-action-card__button" href="${hostEditHref}">
+															<span class="host-action-card__icon" aria-hidden="true">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																	<path d="M12 20h9" />
+																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+																</svg>
+															</span>
+															<span><c:out value="${hostEditOccurrenceLabel}" /></span>
+														</a>
 													</c:when>
 													<c:otherwise>
-														<button
-															class="overflow-menu__item overflow-menu__item--danger"
-															type="submit"
-															role="menuitem"
-															disabled="disabled"
-															aria-disabled="true">
-															<c:out value="${hostManageCancelSeriesLabel}" />
-														</button>
+														<span class="host-action-card__button is-disabled" aria-disabled="true">
+															<span class="host-action-card__icon" aria-hidden="true">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																	<path d="M12 20h9" />
+																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+																</svg>
+															</span>
+															<span><c:out value="${hostEditOccurrenceLabel}" /></span>
+														</span>
 													</c:otherwise>
 												</c:choose>
-											</form>
-										</c:if>
-										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
-										<a class="overflow-menu__item overflow-menu__item--danger" href="${reportMatchHref}" role="menuitem">
-											<c:out value="${reportMenuLabel}" />
-										</a>
-									</ui:overflowMenu>
-
-									<div class="host-panel__note">
-										<p class="detail-label"><spring:message code="host.manage.label" /></p>
-										<p><c:out value="${hostManageDetailLabel}" /></p>
+												<c:choose>
+													<c:when test="${hostCanEditSeries}">
+														<a class="host-action-card__button" href="${hostSeriesEditHref}">
+															<span class="host-action-card__icon" aria-hidden="true">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																	<path d="M12 20h9" />
+																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+																</svg>
+															</span>
+															<span><c:out value="${hostEditSeriesLabel}" /></span>
+														</a>
+													</c:when>
+													<c:otherwise>
+														<span class="host-action-card__button is-disabled" aria-disabled="true">
+															<span class="host-action-card__icon" aria-hidden="true">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																	<path d="M12 20h9" />
+																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+																</svg>
+															</span>
+															<span><c:out value="${hostEditSeriesLabel}" /></span>
+														</span>
+													</c:otherwise>
+												</c:choose>
+												<form method="post" action="${hostCancelAction}" data-submit-guard="true" data-submit-loading-label="${hostCancellingLabel}" class="host-action-card__form">
+													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not hostCanCancel}">disabled="disabled" aria-disabled="true"</c:if>>
+														<span class="host-action-card__icon" aria-hidden="true">
+															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																<rect x="3" y="4" width="18" height="18" rx="2" />
+																<path d="M16 2v4" />
+																<path d="M8 2v4" />
+																<path d="M3 10h18" />
+															</svg>
+														</span>
+														<span><c:out value="${hostCancelOccurrenceLabel}" /></span>
+													</button>
+												</form>
+												<form method="post" action="${hostSeriesCancelAction}" data-submit-guard="true" data-submit-loading-label="${hostCancellingLabel}" class="host-action-card__form">
+													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not hostCanCancelSeries}">disabled="disabled" aria-disabled="true"</c:if>>
+														<span class="host-action-card__icon" aria-hidden="true">
+															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																<rect x="3" y="4" width="18" height="18" rx="2" />
+																<path d="M16 2v4" />
+																<path d="M8 2v4" />
+																<path d="M3 10h18" />
+															</svg>
+														</span>
+														<span><c:out value="${hostCancelSeriesLabel}" /></span>
+													</button>
+												</form>
+											</c:when>
+											<c:otherwise>
+												<spring:message var="hostEditLabel" code="event.host.action.edit" />
+												<spring:message var="hostCancelLabel" code="event.host.action.cancel" />
+												<c:choose>
+													<c:when test="${hostCanEdit}">
+														<a class="host-action-card__button" href="${hostEditHref}">
+															<span class="host-action-card__icon" aria-hidden="true">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																	<path d="M12 20h9" />
+																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+																</svg>
+															</span>
+															<span><c:out value="${hostEditLabel}" /></span>
+														</a>
+													</c:when>
+													<c:otherwise>
+														<span class="host-action-card__button is-disabled" aria-disabled="true">
+															<span class="host-action-card__icon" aria-hidden="true">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																	<path d="M12 20h9" />
+																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+																</svg>
+															</span>
+															<span><c:out value="${hostEditLabel}" /></span>
+														</span>
+													</c:otherwise>
+												</c:choose>
+												<form method="post" action="${hostCancelAction}" data-submit-guard="true" data-submit-loading-label="${hostCancellingLabel}" class="host-action-card__form">
+													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not hostCanCancel}">disabled="disabled" aria-disabled="true"</c:if>>
+														<span class="host-action-card__icon" aria-hidden="true">
+															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																<rect x="3" y="4" width="18" height="18" rx="2" />
+																<path d="M16 2v4" />
+																<path d="M8 2v4" />
+																<path d="M3 10h18" />
+															</svg>
+														</span>
+														<span><c:out value="${hostCancelLabel}" /></span>
+													</button>
+												</form>
+												<c:if test="${isInviteOnly}">
+													<spring:message var="hostInviteLabel" code="event.host.action.invite" />
+													<c:choose>
+														<c:when test="${hostCanManageParticipants}">
+															<a class="host-action-card__button" href="#pending-invitations" data-host-invite-trigger="true">
+																<span class="host-action-card__icon" aria-hidden="true">
+																	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																		<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+																		<circle cx="9" cy="7" r="4" />
+																		<path d="M19 8v6" />
+																		<path d="M22 11h-6" />
+																	</svg>
+																</span>
+																<span><c:out value="${hostInviteLabel}" /></span>
+															</a>
+														</c:when>
+														<c:otherwise>
+															<span class="host-action-card__button is-disabled" aria-disabled="true">
+																<span class="host-action-card__icon" aria-hidden="true">
+																	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+																		<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+																		<circle cx="9" cy="7" r="4" />
+																		<path d="M19 8v6" />
+																		<path d="M22 11h-6" />
+																	</svg>
+																</span>
+																<span><c:out value="${hostInviteLabel}" /></span>
+															</span>
+														</c:otherwise>
+													</c:choose>
+												</c:if>
+											</c:otherwise>
+										</c:choose>
 									</div>
-
-									<c:choose>
-										<c:when test="${isInviteOnly}">
-											<c:url var="hostInvitesHref" value="${hostInvitesPath}" />
-											<spring:message var="hostInvitesLabel" code="event.host.invites" />
-											<ui:button
-												label="${hostInvitesLabel}"
-												href="${hostInvitesHref}"
-												fullWidth="${true}"
-												disabled="${not hostCanManageParticipants}" />
-										</c:when>
-										<c:when test="${isApprovalRequired}">
-											<c:url var="hostRequestsHref" value="${hostRequestsPath}" />
-											<spring:message var="hostRequestsLabel" code="event.host.requests" />
-											<ui:button
-												label="${hostRequestsLabel}"
-												href="${hostRequestsHref}"
-												fullWidth="${true}"
-												disabled="${not hostCanManageParticipants}" />
-										</c:when>
-									</c:choose>
-									<c:url var="hostParticipantsHref" value="${hostParticipantsPath}" />
-									<spring:message var="hostParticipantsLabel" code="event.host.participants" />
-									<ui:button
-										label="${hostParticipantsLabel}"
-										href="${hostParticipantsHref}"
-										fullWidth="${true}"
-										variant="secondary"
-										disabled="${not hostCanManageParticipants}" />
 								</article>
 
 								<article class="panel event-info-panel">
@@ -413,14 +648,6 @@
 								</article>
 
 								<article class="panel player-actions-panel">
-									<p class="detail-label player-actions-panel__title">
-										<spring:message code="event.booking.playerActions" />
-									</p>
-									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
-										<p class="booking-panel__notice booking-panel__notice--success">
-											<spring:message code="event.booking.confirmed" />
-										</p>
-									</c:if>
 									<c:if test="${reservationCancelled}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<c:choose>
@@ -449,7 +676,7 @@
 										</p>
 									</c:if>
 									<c:if test="${joinCancelled}">
-										<p class="booking-panel__notice booking-panel__notice--info">
+										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.joinRequest.cancelled" />
 										</p>
 									</c:if>
@@ -463,9 +690,11 @@
 									<c:if test="${not hostViewer or isConfirmedParticipant or reservationEnabled or seriesReservationEnabled or seriesCancellationEnabled}">
 										<c:choose>
 											<c:when test="${isConfirmedParticipant}">
-												<p class="booking-panel__notice booking-panel__notice--success">
-													<spring:message code="event.booking.confirmed" />
-												</p>
+												<c:if test="${reservationConfirmed}">
+													<p class="booking-panel__notice booking-panel__notice--success">
+														<spring:message code="event.booking.confirmed" />
+													</p>
+												</c:if>
 												<c:if test="${reservationCancellationEnabled}">
 													<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
 													<c:choose>
@@ -553,7 +782,7 @@
 														<c:out value="${inviteError}" />
 													</p>
 												</c:if>
-												<p class="booking-panel__notice booking-panel__notice--info">
+												<p class="booking-panel__notice booking-panel__notice--info" data-invite-refresh-notice="true">
 													<spring:message code="event.invite.pendingLabel" />
 												</p>
 												<c:url var="acceptInviteAction" value="${acceptInvitePath}" />
@@ -657,6 +886,10 @@
 											<ui:button label="${leaveRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
 										</form>
 									</c:if>
+									<hr class="booking-panel__divider" />
+									<c:url var="hostReportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+									<spring:message var="hostReportMatchLabel" code="moderation.report.match.menu" />
+									<ui:button label="${hostReportMatchLabel}" href="${hostReportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
 								</article>
 							</c:when>
 							<c:otherwise>
@@ -796,14 +1029,6 @@
 								</article>
 
 								<article class="panel booking-panel">
-									<p class="detail-label player-actions-panel__title">
-										<spring:message code="event.booking.playerActions" />
-									</p>
-									<c:if test="${reservationConfirmed and not isConfirmedParticipant}">
-										<p class="booking-panel__notice booking-panel__notice--success">
-											<spring:message code="event.booking.confirmed" />
-										</p>
-									</c:if>
 									<c:if test="${reservationCancelled}">
 										<p class="booking-panel__notice booking-panel__notice--info">
 											<c:choose>
@@ -833,7 +1058,7 @@
 										</p>
 									</c:if>
 									<c:if test="${joinCancelled}">
-										<p class="booking-panel__notice booking-panel__notice--info">
+										<p class="booking-panel__notice booking-panel__notice--success">
 											<spring:message code="event.joinRequest.cancelled" />
 										</p>
 									</c:if>
@@ -847,9 +1072,11 @@
 									<c:if test="${not hostViewer or isConfirmedParticipant or reservationEnabled or seriesReservationEnabled or seriesCancellationEnabled}">
 										<c:choose>
 											<c:when test="${isConfirmedParticipant}">
-												<p class="booking-panel__notice booking-panel__notice--success">
-													<spring:message code="event.booking.confirmed" />
-												</p>
+												<c:if test="${reservationConfirmed}">
+													<p class="booking-panel__notice booking-panel__notice--success">
+														<spring:message code="event.booking.confirmed" />
+													</p>
+												</c:if>
 												<c:if test="${reservationCancellationEnabled}">
 													<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
 													<c:choose>
@@ -937,7 +1164,7 @@
 														<c:out value="${inviteError}" />
 													</p>
 												</c:if>
-												<p class="booking-panel__notice booking-panel__notice--info">
+												<p class="booking-panel__notice booking-panel__notice--info" data-invite-refresh-notice="true">
 													<spring:message code="event.invite.pendingLabel" />
 												</p>
 												<c:url var="acceptInviteAction" value="${acceptInvitePath}" />
@@ -1042,9 +1269,10 @@
 										</form>
 									</c:if>
 									<c:if test="${not empty pageContext.request.userPrincipal}">
+										<hr class="booking-panel__divider" />
 										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
 										<spring:message var="reportMatchLabel" code="moderation.report.match.menu" />
-										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" />
+										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
 									</c:if>
 								</article>
 							</c:otherwise>
