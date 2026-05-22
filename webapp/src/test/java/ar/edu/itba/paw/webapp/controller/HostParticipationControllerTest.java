@@ -12,7 +12,9 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,6 +78,33 @@ class HostParticipationControllerTest {
     }
 
     @Test
+    void approveRequestMapsClosedError() throws Exception {
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User requestedUser = Mockito.mock(User.class);
+        final Match mockMatch = Mockito.mock(Match.class);
+
+        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
+        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
+        when(messageSource.getMessage(
+                        Mockito.eq("event.host.requests.error.closed"),
+                        Mockito.isNull(),
+                        Mockito.<Locale>any()))
+                .thenReturn("This event is closed.");
+        Mockito.doThrow(new MatchParticipationException("closed", "The event is not open."))
+                .when(matchParticipationService)
+                .approveRequest(
+                        Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
+
+        mockMvc.perform(post("/host/matches/42/requests/9/approve"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostActionTarget", "requests"))
+                .andExpect(flash().attribute("hostActionError", "This event is closed."));
+    }
+
+    @Test
     void rejectRequestRedirectsWithSuccess() throws Exception {
         AuthenticationUtils.authenticateUser(1L);
 
@@ -129,5 +158,30 @@ class HostParticipationControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
                 .andExpect(flash().attribute("hostAction", "participantRemoved"));
+    }
+
+    @Test
+    void removeParticipantMapsStartedError() throws Exception {
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User requestedUser = Mockito.mock(User.class);
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
+        when(messageSource.getMessage(
+                        Mockito.eq("event.host.participants.error.started"),
+                        Mockito.isNull(),
+                        Mockito.<Locale>any()))
+                .thenReturn("This event has already started.");
+        Mockito.doThrow(
+                        new MatchParticipationException(
+                                "started", "The event has already started."))
+                .when(matchParticipationService)
+                .removeParticipant(
+                        Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
+
+        mockMvc.perform(post("/host/matches/42/participants/9/remove"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostActionTarget", "participants"))
+                .andExpect(flash().attribute("hostActionError", "This event has already started."));
     }
 }

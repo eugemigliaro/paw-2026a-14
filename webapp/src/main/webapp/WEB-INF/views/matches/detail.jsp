@@ -79,7 +79,7 @@
 										</p>
 									</c:if>
 									<c:if test="${not empty hostPendingRequests}">
-										<ul class="participant-list participant-list--managed" aria-label="${participantsAria}">
+										<ul class="participant-list participant-list--managed" aria-labelledby="pending-requests-title">
 											<c:forEach var="req" items="${hostPendingRequests}">
 												<li class="participant-list__item participant-list__item--managed">
 													<c:url var="requestProfileImageSrc" value="${req.profileImageUrl}" />
@@ -91,8 +91,15 @@
 														loading="lazy"
 														decoding="async" />
 													<div class="participant-list__copy">
-														<c:url var="requestProfileHref" value="${req.profileHref}" />
-														<a class="participant-list__name" href="${requestProfileHref}"><c:out value="${req.username}" /></a>
+														<c:choose>
+															<c:when test="${not empty req.profileHref}">
+																<c:url var="requestProfileHref" value="${req.profileHref}" />
+																<a class="participant-list__name" href="${requestProfileHref}"><c:out value="${req.username}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="participant-list__name"><c:out value="${req.username}" /></span>
+															</c:otherwise>
+														</c:choose>
 													</div>
 													<div class="participant-list__actions">
 														<c:url var="approveAction" value="${req.approveUrl}" />
@@ -196,14 +203,21 @@
 										</c:if>
 									</form>
 									<c:if test="${not empty hostPendingInvites or not empty hostDeclinedInvites}">
-										<ul class="participant-list participant-list--managed participant-list--invitations" aria-label="${participantsAria}">
+										<ul class="participant-list participant-list--managed participant-list--invitations" aria-labelledby="pending-invitations-title">
 											<c:forEach var="invite" items="${hostPendingInvites}">
 												<li class="participant-list__item participant-list__item--managed">
 													<c:url var="pendingInviteProfileImageSrc" value="${invite.profileImageUrl}" />
 													<img class="participant-list__avatar" src="${pendingInviteProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
 													<div class="participant-list__copy">
-														<c:url var="pendingInviteProfileHref" value="${invite.profileHref}" />
-														<a class="participant-list__name" href="${pendingInviteProfileHref}"><c:out value="${invite.username}" /></a>
+														<c:choose>
+															<c:when test="${not empty invite.profileHref}">
+																<c:url var="pendingInviteProfileHref" value="${invite.profileHref}" />
+																<a class="participant-list__name" href="${pendingInviteProfileHref}"><c:out value="${invite.username}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="participant-list__name"><c:out value="${invite.username}" /></span>
+															</c:otherwise>
+														</c:choose>
 													</div>
 													<span class="participant-list__status participant-list__status--pending">
 														<spring:message code="host.invites.status.pending" />
@@ -215,8 +229,15 @@
 													<c:url var="declinedInviteProfileImageSrc" value="${invite.profileImageUrl}" />
 													<img class="participant-list__avatar" src="${declinedInviteProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
 													<div class="participant-list__copy">
-														<c:url var="declinedInviteProfileHref" value="${invite.profileHref}" />
-														<a class="participant-list__name" href="${declinedInviteProfileHref}"><c:out value="${invite.username}" /></a>
+														<c:choose>
+															<c:when test="${not empty invite.profileHref}">
+																<c:url var="declinedInviteProfileHref" value="${invite.profileHref}" />
+																<a class="participant-list__name" href="${declinedInviteProfileHref}"><c:out value="${invite.username}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="participant-list__name"><c:out value="${invite.username}" /></span>
+															</c:otherwise>
+														</c:choose>
 													</div>
 													<span class="participant-list__status participant-list__status--declined">
 														<spring:message code="host.invites.status.declined" />

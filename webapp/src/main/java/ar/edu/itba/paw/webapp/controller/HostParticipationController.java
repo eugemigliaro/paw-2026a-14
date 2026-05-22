@@ -334,12 +334,28 @@ public class HostParticipationController {
         if ("full".equals(code)) {
             return messageSource.getMessage("event.host.requests.error.full", null, locale);
         }
+        if ("closed".equals(code)) {
+            return messageSource.getMessage("event.host.requests.error.closed", null, locale);
+        }
         return messageSource.getMessage("event.host.requests.error.noPendingRequest", null, locale);
     }
 
     private String participantErrorMessage(final String code, final Locale locale) {
-        return messageSource.getMessage(
-                "event.host.participants.error.notParticipant", null, locale);
+        switch (code) {
+            case "started":
+                return messageSource.getMessage(
+                        "event.host.participants.error.started", null, locale);
+            case "not_cancellable":
+                return messageSource.getMessage(
+                        "event.host.participants.error.notCancellable", null, locale);
+            case "not_joined":
+            case "not_participant":
+                return messageSource.getMessage(
+                        "event.host.participants.error.notParticipant", null, locale);
+            default:
+                return messageSource.getMessage(
+                        "event.host.participants.error.generic", null, locale);
+        }
     }
 
     private static String avatarLabel(final String username) {

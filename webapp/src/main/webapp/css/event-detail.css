@@ -426,7 +426,7 @@
 	text-decoration: none;
 }
 
-.participant-list__name:hover {
+.participant-list__name[href]:hover {
 	text-decoration: underline;
 }
 

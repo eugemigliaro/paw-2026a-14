@@ -431,6 +431,16 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void matchDetailHostManagementListsUseScopedLabelsAndOptionalProfileLinks() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+
+        assertTrue(detailView.contains("aria-labelledby=\"pending-requests-title\""));
+        assertTrue(detailView.contains("aria-labelledby=\"pending-invitations-title\""));
+        assertTrue(detailView.contains("<c:when test=\"${not empty req.profileHref}\">"));
+        assertTrue(detailView.contains("<c:when test=\"${not empty invite.profileHref}\">"));
+    }
+
+    @Test
     void matchDetailCollapsesLongRecurringSchedule() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final String eventDetailCss = read("src/main/webapp/css/event-detail.css");
