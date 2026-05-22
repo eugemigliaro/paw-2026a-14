@@ -1123,11 +1123,11 @@ I18n:
 - [x] Implement `TournamentRegistrationService`.
 - [x] Implement `TournamentBracketService`.
 - [x] Add service tests for lifecycle, registration, grouping, generation, and propagation.
-- [ ] Add host create form, controller, JSP, and messages.
-- [ ] Add public tournament detail page.
-- [ ] Add solo join/leave actions.
-- [ ] Add host close-registration action.
-- [ ] Add bracket generation host page.
+- [x] Add host create form, controller, JSP, and messages.
+- [x] Add public tournament detail page.
+- [x] Add solo join/leave actions.
+- [x] Add host close-registration action.
+- [x] Add bracket generation host page.
 - [ ] Add bracket publication with round-one schedule.
 - [ ] Add public/player bracket page.
 - [ ] Add host winner/walkover actions.

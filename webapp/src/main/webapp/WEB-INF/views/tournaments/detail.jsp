@@ -92,6 +92,17 @@
 								</form>
 							</article>
 						</c:if>
+						<c:if test="${tournamentPage.canManageBracket}">
+							<article class="panel host-panel">
+								<div class="host-panel__note">
+									<p class="detail-label"><spring:message code="tournament.host.bracket.panel.label" /></p>
+									<p><spring:message code="tournament.host.bracket.panel.detail" /></p>
+								</div>
+								<c:url var="bracketSetupHref" value="/host/tournaments/${tournamentPage.id}/bracket/setup" />
+								<spring:message var="bracketSetupLabel" code="tournament.host.bracket.setup" />
+								<ui:button label="${bracketSetupLabel}" href="${bracketSetupHref}" fullWidth="${true}" variant="secondary" />
+							</article>
+						</c:if>
 
 						<article class="panel player-actions-panel">
 							<p class="detail-label player-actions-panel__title">

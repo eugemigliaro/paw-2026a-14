@@ -8,12 +8,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
+import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
+import ar.edu.itba.paw.services.TournamentBracketService;
+import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
@@ -46,6 +52,7 @@ class HostTournamentControllerTest {
     private MockMvc mockMvc;
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
+    private TournamentBracketService tournamentBracketService;
     private AtomicReference<CreateTournamentRequest> createdRequest;
 
     @BeforeEach
@@ -53,6 +60,7 @@ class HostTournamentControllerTest {
         SecurityContextHolder.clearContext();
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
+        tournamentBracketService = Mockito.mock(TournamentBracketService.class);
         createdRequest = new AtomicReference<>();
 
         final MessageSource messageSource = messageSource();
@@ -62,6 +70,7 @@ class HostTournamentControllerTest {
                                 new HostTournamentController(
                                         tournamentService,
                                         tournamentRegistrationService,
+                                        tournamentBracketService,
                                         messageSource,
                                         clock))
                         .setValidator(validator(messageSource))
@@ -140,6 +149,63 @@ class HostTournamentControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void postGenerateBracketRedirectsToSetup() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/bracket/generate"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/host/tournaments/77/bracket/setup"));
+    }
+
+    @Test
+    void getBracketSetupForHostRendersGeneratedBracket() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam firstTeam = team(1L, tournament, "Team One");
+        final TournamentTeam secondTeam = team(2L, tournament, "Team Two");
+        final TournamentMatch match =
+                new TournamentMatch(
+                        10L,
+                        tournament,
+                        1,
+                        0,
+                        firstTeam,
+                        secondTeam,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        TournamentMatchStatus.PENDING,
+                        null,
+                        null,
+                        FIXED_NOW,
+                        FIXED_NOW);
+        Mockito.when(tournamentService.findTournamentForHost(77L, host))
+                .thenReturn(java.util.Optional.of(tournament));
+        Mockito.when(tournamentBracketService.getBracket(77L, host))
+                .thenReturn(
+                        new TournamentBracketView(
+                                tournament,
+                                java.util.List.of(firstTeam, secondTeam),
+                                java.util.List.of(match),
+                                null,
+                                match));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/host/tournaments/77/bracket/setup"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/bracket-setup"))
+                .andExpect(model().attributeExists("bracketPage"));
+    }
+
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             validCreatePost() {
         return createPost("City Padel Cup");
@@ -193,6 +259,12 @@ class HostTournamentControllerTest {
                 status,
                 FIXED_NOW,
                 FIXED_NOW);
+    }
+
+    private static TournamentTeam team(
+            final Long id, final Tournament tournament, final String name) {
+        return new TournamentTeam(
+                id, tournament, name, TournamentTeamOrigin.SOLO_POOL, null, FIXED_NOW);
     }
 
     private static MessageSource messageSource() {

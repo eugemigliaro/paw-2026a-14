@@ -153,6 +153,9 @@ public class TournamentController {
                 currentUser == null && registrationOpen && tournament.isAllowSoloSignup();
         final boolean canCloseRegistration =
                 registrationOpen && (isHost(tournament, currentUser) || isAdminMod());
+        final boolean canManageBracket =
+                TournamentStatus.BRACKET_SETUP == tournament.getStatus()
+                        && (isHost(tournament, currentUser) || isAdminMod());
 
         return new TournamentDetailViewModel(
                 tournament.getId(),
@@ -188,7 +191,8 @@ public class TournamentController {
                 canJoinSolo,
                 canLeaveSolo,
                 requiresLoginToJoin,
-                canCloseRegistration);
+                canCloseRegistration,
+                canManageBracket);
     }
 
     private void handleRegistrationException(

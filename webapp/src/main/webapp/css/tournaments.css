@@ -101,8 +101,90 @@
 	white-space: normal;
 }
 
+.tournament-bracket-page__heading {
+	align-items: flex-start;
+	display: flex;
+	gap: 1.5rem;
+	justify-content: space-between;
+}
+
+.tournament-bracket-grid {
+	align-items: start;
+	display: grid;
+	gap: 1rem;
+	grid-auto-columns: minmax(240px, 1fr);
+	grid-auto-flow: column;
+	overflow-x: auto;
+	padding-bottom: 0.5rem;
+}
+
+.tournament-bracket-round {
+	display: grid;
+	gap: 0.85rem;
+	min-width: 240px;
+}
+
+.tournament-bracket-round__title {
+	color: var(--text-primary);
+	font-size: 1rem;
+	font-weight: 800;
+	margin: 0;
+}
+
+.tournament-bracket-round__matches {
+	display: grid;
+	gap: 0.85rem;
+}
+
+.tournament-bracket-match {
+	background: var(--color-surface, #fff);
+	border: 1px solid rgba(0, 100, 90, 0.12);
+	border-radius: 18px;
+	display: grid;
+	gap: 0.75rem;
+	padding: 1rem;
+}
+
+.tournament-bracket-match--focused {
+	border-color: rgba(0, 100, 90, 0.55);
+	box-shadow: 0 14px 34px rgba(0, 100, 90, 0.1);
+}
+
+.tournament-bracket-match__label,
+.tournament-bracket-match__status {
+	color: var(--text-secondary);
+	font-size: 0.8rem;
+	font-weight: 700;
+	margin: 0;
+}
+
+.tournament-bracket-match__teams {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.tournament-bracket-match__teams span {
+	background: rgba(242, 242, 240, 0.78);
+	border-radius: 12px;
+	color: var(--text-primary);
+	font-weight: 800;
+	overflow-wrap: anywhere;
+	padding: 0.65rem 0.75rem;
+}
+
+.tournament-bracket-empty {
+	display: grid;
+	gap: 0.8rem;
+	max-width: 680px;
+	padding: 1.5rem;
+}
+
 @media (max-width: 720px) {
 	.tournament-facts__grid {
 		grid-template-columns: 1fr;
+	}
+
+	.tournament-bracket-page__heading {
+		display: grid;
 	}
 }
