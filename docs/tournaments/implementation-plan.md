@@ -1128,7 +1128,7 @@ I18n:
 - [x] Add solo join/leave actions.
 - [x] Add host close-registration action.
 - [x] Add bracket generation host page.
-- [ ] Add bracket publication with round-one schedule.
+- [x] Add bracket publication with round-one schedule.
 - [ ] Add public/player bracket page.
 - [ ] Add host winner/walkover actions.
 - [ ] Add minimum notification service and templates.

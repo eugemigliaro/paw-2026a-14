@@ -179,6 +179,46 @@
 	padding: 1.5rem;
 }
 
+.tournament-schedule-panel {
+	display: grid;
+	gap: 1rem;
+	margin-top: 1.25rem;
+	padding: 1.25rem;
+}
+
+.tournament-schedule-form {
+	display: grid;
+	gap: 1rem;
+}
+
+.tournament-schedule-match {
+	background: rgba(242, 242, 240, 0.68);
+	border: 1px solid rgba(0, 100, 90, 0.1);
+	border-radius: 18px;
+	display: grid;
+	gap: 0.9rem;
+	padding: 1rem;
+}
+
+.tournament-schedule-match__teams {
+	color: var(--text-primary);
+	font-weight: 800;
+	margin: 0.2rem 0 0;
+	overflow-wrap: anywhere;
+}
+
+.tournament-schedule-match__teams span {
+	color: var(--text-secondary);
+	font-size: 0.82rem;
+	padding: 0 0.35rem;
+}
+
+.tournament-schedule-match__grid {
+	display: grid;
+	gap: 0.8rem;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 @media (max-width: 720px) {
 	.tournament-facts__grid {
 		grid-template-columns: 1fr;
@@ -186,5 +226,9 @@
 
 	.tournament-bracket-page__heading {
 		display: grid;
+	}
+
+	.tournament-schedule-match__grid {
+		grid-template-columns: 1fr;
 	}
 }

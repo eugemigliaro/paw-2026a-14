@@ -9,6 +9,7 @@ public class TournamentBracketViewModel {
     private final String statusLabel;
     private final String statusTone;
     private final boolean generated;
+    private final boolean publishable;
     private final List<RoundViewModel> rounds;
 
     public TournamentBracketViewModel(
@@ -17,12 +18,14 @@ public class TournamentBracketViewModel {
             final String statusLabel,
             final String statusTone,
             final boolean generated,
+            final boolean publishable,
             final List<RoundViewModel> rounds) {
         this.tournamentId = tournamentId;
         this.title = title;
         this.statusLabel = statusLabel;
         this.statusTone = statusTone;
         this.generated = generated;
+        this.publishable = publishable;
         this.rounds = rounds == null ? List.of() : List.copyOf(rounds);
     }
 
@@ -44,6 +47,10 @@ public class TournamentBracketViewModel {
 
     public boolean isGenerated() {
         return generated;
+    }
+
+    public boolean isPublishable() {
+        return publishable;
     }
 
     public List<RoundViewModel> getRounds() {
@@ -84,6 +91,13 @@ public class TournamentBracketViewModel {
         private final String teamB;
         private final String statusLabel;
         private final boolean focused;
+        private final String startDate;
+        private final String startTime;
+        private final String endDate;
+        private final String endTime;
+        private final String address;
+        private final String latitude;
+        private final String longitude;
 
         public MatchViewModel(
                 final Long id,
@@ -91,13 +105,27 @@ public class TournamentBracketViewModel {
                 final String teamA,
                 final String teamB,
                 final String statusLabel,
-                final boolean focused) {
+                final boolean focused,
+                final String startDate,
+                final String startTime,
+                final String endDate,
+                final String endTime,
+                final String address,
+                final String latitude,
+                final String longitude) {
             this.id = id;
             this.label = label;
             this.teamA = teamA;
             this.teamB = teamB;
             this.statusLabel = statusLabel;
             this.focused = focused;
+            this.startDate = startDate;
+            this.startTime = startTime;
+            this.endDate = endDate;
+            this.endTime = endTime;
+            this.address = address;
+            this.latitude = latitude;
+            this.longitude = longitude;
         }
 
         public Long getId() {
@@ -122,6 +150,34 @@ public class TournamentBracketViewModel {
 
         public boolean isFocused() {
             return focused;
+        }
+
+        public String getStartDate() {
+            return startDate;
+        }
+
+        public String getStartTime() {
+            return startTime;
+        }
+
+        public String getEndDate() {
+            return endDate;
+        }
+
+        public String getEndTime() {
+            return endTime;
+        }
+
+        public String getAddress() {
+            return address;
+        }
+
+        public String getLatitude() {
+            return latitude;
+        }
+
+        public String getLongitude() {
+            return longitude;
         }
     }
 }

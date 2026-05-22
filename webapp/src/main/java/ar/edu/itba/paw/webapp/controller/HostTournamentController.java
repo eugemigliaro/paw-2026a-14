@@ -13,6 +13,7 @@ import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentLifecycleFailureReason;
+import ar.edu.itba.paw.services.TournamentMatchScheduleRequest;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
@@ -24,7 +25,11 @@ import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +37,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -51,6 +57,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class HostTournamentController {
 
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
+    private static final DateTimeFormatter TIME_INPUT_FORMATTER =
+            DateTimeFormatter.ofPattern("HH:mm");
 
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
@@ -242,12 +250,42 @@ public class HostTournamentController {
         mav.addObject("bracketPage", bracketPage);
         mav.addObject(
                 "generateBracketPath", "/host/tournaments/" + tournamentId + "/bracket/generate");
+        mav.addObject(
+                "publishBracketPath", "/host/tournaments/" + tournamentId + "/bracket/publish");
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
                 "tournamentNoticeCode", flashString(model, "tournamentNoticeCode").orElse(null));
         mav.addObject(
                 "tournamentErrorCode", flashString(model, "tournamentErrorCode").orElse(null));
         return mav;
+    }
+
+    @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/publish")
+    public ModelAndView publishBracket(
+            @PathVariable("tournamentId") final Long tournamentId,
+            final HttpServletRequest request,
+            final RedirectAttributes redirectAttributes) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+
+        try {
+            final TournamentBracketView bracketView =
+                    tournamentBracketService.getBracket(tournamentId, actingUser);
+            final List<TournamentMatchScheduleRequest> schedules =
+                    roundOneSchedules(bracketView, request);
+            tournamentBracketService.publishBracket(tournamentId, actingUser, schedules);
+            redirectAttributes.addFlashAttribute(
+                    "tournamentNoticeCode", "tournament.bracket.publish.success");
+            return new ModelAndView("redirect:/tournaments/" + tournamentId);
+        } catch (final TournamentBracketException exception) {
+            handleBracketException(exception, redirectAttributes);
+            return new ModelAndView(
+                    "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
+        } catch (final IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "tournamentErrorCode", "tournament.bracket.error.invalidSchedule");
+            return new ModelAndView(
+                    "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
+        }
     }
 
     private ModelAndView createFormView(
@@ -597,6 +635,7 @@ public class HostTournamentController {
                 statusLabel(tournament, locale),
                 statusTone(tournament),
                 false,
+                false,
                 List.of());
     }
 
@@ -650,7 +689,32 @@ public class HostTournamentController {
                                                                                 Objects.equals(
                                                                                         focusedMatchId,
                                                                                         match
-                                                                                                .getId())))
+                                                                                                .getId()),
+                                                                                scheduleDate(
+                                                                                        scheduleStart(
+                                                                                                tournament,
+                                                                                                match)),
+                                                                                scheduleTime(
+                                                                                        scheduleStart(
+                                                                                                tournament,
+                                                                                                match)),
+                                                                                scheduleDate(
+                                                                                        scheduleEnd(
+                                                                                                tournament,
+                                                                                                match)),
+                                                                                scheduleTime(
+                                                                                        scheduleEnd(
+                                                                                                tournament,
+                                                                                                match)),
+                                                                                scheduleAddress(
+                                                                                        tournament,
+                                                                                        match),
+                                                                                scheduleLatitude(
+                                                                                        tournament,
+                                                                                        match),
+                                                                                scheduleLongitude(
+                                                                                        tournament,
+                                                                                        match)))
                                                         .toList()))
                         .toList();
         return new TournamentBracketViewModel(
@@ -659,6 +723,7 @@ public class HostTournamentController {
                 statusLabel(tournament, locale),
                 statusTone(tournament),
                 true,
+                TournamentStatus.BRACKET_SETUP == tournament.getStatus(),
                 rounds);
     }
 
@@ -693,6 +758,88 @@ public class HostTournamentController {
     private String matchStatusLabel(final TournamentMatch match, final Locale locale) {
         return messageSource.getMessage(
                 "tournament.match.status." + match.getStatus().getDbValue(), null, locale);
+    }
+
+    private List<TournamentMatchScheduleRequest> roundOneSchedules(
+            final TournamentBracketView bracketView, final HttpServletRequest request) {
+        return bracketView.getMatches().stream()
+                .filter(match -> match.getRoundNumber() == 1)
+                .sorted(Comparator.comparingInt(TournamentMatch::getMatchIndex))
+                .map(match -> scheduleRequest(match, request))
+                .toList();
+    }
+
+    private TournamentMatchScheduleRequest scheduleRequest(
+            final TournamentMatch match, final HttpServletRequest request) {
+        final long matchId = Objects.requireNonNull(match.getId());
+        return new TournamentMatchScheduleRequest(
+                matchId,
+                scheduleInstant(request, "start", matchId),
+                scheduleInstant(request, "end", matchId),
+                requiredParam(request, "address_" + matchId),
+                parseCoordinate(request.getParameter("latitude_" + matchId)),
+                parseCoordinate(request.getParameter("longitude_" + matchId)));
+    }
+
+    private Instant scheduleInstant(
+            final HttpServletRequest request, final String prefix, final long matchId) {
+        final LocalDate date = LocalDate.parse(requiredParam(request, prefix + "Date_" + matchId));
+        final LocalTime time = LocalTime.parse(requiredParam(request, prefix + "Time_" + matchId));
+        return toInstant(date, time, request.getParameter("tz"));
+    }
+
+    private static String requiredParam(final HttpServletRequest request, final String name) {
+        final String value = normalizeBlank(request.getParameter(name));
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("Missing " + name);
+        }
+        return value;
+    }
+
+    private static Instant scheduleStart(final Tournament tournament, final TournamentMatch match) {
+        return match.getScheduledStartsAt() == null
+                ? tournament.getStartsAt()
+                : match.getScheduledStartsAt();
+    }
+
+    private static Instant scheduleEnd(final Tournament tournament, final TournamentMatch match) {
+        return match.getScheduledEndsAt() == null
+                ? tournament.getEndsAt()
+                : match.getScheduledEndsAt();
+    }
+
+    private static String scheduleDate(final Instant instant) {
+        return instant == null
+                ? ""
+                : LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalDate().toString();
+    }
+
+    private static String scheduleTime(final Instant instant) {
+        return instant == null
+                ? ""
+                : TIME_INPUT_FORMATTER.format(
+                        LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalTime());
+    }
+
+    private static String scheduleAddress(
+            final Tournament tournament, final TournamentMatch match) {
+        return normalizeBlank(match.getAddress()).isEmpty()
+                ? tournament.getAddress()
+                : match.getAddress();
+    }
+
+    private static String scheduleLatitude(
+            final Tournament tournament, final TournamentMatch match) {
+        final Double latitude =
+                match.getLatitude() == null ? tournament.getLatitude() : match.getLatitude();
+        return latitude == null ? "" : latitude.toString();
+    }
+
+    private static String scheduleLongitude(
+            final Tournament tournament, final TournamentMatch match) {
+        final Double longitude =
+                match.getLongitude() == null ? tournament.getLongitude() : match.getLongitude();
+        return longitude == null ? "" : longitude.toString();
     }
 
     private static java.util.Optional<String> flashString(
