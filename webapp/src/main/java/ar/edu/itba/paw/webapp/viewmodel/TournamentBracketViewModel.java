@@ -8,6 +8,10 @@ public class TournamentBracketViewModel {
     private final String title;
     private final String statusLabel;
     private final String statusTone;
+    private final String focusedMatchLabel;
+    private final String focusedMatchTeamsLabel;
+    private final String focusedMatchScheduleLabel;
+    private final String focusedMatchAddress;
     private final boolean generated;
     private final boolean publishable;
     private final List<RoundViewModel> rounds;
@@ -17,6 +21,10 @@ public class TournamentBracketViewModel {
             final String title,
             final String statusLabel,
             final String statusTone,
+            final String focusedMatchLabel,
+            final String focusedMatchTeamsLabel,
+            final String focusedMatchScheduleLabel,
+            final String focusedMatchAddress,
             final boolean generated,
             final boolean publishable,
             final List<RoundViewModel> rounds) {
@@ -24,6 +32,10 @@ public class TournamentBracketViewModel {
         this.title = title;
         this.statusLabel = statusLabel;
         this.statusTone = statusTone;
+        this.focusedMatchLabel = focusedMatchLabel;
+        this.focusedMatchTeamsLabel = focusedMatchTeamsLabel;
+        this.focusedMatchScheduleLabel = focusedMatchScheduleLabel;
+        this.focusedMatchAddress = focusedMatchAddress;
         this.generated = generated;
         this.publishable = publishable;
         this.rounds = rounds == null ? List.of() : List.copyOf(rounds);
@@ -43,6 +55,22 @@ public class TournamentBracketViewModel {
 
     public String getStatusTone() {
         return statusTone;
+    }
+
+    public String getFocusedMatchLabel() {
+        return focusedMatchLabel;
+    }
+
+    public String getFocusedMatchTeamsLabel() {
+        return focusedMatchTeamsLabel;
+    }
+
+    public String getFocusedMatchScheduleLabel() {
+        return focusedMatchScheduleLabel;
+    }
+
+    public String getFocusedMatchAddress() {
+        return focusedMatchAddress;
     }
 
     public boolean isGenerated() {
@@ -91,6 +119,9 @@ public class TournamentBracketViewModel {
         private final String teamB;
         private final String statusLabel;
         private final boolean focused;
+        private final boolean teamAViewerTeam;
+        private final boolean teamBViewerTeam;
+        private final String scheduleLabel;
         private final String startDate;
         private final String startTime;
         private final String endDate;
@@ -106,6 +137,9 @@ public class TournamentBracketViewModel {
                 final String teamB,
                 final String statusLabel,
                 final boolean focused,
+                final boolean teamAViewerTeam,
+                final boolean teamBViewerTeam,
+                final String scheduleLabel,
                 final String startDate,
                 final String startTime,
                 final String endDate,
@@ -119,6 +153,9 @@ public class TournamentBracketViewModel {
             this.teamB = teamB;
             this.statusLabel = statusLabel;
             this.focused = focused;
+            this.teamAViewerTeam = teamAViewerTeam;
+            this.teamBViewerTeam = teamBViewerTeam;
+            this.scheduleLabel = scheduleLabel;
             this.startDate = startDate;
             this.startTime = startTime;
             this.endDate = endDate;
@@ -150,6 +187,18 @@ public class TournamentBracketViewModel {
 
         public boolean isFocused() {
             return focused;
+        }
+
+        public boolean isTeamAViewerTeam() {
+            return teamAViewerTeam;
+        }
+
+        public boolean isTeamBViewerTeam() {
+            return teamBViewerTeam;
+        }
+
+        public String getScheduleLabel() {
+            return scheduleLabel;
         }
 
         public String getStartDate() {

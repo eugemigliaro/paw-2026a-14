@@ -1129,7 +1129,7 @@ I18n:
 - [x] Add host close-registration action.
 - [x] Add bracket generation host page.
 - [x] Add bracket publication with round-one schedule.
-- [ ] Add public/player bracket page.
+- [x] Add public/player bracket page.
 - [ ] Add host winner/walkover actions.
 - [ ] Add minimum notification service and templates.
 - [ ] Add controller/security tests.

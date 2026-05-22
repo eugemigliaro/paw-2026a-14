@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
+
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.User;
@@ -634,6 +636,10 @@ public class HostTournamentController {
                 tournament.getTitle(),
                 statusLabel(tournament, locale),
                 statusTone(tournament),
+                null,
+                null,
+                null,
+                null,
                 false,
                 false,
                 List.of());
@@ -690,6 +696,11 @@ public class HostTournamentController {
                                                                                         focusedMatchId,
                                                                                         match
                                                                                                 .getId()),
+                                                                                false,
+                                                                                false,
+                                                                                matchScheduleLabel(
+                                                                                        match,
+                                                                                        locale),
                                                                                 scheduleDate(
                                                                                         scheduleStart(
                                                                                                 tournament,
@@ -722,6 +733,12 @@ public class HostTournamentController {
                 tournament.getTitle(),
                 statusLabel(tournament, locale),
                 statusTone(tournament),
+                focusedMatchLabel(bracketView.getFocusedMatch(), locale),
+                focusedMatchTeamsLabel(bracketView.getFocusedMatch(), locale),
+                matchScheduleLabel(bracketView.getFocusedMatch(), locale),
+                bracketView.getFocusedMatch() == null
+                        ? null
+                        : bracketView.getFocusedMatch().getAddress(),
                 true,
                 TournamentStatus.BRACKET_SETUP == tournament.getStatus(),
                 rounds);
@@ -758,6 +775,38 @@ public class HostTournamentController {
     private String matchStatusLabel(final TournamentMatch match, final Locale locale) {
         return messageSource.getMessage(
                 "tournament.match.status." + match.getStatus().getDbValue(), null, locale);
+    }
+
+    private String matchScheduleLabel(final TournamentMatch match, final Locale locale) {
+        if (match == null || match.getScheduledStartsAt() == null) {
+            return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
+        }
+        if (match.getScheduledEndsAt() == null) {
+            return formatInstant(match.getScheduledStartsAt(), locale);
+        }
+        return messageSource.getMessage(
+                "tournament.bracket.schedule.range",
+                new Object[] {
+                    formatInstant(match.getScheduledStartsAt(), locale),
+                    formatInstant(match.getScheduledEndsAt(), locale)
+                },
+                locale);
+    }
+
+    private String focusedMatchLabel(final TournamentMatch match, final Locale locale) {
+        return match == null ? null : matchLabel(match, locale);
+    }
+
+    private String focusedMatchTeamsLabel(final TournamentMatch match, final Locale locale) {
+        if (match == null) {
+            return null;
+        }
+        return messageSource.getMessage(
+                "tournament.bracket.match.teams",
+                new Object[] {
+                    teamName(match.getTeamA(), locale), teamName(match.getTeamB(), locale)
+                },
+                locale);
     }
 
     private List<TournamentMatchScheduleRequest> roundOneSchedules(
