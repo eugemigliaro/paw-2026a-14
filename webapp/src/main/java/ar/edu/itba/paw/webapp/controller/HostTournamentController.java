@@ -642,6 +642,7 @@ public class HostTournamentController {
                 null,
                 false,
                 false,
+                false,
                 List.of());
     }
 
@@ -678,6 +679,12 @@ public class HostTournamentController {
                                                                         new TournamentBracketViewModel
                                                                                 .MatchViewModel(
                                                                                 match.getId(),
+                                                                                teamId(
+                                                                                        match
+                                                                                                .getTeamA()),
+                                                                                teamId(
+                                                                                        match
+                                                                                                .getTeamB()),
                                                                                 matchLabel(
                                                                                         match,
                                                                                         locale),
@@ -696,6 +703,7 @@ public class HostTournamentController {
                                                                                         focusedMatchId,
                                                                                         match
                                                                                                 .getId()),
+                                                                                false,
                                                                                 false,
                                                                                 false,
                                                                                 matchScheduleLabel(
@@ -741,6 +749,7 @@ public class HostTournamentController {
                         : bracketView.getFocusedMatch().getAddress(),
                 true,
                 TournamentStatus.BRACKET_SETUP == tournament.getStatus(),
+                false,
                 rounds);
     }
 
@@ -770,6 +779,10 @@ public class HostTournamentController {
         return team == null
                 ? messageSource.getMessage("tournament.bracket.team.tbd", null, locale)
                 : team.getName();
+    }
+
+    private static Long teamId(final ar.edu.itba.paw.models.TournamentTeam team) {
+        return team == null ? null : team.getId();
     }
 
     private String matchStatusLabel(final TournamentMatch match, final Locale locale) {

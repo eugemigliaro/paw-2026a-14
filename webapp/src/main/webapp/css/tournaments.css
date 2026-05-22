@@ -204,6 +204,13 @@
 	overflow-wrap: anywhere;
 }
 
+.tournament-result-actions {
+	border-top: 1px solid rgba(0, 100, 90, 0.12);
+	display: grid;
+	gap: 0.45rem;
+	padding-top: 0.75rem;
+}
+
 .tournament-bracket-empty {
 	display: grid;
 	gap: 0.8rem;

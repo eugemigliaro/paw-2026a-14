@@ -25,6 +25,7 @@ import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -187,6 +188,72 @@ class TournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77/bracket")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void hostCanDeclareWinner() throws Exception {
+        // 1. Arrange
+        final User hostUser = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(hostUser, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(
+                        tournamentBracketService.declareWinner(
+                                Mockito.eq(77L),
+                                Mockito.eq(10L),
+                                Mockito.any(TournamentWinnerDeclarationRequest.class),
+                                Mockito.eq(hostUser)))
+                .thenReturn(match);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/matches/10/winner").param("winnerTeamId", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77/bracket"))
+                .andExpect(
+                        flash().attribute(
+                                        "tournamentNoticeCode", "tournament.bracket.result.saved"));
+    }
+
+    @Test
+    void nonHostDeclareWinnerIsForbidden() throws Exception {
+        // 1. Arrange
+        final User user = UserUtils.getUser(9L);
+        AuthenticationUtils.authenticateUser(user, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentBracketService.declareWinner(
+                                Mockito.eq(77L),
+                                Mockito.eq(10L),
+                                Mockito.any(TournamentWinnerDeclarationRequest.class),
+                                Mockito.eq(user)))
+                .thenThrow(
+                        new TournamentBracketException(
+                                TournamentBracketFailureReason.FORBIDDEN, "Forbidden"));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/matches/10/winner").param("winnerTeamId", "1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void hostCanRecordWalkover() throws Exception {
+        // 1. Arrange
+        final User hostUser = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(hostUser, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(tournamentBracketService.recordWalkover(77L, 10L, 1L, hostUser))
+                .thenReturn(match);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/host/tournaments/77/matches/10/walkover")
+                                .param("forfeitingTeamId", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77/bracket"))
+                .andExpect(
+                        flash().attribute(
+                                        "tournamentNoticeCode",
+                                        "tournament.bracket.walkover.saved"));
     }
 
     private Tournament tournament(final Long id, final TournamentStatus status) {

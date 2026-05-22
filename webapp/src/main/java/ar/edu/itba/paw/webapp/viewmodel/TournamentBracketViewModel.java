@@ -14,6 +14,7 @@ public class TournamentBracketViewModel {
     private final String focusedMatchAddress;
     private final boolean generated;
     private final boolean publishable;
+    private final boolean canManageResults;
     private final List<RoundViewModel> rounds;
 
     public TournamentBracketViewModel(
@@ -27,6 +28,7 @@ public class TournamentBracketViewModel {
             final String focusedMatchAddress,
             final boolean generated,
             final boolean publishable,
+            final boolean canManageResults,
             final List<RoundViewModel> rounds) {
         this.tournamentId = tournamentId;
         this.title = title;
@@ -38,6 +40,7 @@ public class TournamentBracketViewModel {
         this.focusedMatchAddress = focusedMatchAddress;
         this.generated = generated;
         this.publishable = publishable;
+        this.canManageResults = canManageResults;
         this.rounds = rounds == null ? List.of() : List.copyOf(rounds);
     }
 
@@ -81,6 +84,10 @@ public class TournamentBracketViewModel {
         return publishable;
     }
 
+    public boolean isCanManageResults() {
+        return canManageResults;
+    }
+
     public List<RoundViewModel> getRounds() {
         return rounds;
     }
@@ -114,6 +121,8 @@ public class TournamentBracketViewModel {
     public static class MatchViewModel {
 
         private final Long id;
+        private final Long teamAId;
+        private final Long teamBId;
         private final String label;
         private final String teamA;
         private final String teamB;
@@ -121,6 +130,7 @@ public class TournamentBracketViewModel {
         private final boolean focused;
         private final boolean teamAViewerTeam;
         private final boolean teamBViewerTeam;
+        private final boolean canRecordResult;
         private final String scheduleLabel;
         private final String startDate;
         private final String startTime;
@@ -132,6 +142,8 @@ public class TournamentBracketViewModel {
 
         public MatchViewModel(
                 final Long id,
+                final Long teamAId,
+                final Long teamBId,
                 final String label,
                 final String teamA,
                 final String teamB,
@@ -139,6 +151,7 @@ public class TournamentBracketViewModel {
                 final boolean focused,
                 final boolean teamAViewerTeam,
                 final boolean teamBViewerTeam,
+                final boolean canRecordResult,
                 final String scheduleLabel,
                 final String startDate,
                 final String startTime,
@@ -148,6 +161,8 @@ public class TournamentBracketViewModel {
                 final String latitude,
                 final String longitude) {
             this.id = id;
+            this.teamAId = teamAId;
+            this.teamBId = teamBId;
             this.label = label;
             this.teamA = teamA;
             this.teamB = teamB;
@@ -155,6 +170,7 @@ public class TournamentBracketViewModel {
             this.focused = focused;
             this.teamAViewerTeam = teamAViewerTeam;
             this.teamBViewerTeam = teamBViewerTeam;
+            this.canRecordResult = canRecordResult;
             this.scheduleLabel = scheduleLabel;
             this.startDate = startDate;
             this.startTime = startTime;
@@ -167,6 +183,14 @@ public class TournamentBracketViewModel {
 
         public Long getId() {
             return id;
+        }
+
+        public Long getTeamAId() {
+            return teamAId;
+        }
+
+        public Long getTeamBId() {
+            return teamBId;
         }
 
         public String getLabel() {
@@ -195,6 +219,10 @@ public class TournamentBracketViewModel {
 
         public boolean isTeamBViewerTeam() {
             return teamBViewerTeam;
+        }
+
+        public boolean isCanRecordResult() {
+            return canRecordResult;
         }
 
         public String getScheduleLabel() {

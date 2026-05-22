@@ -1130,7 +1130,7 @@ I18n:
 - [x] Add bracket generation host page.
 - [x] Add bracket publication with round-one schedule.
 - [x] Add public/player bracket page.
-- [ ] Add host winner/walkover actions.
+- [x] Add host winner/walkover actions.
 - [ ] Add minimum notification service and templates.
 - [ ] Add controller/security tests.
 - [ ] Run `mvn test`.
