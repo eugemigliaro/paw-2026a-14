@@ -22,6 +22,7 @@ class ViewTemplateAssetsTest {
         assertTrue(head.contains("/js/overflow-menu.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
         assertTrue(head.contains("/js/event-map.js"));
+        assertTrue(head.contains("/js/event-detail-host-actions.js"));
     }
 
     @Test
@@ -319,28 +320,23 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void matchDetailUsesOverflowMenuForHostActions() throws IOException {
+    void matchDetailUsesHostActionCardInsteadOfOverflowMenuForHostActions() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(detailView.contains("<ui:overflowMenu"));
-        assertTrue(detailView.contains("host.manage.menu.trigger"));
-        assertTrue(detailView.contains("overflow-menu__item--danger"));
+        assertTrue(detailView.contains("host-action-card"));
+        assertTrue(detailView.contains("event.host.action.editSeries"));
+        assertTrue(detailView.contains("event.host.action.cancelSeries"));
+        assertFalse(detailView.contains("<ui:overflowMenu"));
+        assertFalse(detailView.contains("host.manage"));
+        assertFalse(detailView.contains("overflow-menu__item--danger"));
         assertTrue(detailView.contains("hostSeriesEditPath"));
         assertTrue(detailView.contains("hostSeriesCancelPath"));
-        assertTrue(detailView.contains("host.manage.editSeries"));
-        assertTrue(detailView.contains("host.manage.cancelSeries"));
-        assertFalse(detailView.contains("label=\"${hostManageEditLabel}\""));
-        assertFalse(detailView.contains("label=\"${hostManageCancelLabel}\""));
-        assertEquals("Edit recurring dates", english.getProperty("host.manage.editSeries"));
-        assertEquals(
-                "Cancel all upcoming recurring dates",
-                english.getProperty("host.manage.cancelSeries"));
-        assertEquals("Editar fechas recurrentes", spanish.getProperty("host.manage.editSeries"));
-        assertEquals(
-                "Cancelar todas las fechas recurrentes pr\u00f3ximas",
-                spanish.getProperty("host.manage.cancelSeries"));
+        assertEquals("Edit series", english.getProperty("event.host.action.editSeries"));
+        assertEquals("Cancel series", english.getProperty("event.host.action.cancelSeries"));
+        assertEquals("Editar serie", spanish.getProperty("event.host.action.editSeries"));
+        assertEquals("Cancelar serie", spanish.getProperty("event.host.action.cancelSeries"));
     }
 
     @Test
@@ -404,11 +400,10 @@ class ViewTemplateAssetsTest {
     @Test
     void hostRequestsIncludesAggregateRecurringRequestCopy() throws IOException {
         final String requestView =
-                read("src/main/webapp/WEB-INF/views/host/participation/requests.jsp");
+                read("src/main/webapp/WEB-INF/views/host/participation/aggregate-requests.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(requestView.contains("aggregateRequests"));
         assertTrue(requestView.contains("host.requests.all.description"));
         assertTrue(requestView.contains("host.requests.seriesBadge"));
         assertEquals("Join requests", english.getProperty("nav.host.joinRequests"));
@@ -419,13 +414,12 @@ class ViewTemplateAssetsTest {
 
     @Test
     void hostInvitesIncludesLocalizedSeriesInviteOption() throws IOException {
-        final String inviteView =
-                read("src/main/webapp/WEB-INF/views/host/participation/invites.jsp");
+        final String inviteView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(inviteView.contains("seriesInviteAvailable"));
-        assertTrue(inviteView.contains("path=\"inviteSeries\""));
+        assertTrue(inviteView.contains("hostSeriesInviteAvailable"));
+        assertTrue(inviteView.contains("name=\"inviteSeries\""));
         assertTrue(inviteView.contains("host.invites.inviteSeries"));
         assertEquals(
                 "Invite to all dates in this series",
@@ -433,6 +427,16 @@ class ViewTemplateAssetsTest {
         assertEquals(
                 "Invitar a todas las fechas de esta serie",
                 spanish.getProperty("host.invites.inviteSeries"));
+    }
+
+    @Test
+    void matchDetailHostManagementListsUseScopedLabelsAndOptionalProfileLinks() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+
+        assertTrue(detailView.contains("aria-labelledby=\"pending-requests-title\""));
+        assertTrue(detailView.contains("aria-labelledby=\"pending-invitations-title\""));
+        assertTrue(detailView.contains("<c:when test=\"${not empty req.profileHref}\">"));
+        assertTrue(detailView.contains("<c:when test=\"${not empty invite.profileHref}\">"));
     }
 
     @Test
