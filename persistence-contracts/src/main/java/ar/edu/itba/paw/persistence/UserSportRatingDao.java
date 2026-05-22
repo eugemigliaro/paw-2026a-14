@@ -10,7 +10,7 @@ public interface UserSportRatingDao {
 
     Optional<UserSportRating> findByUserAndSport(User user, Sport sport);
 
-    UserSportRating getOrCreate(User user, Sport sport, int initialElo);
+    UserSportRatingLookupResult getOrCreate(User user, Sport sport, int initialElo);
 
     UserSportRating save(UserSportRating rating);
 

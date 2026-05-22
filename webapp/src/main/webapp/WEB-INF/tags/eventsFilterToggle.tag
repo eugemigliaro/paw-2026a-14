@@ -53,22 +53,22 @@
     <c:set var="wrapperClasses" value="${wrapperClasses} ${className}" />
 </c:if>
 
-<div class="${wrapperClasses}" data-events-toggle="true" data-events-toggle-right-value="${resolvedRightValue}"
+<div class="<c:out value='${wrapperClasses}' />" data-events-toggle="true" data-events-toggle-right-value="<c:out value='${resolvedRightValue}' />"
     data-events-toggle-options="${hasThirdOption ? '3' : '2'}" style="--events-toggle-index: ${selectedIndex};"
-    <c:if test="${not empty id}">id="${id}"</c:if>>
+    <c:if test="${not empty id}">id="<c:out value='${id}' />"</c:if>>
     <c:if test="${not empty inputName}">
-        <input type="hidden" name="${inputName}" value="${finalInputValue}" data-events-toggle-input="true" />
+        <input type="hidden" name="<c:out value='${inputName}' />" value="<c:out value='${finalInputValue}' />" data-events-toggle-input="true" />
     </c:if>
     <div class="events-toggle-slider ${isRightSelected ? 'right' : ''}" data-events-toggle-slider="true"></div>
     <c:choose>
         <c:when test="${not empty leftHref}">
             <c:url var="resolvedLeftHref" value="${leftHref}" />
-            <a href="${resolvedLeftHref}" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="${resolvedLeftValue}" aria-current="${isLeftSelected ? 'true' : 'false'}">
+            <a href="${resolvedLeftHref}" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="<c:out value='${resolvedLeftValue}' />" aria-current="${isLeftSelected ? 'true' : 'false'}">
                 <c:out value="${resolvedLeftLabel}" />
             </a>
         </c:when>
         <c:otherwise>
-            <button type="button" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="${resolvedLeftValue}">
+            <button type="button" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="<c:out value='${resolvedLeftValue}' />">
                 <c:out value="${resolvedLeftLabel}" />
             </button>
         </c:otherwise>
@@ -76,12 +76,12 @@
     <c:choose>
         <c:when test="${not empty rightHref}">
             <c:url var="resolvedRightHref" value="${rightHref}" />
-            <a href="${resolvedRightHref}" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="${resolvedRightValue}" aria-current="${isRightSelected ? 'true' : 'false'}">
+            <a href="${resolvedRightHref}" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="<c:out value='${resolvedRightValue}' />" aria-current="${isRightSelected ? 'true' : 'false'}">
                 <c:out value="${resolvedRightLabel}" />
             </a>
         </c:when>
         <c:otherwise>
-            <button type="button" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="${resolvedRightValue}">
+            <button type="button" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="<c:out value='${resolvedRightValue}' />">
                 <c:out value="${resolvedRightLabel}" />
             </button>
         </c:otherwise>
@@ -90,12 +90,12 @@
         <c:choose>
             <c:when test="${not empty thirdHref}">
                 <c:url var="resolvedThirdHref" value="${thirdHref}" />
-                <a href="${resolvedThirdHref}" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="${resolvedThirdValue}" aria-current="${isThirdSelected ? 'true' : 'false'}">
+                <a href="${resolvedThirdHref}" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="<c:out value='${resolvedThirdValue}' />" aria-current="${isThirdSelected ? 'true' : 'false'}">
                     <c:out value="${resolvedThirdLabel}" />
                 </a>
             </c:when>
             <c:otherwise>
-                <button type="button" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="${resolvedThirdValue}">
+                <button type="button" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="<c:out value='${resolvedThirdValue}' />">
                     <c:out value="${resolvedThirdLabel}" />
                 </button>
             </c:otherwise>

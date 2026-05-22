@@ -105,18 +105,18 @@
 				</section>
 				<section class="panel public-profile-panel public-profile-ratings">
 					<header class="public-profile-ratings__header">
-						<h2 class="public-profile-ratings__title">${profileRatingsTitle}</h2>
+						<h2 class="public-profile-ratings__title"><c:out value="${profileRatingsTitle}" /></h2>
 					</header>
 					<c:choose>
 						<c:when test="${empty profileRatings}">
-							<p class="public-profile-ratings__empty">${profileRatingsEmpty}</p>
+							<p class="public-profile-ratings__empty"><c:out value="${profileRatingsEmpty}" /></p>
 						</c:when>
 						<c:otherwise>
 							<ul class="public-profile-ratings__list">
 								<c:forEach var="rating" items="${profileRatings}">
 									<li class="public-profile-ratings__item">
-										<span class="public-profile-ratings__sport">${rating.sportLabel}</span>
-										<span class="public-profile-ratings__elo">${rating.elo}</span>
+										<span class="public-profile-ratings__sport"><c:out value="${rating.sportLabel}" /></span>
+										<span class="public-profile-ratings__elo"><c:out value="${rating.elo}" /></span>
 									</li>
 								</c:forEach>
 							</ul>
@@ -206,7 +206,7 @@
 								</form>
 							</c:when>
 							<c:otherwise>
-								<button type="button" disabled="disabled" aria-disabled="true" aria-describedby="reviewLockedNote"
+								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedMessage}"> aria-describedby="reviewLockedNote"</c:if>
 									class="public-profile-review-stat public-profile-review-stat--like public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
@@ -245,7 +245,7 @@
 								</form>
 							</c:when>
 							<c:otherwise>
-								<button type="button" disabled="disabled" aria-disabled="true" aria-describedby="reviewLockedNote"
+								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedMessage}"> aria-describedby="reviewLockedNote"</c:if>
 									class="public-profile-review-stat public-profile-review-stat--dislike public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
@@ -465,7 +465,7 @@
 											<c:when test="${not empty reviewPreviousPageHref}">
 												<c:url var="reviewPrevHref" value="${reviewPreviousPageHref}" />
 												<a class="feed-pagination__control" href="${reviewPrevHref}">
-													${previousLabel}
+														<c:out value="${previousLabel}" />
 												</a>
 											</c:when>
 											<c:otherwise>
@@ -479,11 +479,11 @@
 											<c:forEach var="item" items="${reviewPaginationItems}">
 												<c:choose>
 													<c:when test="${item.ellipsis}">
-														<span class="feed-pagination__ellipsis" aria-hidden="true">${item.label}</span>
+															<span class="feed-pagination__ellipsis" aria-hidden="true"><c:out value="${item.label}" /></span>
 													</c:when>
 													<c:when test="${item.current}">
 														<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">
-															${item.label}
+																<c:out value="${item.label}" />
 														</span>
 													</c:when>
 													<c:otherwise>

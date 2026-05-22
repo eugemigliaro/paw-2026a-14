@@ -15,19 +15,19 @@
 			<c:set var="selectedLabel" value="${option.label}" />
 		</c:if>
 	</c:forEach>
-	<div class="sort-panel" aria-label="${ariaLabel}" data-sort-select="true">
+		<div class="sort-panel" aria-label="<c:out value='${ariaLabel}' />" data-sort-select="true">
 		<div class="field sort-panel__field">
-			<span class="field__label" id="${resolvedId}-label"><c:out value="${label}" /></span>
+				<span class="field__label" id="<c:out value='${resolvedId}' />-label"><c:out value="${label}" /></span>
 			<div
 				class="filter-dropdown sort-panel__dropdown"
-				data-filter-name="${resolvedId}"
+					data-filter-name="<c:out value='${resolvedId}' />"
 				data-close-on-select="true">
 				<button
 					type="button"
 					class="filter-dropdown__toggle sort-panel__toggle"
-					id="${resolvedId}"
+						id="<c:out value='${resolvedId}' />"
 					aria-expanded="false"
-					aria-labelledby="${resolvedId}-label ${resolvedId}">
+						aria-labelledby="<c:out value='${resolvedId}' />-label <c:out value='${resolvedId}' />">
 					<span class="filter-dropdown__icon sort-panel__icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24">
 							<path d="M3 7h18" />
@@ -37,7 +37,7 @@
 					</span>
 					<span class="sort-panel__toggle-label"><c:out value="${selectedLabel}" /></span>
 				</button>
-				<div class="filter-dropdown__panel sort-panel__panel" aria-labelledby="${resolvedId}-label">
+					<div class="filter-dropdown__panel sort-panel__panel" aria-labelledby="<c:out value='${resolvedId}' />-label">
 					<c:forEach var="option" items="${options}">
 						<c:url var="optionHref" value="${option.href}" />
 						<a

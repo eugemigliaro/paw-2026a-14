@@ -37,16 +37,16 @@
 <c:choose>
   <c:when test="${not empty href}">
     <a
-      href="${href}"
-      class="${classes}"
-      <c:if test="${not empty id}">id="${id}"</c:if>
+      href="<c:out value='${href}' />"
+      class="<c:out value='${classes}' />"
+      <c:if test="${not empty id}">id="<c:out value='${id}' />"</c:if>
       <c:if test="${not empty ariaLabel}">aria-label="<c:out value='${ariaLabel}' />"</c:if>
-      <c:if test="${not empty onClick}">onclick="${onClick}"</c:if>>
+      <c:if test="${not empty onClick}">onclick="<c:out value='${onClick}' />"</c:if>>
       <c:if test="${not empty imageUrl}">
-        <div class="card__image"<c:if test="${not empty imageHeight}"> style="height: ${imageHeight};"</c:if>>
+        <div class="card__image"<c:if test="${not empty imageHeight}"> style="height: <c:out value='${imageHeight}' />;"</c:if>>
           <c:choose>
             <c:when test="${fn:startsWith(imageUrl, 'http')}">
-              <img src="${imageUrl}" alt="<c:out value='${resolvedImageAlt}' />" />
+              <img src="<c:out value='${imageUrl}' />" alt="<c:out value='${resolvedImageAlt}' />" />
             </c:when>
             <c:otherwise>
               <img src="<c:url value='${imageUrl}' />" alt="<c:out value='${resolvedImageAlt}' />" />
@@ -78,15 +78,15 @@
   </c:when>
   <c:otherwise>
     <article
-      class="${classes}"
-      <c:if test="${not empty id}">id="${id}"</c:if>
+      class="<c:out value='${classes}' />"
+      <c:if test="${not empty id}">id="<c:out value='${id}' />"</c:if>
       <c:if test="${not empty ariaLabel}">aria-label="<c:out value='${ariaLabel}' />"</c:if>
-      <c:if test="${not empty onClick}">onclick="${onClick}"</c:if>>
+      <c:if test="${not empty onClick}">onclick="<c:out value='${onClick}' />"</c:if>>
       <c:if test="${not empty imageUrl}">
-        <div class="card__image"<c:if test="${not empty imageHeight}"> style="height: ${imageHeight};"</c:if>>
+        <div class="card__image"<c:if test="${not empty imageHeight}"> style="height: <c:out value='${imageHeight}' />;"</c:if>>
           <c:choose>
             <c:when test="${fn:startsWith(imageUrl, 'http')}">
-              <img src="${imageUrl}" alt="<c:out value='${resolvedImageAlt}' />" />
+              <img src="<c:out value='${imageUrl}' />" alt="<c:out value='${resolvedImageAlt}' />" />
             </c:when>
             <c:otherwise>
               <img src="<c:url value='${imageUrl}' />" alt="<c:out value='${resolvedImageAlt}' />" />

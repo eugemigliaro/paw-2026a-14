@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.UserSportRatingDao;
+import ar.edu.itba.paw.persistence.UserSportRatingLookupResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -65,13 +66,14 @@ public class UserSportRatingServiceImpl implements UserSportRatingService {
     private PlayerEloChange updateRating(
             final User user, final Sport sport, final double result, final double opponentTeamElo) {
 
-        final Optional<UserSportRating> existingRating = findRating(user, sport);
-        final boolean previouslyUnrated = existingRating.isEmpty();
-        final int previousElo = existingRating.map(UserSportRating::getElo).orElse(INITIAL_ELO);
+        final UserSportRatingLookupResult lookupResult =
+                userSportRatingDao.getOrCreate(user, sport, INITIAL_ELO);
+        final UserSportRating rating = lookupResult.getRating();
+        final boolean previouslyUnrated = lookupResult.isCreated();
+        final int previousElo = rating.getElo();
         final int newElo =
                 computeNewElo(previousElo, result, expectedResult(previousElo, opponentTeamElo));
 
-        final UserSportRating rating = userSportRatingDao.getOrCreate(user, sport, INITIAL_ELO);
         rating.setElo(newElo);
         userSportRatingDao.save(rating);
         return new PlayerEloChange(user, previousElo, newElo, previouslyUnrated);

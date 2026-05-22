@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.UserSportRatingDao;
+import ar.edu.itba.paw.persistence.UserSportRatingLookupResult;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -147,7 +148,7 @@ public class UserSportRatingServiceImplTest {
         Mockito.when(userSportRatingDao.findByUserAndSport(winner, Sport.PADEL))
                 .thenReturn(Optional.empty());
         Mockito.when(userSportRatingDao.getOrCreate(winner, Sport.PADEL, 1000))
-                .thenReturn(winnerRating);
+                .thenReturn(new UserSportRatingLookupResult(winnerRating, true));
         stubExistingRating(loser, loserRating, Sport.PADEL);
         Mockito.when(userSportRatingDao.save(ArgumentMatchers.any(UserSportRating.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -216,7 +217,8 @@ public class UserSportRatingServiceImplTest {
             final User user, final UserSportRating rating, final Sport sport) {
         Mockito.when(userSportRatingDao.findByUserAndSport(user, sport))
                 .thenReturn(Optional.of(rating));
-        Mockito.when(userSportRatingDao.getOrCreate(user, sport, 1000)).thenReturn(rating);
+        Mockito.when(userSportRatingDao.getOrCreate(user, sport, 1000))
+                .thenReturn(new UserSportRatingLookupResult(rating, false));
     }
 
     private PlayerEloChange findChange(final EloUpdatedResult result, final User user) {

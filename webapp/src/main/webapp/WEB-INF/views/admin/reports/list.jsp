@@ -213,7 +213,7 @@
 								<c:forEach var="item" items="${paginationItems}">
 									<c:choose>
 										<c:when test="${item.ellipsis}">
-											<span class="feed-pagination__ellipsis">${item.label}</span>
+												<span class="feed-pagination__ellipsis"><c:out value="${item.label}" /></span>
 										</c:when>
 										<c:when test="${item.current}">
 											<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">

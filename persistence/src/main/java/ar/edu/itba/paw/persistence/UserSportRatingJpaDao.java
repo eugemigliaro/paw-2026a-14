@@ -36,8 +36,11 @@ public class UserSportRatingJpaDao implements UserSportRatingDao {
     }
 
     @Override
-    public UserSportRating getOrCreate(final User user, final Sport sport, final int initialElo) {
+    public UserSportRatingLookupResult getOrCreate(
+            final User user, final Sport sport, final int initialElo) {
+        assertPersistedUser(user);
         assertRatedSport(sport);
+        lockUser(user.getId());
 
         final Optional<UserSportRating> existing =
                 em
@@ -54,13 +57,13 @@ public class UserSportRatingJpaDao implements UserSportRatingDao {
                         .findFirst();
 
         if (existing.isPresent()) {
-            return existing.get();
+            return new UserSportRatingLookupResult(existing.get(), false);
         }
 
         final Instant now = Instant.now();
         final UserSportRating rating = new UserSportRating(null, user, sport, initialElo, now, now);
         em.persist(rating);
-        return rating;
+        return new UserSportRatingLookupResult(rating, true);
     }
 
     @Override
@@ -105,5 +108,18 @@ public class UserSportRatingJpaDao implements UserSportRatingDao {
         if (sport == null || sport == Sport.OTHER) {
             throw new IllegalArgumentException("Sport is not rated: " + sport);
         }
+    }
+
+    private void assertPersistedUser(final User user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User must be persisted");
+        }
+    }
+
+    private void lockUser(final Long userId) {
+        em.createQuery("SELECT u.id FROM UserAccount u WHERE u.id = :userId", Long.class)
+                .setParameter("userId", userId)
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                .getResultList();
     }
 }

@@ -50,8 +50,11 @@ public class UserSportRatingJpaDaoTest {
     public void testGetOrCreateCreatesRatingWithProvidedInitialElo() {
         final User user = createUser("rated", "rated@test.com");
 
-        final UserSportRating rating = userSportRatingDao.getOrCreate(user, Sport.FOOTBALL, 1000);
+        final UserSportRatingLookupResult result =
+                userSportRatingDao.getOrCreate(user, Sport.FOOTBALL, 1000);
+        final UserSportRating rating = result.getRating();
 
+        Assertions.assertTrue(result.isCreated());
         Assertions.assertNotNull(rating.getId());
         Assertions.assertEquals(user.getId(), rating.getUser().getId());
         Assertions.assertEquals(Sport.FOOTBALL, rating.getSport());
@@ -63,12 +66,33 @@ public class UserSportRatingJpaDaoTest {
     @Test
     public void testGetOrCreateReturnsExistingRating() {
         final User user = createUser("existing_rating", "existing_rating@test.com");
-        final UserSportRating initial = userSportRatingDao.getOrCreate(user, Sport.TENNIS, 1000);
+        final UserSportRating initial =
+                userSportRatingDao.getOrCreate(user, Sport.TENNIS, 1000).getRating();
 
-        final UserSportRating existing = userSportRatingDao.getOrCreate(user, Sport.TENNIS, 1500);
+        final UserSportRatingLookupResult result =
+                userSportRatingDao.getOrCreate(user, Sport.TENNIS, 1500);
+        final UserSportRating existing = result.getRating();
 
+        Assertions.assertFalse(result.isCreated());
         Assertions.assertEquals(initial.getId(), existing.getId());
         Assertions.assertEquals(1L, countRatings());
+    }
+
+    @Test
+    public void testGetOrCreateRejectsNullUser() {
+        Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> userSportRatingDao.getOrCreate(null, Sport.FOOTBALL, 1000));
+    }
+
+    @Test
+    public void testGetOrCreateRejectsUnpersistedUser() {
+        final User user =
+                new User(null, "unpersisted@test.com", "unpersisted", null, null, null, null, "en");
+
+        Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> userSportRatingDao.getOrCreate(user, Sport.FOOTBALL, 1000));
     }
 
     @Test
@@ -93,7 +117,8 @@ public class UserSportRatingJpaDaoTest {
     @Test
     public void testSavePersistsEloChange() {
         final User user = createUser("save_rating", "save_rating@test.com");
-        final UserSportRating rating = userSportRatingDao.getOrCreate(user, Sport.PADEL, 1000);
+        final UserSportRating rating =
+                userSportRatingDao.getOrCreate(user, Sport.PADEL, 1000).getRating();
         rating.setElo(1175);
 
         userSportRatingDao.save(rating);
@@ -154,7 +179,8 @@ public class UserSportRatingJpaDaoTest {
     }
 
     private void setElo(final User user, final Sport sport, final int elo) {
-        final UserSportRating rating = userSportRatingDao.getOrCreate(user, sport, 1000);
+        final UserSportRating rating =
+                userSportRatingDao.getOrCreate(user, sport, 1000).getRating();
         rating.setElo(elo);
         userSportRatingDao.save(rating);
     }

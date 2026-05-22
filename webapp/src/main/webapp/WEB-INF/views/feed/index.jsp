@@ -566,10 +566,10 @@
 											<c:choose>
 												<c:when test="${not empty feedPage.previousPageHref}">
 													<c:url var="feedPrevHref" value="${feedPage.previousPageHref}" />
-													<a class="feed-pagination__control" href="${feedPrevHref}">${previousLabel}</a>
+														<a class="feed-pagination__control" href="${feedPrevHref}"><c:out value="${previousLabel}" /></a>
 												</c:when>
 												<c:otherwise>
-													<span class="feed-pagination__control feed-pagination__control--disabled">${previousLabel}</span>
+														<span class="feed-pagination__control feed-pagination__control--disabled"><c:out value="${previousLabel}" /></span>
 												</c:otherwise>
 											</c:choose>
 
@@ -577,14 +577,14 @@
 												<c:forEach var="item" items="${feedPage.paginationItems}">
 													<c:choose>
 														<c:when test="${item.ellipsis}">
-															<span class="feed-pagination__ellipsis" aria-hidden="true">${item.label}</span>
+																<span class="feed-pagination__ellipsis" aria-hidden="true"><c:out value="${item.label}" /></span>
 														</c:when>
 														<c:when test="${item.current}">
-															<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">${item.label}</span>
+																<span class="feed-pagination__page feed-pagination__page--current" aria-current="page"><c:out value="${item.label}" /></span>
 														</c:when>
 														<c:otherwise>
 															<c:url var="feedPageItemHref" value="${item.href}" />
-															<a class="feed-pagination__page" href="${feedPageItemHref}">${item.label}</a>
+																<a class="feed-pagination__page" href="${feedPageItemHref}"><c:out value="${item.label}" /></a>
 														</c:otherwise>
 													</c:choose>
 												</c:forEach>
@@ -593,10 +593,10 @@
 											<c:choose>
 												<c:when test="${not empty feedPage.nextPageHref}">
 													<c:url var="feedNextHref" value="${feedPage.nextPageHref}" />
-													<a class="feed-pagination__control" href="${feedNextHref}">${nextLabel}</a>
+														<a class="feed-pagination__control" href="${feedNextHref}"><c:out value="${nextLabel}" /></a>
 												</c:when>
 												<c:otherwise>
-													<span class="feed-pagination__control feed-pagination__control--disabled">${nextLabel}</span>
+														<span class="feed-pagination__control feed-pagination__control--disabled"><c:out value="${nextLabel}" /></span>
 												</c:otherwise>
 											</c:choose>
 										</nav>
