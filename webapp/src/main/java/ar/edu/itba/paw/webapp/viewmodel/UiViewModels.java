@@ -782,18 +782,24 @@ public final class UiViewModels {
         private final String statusLabel;
         private final String statusTone;
         private final boolean current;
+        private final String spotsLabel;
+        private final String spotsTone;
 
         public EventOccurrenceViewModel(
                 final String href,
                 final String schedule,
                 final String statusLabel,
                 final String statusTone,
-                final boolean current) {
+                final boolean current,
+                final String spotsLabel,
+                final String spotsTone) {
             this.href = href;
             this.schedule = schedule;
             this.statusLabel = statusLabel;
             this.statusTone = statusTone;
             this.current = current;
+            this.spotsLabel = spotsLabel;
+            this.spotsTone = spotsTone;
         }
 
         public String getHref() {
@@ -814,6 +820,14 @@ public final class UiViewModels {
 
         public boolean isCurrent() {
             return current;
+        }
+
+        public String getSpotsLabel() {
+            return spotsLabel;
+        }
+
+        public String getSpotsTone() {
+            return spotsTone;
         }
     }
 

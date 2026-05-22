@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.query.MatchSort;
@@ -217,6 +218,8 @@ public interface MatchDao {
     Optional<Match> findPublicMatchById(Long matchId);
 
     List<Match> findSeriesOccurrences(Long seriesId);
+
+    PaginatedResult<Match> findSeriesOccurrencesPage(Long seriesId, int page, int pageSize);
 
     default Optional<Match> findMatchById(final Long matchId) {
         return findById(matchId);

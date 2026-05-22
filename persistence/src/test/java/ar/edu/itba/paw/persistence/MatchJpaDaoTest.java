@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.query.MatchSort;
@@ -1696,6 +1697,320 @@ public class MatchJpaDaoTest {
                 EventJoinPolicy.DIRECT,
                 EventStatus.OPEN,
                 null);
+    }
+
+    @Test
+    public void findSeriesOccurrencesPageReturnsFirstPageInOrder() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        3);
+        final MatchSeries matchSeries =
+                new MatchSeries(
+                        seriesId,
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        3,
+                        null,
+                        null);
+        final Match first =
+                matchDao.createMatch(
+                        host,
+                        "A",
+                        "S",
+                        "d",
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        null,
+                        matchSeries,
+                        1);
+        final Match second =
+                matchDao.createMatch(
+                        host,
+                        "A",
+                        "S",
+                        "d",
+                        startsAt.plusWeeks(1).toInstant(),
+                        endsAt.plusWeeks(1).toInstant(),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        null,
+                        matchSeries,
+                        2);
+        matchDao.createMatch(
+                host,
+                "A",
+                "S",
+                "d",
+                startsAt.plusWeeks(2).toInstant(),
+                endsAt.plusWeeks(2).toInstant(),
+                4,
+                BigDecimal.ZERO,
+                Sport.TENNIS,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                null,
+                matchSeries,
+                3);
+        em.flush();
+        em.clear();
+
+        final PaginatedResult<Match> page = matchDao.findSeriesOccurrencesPage(seriesId, 1, 2);
+
+        Assertions.assertEquals(3, page.getTotalCount());
+        Assertions.assertEquals(2, page.getItems().size());
+        Assertions.assertEquals(first.getId(), page.getItems().get(0).getId());
+        Assertions.assertEquals(second.getId(), page.getItems().get(1).getId());
+        Assertions.assertEquals(1, page.getPage());
+        Assertions.assertTrue(page.hasNext());
+        Assertions.assertFalse(page.hasPrevious());
+    }
+
+    @Test
+    public void findSeriesOccurrencesPageReturnsLastPartialPage() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        3);
+        final MatchSeries matchSeries =
+                new MatchSeries(
+                        seriesId,
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        3,
+                        null,
+                        null);
+        matchDao.createMatch(
+                host,
+                "A",
+                "S",
+                "d",
+                startsAt.toInstant(),
+                endsAt.toInstant(),
+                4,
+                BigDecimal.ZERO,
+                Sport.TENNIS,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                null,
+                matchSeries,
+                1);
+        matchDao.createMatch(
+                host,
+                "A",
+                "S",
+                "d",
+                startsAt.plusWeeks(1).toInstant(),
+                endsAt.plusWeeks(1).toInstant(),
+                4,
+                BigDecimal.ZERO,
+                Sport.TENNIS,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                null,
+                matchSeries,
+                2);
+        final Match third =
+                matchDao.createMatch(
+                        host,
+                        "A",
+                        "S",
+                        "d",
+                        startsAt.plusWeeks(2).toInstant(),
+                        endsAt.plusWeeks(2).toInstant(),
+                        4,
+                        BigDecimal.ZERO,
+                        Sport.TENNIS,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        null,
+                        matchSeries,
+                        3);
+        em.flush();
+        em.clear();
+
+        final PaginatedResult<Match> page = matchDao.findSeriesOccurrencesPage(seriesId, 2, 2);
+
+        Assertions.assertEquals(3, page.getTotalCount());
+        Assertions.assertEquals(1, page.getItems().size());
+        Assertions.assertEquals(third.getId(), page.getItems().get(0).getId());
+        Assertions.assertEquals(2, page.getPage());
+        Assertions.assertFalse(page.hasNext());
+        Assertions.assertTrue(page.hasPrevious());
+    }
+
+    @Test
+    public void findSeriesOccurrencesPageClampsPageBeyondTotalPagesToLastPage() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+        final MatchSeries matchSeries =
+                new MatchSeries(
+                        seriesId,
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2,
+                        null,
+                        null);
+        matchDao.createMatch(
+                host,
+                "A",
+                "S",
+                "d",
+                startsAt.toInstant(),
+                endsAt.toInstant(),
+                4,
+                BigDecimal.ZERO,
+                Sport.TENNIS,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                null,
+                matchSeries,
+                1);
+        matchDao.createMatch(
+                host,
+                "A",
+                "S",
+                "d",
+                startsAt.plusWeeks(1).toInstant(),
+                endsAt.plusWeeks(1).toInstant(),
+                4,
+                BigDecimal.ZERO,
+                Sport.TENNIS,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                null,
+                matchSeries,
+                2);
+        em.flush();
+        em.clear();
+
+        // 2 occurrences with page size 5 → only 1 total page; page 99 should clamp to 1
+        final PaginatedResult<Match> page = matchDao.findSeriesOccurrencesPage(seriesId, 99, 5);
+
+        Assertions.assertEquals(2, page.getTotalCount());
+        Assertions.assertEquals(1, page.getPage());
+        Assertions.assertEquals(2, page.getItems().size());
+        Assertions.assertFalse(page.hasPrevious());
+        Assertions.assertFalse(page.hasNext());
+    }
+
+    @Test
+    public void findSeriesOccurrencesPageDefaultsNonPositivePageSize() {
+        final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
+        final ZonedDateTime endsAt = startsAt.plusMinutes(90);
+        final Long seriesId =
+                matchDao.createMatchSeries(
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2);
+        final MatchSeries matchSeries =
+                new MatchSeries(
+                        seriesId,
+                        host,
+                        RecurrenceFrequency.WEEKLY,
+                        startsAt.toInstant(),
+                        endsAt.toInstant(),
+                        ZoneId.systemDefault().getId(),
+                        null,
+                        2,
+                        null,
+                        null);
+        matchDao.createMatch(
+                host,
+                "A",
+                "S",
+                "d",
+                startsAt.toInstant(),
+                endsAt.toInstant(),
+                4,
+                BigDecimal.ZERO,
+                Sport.TENNIS,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                null,
+                matchSeries,
+                1);
+        matchDao.createMatch(
+                host,
+                "A",
+                "S",
+                "d",
+                startsAt.plusWeeks(1).toInstant(),
+                endsAt.plusWeeks(1).toInstant(),
+                4,
+                BigDecimal.ZERO,
+                Sport.TENNIS,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                null,
+                matchSeries,
+                2);
+        em.flush();
+        em.clear();
+
+        // pageSize = 0 must not throw; DAO should substitute DEFAULT_SERIES_PAGE_SIZE
+        final PaginatedResult<Match> page = matchDao.findSeriesOccurrencesPage(seriesId, 1, 0);
+
+        Assertions.assertEquals(2, page.getTotalCount());
+        Assertions.assertFalse(page.getItems().isEmpty());
+        Assertions.assertTrue(page.getPageSize() > 0);
     }
 
     private Match createMatchWithPolicy(

@@ -74,7 +74,7 @@
     </c:if>
 
     <div class="site-header__actions">
-      
+
       <c:if test="${not empty shell.hostMatchNav}">
         <c:url var="hostMatchNavHref" value="${shell.hostMatchNav.href}" />
         <a

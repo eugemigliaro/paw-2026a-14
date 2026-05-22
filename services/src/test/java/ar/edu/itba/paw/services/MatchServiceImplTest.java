@@ -2471,6 +2471,33 @@ public class MatchServiceImplTest {
                 null);
     }
 
+    @Test
+    public void findSeriesOccurrencesPageDelegatesToDao() {
+        final PaginatedResult<Match> expected = new PaginatedResult<>(List.of(), 0, 1, 5);
+        Mockito.when(matchDao.findSeriesOccurrencesPage(600L, 1, 5)).thenReturn(expected);
+
+        final PaginatedResult<Match> result = matchService.findSeriesOccurrencesPage(600L, 1, 5);
+
+        Assertions.assertSame(expected, result);
+    }
+
+    @Test
+    public void findSeriesOccurrencesPageReturnsEmptyResultForNullSeriesId() {
+        final PaginatedResult<Match> result = matchService.findSeriesOccurrencesPage(null, 1, 5);
+
+        Assertions.assertEquals(0, result.getTotalCount());
+        Assertions.assertTrue(result.getItems().isEmpty());
+    }
+
+    @Test
+    public void
+            findSeriesOccurrencesPageReturnsEmptyResultForNullSeriesIdWithSafeDefaultPageSize() {
+        final PaginatedResult<Match> result = matchService.findSeriesOccurrencesPage(null, 1, 0);
+
+        Assertions.assertTrue(result.getItems().isEmpty());
+        Assertions.assertTrue(result.getPageSize() > 0);
+    }
+
     private Match recurringMatch(
             final Long id,
             final String title,

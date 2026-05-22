@@ -17,6 +17,8 @@ public interface MatchService {
 
     List<Match> findSeriesOccurrences(Long seriesId);
 
+    PaginatedResult<Match> findSeriesOccurrencesPage(Long seriesId, int page, int pageSize);
+
     List<User> findConfirmedParticipants(Long matchId);
 
     Match updateMatch(Long matchId, User actingUser, UpdateMatchRequest request);

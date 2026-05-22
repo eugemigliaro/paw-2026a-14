@@ -651,6 +651,20 @@ class UiRouteTest {
                     }
 
                     @Override
+                    public PaginatedResult<Match> findSeriesOccurrencesPage(
+                            final Long seriesId, final int page, final int pageSize) {
+                        final List<Match> all = findSeriesOccurrences(seriesId);
+                        final int safePage = Math.max(1, page);
+                        final int offset = Math.max(0, (safePage - 1) * pageSize);
+                        final List<Match> items =
+                                offset >= all.size()
+                                        ? List.of()
+                                        : all.subList(
+                                                offset, Math.min(offset + pageSize, all.size()));
+                        return new PaginatedResult<>(items, all.size(), safePage, pageSize);
+                    }
+
+                    @Override
                     public List<User> findConfirmedParticipants(final Long matchId) {
                         return matchId == 42L
                                 ? List.of(UserUtils.getUser(2L), UserUtils.getUser(3L))
@@ -1882,13 +1896,14 @@ class UiRouteTest {
 
     @Test
     void getRecurringMatchDetailsRouteExposesRecurringOccurrenceStates() throws Exception {
+        // Page 1 (size 5) shows first 5 of 6 occurrences: past, in-progress, current, second, full
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(6))))
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(5))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1921,6 +1936,19 @@ class UiRouteTest {
                                                         Matchers.hasProperty(
                                                                 "statusLabel",
                                                                 Matchers.is("Full"))))))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationPath",
+                                        "/matches/46/recurring-reservations"));
+
+        // Page 2 shows the 6th occurrence: cancelled
+        mockMvc.perform(get("/matches/46").param("seriesPage", "2"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(1))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1933,12 +1961,7 @@ class UiRouteTest {
                                                                         Matchers.is("Cancelled")),
                                                                 Matchers.hasProperty(
                                                                         "href",
-                                                                        Matchers.nullValue()))))))
-                .andExpect(model().attribute("seriesReservationEnabled", true))
-                .andExpect(
-                        model().attribute(
-                                        "seriesReservationPath",
-                                        "/matches/46/recurring-reservations"));
+                                                                        Matchers.nullValue()))))));
     }
 
     @Test
@@ -2032,7 +2055,8 @@ class UiRouteTest {
     void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/46"))
+        // Cancelled occurrence is the 6th item, so it appears on page 2 (page size = 5)
+        mockMvc.perform(get("/matches/46").param("seriesPage", "2"))
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(

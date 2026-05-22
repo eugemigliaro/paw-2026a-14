@@ -107,7 +107,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         }
 
         final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, player.getName() + " " + player.getLastName());
+                buildTemplateData(host, match, displayName(player));
 
         final MailContent content = templateRenderer.renderPlayerJoinedNotification(templateData);
 
@@ -123,7 +123,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         }
 
         final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, player.getName() + " " + player.getLastName());
+                buildTemplateData(host, match, displayName(player));
         final MailContent content =
                 templateRenderer.renderJoinRequestReceivedNotification(templateData);
         mailDispatchService.dispatch(host.getEmail(), content);
@@ -178,7 +178,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         }
 
         final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, player.getName() + " " + player.getLastName());
+                buildTemplateData(host, match, displayName(player));
         final MailContent content = templateRenderer.renderInviteAcceptedNotification(templateData);
         mailDispatchService.dispatch(host.getEmail(), content);
     }
@@ -192,7 +192,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         }
 
         final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, player.getName() + " " + player.getLastName());
+                buildTemplateData(host, match, displayName(player));
         final MailContent content = templateRenderer.renderInviteDeclinedNotification(templateData);
         mailDispatchService.dispatch(host.getEmail(), content);
     }
@@ -206,7 +206,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         }
 
         final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, player.getName() + " " + player.getLastName());
+                buildTemplateData(host, match, displayName(player));
         final MailContent content = templateRenderer.renderPlayerLeftNotification(templateData);
         mailDispatchService.dispatch(host.getEmail(), content);
     }
@@ -257,6 +257,29 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return List.of();
         }
         return users.stream().filter(user -> user != null && user.getEmail() != null).toList();
+    }
+
+    private static String displayName(final User user) {
+        final String firstName = clean(user.getName());
+        final String lastName = clean(user.getLastName());
+
+        if (firstName != null && lastName != null) {
+            return firstName + " " + lastName;
+        }
+
+        final String username = clean(user.getUsername());
+        if (username != null) {
+            return username;
+        }
+
+        return user.getEmail();
+    }
+
+    private static String clean(final String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private record AffectedRecurringParticipant(

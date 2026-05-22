@@ -20,6 +20,7 @@ import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
@@ -51,10 +52,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 public class EventController {
     private static final int DEFAULT_MAP_ZOOM = 14;
+    private static final int SERIES_PAGE_SIZE = 5;
 
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
@@ -124,6 +127,7 @@ public class EventController {
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
             @RequestParam(value = "invite", required = false) final String inviteStatus,
             @RequestParam(value = "inviteError", required = false) final String inviteErrorCode,
+            @RequestParam(value = "seriesPage", defaultValue = "1") final int seriesPage,
             final Model model,
             final Locale locale) {
         final String resolvedReservationStatus =
@@ -148,6 +152,7 @@ public class EventController {
                 joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
                 resolvedInviteStatus,
                 inviteErrorCode == null ? null : inviteErrorMessage(inviteErrorCode, locale),
+                seriesPage,
                 locale);
     }
 
@@ -179,6 +184,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -215,6 +221,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -250,6 +257,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -284,6 +292,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -303,6 +312,7 @@ public class EventController {
             final String joinError,
             final String inviteStatus,
             final String inviteError,
+            final int seriesPage,
             final Locale locale) {
         final Match match =
                 matchService
@@ -350,10 +360,12 @@ public class EventController {
                 isHostViewer && isInviteOnly
                         ? matchParticipationService.findDeclinedInvitees(eventId, currentUser)
                         : List.of();
-        final List<Match> seriesOccurrences =
+        final PaginatedResult<Match> seriesOccurrencesPage =
                 match.isRecurringOccurrence()
-                        ? matchService.findSeriesOccurrences(match.getSeries().getId())
-                        : List.of();
+                        ? matchService.findSeriesOccurrencesPage(
+                                match.getSeries().getId(), seriesPage, SERIES_PAGE_SIZE)
+                        : new PaginatedResult<>(List.of(), 0, 1, SERIES_PAGE_SIZE);
+        final List<Match> seriesOccurrences = seriesOccurrencesPage.getItems();
         final SeriesReservationUiState seriesReservationState =
                 match.isRecurringOccurrence()
                         ? buildSeriesReservationUiState(
@@ -384,6 +396,22 @@ public class EventController {
                         currentUser,
                         locale,
                         hostCanManageParticipants));
+        if (match.isRecurringOccurrence()) {
+            mav.addObject("recurrenceHasPreviousPage", seriesOccurrencesPage.hasPrevious());
+            mav.addObject("recurrenceHasNextPage", seriesOccurrencesPage.hasNext());
+            mav.addObject(
+                    "recurrencePreviousPageHref",
+                    buildSeriesScheduleUrl(eventId, seriesOccurrencesPage.getPage() - 1));
+            mav.addObject(
+                    "recurrenceNextPageHref",
+                    buildSeriesScheduleUrl(eventId, seriesOccurrencesPage.getPage() + 1));
+            mav.addObject(
+                    "recurrencePaginationItems",
+                    PaginationUtils.buildPaginationItems(
+                            seriesOccurrencesPage.getPage(),
+                            seriesOccurrencesPage.getTotalPages(),
+                            p -> buildSeriesScheduleUrl(eventId, p)));
+        }
 
         mav.addObject("reservationEnabled", canReserveMatch(match, isHostViewer));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
@@ -542,6 +570,15 @@ public class EventController {
                 mapDefaultZoom);
     }
 
+    private static String buildSeriesScheduleUrl(final Long eventId, final int page) {
+        return UriComponentsBuilder.fromPath("/matches/" + eventId)
+                .queryParam("seriesPage", page)
+                .fragment("recurrence-schedule-title")
+                .build()
+                .encode()
+                .toUriString();
+    }
+
     private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
         final String description =
                 match.getDescription() == null || match.getDescription().isBlank()
@@ -698,7 +735,7 @@ public class EventController {
             final List<Match> occurrences,
             final User currentUser,
             final Locale locale) {
-        if (occurrences == null || occurrences.size() <= 1) {
+        if (occurrences == null || occurrences.isEmpty()) {
             return List.of();
         }
 
@@ -719,7 +756,9 @@ public class EventController {
                                                             .atZone(ZoneId.systemDefault())),
                                     eventStateLabel(state, locale),
                                     state.tone(),
-                                    occurrence.getId().equals(currentMatch.getId()));
+                                    occurrence.getId().equals(currentMatch.getId()),
+                                    buildSpotsLabel(occurrence, state, locale),
+                                    buildSpotsTone(occurrence, state));
                         })
                 .toList();
     }
@@ -902,6 +941,37 @@ public class EventController {
 
     private String eventStateLabel(final EventDisplayState state, final Locale locale) {
         return messageSource.getMessage("match.status." + state.key(), null, locale);
+    }
+
+    private String buildSpotsLabel(
+            final Match occurrence, final EventDisplayState state, final Locale locale) {
+        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
+            return null;
+        }
+        final int spots = occurrence.getAvailableSpots();
+        if (spots <= 0) {
+            return null;
+        }
+        if (spots == 1) {
+            return messageSource.getMessage("event.occurrence.spots.one", null, locale);
+        }
+        return messageSource.getMessage(
+                "event.occurrence.spots.many", new Object[] {spots}, locale);
+    }
+
+    private String buildSpotsTone(final Match occurrence, final EventDisplayState state) {
+        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
+            return null;
+        }
+        final int spots = occurrence.getAvailableSpots();
+        if (spots <= 0) {
+            return null;
+        }
+        if (spots == 1) {
+            return "last";
+        }
+        final int max = occurrence.getMaxPlayers();
+        return (double) spots / max <= 0.33 ? "scarce" : "plenty";
     }
 
     private String eventStateNotice(final Match match, final Locale locale) {
