@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.NavItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ShellViewModel;
 import java.util.List;
@@ -10,8 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.StaticMessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class ShellViewModelFactoryTest {
@@ -32,7 +31,7 @@ class ShellViewModelFactoryTest {
     @Test
     void playerShellForAuthenticatedUserMovesReportLinkToSettingsMenu() {
         // 1. Arrange
-        authenticate("ROLE_USER");
+        AuthenticationUtils.authenticateUser(1L);
 
         // 2. Exercise
         final ShellViewModel shell =
@@ -50,7 +49,7 @@ class ShellViewModelFactoryTest {
     @Test
     void playerShellForAdminUserIncludesAdminReportsOnlyInSettingsMenu() {
         // 1. Arrange
-        authenticate("ROLE_ADMIN_MOD");
+        AuthenticationUtils.authenticateAdmin(1L, null);
 
         // 2. Exercise
         final ShellViewModel shell =
@@ -79,13 +78,6 @@ class ShellViewModelFactoryTest {
         Assertions.assertEquals(List.of("Explore"), labels(shell.getPrimaryNav()));
         Assertions.assertTrue(shell.getSettingsMenuItems().isEmpty());
         Assertions.assertNull(shell.getHostMatchNav());
-    }
-
-    private static void authenticate(final String role) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                "user", null, List.of(new SimpleGrantedAuthority(role))));
     }
 
     private static List<String> labels(final List<NavItemViewModel> items) {
