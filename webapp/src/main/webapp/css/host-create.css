@@ -185,6 +185,14 @@
 	padding-right: 0.5rem;
 }
 
+.create-form .recurrence-segmented-full-width {
+	width: 100%;
+}
+
+.create-form .recurrence-segmented-full-width > button {
+	overflow: auto;
+}
+
 .recurrence-settings {
 	background: transparent;
 	border: 0;

@@ -484,7 +484,7 @@
 																</span>
 																<c:set var="selectedRecurrenceEndMode"
 																	value="${empty createEventForm.recurrenceEndMode ? 'until_date' : createEventForm.recurrenceEndMode}" />
-																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--two"
+																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--two recurrence-segmented-full-width"
 																	id="match-recurrence-end-mode-toggle"
 																	data-events-toggle="true"
 																	data-events-toggle-right-value="occurrence_count"
