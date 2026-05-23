@@ -699,16 +699,23 @@ public class MatchJpaDao implements MatchDao {
             return;
         }
         parts.where.add(
-                "(LOWER(m.title) LIKE :query"
-                        + " OR LOWER(COALESCE(m.description, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(m.address, '')) LIKE :query"
-                        + " OR LOWER(CAST(m.sport AS string)) LIKE :query"
-                        + " OR LOWER(COALESCE(hu.name, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(hu.lastName, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(hu.username, '')) LIKE :query"
-                        + " OR LOWER(CONCAT(COALESCE(hu.name, ''), ' ', COALESCE(hu.lastName, ''))) LIKE :query"
-                        + " OR LOWER(CONCAT(COALESCE(hu.lastName, ''), ' ', COALESCE(hu.name, ''))) LIKE :query)");
-        parts.params.put("query", "%" + query.trim().toLowerCase() + "%");
+                "(LOWER(m.title) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(m.description, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(m.address, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(CAST(m.sport AS string)) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(hu.name, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(hu.lastName, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(hu.username, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(CONCAT(COALESCE(hu.name, ''), ' ', COALESCE(hu.lastName, ''))) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(CONCAT(COALESCE(hu.lastName, ''), ' ', COALESCE(hu.name, ''))) LIKE :query ESCAPE '\\')");
+
+        final String normalizedQuery = "%" + escapeLikePattern(query.trim().toLowerCase()) + "%";
+
+        parts.params.put("query", normalizedQuery);
+    }
+
+    private static String escapeLikePattern(final String query) {
+        return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     private static void appendDateRangeFilter(

@@ -42,8 +42,8 @@
 							<form:form
 								method="get"
 								action="${feedFormAction}"
-								modelAttribute="feedSearchForm"
-								cssClass="search-panel__form"
+								modelAttribute="searchForm"
+								cssClass="search-panel__form search-panel__form--floating-error"
 								novalidate="novalidate">
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
@@ -167,7 +167,7 @@
 								</button>
 								<div class="filter-dropdown__panel">
 									<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate">
-										<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
+										<input type="hidden" name="q" value="<c:out value='${searchForm.q}' />" />
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
@@ -186,7 +186,7 @@
 										</div>
 
 										<c:url var="clearDateHref" value="${feedPath}">
-											<c:param name="q" value="${feedSearchForm.q}" />
+											<c:param name="q" value="${searchForm.q}" />
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>
@@ -235,7 +235,7 @@
 								</button>
 								<div class="filter-dropdown__panel">
 									<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate">
-										<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
+										<input type="hidden" name="q" value="<c:out value='${searchForm.q}' />" />
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
@@ -260,7 +260,7 @@
 										</div>
 
 										<c:url var="clearPriceHref" value="${feedPath}">
-											<c:param name="q" value="${feedSearchForm.q}" />
+											<c:param name="q" value="${searchForm.q}" />
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>

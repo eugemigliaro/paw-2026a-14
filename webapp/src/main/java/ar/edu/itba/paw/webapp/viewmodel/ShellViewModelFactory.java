@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.utils.UrlUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.NavItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ShellViewModel;
@@ -105,13 +107,20 @@ public final class ShellViewModelFactory {
             return List.of();
         }
 
+        final User user = SecurityControllerUtils.currentUserOrNull();
+        if (user == null) {
+            return List.of();
+        }
+
+        final String profilePath = "/users/" + user.getUsername();
+
         final ArrayList<NavItemViewModel> settingsItems =
                 new ArrayList<>(
                         List.of(
                                 new NavItemViewModel(
                                         ms.getMessage("nav.profile", null, locale),
-                                        UrlUtils.withLang("/account", locale),
-                                        "/account".equals(activePath)),
+                                        UrlUtils.withLang(profilePath, locale),
+                                        profilePath.equals(activePath)),
                                 new NavItemViewModel(
                                         ms.getMessage("nav.player.reports", null, locale),
                                         UrlUtils.withLang("/reports/mine", locale),
@@ -123,6 +132,13 @@ public final class ShellViewModelFactory {
                             UrlUtils.withLang("/admin/reports", locale),
                             "/admin/reports".equals(activePath)));
         }
+
+        settingsItems.add(
+                new NavItemViewModel(
+                        ms.getMessage("nav.logout", null, locale),
+                        UrlUtils.withLang("/logout", locale),
+                        false));
+
         return settingsItems;
     }
 

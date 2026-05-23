@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.NavItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ShellViewModel;
 import java.util.List;
@@ -10,8 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.StaticMessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class ShellViewModelFactoryTest {
@@ -32,7 +31,7 @@ class ShellViewModelFactoryTest {
     @Test
     void playerShellForAuthenticatedUserMovesReportLinkToSettingsMenu() {
         // 1. Arrange
-        authenticate("ROLE_USER");
+        AuthenticationUtils.authenticateUser(1L);
 
         // 2. Exercise
         final ShellViewModel shell =
@@ -41,7 +40,7 @@ class ShellViewModelFactoryTest {
         // 3. Assert
         Assertions.assertEquals(List.of("Explore", "My matches"), labels(shell.getPrimaryNav()));
         Assertions.assertEquals(
-                List.of("Profile", "My reports"), labels(shell.getSettingsMenuItems()));
+                List.of("Profile", "My reports", "Logout"), labels(shell.getSettingsMenuItems()));
         Assertions.assertFalse(hrefs(shell.getPrimaryNav()).contains("/reports/mine?lang=en"));
         Assertions.assertTrue(
                 hrefs(shell.getSettingsMenuItems()).contains("/reports/mine?lang=en"));
@@ -50,7 +49,7 @@ class ShellViewModelFactoryTest {
     @Test
     void playerShellForAdminUserIncludesAdminReportsOnlyInSettingsMenu() {
         // 1. Arrange
-        authenticate("ROLE_ADMIN_MOD");
+        AuthenticationUtils.authenticateAdmin(1L, null);
 
         // 2. Exercise
         final ShellViewModel shell =
@@ -59,7 +58,7 @@ class ShellViewModelFactoryTest {
         // 3. Assert
         Assertions.assertEquals(List.of("Explore", "My matches"), labels(shell.getPrimaryNav()));
         Assertions.assertEquals(
-                List.of("Profile", "My reports", "Admin reports"),
+                List.of("Profile", "My reports", "Admin reports", "Logout"),
                 labels(shell.getSettingsMenuItems()));
         Assertions.assertFalse(hrefs(shell.getPrimaryNav()).contains("/admin/reports?lang=en"));
         Assertions.assertTrue(
@@ -81,13 +80,6 @@ class ShellViewModelFactoryTest {
         Assertions.assertNull(shell.getHostMatchNav());
     }
 
-    private static void authenticate(final String role) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                "user", null, List.of(new SimpleGrantedAuthority(role))));
-    }
-
     private static List<String> labels(final List<NavItemViewModel> items) {
         return items.stream().map(NavItemViewModel::getLabel).toList();
     }
@@ -104,6 +96,7 @@ class ShellViewModelFactoryTest {
         messageSource.addMessage("nav.player.reports", Locale.ENGLISH, "My reports");
         messageSource.addMessage("nav.admin.reports", Locale.ENGLISH, "Admin reports");
         messageSource.addMessage("nav.profile", Locale.ENGLISH, "Profile");
+        messageSource.addMessage("nav.logout", Locale.ENGLISH, "Logout");
         messageSource.addMessage("nav.hostAMatch", Locale.ENGLISH, "Host a match");
         return messageSource;
     }

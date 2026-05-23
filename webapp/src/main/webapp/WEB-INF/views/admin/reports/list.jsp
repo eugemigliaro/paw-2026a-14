@@ -165,7 +165,7 @@
 											<c:if test="${not empty report.appealReason}">
 												<div class="report-section-field report-section-field__row">
 													<dt class="detail-label"><spring:message code="admin.reports.appeal" /></dt>
-													<dd><c:out value="${report.appealReason}" /></dd>
+													<dd class="body-copy"><c:out value="${report.appealReason}" /></dd>
 												</div>
 											</c:if>
 										</dl>
