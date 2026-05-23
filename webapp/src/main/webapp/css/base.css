@@ -311,6 +311,12 @@ button.site-header__settings-item {
 	color: #a53928;
 }
 
+.site-header__settings-item--logout > span {
+	font-size: 0.9rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
 .site-header__settings-item--logout:hover {
 	color: #a53928;
 	background-color: #fff5f5;

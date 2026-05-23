@@ -149,10 +149,9 @@
                     </form>
                   </c:when>
                   <c:otherwise>
-                    <button
-                      type="button"
+                    <a
+                      href="${settingsItemHref}"
                       class="site-header__settings-item ${settingsItem.active ? 'site-header__settings-item--active' : ''}"
-                      onclick="window.location.href='${settingsItemHref}'"
                       role="menuitem">
                       <span class="site-header__settings-item-icon" aria-hidden="true">
                         <c:choose>
@@ -183,7 +182,7 @@
                         </c:choose>
                       </span>
                       <span><c:out value="${settingsItem.label}" /></span>
-                    </button>
+                    </a>
                   </c:otherwise>
                 </c:choose>
               </c:forEach>
