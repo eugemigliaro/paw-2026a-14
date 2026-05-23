@@ -35,9 +35,10 @@
 						options="${listControls.sortOptions}" />
 
 					<section class="search-panel matches-search-panel" aria-label="${searchAriaLabel}">
+						<c:url var="matchesSearchFormAction" value="${listControls.searchAction}" />
 						<form:form
 							method="get"
-							action="${listControls.searchAction}"
+							action="${matchesSearchFormAction}"
 							modelAttribute="listSearchForm"
 							cssClass="search-panel__form">
 							<c:forEach var="selectedSport" items="${selectedSports}">
@@ -124,7 +125,8 @@
 									<div class="filter-rail__group-header">
 										<h2 class="filter-rail__title"><spring:message code="filter.datePrice" /></h2>
 									</div>
-									<form method="get" action="${listControls.searchAction}" class="filter-rail__form">
+									<c:url var="matchesFilterFormAction" value="${listControls.searchAction}" />
+									<form method="get" action="${matchesFilterFormAction}" class="filter-rail__form">
 										<input type="hidden" name="q" value="<c:out value='${listControls.searchQuery}' />" />
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />

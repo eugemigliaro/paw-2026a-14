@@ -13,7 +13,7 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
-import ar.edu.itba.paw.webapp.form.FeedSearchForm;
+import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -30,11 +30,14 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -69,7 +72,8 @@ public class MatchDashboardController {
     @GetMapping("/events")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView showEventsPage(
-            @RequestParam(value = "q", required = false) final String query,
+            @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
+            final BindingResult bindingResult,
             @RequestParam(value = "sort", required = false) final String sort,
             @RequestParam(value = "startDate", required = false) final String startDate,
             @RequestParam(value = "endDate", required = false) final String endDate,
@@ -90,7 +94,10 @@ public class MatchDashboardController {
                 normalizeValues(
                         categories, List.of(), List.of("joined", "invited", "pending", "hosted"));
         final String selectedSort = normalizeSort(sort);
-        final String searchQuery = normalizeQuery(query);
+        final String searchQuery =
+                bindingResult.hasFieldErrors("q") || searchForm.getQ() == null
+                        ? ""
+                        : searchForm.getQ().trim();
         final String selectedTimezone = normalizeTimezone(timezone);
 
         final DateRangeContext context =
@@ -120,6 +127,7 @@ public class MatchDashboardController {
                 "/events",
                 "page.title.events",
                 locale,
+                searchForm,
                 searchQuery,
                 selectedSort,
                 selectedDateRange.startDate(),
@@ -143,6 +151,7 @@ public class MatchDashboardController {
             final String path,
             final String pageTitleCode,
             final Locale locale,
+            final SearchForm searchForm,
             final String searchQuery,
             final String sort,
             final String startDate,
@@ -181,7 +190,7 @@ public class MatchDashboardController {
         mav.addObject("selectedTimezone", timezone);
         mav.addObject("selectedMinPriceValue", formatNullablePriceValue(minPrice));
         mav.addObject("selectedMaxPriceValue", formatNullablePriceValue(maxPrice));
-        mav.addObject("listSearchForm", buildSearchForm(searchQuery));
+        mav.addObject("searchForm", searchForm);
         mav.addObject(
                 "listControls",
                 buildListControls(
@@ -674,22 +683,8 @@ public class MatchDashboardController {
                                 messageSource.getMessage("feed.sort.spots", null, locale)));
 
         return new MatchListControlsViewModel(
-                buildSearchAction(
-                        path, locale, sort, null, null, null, null, timezone, List.of(), List.of(),
-                        List.of(), List.of()),
-                buildSearchAction(
-                        path,
-                        locale,
-                        sort,
-                        selectedStartDate,
-                        selectedEndDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        selectedCategories),
+                path,
+                path,
                 messageSource.getMessage("feed.aria.search", null, locale),
                 searchQuery,
                 messageSource.getMessage("feed.search.placeholder", null, locale),
@@ -804,36 +799,6 @@ public class MatchDashboardController {
         }
 
         return builder.build().encode().toUriString();
-    }
-
-    private String buildSearchAction(
-            final String path,
-            final Locale locale,
-            final String sort,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String timezone,
-            final List<String> selectedStatuses,
-            final List<String> selectedSports,
-            final List<String> selectedVisibility,
-            final List<String> selectedCategories) {
-        return buildPageUrl(
-                path,
-                locale,
-                null,
-                sort,
-                startDate,
-                endDate,
-                minPrice,
-                maxPrice,
-                timezone,
-                selectedStatuses,
-                selectedSports,
-                selectedVisibility,
-                selectedCategories,
-                1);
     }
 
     private SelectOptionViewModel sortOption(
@@ -1176,10 +1141,6 @@ public class MatchDashboardController {
                         messageSource.getMessage("category.hosted", null, locale)));
     }
 
-    private static String normalizeQuery(final String query) {
-        return query == null ? "" : query.trim();
-    }
-
     private static DateRange normalizeDateRange(
             final String rawStartDate,
             final String rawEndDate,
@@ -1284,12 +1245,6 @@ public class MatchDashboardController {
         }
 
         return List.copyOf(filtered);
-    }
-
-    private static FeedSearchForm buildSearchForm(final String searchQuery) {
-        final FeedSearchForm form = new FeedSearchForm();
-        form.setQ(searchQuery == null ? "" : searchQuery);
-        return form;
     }
 
     private static String formatNullablePriceValue(final BigDecimal price) {
