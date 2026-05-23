@@ -48,7 +48,6 @@ public class ModerationServiceImpl implements ModerationService {
 
     private static final int MAX_ACTIVE_REPORTS = 3;
     private static final int DEFAULT_REPORT_PAGE_SIZE = 24;
-    private static final int DEFAULT_BAN_DURATION_DAYS = 7;
 
     private final UserBanDao userBanDao;
     private final ModerationReportDao moderationReportDao;
@@ -262,8 +261,12 @@ public class ModerationServiceImpl implements ModerationService {
             final User adminUser,
             final ReportResolution resolution,
             final String resolutionDetails,
-            final ReportStatus nextStatus) {
+            final ReportStatus nextStatus,
+            final int banDurationDays) {
         nonNullUser(adminUser);
+        if (resolution == ReportResolution.USER_BANNED && banDurationDays <= 0) {
+            throw new ModerationException("invalid_ban_duration", "Ban duration must be positive.");
+        }
         final ModerationReport report =
                 moderationReportDao
                         .findById(reportId)
@@ -272,7 +275,12 @@ public class ModerationServiceImpl implements ModerationService {
                                         new ModerationException(
                                                 "report_not_found", "Report not found."));
         applyResolutionEffect(
-                report, adminUser, resolution, normalizeText(resolutionDetails, 4000), reportId);
+                report,
+                adminUser,
+                resolution,
+                normalizeText(resolutionDetails, 4000),
+                reportId,
+                banDurationDays);
         if (!moderationReportDao.resolveReport(
                 reportId,
                 adminUser,
@@ -551,7 +559,8 @@ public class ModerationServiceImpl implements ModerationService {
             final User adminUser,
             final ReportResolution resolution,
             final String resolutionDetails,
-            final Long sourceReportId) {
+            final Long sourceReportId,
+            final int banDurationDays) {
         if (resolution == ReportResolution.CONTENT_DELETED) {
             applyContentDelete(report, adminUser, resolutionDetails, sourceReportId);
             return;
@@ -559,7 +568,7 @@ public class ModerationServiceImpl implements ModerationService {
         if (resolution == ReportResolution.USER_BANNED
                 && report.getTargetType() == ReportTargetType.USER) {
             final Instant bannedUntil =
-                    Instant.now(clock).plusSeconds(DEFAULT_BAN_DURATION_DAYS * 24L * 3600L);
+                    Instant.now(clock).plusSeconds(banDurationDays * 24L * 3600L);
             final User user =
                     userDao.findById(report.getTargetId())
                             .orElseThrow(

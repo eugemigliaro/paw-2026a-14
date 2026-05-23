@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
@@ -80,7 +81,7 @@
 										<dd class="body-copy"><c:out value="${report.resolutionDetails}" /></dd>
 									</div>
 								</c:if>
-								<c:if test="${not empty report.reviewedByUserId}">
+								<c:if test="${not empty reviewerUsername}">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="admin.reports.reviewedBy" /></dt>
 										<dd><c:out value="${reviewerUsername}" /></dd>
@@ -103,12 +104,13 @@
 
 						<c:if test="${report.statusCode eq 'pending' or report.statusCode eq 'under_review'}">
 							<div class="stack">
-								<form method="post" class="stack">
-									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+								<form:form method="post" modelAttribute="resolutionForm" cssClass="stack">
+									<form:errors path="" cssClass="notice notice--error" element="div" />
 									<div class="report-section-field">
-										<label class="field">
+										<label class="field" for="resolution-details-${report.id}">
 											<span class="detail-label"><spring:message code="admin.reports.resolutionDetails" /></span>
-											<textarea name="resolutionDetails" maxlength="4000" class="field__control field__control--textarea" rows="3"></textarea>
+											<form:textarea id="resolution-details-${report.id}" path="resolutionDetails" maxlength="4000" cssClass="field__control field__control--textarea" rows="3" />
+											<form:errors path="resolutionDetails" cssClass="field__error" element="span" />
 										</label>
 									</div>
 
@@ -123,10 +125,11 @@
 											<div class="report-section-field__row">
 												<c:url var="banUserHref" value="/admin/reports/${report.id}/ban-user" />
 												<spring:message var="banUserLabel" code="admin.reports.action.banUser" />
-													<ui:button label="${banUserLabel}" type="submit" variant="danger" submitAction="${banUserHref}" />
-												<label class="field">
+												<ui:button label="${banUserLabel}" type="submit" variant="danger" submitAction="${banUserHref}" />
+												<label class="field" for="ban-days-${report.id}">
 													<span class="detail-label"><spring:message code="admin.reports.ban.days" /></span>
-													<input type="number" name="banDays" min="0" value="7" class="field__control field__control--ban-days" />
+													<form:input id="ban-days-${report.id}" path="banDays" cssClass="field__control field__control--ban-days" />
+													<form:errors path="banDays" cssClass="field__error" element="span" />
 												</label>
 											</div>
 										</c:if>
@@ -135,7 +138,7 @@
 										<spring:message var="dismissLabel" code="admin.reports.action.dismiss" />
 											<ui:button label="${dismissLabel}" type="submit" variant="secondary" submitAction="${dismissHref}" />
 									</div>
-								</form>
+								</form:form>
 							</div>
 						</c:if>
 					</ui:card>
@@ -178,8 +181,8 @@
 						<c:choose>
 							<c:when test="${report.appealed}">
 								<c:url var="finalizeAppealHref" value="/admin/reports/${report.id}/finalize-appeal" />
-								<form method="post" action="${finalizeAppealHref}" class="stack report-section__top">
-									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+								<form:form method="post" modelAttribute="appealResolutionForm" action="${finalizeAppealHref}" cssClass="stack report-section__top">
+									<form:errors path="" cssClass="notice notice--error" element="div" />
 									<spring:message var="appealResolutionLabel" code="admin.reports.appeal.resolution.label" />
 									<div class="report-section-field">
 										<label for="appeal-decision-${report.id}" class="detail-label"><c:out value="${appealResolutionLabel}" /></label>
@@ -195,17 +198,18 @@
 													<spring:message code="admin.reports.appealDecision.lifted" />
 												</button>
 											</div>
-											<select id="appeal-decision-${report.id}" name="appealDecision" class="field--hidden">
-												<option value="upheld"><spring:message code="admin.reports.appealDecision.upheld" /></option>
-												<option value="lifted"><spring:message code="admin.reports.appealDecision.lifted" /></option>
-											</select>
+											<form:select id="appeal-decision-${report.id}" path="appealDecision" cssClass="field--hidden">
+												<form:option value="upheld"><spring:message code="admin.reports.appealDecision.upheld" /></form:option>
+												<form:option value="lifted"><spring:message code="admin.reports.appealDecision.lifted" /></form:option>
+											</form:select>
 										</div>
+										<form:errors path="appealDecision" cssClass="field__error" element="span" />
 									</div>
 									<div class="report-section-actions">
 										<spring:message var="finalizeAppealLabel" code="admin.reports.appeal.finalize" />
 											<ui:button label="${finalizeAppealLabel}" type="submit" submitAction="${finalizeAppealHref}"/>
 									</div>
-								</form>
+								</form:form>
 							</c:when>
 							<c:when test="${not empty report.appealDecisionCode}">
 								<spring:message var="appealDecisionLabel" code="admin.reports.appealDecision.${report.appealDecisionCode}" />
