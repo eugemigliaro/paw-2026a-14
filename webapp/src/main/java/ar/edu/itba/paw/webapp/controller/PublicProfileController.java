@@ -93,7 +93,10 @@ public class PublicProfileController {
                         new Object[] {user.getUsername()},
                         "Match Point | " + user.getUsername(),
                         resolvedLocale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, resolvedLocale));
+        mav.addObject(
+                "shell",
+                ShellViewModelFactory.playerShell(
+                        messageSource, resolvedLocale, "/users/" + username));
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(

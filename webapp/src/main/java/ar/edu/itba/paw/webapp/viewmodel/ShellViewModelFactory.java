@@ -112,13 +112,15 @@ public final class ShellViewModelFactory {
             return List.of();
         }
 
+        final String profilePath = "/users/" + user.getUsername();
+
         final ArrayList<NavItemViewModel> settingsItems =
                 new ArrayList<>(
                         List.of(
                                 new NavItemViewModel(
                                         ms.getMessage("nav.profile", null, locale),
-                                        UrlUtils.withLang("/users/" + user.getUsername(), locale),
-                                        "/account".equals(activePath)),
+                                        UrlUtils.withLang(profilePath, locale),
+                                        profilePath.equals(activePath)),
                                 new NavItemViewModel(
                                         ms.getMessage("nav.player.reports", null, locale),
                                         UrlUtils.withLang("/reports/mine", locale),
