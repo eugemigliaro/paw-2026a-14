@@ -40,7 +40,7 @@ class ShellViewModelFactoryTest {
         // 3. Assert
         Assertions.assertEquals(List.of("Explore", "My matches"), labels(shell.getPrimaryNav()));
         Assertions.assertEquals(
-                List.of("Profile", "My reports"), labels(shell.getSettingsMenuItems()));
+                List.of("Profile", "My reports", "Logout"), labels(shell.getSettingsMenuItems()));
         Assertions.assertFalse(hrefs(shell.getPrimaryNav()).contains("/reports/mine?lang=en"));
         Assertions.assertTrue(
                 hrefs(shell.getSettingsMenuItems()).contains("/reports/mine?lang=en"));
@@ -58,7 +58,7 @@ class ShellViewModelFactoryTest {
         // 3. Assert
         Assertions.assertEquals(List.of("Explore", "My matches"), labels(shell.getPrimaryNav()));
         Assertions.assertEquals(
-                List.of("Profile", "My reports", "Admin reports"),
+                List.of("Profile", "My reports", "Admin reports", "Logout"),
                 labels(shell.getSettingsMenuItems()));
         Assertions.assertFalse(hrefs(shell.getPrimaryNav()).contains("/admin/reports?lang=en"));
         Assertions.assertTrue(
@@ -96,6 +96,7 @@ class ShellViewModelFactoryTest {
         messageSource.addMessage("nav.player.reports", Locale.ENGLISH, "My reports");
         messageSource.addMessage("nav.admin.reports", Locale.ENGLISH, "Admin reports");
         messageSource.addMessage("nav.profile", Locale.ENGLISH, "Profile");
+        messageSource.addMessage("nav.logout", Locale.ENGLISH, "Logout");
         messageSource.addMessage("nav.hostAMatch", Locale.ENGLISH, "Host a match");
         return messageSource;
     }

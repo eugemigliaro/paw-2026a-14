@@ -266,6 +266,15 @@ a {
 	outline: none;
 }
 
+button.site-header__settings-item {
+	background: transparent;
+	border: none;
+	font: inherit;
+	cursor: pointer;
+	width: 100%;
+	text-align: left;
+}
+
 .site-header__settings-item--active {
 	background: var(--accent-soft);
 	color: var(--accent);
@@ -298,11 +307,19 @@ a {
 	stroke: none;
 }
 
+.site-header__settings-item--logout {
+	color: #a53928;
+}
+
+.site-header__settings-item--logout:hover {
+	color: #a53928;
+	background-color: #fff5f5;
+}
+
 .page-shell {
 	margin: 0 auto;
 	max-width: 1360px;
 	padding: 2rem 1.5rem 4rem;
-
 }
 
 .page-back-nav {

@@ -130,6 +130,13 @@ public final class ShellViewModelFactory {
                             UrlUtils.withLang("/admin/reports", locale),
                             "/admin/reports".equals(activePath)));
         }
+
+        settingsItems.add(
+                new NavItemViewModel(
+                        ms.getMessage("nav.logout", null, locale),
+                        UrlUtils.withLang("/logout", locale),
+                        false));
+
         return settingsItems;
     }
 
