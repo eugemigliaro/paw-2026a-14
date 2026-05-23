@@ -2,6 +2,7 @@
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <spring:message var="primaryNavAria" code="nav.primary" />
 <spring:message var="languageAria" code="nav.language" text="Language" />
 <spring:message var="englishShortLabel" code="nav.language.englishShort" text="EN" />
@@ -104,8 +105,7 @@
           <c:out value="${spanishShortLabel}" />
         </a>
       </nav>
-      <c:choose>
-        <c:when test="${pageContext.request.userPrincipal ne null}">
+      <sec:authorize access="!isAnonymous()">
           <spring:message var="settingsLabel" code="nav.settings" text="Settings" />
           <div class="site-header__settings-menu" data-overflow-menu="true">
             <button
@@ -166,16 +166,15 @@
               </c:forEach>
             </div>
           </div>
-        </c:when>
-        <c:otherwise>
-          <spring:message var="loginLabel" code="nav.login" />
-          <spring:message var="registerLabel" code="nav.register" />
-          <div class="site-header__auth">
-            <ui:button label="${loginLabel}" href="${loginHref}" variant="secondary" size="sm" />
-            <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
-          </div>
-        </c:otherwise>
-      </c:choose>
+        </sec:authorize>
+      <sec:authorize access="isAnonymous()">
+        <spring:message var="loginLabel" code="nav.login" />
+        <spring:message var="registerLabel" code="nav.register" />
+        <div class="site-header__auth">
+          <ui:button label="${loginLabel}" href="${loginHref}" variant="secondary" size="sm" />
+          <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
+        </div>
+      </sec:authorize>
       <c:if test="${not empty shell.hostAction}">
         <c:url var="hostActionHref" value="${shell.hostAction.href}" />
         <ui:button
