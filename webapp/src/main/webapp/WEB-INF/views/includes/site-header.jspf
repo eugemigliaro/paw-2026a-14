@@ -105,33 +105,40 @@
           <c:out value="${shell.hostMatchNav.label}" />
         </a>
       </c:if>
-      <c:choose>
-        <c:when test="${pageContext.request.userPrincipal ne null}">
-          <spring:message var="accountLabel" code="nav.account" text="Account" />
-          <a class="site-header__account-link" href="${accountHref}" aria-label="${accountLabel}" title="${accountLabel}">
-            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-              <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
-              <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
-            </svg>
-          </a>
-        </c:when>
-        <c:otherwise>
-          <spring:message var="loginLabel" code="nav.login" />
-          <spring:message var="registerLabel" code="nav.register" />
-          <div class="site-header__auth">
-            <ui:button label="${loginLabel}" href="${loginHref}" variant="secondary" size="sm" />
-            <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
-          </div>
-        </c:otherwise>
-      </c:choose>
+      <c:if test="${pageContext.request.userPrincipal eq null}">
+        <spring:message var="loginLabel" code="nav.login" />
+        <spring:message var="registerLabel" code="nav.register" />
+        <div class="site-header__auth">
+          <ui:button label="${loginLabel}" href="${loginHref}" variant="secondary" size="sm" />
+          <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
+        </div>
+      </c:if>
       <c:if test="${not empty shell.hostAction}">
         <c:url var="hostActionHref" value="${shell.hostAction.href}" />
         <ui:button
           label="${shell.hostAction.label}"
           href="${hostActionHref}"
-          variant="primary"
+          variant="secondary"
           size="md"
           className="site-header__host-button" />
+      </c:if>
+      <c:if test="${not empty shell.tournamentHostAction}">
+        <c:url var="tournamentHostActionHref" value="${shell.tournamentHostAction.href}" />
+        <ui:button
+          label="${shell.tournamentHostAction.label}"
+          href="${tournamentHostActionHref}"
+          variant="secondary"
+          size="md"
+          className="site-header__host-button" />
+      </c:if>
+      <c:if test="${pageContext.request.userPrincipal ne null}">
+        <spring:message var="accountLabel" code="nav.account" text="Account" />
+        <a class="site-header__account-link" href="${accountHref}" aria-label="${accountLabel}" title="${accountLabel}">
+          <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+            <path d="M12 12.25a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" />
+            <path d="M4.5 20.25a7.5 7.5 0 0 1 15 0" />
+          </svg>
+        </a>
       </c:if>
     </div>
   </div>

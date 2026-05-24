@@ -11,6 +11,7 @@ public final class UiViewModels {
     public static final class ShellViewModel {
         private final String brandLabel;
         private final NavItemViewModel hostAction;
+        private final NavItemViewModel tournamentHostAction;
         private final NavItemViewModel hostMatchNav;
         private final List<NavItemViewModel> primaryNav;
 
@@ -18,7 +19,7 @@ public final class UiViewModels {
                 final String brandLabel,
                 final NavItemViewModel hostAction,
                 final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, null, primaryNav);
+            this(brandLabel, hostAction, null, null, primaryNav);
         }
 
         public ShellViewModel(
@@ -26,8 +27,18 @@ public final class UiViewModels {
                 final NavItemViewModel hostAction,
                 final NavItemViewModel hostMatchNav,
                 final List<NavItemViewModel> primaryNav) {
+            this(brandLabel, hostAction, null, hostMatchNav, primaryNav);
+        }
+
+        public ShellViewModel(
+                final String brandLabel,
+                final NavItemViewModel hostAction,
+                final NavItemViewModel tournamentHostAction,
+                final NavItemViewModel hostMatchNav,
+                final List<NavItemViewModel> primaryNav) {
             this.brandLabel = brandLabel;
             this.hostAction = hostAction;
+            this.tournamentHostAction = tournamentHostAction;
             this.hostMatchNav = hostMatchNav;
             this.primaryNav = primaryNav;
         }
@@ -38,6 +49,10 @@ public final class UiViewModels {
 
         public NavItemViewModel getHostAction() {
             return hostAction;
+        }
+
+        public NavItemViewModel getTournamentHostAction() {
+            return tournamentHostAction;
         }
 
         public NavItemViewModel getHostMatchNav() {

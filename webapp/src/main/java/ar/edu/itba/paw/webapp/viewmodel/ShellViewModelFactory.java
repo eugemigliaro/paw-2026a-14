@@ -59,13 +59,19 @@ public final class ShellViewModelFactory {
 
         return new ShellViewModel(
                 ms.getMessage("app.brand", null, locale),
-                null,
                 isAuthenticated()
                         ? new NavItemViewModel(
                                 ms.getMessage("nav.hostAMatch", null, locale),
                                 UrlUtils.withLang("/host/matches/new", locale),
                                 "/host/matches/new".equals(activePath))
                         : null,
+                isAuthenticated()
+                        ? new NavItemViewModel(
+                                ms.getMessage("nav.hostATournament", null, locale),
+                                UrlUtils.withLang("/host/tournaments/new", locale),
+                                "/host/tournaments/new".equals(activePath))
+                        : null,
+                null,
                 navItems);
     }
 
