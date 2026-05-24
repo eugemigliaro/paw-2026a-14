@@ -108,6 +108,10 @@
 	justify-content: space-between;
 }
 
+.tournament-bracket-actions__update-button--hidden {
+	display: none;
+}
+
 .tournament-bracket-grid {
 	align-items: start;
 	display: grid;
@@ -256,6 +260,22 @@
 	display: grid;
 	gap: 0.8rem;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tournament-bracket-actions {
+	display: flex;
+	flex-direction: row;
+	justify-content: start;
+	align-items: end;
+	gap: 0.75rem;
+	margin: 0.5rem 0 0.75rem 0;
+}
+
+.tournament-bracket-actions > form {
+	display: flex;
+	flex-direction: row;
+	align-items: end;
+	gap: 0.5rem;
 }
 
 @media (max-width: 720px) {

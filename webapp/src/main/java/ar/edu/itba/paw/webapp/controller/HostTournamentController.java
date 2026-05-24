@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
@@ -32,6 +33,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +52,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -186,6 +189,26 @@ public class HostTournamentController {
         }
     }
 
+    @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/strategy")
+    public ModelAndView updateBracketStrategy(
+            @PathVariable("tournamentId") final Long tournamentId,
+            @RequestParam("pairingStrategy") final String pairingStrategyValue,
+            final RedirectAttributes redirectAttributes) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final TournamentPairingStrategy pairingStrategy =
+                PersistableEnum.fromDbValue(TournamentPairingStrategy.class, pairingStrategyValue)
+                        .orElse(null);
+        try {
+            tournamentBracketService.updatePairingStrategy(
+                    tournamentId, actingUser, pairingStrategy);
+            redirectAttributes.addFlashAttribute(
+                    "tournamentNoticeCode", "tournament.bracket.strategy.updated");
+        } catch (final TournamentBracketException exception) {
+            handleBracketException(exception, redirectAttributes);
+        }
+        return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
+    }
+
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/generate")
     public ModelAndView generateBracket(
             @PathVariable("tournamentId") final Long tournamentId,
@@ -200,7 +223,8 @@ public class HostTournamentController {
                     "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
         } catch (final TournamentBracketException exception) {
             handleBracketException(exception, redirectAttributes);
-            return new ModelAndView("redirect:/tournaments/" + tournamentId);
+            return new ModelAndView(
+                    "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
         }
     }
 
@@ -251,7 +275,30 @@ public class HostTournamentController {
                         "/host/tournaments/" + tournamentId + "/bracket/setup"));
         mav.addObject("bracketPage", bracketPage);
         mav.addObject(
+                "selectedPairingStrategy",
+                tournament.getPairingStrategy() == null
+                        ? TournamentPairingStrategy.RANDOM.getDbValue()
+                        : tournament.getPairingStrategy().getDbValue());
+        mav.addObject(
                 "generateBracketPath", "/host/tournaments/" + tournamentId + "/bracket/generate");
+        mav.addObject(
+                "updateBracketStrategyPath",
+                "/host/tournaments/" + tournamentId + "/bracket/strategy");
+        mav.addObject(
+                "saveManualPairingsPath",
+                "/host/tournaments/" + tournamentId + "/bracket/manual-pairings");
+        mav.addObject(
+                "manualPairingEnabled",
+                TournamentPairingStrategy.MANUAL == tournament.getPairingStrategy());
+        mav.addObject("tournamentPairingStrategy", tournament.getPairingStrategy());
+        if (!bracketPage.isGenerated()
+                && TournamentPairingStrategy.MANUAL == tournament.getPairingStrategy()) {
+            mav.addObject(
+                    "manualPairingTeams",
+                    tournamentBracketService.listTeamsForSetup(tournamentId, actingUser));
+        } else {
+            mav.addObject("manualPairingTeams", List.of());
+        }
         mav.addObject(
                 "publishBracketPath", "/host/tournaments/" + tournamentId + "/bracket/publish");
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
@@ -260,6 +307,32 @@ public class HostTournamentController {
         mav.addObject(
                 "tournamentErrorCode", flashString(model, "tournamentErrorCode").orElse(null));
         return mav;
+    }
+
+    @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/manual-pairings")
+    public ModelAndView saveManualPairings(
+            @PathVariable("tournamentId") final Long tournamentId,
+            final HttpServletRequest request,
+            final RedirectAttributes redirectAttributes) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final String[] teamIdValues = request.getParameterValues("teamIds");
+        final List<Long> orderedTeamIds = new ArrayList<>();
+        if (teamIdValues != null) {
+            for (final String teamIdValue : teamIdValues) {
+                orderedTeamIds.add(Long.parseLong(teamIdValue));
+            }
+        }
+        try {
+            tournamentBracketService.saveManualPairings(tournamentId, actingUser, orderedTeamIds);
+            redirectAttributes.addFlashAttribute(
+                    "tournamentNoticeCode", "tournament.bracket.manualPairings.saved");
+        } catch (final TournamentBracketException exception) {
+            handleBracketException(exception, redirectAttributes);
+        } catch (final IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "tournamentErrorCode", "tournament.bracket.error.invalidPairings");
+        }
+        return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/publish")
@@ -604,6 +677,12 @@ public class HostTournamentController {
                 return "tournament.bracket.error.alreadyGenerated";
             case BRACKET_NOT_GENERATED:
                 return "tournament.bracket.error.notGenerated";
+            case PAIRING_STRATEGY_REQUIRED:
+                return "tournament.bracket.error.pairingStrategyRequired";
+            case INVALID_PAIRINGS:
+                return "tournament.bracket.error.invalidPairings";
+            case MANUAL_PAIRINGS_REQUIRED:
+                return "tournament.bracket.error.manualPairingsRequired";
             case UNDER_CAPACITY:
                 return "tournament.bracket.error.underCapacity";
             case MISSING_ROUND_ONE_SCHEDULE:

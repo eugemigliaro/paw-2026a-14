@@ -19,6 +19,8 @@ public interface TournamentTeamDao {
 
     List<TournamentTeam> findByTournament(long tournamentId);
 
+    List<TournamentTeam> findByTournamentUnordered(long tournamentId);
+
     List<TournamentTeam> findSeededByTournament(long tournamentId);
 
     List<TournamentTeamMember> findMembersByTournament(long tournamentId);

@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
+import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentDao;
@@ -49,6 +50,7 @@ public class TournamentBracketServiceImplTest {
     @Mock private TournamentDao tournamentDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMatchDao tournamentMatchDao;
+    @Mock private UserSportRatingService userSportRatingService;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private MessageSource messageSource;
 
@@ -61,6 +63,7 @@ public class TournamentBracketServiceImplTest {
                         tournamentDao,
                         tournamentTeamDao,
                         tournamentMatchDao,
+                        userSportRatingService,
                         tournamentMailService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
@@ -135,6 +138,27 @@ public class TournamentBracketServiceImplTest {
     }
 
     @Test
+    public void generateCreatesPlayInRoundWhenTeamCountIsNotPowerOfTwo() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 8, TournamentStatus.BRACKET_SETUP);
+        configureGenerate(tournament, teams(tournament, 6));
+
+        // 2. Exercise
+        final List<TournamentMatch> matches =
+                bracketService.generateBracket(10L, tournament.getHost());
+
+        // 3. Assert
+        Assertions.assertEquals(5, matches.size());
+        Assertions.assertEquals(
+                2, matches.stream().filter(match -> match.getRoundNumber() == 1).count());
+        Assertions.assertEquals(
+                2, matches.stream().filter(match -> match.getRoundNumber() == 2).count());
+        Assertions.assertEquals(
+                1, matches.stream().filter(match -> match.getRoundNumber() == 3).count());
+    }
+
+    @Test
     public void roundOneMatchesContainEveryTeamExactlyOnce() {
         // 1. Arrange
         final Tournament tournament =
@@ -186,7 +210,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
-        configureGenerate(tournament, teams(tournament, 3), false);
+        configureGenerate(tournament, teams(tournament, 1), false);
 
         // 2. Exercise
         final TournamentBracketException exception =
@@ -788,6 +812,7 @@ public class TournamentBracketServiceImplTest {
             final Tournament tournament,
             final List<TournamentTeam> teams,
             final boolean configureMatchCreation) {
+        tournament.setPairingStrategy(TournamentPairingStrategy.RANDOM);
         Mockito.when(tournamentDao.findById(tournament.getId()))
                 .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(tournament.getId())).thenReturn(teams);
@@ -836,6 +861,7 @@ public class TournamentBracketServiceImplTest {
             final List<TournamentTeam> teams,
             final List<TournamentMatch> persistedMatches) {
         final AtomicLong matchIds = new AtomicLong(1000L);
+        tournament.setPairingStrategy(TournamentPairingStrategy.RANDOM);
         Mockito.when(tournamentDao.findById(tournament.getId()))
                 .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(tournament.getId())).thenReturn(teams);

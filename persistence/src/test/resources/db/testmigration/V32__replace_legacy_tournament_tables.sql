@@ -27,6 +27,7 @@ CREATE TABLE tournaments (
 	registration_opens_at TIMESTAMP NOT NULL,
 	registration_closes_at TIMESTAMP NOT NULL,
 	status VARCHAR(40) NOT NULL DEFAULT 'registration',
+	pairing_strategy VARCHAR(30),
 	registration_closed_at TIMESTAMP,
 	bracket_generated_at TIMESTAMP,
 	started_at TIMESTAMP,
@@ -49,6 +50,9 @@ CREATE TABLE tournaments (
 	CONSTRAINT ck_tournaments_play_window CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at),
 	CONSTRAINT ck_tournaments_status CHECK (
 		status IN ('registration', 'bracket_setup', 'in_progress', 'completed', 'cancelled')
+	),
+	CONSTRAINT ck_tournaments_pairing_strategy CHECK (
+		pairing_strategy IS NULL OR pairing_strategy IN ('manual', 'random', 'elo')
 	),
 	CONSTRAINT ck_tournaments_coordinates_pair CHECK (
 		(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)

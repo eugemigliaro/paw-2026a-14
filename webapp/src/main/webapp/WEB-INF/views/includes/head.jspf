@@ -41,6 +41,7 @@
 <c:url var="inviteNoticeHref" value="/js/invite-notice.js?v=20260521" />
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
 <c:url var="reportFiltersHref" value="/js/report-filters.js" />
+<c:url var="bracketSetupHref" value="/js/bracket-setup.js" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
 <link rel="stylesheet" href="${cssComponentsHref}" />
 <link rel="stylesheet" href="${cssBaseHref}" />
@@ -75,3 +76,4 @@
 <script defer src="${inviteNoticeHref}"></script>
 <script defer src="${reportDropdownsHref}"></script>
 <script defer src="${reportFiltersHref}"></script>
+<script defer src="${bracketSetupHref}"></script>

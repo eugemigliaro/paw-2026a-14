@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
@@ -187,6 +188,7 @@ public class TournamentRegistrationServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.BRACKET_SETUP, result.getStatus());
+        Assertions.assertEquals(TournamentPairingStrategy.RANDOM, result.getPairingStrategy());
         Assertions.assertEquals(FIXED_NOW, result.getRegistrationClosedAt());
         Assertions.assertEquals(2, createdTeams.size());
         Assertions.assertTrue(
@@ -235,11 +237,11 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
-    public void closeRegistrationUnderCapacityCancelsTournament() {
+    public void closeRegistrationWithOneTeamCancelsTournament() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
         final Tournament tournament = tournament(10L, host, 4, 2);
-        final List<TournamentSoloEntry> entries = activeEntries(tournament, 7);
+        final List<TournamentSoloEntry> entries = activeEntries(tournament, 2);
         configureCloseRegistration(tournament, entries);
         final List<TournamentTeam> createdTeams = new ArrayList<>();
 

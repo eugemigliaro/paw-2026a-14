@@ -55,6 +55,17 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
     }
 
     @Override
+    public List<TournamentTeam> findByTournamentUnordered(final long tournamentId) {
+        return em.createQuery(
+                        "FROM TournamentTeam tt"
+                                + " WHERE tt.tournament.id = :tournamentId"
+                                + " ORDER BY tt.id ASC",
+                        TournamentTeam.class)
+                .setParameter("tournamentId", tournamentId)
+                .getResultList();
+    }
+
+    @Override
     public List<TournamentTeam> findSeededByTournament(final long tournamentId) {
         return em.createQuery(
                         "FROM TournamentTeam tt"

@@ -3,8 +3,11 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
+import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentMatchDao;
@@ -13,14 +16,17 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
@@ -46,6 +52,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     private final TournamentDao tournamentDao;
     private final TournamentTeamDao tournamentTeamDao;
     private final TournamentMatchDao tournamentMatchDao;
+    private final UserSportRatingService userSportRatingService;
     private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
     private final Clock clock;
@@ -54,12 +61,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             final TournamentDao tournamentDao,
             final TournamentTeamDao tournamentTeamDao,
             final TournamentMatchDao tournamentMatchDao,
+            final UserSportRatingService userSportRatingService,
             final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
         this.tournamentTeamDao = tournamentTeamDao;
         this.tournamentMatchDao = tournamentMatchDao;
+        this.userSportRatingService = userSportRatingService;
         this.tournamentMailService = tournamentMailService;
         this.messageSource = messageSource;
         this.clock = clock;
@@ -81,8 +90,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     "tournament.bracket.error.alreadyGenerated");
         }
 
-        final List<TournamentTeam> teams =
-                seedOrder(tournamentTeamDao.findByTournament(tournamentId));
+        final List<TournamentTeam> teams = orderedTeamsForStrategy(tournament);
         validateTeamCount(tournament, teams);
 
         final List<TournamentMatch> createdMatches = createFixtures(tournament, teams);
@@ -90,8 +98,63 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final Instant now = Instant.now(clock);
         tournament.setBracketGeneratedAt(now);
         tournament.setUpdatedAt(now);
-        tournamentDao.update(tournament);
         return createdMatches;
+    }
+
+    @Override
+    public List<TournamentTeam> listTeamsForSetup(final long tournamentId, final User actingUser) {
+        final Tournament tournament = findTournamentOrThrow(tournamentId);
+        validateCanMutate(tournament, actingUser);
+        requireBracketSetup(tournament);
+        return tournamentTeamDao.findByTournament(tournamentId);
+    }
+
+    @Override
+    @Transactional
+    public Tournament updatePairingStrategy(
+            final long tournamentId,
+            final User actingUser,
+            final TournamentPairingStrategy pairingStrategy) {
+        final Tournament tournament = findTournamentOrThrow(tournamentId);
+        validateCanMutate(tournament, actingUser);
+        requireBracketSetup(tournament);
+        if (pairingStrategy == null) {
+            throw bracketException(
+                    TournamentBracketFailureReason.PAIRING_STRATEGY_REQUIRED,
+                    "tournament.bracket.error.pairingStrategyRequired");
+        }
+        tournament.setPairingStrategy(pairingStrategy);
+        tournament.setUpdatedAt(Instant.now(clock));
+        return tournament;
+    }
+
+    @Override
+    @Transactional
+    public void saveManualPairings(
+            final long tournamentId, final User actingUser, final List<Long> orderedTeamIds) {
+        final Tournament tournament = findTournamentOrThrow(tournamentId);
+        validateCanMutate(tournament, actingUser);
+        requireBracketSetup(tournament);
+        if (tournament.getPairingStrategy() != TournamentPairingStrategy.MANUAL) {
+            throw bracketException(
+                    TournamentBracketFailureReason.INVALID_PAIRINGS,
+                    "tournament.bracket.error.invalidPairings");
+        }
+        if (!tournamentMatchDao.findByTournament(tournamentId).isEmpty()) {
+            throw bracketException(
+                    TournamentBracketFailureReason.BRACKET_ALREADY_GENERATED,
+                    "tournament.bracket.error.alreadyGenerated");
+        }
+        final List<TournamentTeam> teams =
+                tournamentTeamDao.findByTournamentUnordered(tournamentId);
+        validateManualPairings(teams, orderedTeamIds);
+        final Map<Long, Integer> positionByTeamId = new HashMap<>();
+        for (int index = 0; index < orderedTeamIds.size(); index++) {
+            positionByTeamId.put(orderedTeamIds.get(index), index + 1);
+        }
+        for (final TournamentTeam team : teams) {
+            team.setSeedPosition(positionByTeamId.get(team.getId()));
+        }
     }
 
     @Override
@@ -139,9 +202,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         tournament.setStatus(TournamentStatus.IN_PROGRESS);
         tournament.setStartedAt(now);
         tournament.setUpdatedAt(now);
-        final Tournament updatedTournament = tournamentDao.update(tournament);
-        tournamentMailService.sendBracketPublishedEmail(updatedTournament);
-        return updatedTournament;
+        tournamentMailService.sendBracketPublishedEmail(tournament);
+        return tournament;
     }
 
     @Override
@@ -232,6 +294,53 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
     private List<TournamentMatch> createFixtures(
             final Tournament tournament, final List<TournamentTeam> teams) {
+        final int teamCount = teams.size();
+        final int nearestPower = highestPowerOfTwoAtMost(teamCount);
+        if (teamCount == nearestPower) {
+            return createPowerOfTwoFixtures(tournament, teams);
+        }
+
+        final List<TournamentMatch> createdMatches = new ArrayList<>();
+        final int playInTeamCount = 2 * (teamCount - nearestPower);
+        final int playInMatches = playInTeamCount / 2;
+        final List<TournamentMatch> previousRound = new ArrayList<>();
+
+        for (int matchIndex = 0; matchIndex < playInMatches; matchIndex++) {
+            final TournamentMatch match =
+                    tournamentMatchDao.create(
+                            tournament,
+                            1,
+                            matchIndex,
+                            teams.get(matchIndex * 2),
+                            teams.get(matchIndex * 2 + 1),
+                            TournamentMatchStatus.PENDING,
+                            null,
+                            null);
+            previousRound.add(match);
+            createdMatches.add(match);
+        }
+
+        final List<BracketSlot> slots = new ArrayList<>();
+        for (final TournamentMatch playIn : previousRound) {
+            slots.add(BracketSlot.fromParent(playIn));
+        }
+        for (int index = playInTeamCount; index < teamCount; index++) {
+            slots.add(BracketSlot.fromTeam(teams.get(index)));
+        }
+
+        List<TournamentMatch> currentParents =
+                createRoundFromSlots(tournament, 2, slots, createdMatches);
+        int roundNumber = 3;
+        while (currentParents.size() > 1) {
+            currentParents =
+                    createRoundFromParents(tournament, roundNumber, currentParents, createdMatches);
+            roundNumber++;
+        }
+        return createdMatches;
+    }
+
+    private List<TournamentMatch> createPowerOfTwoFixtures(
+            final Tournament tournament, final List<TournamentTeam> teams) {
         final List<TournamentMatch> createdMatches = new ArrayList<>();
         List<TournamentMatch> previousRound = new ArrayList<>();
 
@@ -271,6 +380,54 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             roundNumber++;
         }
         return createdMatches;
+    }
+
+    private List<TournamentMatch> createRoundFromSlots(
+            final Tournament tournament,
+            final int roundNumber,
+            final List<BracketSlot> slots,
+            final List<TournamentMatch> createdMatches) {
+        final List<TournamentMatch> currentRound = new ArrayList<>();
+        for (int matchIndex = 0; matchIndex < slots.size() / 2; matchIndex++) {
+            final BracketSlot slotA = slots.get(matchIndex * 2);
+            final BracketSlot slotB = slots.get(matchIndex * 2 + 1);
+            final TournamentMatch match =
+                    tournamentMatchDao.create(
+                            tournament,
+                            roundNumber,
+                            matchIndex,
+                            slotA.team,
+                            slotB.team,
+                            TournamentMatchStatus.PENDING,
+                            slotA.parentMatch,
+                            slotB.parentMatch);
+            currentRound.add(match);
+            createdMatches.add(match);
+        }
+        return currentRound;
+    }
+
+    private List<TournamentMatch> createRoundFromParents(
+            final Tournament tournament,
+            final int roundNumber,
+            final List<TournamentMatch> parents,
+            final List<TournamentMatch> createdMatches) {
+        final List<TournamentMatch> currentRound = new ArrayList<>();
+        for (int matchIndex = 0; matchIndex < parents.size() / 2; matchIndex++) {
+            final TournamentMatch match =
+                    tournamentMatchDao.create(
+                            tournament,
+                            roundNumber,
+                            matchIndex,
+                            null,
+                            null,
+                            TournamentMatchStatus.PENDING,
+                            parents.get(matchIndex * 2),
+                            parents.get(matchIndex * 2 + 1));
+            currentRound.add(match);
+            createdMatches.add(match);
+        }
+        return currentRound;
     }
 
     private Tournament findTournamentOrThrow(final long tournamentId) {
@@ -353,7 +510,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     }
 
     private void validateTeamCount(final Tournament tournament, final List<TournamentTeam> teams) {
-        if (teams.size() < tournament.getBracketSize()) {
+        if (teams.size() < 2) {
             throw bracketException(
                     TournamentBracketFailureReason.UNDER_CAPACITY,
                     "tournament.bracket.error.underCapacity");
@@ -363,6 +520,68 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     TournamentBracketFailureReason.NOT_READY_FOR_BRACKET,
                     "tournament.bracket.error.teamCountMismatch");
         }
+    }
+
+    private List<TournamentTeam> orderedTeamsForStrategy(final Tournament tournament) {
+        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournament.getId());
+        final TournamentPairingStrategy strategy =
+                tournament.getPairingStrategy() == null
+                        ? TournamentPairingStrategy.RANDOM
+                        : tournament.getPairingStrategy();
+        if (strategy == TournamentPairingStrategy.RANDOM) {
+            return randomOrder(teams);
+        }
+        if (strategy == TournamentPairingStrategy.ELO) {
+            return eloOrder(tournament, teams);
+        }
+        final List<TournamentTeam> seeded = seedOrder(teams);
+        validateManualSeedsPresent(seeded);
+        return seeded;
+    }
+
+    private List<TournamentTeam> randomOrder(final List<TournamentTeam> teams) {
+        final List<TournamentTeam> shuffled = new ArrayList<>(teams);
+        Collections.shuffle(shuffled, ThreadLocalRandom.current());
+        return shuffled;
+    }
+
+    private List<TournamentTeam> eloOrder(
+            final Tournament tournament, final List<TournamentTeam> teams) {
+        if (tournament.getSport() == Sport.OTHER) {
+            return seedOrder(teams);
+        }
+        final Map<Long, List<User>> membersByTeam =
+                tournamentTeamDao.findMembersByTournament(tournament.getId()).stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        member -> member.getTeam().getId(),
+                                        Collectors.mapping(
+                                                TournamentTeamMember::getUser,
+                                                Collectors.toList())));
+        return teams.stream()
+                .sorted(
+                        Comparator.comparingDouble(
+                                        (TournamentTeam team) ->
+                                                -averageElo(
+                                                        membersByTeam.getOrDefault(
+                                                                team.getId(), List.of()),
+                                                        tournament.getSport()))
+                                .thenComparing(
+                                        team ->
+                                                Optional.ofNullable(team.getSeedPosition())
+                                                        .orElse(Integer.MAX_VALUE))
+                                .thenComparing(TournamentTeam::getId))
+                .toList();
+    }
+
+    private double averageElo(final List<User> teamMembers, final Sport sport) {
+        if (teamMembers.isEmpty()) {
+            return 0;
+        }
+        return teamMembers.stream()
+                .mapToInt(user -> userSportRatingService.getEffectiveElo(user, sport))
+                .average()
+                .orElse(0);
     }
 
     private List<TournamentTeam> seedOrder(final List<TournamentTeam> teams) {
@@ -384,6 +603,37 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                                                         .orElse(Integer.MAX_VALUE))
                                 .thenComparingInt(originalIndexes::get))
                 .toList();
+    }
+
+    private void validateManualSeedsPresent(final List<TournamentTeam> teams) {
+        final Set<Integer> seen = new HashSet<>();
+        for (final TournamentTeam team : teams) {
+            final Integer seed = team.getSeedPosition();
+            if (seed == null || seed <= 0 || !seen.add(seed)) {
+                throw bracketException(
+                        TournamentBracketFailureReason.MANUAL_PAIRINGS_REQUIRED,
+                        "tournament.bracket.error.manualPairingsRequired");
+            }
+        }
+    }
+
+    private void validateManualPairings(
+            final List<TournamentTeam> teams, final List<Long> orderedTeamIds) {
+        if (orderedTeamIds == null || orderedTeamIds.size() != teams.size()) {
+            throw bracketException(
+                    TournamentBracketFailureReason.INVALID_PAIRINGS,
+                    "tournament.bracket.error.invalidPairings");
+        }
+        final Set<Long> availableTeamIds =
+                teams.stream().map(TournamentTeam::getId).collect(Collectors.toSet());
+        final Set<Long> seen = new HashSet<>();
+        for (final Long teamId : orderedTeamIds) {
+            if (teamId == null || !availableTeamIds.contains(teamId) || !seen.add(teamId)) {
+                throw bracketException(
+                        TournamentBracketFailureReason.INVALID_PAIRINGS,
+                        "tournament.bracket.error.invalidPairings");
+            }
+        }
     }
 
     private Map<Long, TournamentMatchScheduleRequest> schedulesByMatchId(
@@ -516,7 +766,6 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             tournament.setStatus(TournamentStatus.COMPLETED);
             tournament.setCompletedAt(now);
             tournament.setUpdatedAt(now);
-            tournamentDao.update(tournament);
             return true;
         }
 
@@ -586,6 +835,32 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
     private static boolean isBlank(final String value) {
         return value == null || value.isBlank();
+    }
+
+    private int highestPowerOfTwoAtMost(final int value) {
+        int power = 1;
+        while (power * 2 <= value) {
+            power *= 2;
+        }
+        return power;
+    }
+
+    private static final class BracketSlot {
+        private final TournamentTeam team;
+        private final TournamentMatch parentMatch;
+
+        private BracketSlot(final TournamentTeam team, final TournamentMatch parentMatch) {
+            this.team = team;
+            this.parentMatch = parentMatch;
+        }
+
+        private static BracketSlot fromTeam(final TournamentTeam team) {
+            return new BracketSlot(team, null);
+        }
+
+        private static BracketSlot fromParent(final TournamentMatch parentMatch) {
+            return new BracketSlot(null, parentMatch);
+        }
     }
 
     private TournamentBracketException bracketException(
