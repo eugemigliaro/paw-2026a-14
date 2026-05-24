@@ -15,19 +15,18 @@
 			button.addEventListener("click", function(event) {
 				var value = button.dataset.value;
 				var isPast = value === "past";
+				var selectedIndex = Array.prototype.indexOf.call(eventsButtons, button);
+				var optionCount = eventsButtons.length;
 				var currentUrl = new URL(window.location);
 
-				eventsSlider.classList.toggle("right", isPast);
+				eventsSlider.classList.toggle("right", optionCount === 2 && selectedIndex === 1);
 				eventsButtons.forEach(function(otherButton) {
 					otherButton.classList.remove("active");
 					otherButton.setAttribute("aria-current", "false");
 				});
 				button.classList.add("active");
 				button.setAttribute("aria-current", "true");
-				toggleRoot.style.setProperty(
-					"--events-toggle-index",
-					String(Array.prototype.indexOf.call(eventsButtons, button))
-				);
+				toggleRoot.style.setProperty("--events-toggle-index", String(selectedIndex));
 
 				if (button.href) {
 					return;

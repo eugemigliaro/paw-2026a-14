@@ -196,13 +196,14 @@ class FeedControllerTournamentTest {
         final FeedPageViewModel feedPage =
                 (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
         final List<SelectOptionViewModel> sortOptions = sortOptions(result);
-
-        Assertions.assertTrue(
+        final FilterGroupViewModel eventTypeGroup =
                 feedPage.getFilterGroups().stream()
-                        .anyMatch(
-                                group ->
-                                        "Tipo de evento".equals(group.getTitle())
-                                                && hasActiveOption(group, "Torneos")));
+                        .filter(group -> "Tipo de evento".equals(group.getTitle()))
+                        .findFirst()
+                        .orElseThrow();
+
+        Assertions.assertEquals(2, eventTypeGroup.getOptions().size());
+        Assertions.assertTrue(hasActiveOption(eventTypeGroup, "Torneos"));
         Assertions.assertTrue(
                 sortOptions.stream()
                         .noneMatch(

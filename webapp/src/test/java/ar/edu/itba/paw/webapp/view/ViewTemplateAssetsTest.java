@@ -151,6 +151,28 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void feedEventTypeFilterRendersAsIconToggle() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String feedCss = read("src/main/webapp/css/feed.css");
+        final String eventsToggleScript = read("src/main/webapp/js/events-toggle-filter.js");
+        final String toggleTag = read("src/main/webapp/WEB-INF/tags/eventsFilterToggle.tag");
+
+        assertTrue(feedIndex.contains("var=\"eventTypeFilterTitle\" code=\"filter.eventType\""));
+        assertTrue(feedIndex.contains("<ui:eventsFilterToggle"));
+        assertTrue(feedIndex.contains("className=\"feed-event-type-toggle\""));
+        assertTrue(feedIndex.contains("leftIcon=\"ball\""));
+        assertTrue(feedIndex.contains("rightIcon=\"trophy\""));
+        assertTrue(feedIndex.contains("iconOnly=\"${true}\""));
+        assertFalse(feedIndex.contains("data-filter-name=\"${eventTypeFilterTitle}\""));
+        assertTrue(feedCss.contains(".feed-event-type-toggle"));
+        assertTrue(feedCss.contains(".feed-event-type-toggle .events-toggle-icon"));
+        assertTrue(eventsToggleScript.contains("optionCount === 2 && selectedIndex === 1"));
+        assertTrue(toggleTag.contains("iconOnly"));
+        assertTrue(toggleTag.contains("leftIcon"));
+        assertTrue(toggleTag.contains("events-toggle-icon.jspf"));
+    }
+
+    @Test
     void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
@@ -527,6 +549,7 @@ class ViewTemplateAssetsTest {
         assertTrue(toggleTag.contains("thirdValue"));
         assertTrue(toggleTag.contains("leftHref"));
         assertTrue(toggleTag.contains("data-events-toggle-options"));
+        assertTrue(toggleTag.contains("iconOnly"));
     }
 
     @Test

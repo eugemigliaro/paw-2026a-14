@@ -20,6 +20,7 @@
 					<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 					<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 					<spring:message var="priceRangeError" code="filter.price.rangeError" />
+					<spring:message var="eventTypeFilterTitle" code="filter.eventType" />
 					<c:set var="feedPath" value="/" />
 					<c:url var="feedFormAction" value="${feedPath}" />
 				<main class="page-shell page-shell--feed">
@@ -77,7 +78,37 @@
 					</div>
 						<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
 							<c:forEach var="group" items="${feedPage.filterGroups}">
-								<div class="filter-dropdown" data-filter-name="${group.title}">
+									<c:choose>
+										<c:when test="${group.title eq eventTypeFilterTitle}">
+											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
+												<c:choose>
+													<c:when test="${optionStatus.first}">
+														<c:set var="eventTypeMatchLabel" value="${option.label}" />
+														<c:set var="eventTypeMatchHref" value="${option.href}" />
+													</c:when>
+													<c:otherwise>
+														<c:set var="eventTypeTournamentLabel" value="${option.label}" />
+														<c:set var="eventTypeTournamentHref" value="${option.href}" />
+													</c:otherwise>
+												</c:choose>
+											</c:forEach>
+											<ui:eventsFilterToggle
+												className="feed-event-type-toggle"
+												ariaLabel="${group.title}"
+												currentValue="${selectedType}"
+												leftValue="match"
+												rightValue="tournament"
+												leftLabel="${eventTypeMatchLabel}"
+												rightLabel="${eventTypeTournamentLabel}"
+												leftHref="${eventTypeMatchHref}"
+												rightHref="${eventTypeTournamentHref}"
+												iconOnly="${true}"
+												leftIcon="ball"
+												rightIcon="trophy"
+												forceLeftOnEmpty="${true}" />
+										</c:when>
+										<c:otherwise>
+										<div class="filter-dropdown" data-filter-name="${group.title}">
 									<button type="button" class="filter-dropdown__toggle">
 											<span class="filter-dropdown__icon">
 												<c:choose>
@@ -159,6 +190,8 @@
 											</div>
 										</c:if>
 									</div>
+									</c:otherwise>
+								</c:choose>
 								</c:forEach>
 
 							<div class="filter-dropdown" data-filter-name="Date">

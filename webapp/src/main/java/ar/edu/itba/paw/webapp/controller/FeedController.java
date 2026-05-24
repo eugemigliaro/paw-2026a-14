@@ -417,17 +417,6 @@ public class FeedController {
                                         TYPE_MATCH.equals(filters.selectedType())),
                                 new FilterOptionViewModel(
                                         messageSource.getMessage(
-                                                "filter.eventType.matches", null, locale),
-                                        buildUrl(
-                                                query,
-                                                filters.withType(TYPE_MATCH),
-                                                1,
-                                                email,
-                                                locale),
-                                        null,
-                                        TYPE_MATCH.equals(filters.selectedType())),
-                                new FilterOptionViewModel(
-                                        messageSource.getMessage(
                                                 "filter.eventType.tournaments", null, locale),
                                         buildUrl(
                                                 query,
