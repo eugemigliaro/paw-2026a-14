@@ -103,10 +103,28 @@ public final class EventCardViewModelUtils {
             final String distanceLabel,
             final MessageSource messageSource) {
         final Locale resolvedLocale = resolvedLocale(locale);
-        final Instant scheduleInstant =
-                tournament.getStartsAt() == null
-                        ? tournament.getRegistrationClosesAt()
-                        : tournament.getStartsAt();
+        if (tournament.getStartsAt() == null) {
+            return new EventCardViewModel(
+                    String.valueOf(tournament.getId()),
+                    "/tournaments/" + tournament.getId(),
+                    sportLabel(tournament.getSport(), resolvedLocale, messageSource),
+                    tournament.getTitle(),
+                    tournament.getAddress(),
+                    hostLabelFor(tournament),
+                    messageSource.getMessage("tournament.detail.schedule.tbd", null, locale),
+                    "",
+                    "",
+                    priceLabel(tournament.getPricePerPlayer(), locale, messageSource),
+                    badge,
+                    tournamentRelationshipBadges(tournament, currentUser, locale, messageSource),
+                    null,
+                    statusLabel,
+                    distanceLabel,
+                    mediaClassFor(tournament.getSport()),
+                    bannerUrlFor(tournament));
+        }
+
+        final Instant scheduleInstant = tournament.getStartsAt();
         final ZonedDateTime startsAt = scheduleInstant.atZone(zoneId);
 
         return new EventCardViewModel(

@@ -116,10 +116,36 @@ class HostTournamentControllerTest {
                 .andExpect(redirectedUrl("/tournaments/99"));
         Assertions.assertNotNull(createdRequest.get());
         Assertions.assertEquals(Sport.PADEL, createdRequest.get().getSport());
+        Assertions.assertNull(createdRequest.get().getStartsAt());
+        Assertions.assertNull(createdRequest.get().getEndsAt());
         Assertions.assertEquals(8, createdRequest.get().getBracketSize());
         Assertions.assertEquals(1, createdRequest.get().getTeamSize());
         Assertions.assertTrue(createdRequest.get().isAllowSoloSignup());
-        Assertions.assertFalse(createdRequest.get().isAllowTeamDraft());
+        Assertions.assertTrue(createdRequest.get().isAllowTeamDraft());
+    }
+
+    @Test
+    void postCreateWithTeamDraftOnlyRedirectsToTournamentDetail() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentService.createTournament(
+                                Mockito.any(User.class),
+                                Mockito.any(CreateTournamentRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            createdRequest.set(invocation.getArgument(1));
+                            return tournament(99L, host, TournamentStatus.REGISTRATION);
+                        });
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(createPost("City Padel Cup", false, true))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/99"));
+        Assertions.assertNotNull(createdRequest.get());
+        Assertions.assertFalse(createdRequest.get().isAllowSoloSignup());
+        Assertions.assertTrue(createdRequest.get().isAllowTeamDraft());
     }
 
     @Test
@@ -133,6 +159,21 @@ class HostTournamentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attributeHasFieldErrors("createTournamentForm", "title"));
+        Assertions.assertNull(createdRequest.get());
+    }
+
+    @Test
+    void postCreateWithNoJoinModeReturnsForm() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(createPost("City Padel Cup", false, false))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(
+                        model().attributeHasFieldErrors("createTournamentForm", "allowSoloSignup"));
         Assertions.assertNull(createdRequest.get());
     }
 
@@ -274,25 +315,40 @@ class HostTournamentControllerTest {
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             createPost(final String title) {
-        return post("/host/tournaments")
-                .locale(Locale.ENGLISH)
-                .param("title", title)
-                .param("sport", "padel")
-                .param("description", "Open city tournament")
-                .param("address", "Downtown Club")
-                .param("startDate", "2030-04-10")
-                .param("startTime", "18:00")
-                .param("endDate", "2030-04-10")
-                .param("endTime", "21:00")
-                .param("registrationOpensDate", "2030-04-01")
-                .param("registrationOpensTime", "09:00")
-                .param("registrationClosesDate", "2030-04-09")
-                .param("registrationClosesTime", "20:00")
-                .param("bracketSize", "8")
-                .param("teamSize", "1")
-                .param("pricePerPlayer", "10.00")
-                .param("allowSoloSignup", "true")
-                .param("tz", "UTC");
+        return createPost(title, true, true);
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            createPost(
+                    final String title,
+                    final boolean allowSoloSignup,
+                    final boolean allowTeamDraft) {
+        final org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder builder =
+                post("/host/tournaments")
+                        .locale(Locale.ENGLISH)
+                        .param("title", title)
+                        .param("sport", "padel")
+                        .param("description", "Open city tournament")
+                        .param("address", "Downtown Club")
+                        .param("registrationOpensDate", "2030-04-01")
+                        .param("registrationOpensTime", "09:00")
+                        .param("registrationClosesDate", "2030-04-09")
+                        .param("registrationClosesTime", "20:00")
+                        .param("bracketSize", "8")
+                        .param("teamSize", "1")
+                        .param("pricePerPlayer", "10.00")
+                        .param("tz", "UTC");
+        if (allowSoloSignup) {
+            builder.param("allowSoloSignup", "true");
+        } else {
+            builder.param("_allowSoloSignup", "on");
+        }
+        if (allowTeamDraft) {
+            builder.param("allowTeamDraft", "true");
+        } else {
+            builder.param("_allowTeamDraft", "on");
+        }
+        return builder;
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

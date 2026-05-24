@@ -72,8 +72,6 @@ class CreateTournamentFormValidationTest {
         form.setDescription("Open city tournament");
         form.setAddress("Downtown Club");
         form.setSport("padel");
-        form.setStartDate(LocalDate.now().plusDays(14));
-        form.setEndDate(LocalDate.now().plusDays(14));
         form.setRegistrationOpensDate(LocalDate.now().plusDays(1));
         form.setRegistrationClosesDate(LocalDate.now().plusDays(10));
         form.setBracketSize(8);

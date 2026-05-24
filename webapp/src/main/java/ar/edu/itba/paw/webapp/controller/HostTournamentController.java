@@ -117,21 +117,15 @@ public class HostTournamentController {
                         createTournamentForm.getAddress(),
                         parseCoordinate(createTournamentForm.getLatitude()),
                         parseCoordinate(createTournamentForm.getLongitude()),
-                        toInstant(
-                                createTournamentForm.getStartDate(),
-                                createTournamentForm.getStartTime(),
-                                createTournamentForm.getTz()),
-                        toInstant(
-                                createTournamentForm.getEndDate(),
-                                createTournamentForm.getEndTime(),
-                                createTournamentForm.getTz()),
+                        null,
+                        null,
                         createTournamentForm.getPricePerPlayer(),
                         null,
                         TournamentFormat.SINGLE_ELIMINATION,
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
                         createTournamentForm.isAllowSoloSignup(),
-                        false,
+                        createTournamentForm.isAllowTeamDraft(),
                         toInstant(
                                 createTournamentForm.getRegistrationOpensDate(),
                                 createTournamentForm.getRegistrationOpensTime(),
@@ -324,7 +318,6 @@ public class HostTournamentController {
         validateBracketSize(form, bindingResult, locale);
         validateJoinMode(form, bindingResult, locale);
         validateCoordinates(form, bindingResult, locale);
-        validateSchedule(form, bindingResult, locale);
         validateRegistrationWindow(form, bindingResult, locale);
     }
 
@@ -363,7 +356,7 @@ public class HostTournamentController {
             final CreateTournamentForm form,
             final BindingResult bindingResult,
             final Locale locale) {
-        if (!form.isAllowSoloSignup()) {
+        if (!form.isAllowSoloSignup() && !form.isAllowTeamDraft()) {
             bindingResult.rejectValue(
                     "allowSoloSignup",
                     "CreateTournamentForm.joinMode.Required",
@@ -411,35 +404,6 @@ public class HostTournamentController {
         }
     }
 
-    private void validateSchedule(
-            final CreateTournamentForm form,
-            final BindingResult bindingResult,
-            final Locale locale) {
-        if (bindingResult.hasFieldErrors("startDate")
-                || bindingResult.hasFieldErrors("startTime")
-                || bindingResult.hasFieldErrors("endDate")
-                || bindingResult.hasFieldErrors("endTime")) {
-            return;
-        }
-        final Instant startsAt = toInstant(form.getStartDate(), form.getStartTime(), form.getTz());
-        final Instant endsAt = toInstant(form.getEndDate(), form.getEndTime(), form.getTz());
-
-        if (!startsAt.isAfter(Instant.now(clock))) {
-            bindingResult.rejectValue(
-                    "startTime",
-                    "CreateTournamentForm.startTime.Future",
-                    messageSource.getMessage(
-                            "CreateTournamentForm.startTime.Future", null, locale));
-        }
-        if (!endsAt.isAfter(startsAt)) {
-            bindingResult.rejectValue(
-                    "endTime",
-                    "CreateTournamentForm.endTime.AfterStart",
-                    messageSource.getMessage(
-                            "CreateTournamentForm.endTime.AfterStart", null, locale));
-        }
-    }
-
     private void validateRegistrationWindow(
             final CreateTournamentForm form,
             final BindingResult bindingResult,
@@ -477,20 +441,6 @@ public class HostTournamentController {
                     messageSource.getMessage(
                             "CreateTournamentForm.registrationClosesTime.Future", null, locale));
         }
-        if (!bindingResult.hasFieldErrors("startDate")
-                && !bindingResult.hasFieldErrors("startTime")) {
-            final Instant startsAt =
-                    toInstant(form.getStartDate(), form.getStartTime(), form.getTz());
-            if (closesAt.isAfter(startsAt)) {
-                bindingResult.rejectValue(
-                        "registrationClosesTime",
-                        "CreateTournamentForm.registrationClosesTime.BeforeStart",
-                        messageSource.getMessage(
-                                "CreateTournamentForm.registrationClosesTime.BeforeStart",
-                                null,
-                                locale));
-            }
-        }
     }
 
     private void applyServiceError(
@@ -510,7 +460,7 @@ public class HostTournamentController {
                 bindingResult.rejectValue("registrationClosesTime", code, message);
                 break;
             case INVALID_SCHEDULE:
-                bindingResult.rejectValue("startTime", code, message);
+                bindingResult.reject("CreateTournamentForm.global", message);
                 break;
             case INVALID_JOIN_MODE:
                 bindingResult.rejectValue("allowSoloSignup", code, message);

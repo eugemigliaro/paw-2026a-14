@@ -96,30 +96,6 @@
 								<form:hidden path="longitude" id="tournament-location-longitude" />
 								<form:errors path="latitude" cssClass="field__error" element="span" />
 								<form:errors path="longitude" cssClass="field__error" element="span" />
-								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="tournament-start-date">
-										<span class="field__label"><spring:message code="tournament.form.startDate.label" /></span>
-										<form:input path="startDate" id="tournament-start-date" type="date" cssClass="field__control" required="required" />
-										<form:errors path="startDate" cssClass="field__error" element="span" />
-									</label>
-									<label class="field" for="tournament-start-time">
-										<span class="field__label"><spring:message code="tournament.form.startTime.label" /></span>
-										<form:input path="startTime" id="tournament-start-time" type="time" cssClass="field__control" required="required" />
-										<form:errors path="startTime" cssClass="field__error" element="span" />
-									</label>
-								</div>
-								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="tournament-end-date">
-										<span class="field__label"><spring:message code="tournament.form.endDate.label" /></span>
-										<form:input path="endDate" id="tournament-end-date" type="date" cssClass="field__control" required="required" />
-										<form:errors path="endDate" cssClass="field__error" element="span" />
-									</label>
-									<label class="field" for="tournament-end-time">
-										<span class="field__label"><spring:message code="tournament.form.endTime.label" /></span>
-										<form:input path="endTime" id="tournament-end-time" type="time" cssClass="field__control" required="required" />
-										<form:errors path="endTime" cssClass="field__error" element="span" />
-									</label>
-								</div>
 							</div>
 						</article>
 
@@ -162,6 +138,17 @@
 									</span>
 								</label>
 								<form:errors path="allowSoloSignup" cssClass="field__error" element="span" />
+								<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-team-draft">
+									<form:checkbox path="allowTeamDraft" id="tournament-allow-team-draft" cssClass="recurrence-toggle__input" />
+									<span class="recurrence-toggle__switch" aria-hidden="true">
+										<span class="recurrence-toggle__knob"></span>
+									</span>
+									<span class="recurrence-toggle__copy">
+										<span class="recurrence-toggle__title"><spring:message code="tournament.form.allowTeamDraft.label" /></span>
+										<span class="recurrence-toggle__hint"><spring:message code="tournament.form.allowTeamDraft.hint" /></span>
+									</span>
+								</label>
+								<form:errors path="allowTeamDraft" cssClass="field__error" element="span" />
 							</div>
 						</article>
 
