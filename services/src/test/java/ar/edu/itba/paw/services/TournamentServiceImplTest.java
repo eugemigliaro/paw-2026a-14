@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.TournamentSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -15,6 +17,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -299,6 +303,114 @@ public class TournamentServiceImplTest {
         Assertions.assertEquals(TournamentStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(FIXED_NOW, result.getCancelledAt());
         Assertions.assertEquals("Weather", result.getCancelReason());
+    }
+
+    @Test
+    public void searchPublicTournamentsPaginatesAndNormalizesInvalidSortToSoonest() {
+        // 1. Arrange
+        final AtomicReference<TournamentSort> capturedSort = new AtomicReference<>();
+        final AtomicInteger capturedOffset = new AtomicInteger(-1);
+        final AtomicInteger capturedLimit = new AtomicInteger(-1);
+        Mockito.when(
+                        tournamentDao.countPublicTournaments(
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any()))
+                .thenReturn(25);
+        Mockito.when(
+                        tournamentDao.findPublicTournaments(
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.anyInt(),
+                                ArgumentMatchers.anyInt()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedSort.set(invocation.getArgument(6));
+                            capturedOffset.set(invocation.getArgument(9));
+                            capturedLimit.set(invocation.getArgument(10));
+                            return List.of(
+                                    tournament(
+                                            10L,
+                                            UserUtils.getUser(1L),
+                                            TournamentStatus.REGISTRATION));
+                        });
+
+        // 2. Exercise
+        final PaginatedResult<Tournament> result =
+                tournamentService.searchPublicTournaments(
+                        "cup",
+                        "padel",
+                        "2026-04-06",
+                        "2026-04-10",
+                        "spots",
+                        9,
+                        10,
+                        "UTC",
+                        BigDecimal.ZERO,
+                        BigDecimal.TEN,
+                        null,
+                        null);
+
+        // 3. Assert
+        Assertions.assertEquals(3, result.getPage());
+        Assertions.assertEquals(25, result.getTotalCount());
+        Assertions.assertEquals(TournamentSort.SOONEST, capturedSort.get());
+        Assertions.assertEquals(20, capturedOffset.get());
+        Assertions.assertEquals(10, capturedLimit.get());
+    }
+
+    @Test
+    public void searchPublicTournamentsUsesDistanceSortOnlyWhenCoordinatesArePresent() {
+        // 1. Arrange
+        final AtomicReference<TournamentSort> capturedSort = new AtomicReference<>();
+        Mockito.when(
+                        tournamentDao.countPublicTournaments(
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any()))
+                .thenReturn(1);
+        Mockito.when(
+                        tournamentDao.findPublicTournaments(
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.anyInt(),
+                                ArgumentMatchers.anyInt()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedSort.set(invocation.getArgument(6));
+                            return List.of(
+                                    tournament(
+                                            10L,
+                                            UserUtils.getUser(1L),
+                                            TournamentStatus.REGISTRATION));
+                        });
+
+        // 2. Exercise
+        tournamentService.searchPublicTournaments(
+                "", "", null, null, "distance", 1, 12, "UTC", null, null, -34.60, -58.38);
+
+        // 3. Assert
+        Assertions.assertEquals(TournamentSort.DISTANCE, capturedSort.get());
     }
 
     private static CreateTournamentRequest validCreateRequest() {

@@ -37,6 +37,7 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
+import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
@@ -1550,6 +1551,7 @@ class UiRouteTest {
                                         matchService,
                                         matchParticipationService,
                                         matchReservationService,
+                                        Mockito.mock(TournamentService.class),
                                         messageSource),
                                 new EventController(
                                         matchService,

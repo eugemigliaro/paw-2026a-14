@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.TournamentSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
@@ -95,6 +96,225 @@ public class TournamentJpaDaoTest {
         Assertions.assertTrue(publicActive.stream().anyMatch(t -> t.getId().equals(first.getId())));
         Assertions.assertTrue(
                 publicActive.stream().anyMatch(t -> t.getId().equals(second.getId())));
+    }
+
+    @Test
+    public void shouldSearchPublicTournamentsByActiveStatusAndCountMatchesResults() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        final Tournament registration =
+                createTournament(
+                        "Registration Cup",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        now.plusSeconds(86_400),
+                        BigDecimal.TEN,
+                        -34.56,
+                        -58.45);
+        final Tournament bracketSetup =
+                createTournament(
+                        "Bracket Cup",
+                        Sport.FOOTBALL,
+                        TournamentStatus.BRACKET_SETUP,
+                        now.plusSeconds(172_800),
+                        BigDecimal.ZERO,
+                        -34.57,
+                        -58.46);
+        final Tournament inProgress =
+                createTournament(
+                        "Live Cup",
+                        Sport.TENNIS,
+                        TournamentStatus.IN_PROGRESS,
+                        now.plusSeconds(259_200),
+                        BigDecimal.ONE,
+                        -34.58,
+                        -58.47);
+        createTournament(
+                "Completed Cup",
+                Sport.PADEL,
+                TournamentStatus.COMPLETED,
+                now.plusSeconds(345_600),
+                BigDecimal.ZERO,
+                -34.59,
+                -58.48);
+        createTournament(
+                "Cancelled Cup",
+                Sport.PADEL,
+                TournamentStatus.CANCELLED,
+                now.plusSeconds(432_000),
+                BigDecimal.ZERO,
+                -34.60,
+                -58.49);
+        final Tournament deleted =
+                createTournament(
+                        "Deleted Cup",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        now.plusSeconds(518_400),
+                        BigDecimal.ZERO,
+                        -34.61,
+                        -58.50);
+        deleted.setDeleted(true);
+        tournamentDao.update(deleted);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> results =
+                tournamentDao.findPublicTournaments(
+                        null,
+                        List.of(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        TournamentSort.SOONEST,
+                        null,
+                        null,
+                        0,
+                        10);
+        final int count =
+                tournamentDao.countPublicTournaments(null, List.of(), null, null, null, null);
+
+        Assertions.assertEquals(3, results.size());
+        Assertions.assertEquals(3, count);
+        Assertions.assertEquals(
+                List.of(registration.getId(), bracketSetup.getId(), inProgress.getId()),
+                tournamentIds(results));
+    }
+
+    @Test
+    public void shouldFilterPublicTournamentsByQuerySportDateAndPrice() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        final Tournament matching =
+                createTournament(
+                        "Sunrise Open",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        now.plusSeconds(172_800),
+                        new BigDecimal("15"),
+                        -34.56,
+                        -58.45);
+        createTournament(
+                "Sunrise Football",
+                Sport.FOOTBALL,
+                TournamentStatus.REGISTRATION,
+                now.plusSeconds(172_800),
+                new BigDecimal("15"),
+                -34.57,
+                -58.46);
+        createTournament(
+                "Sunrise Later",
+                Sport.PADEL,
+                TournamentStatus.REGISTRATION,
+                now.plusSeconds(604_800),
+                new BigDecimal("15"),
+                -34.58,
+                -58.47);
+        createTournament(
+                "Sunrise Premium",
+                Sport.PADEL,
+                TournamentStatus.REGISTRATION,
+                now.plusSeconds(172_800),
+                new BigDecimal("50"),
+                -34.59,
+                -58.48);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> results =
+                tournamentDao.findPublicTournaments(
+                        "sunrise",
+                        List.of(Sport.PADEL),
+                        now.plusSeconds(86_400),
+                        now.plusSeconds(259_200),
+                        new BigDecimal("10"),
+                        new BigDecimal("20"),
+                        TournamentSort.SOONEST,
+                        null,
+                        null,
+                        0,
+                        10);
+        final int count =
+                tournamentDao.countPublicTournaments(
+                        "sunrise",
+                        List.of(Sport.PADEL),
+                        now.plusSeconds(86_400),
+                        now.plusSeconds(259_200),
+                        new BigDecimal("10"),
+                        new BigDecimal("20"));
+
+        Assertions.assertEquals(List.of(matching.getId()), tournamentIds(results));
+        Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    public void shouldSortPublicTournamentsByPriceAndDistance() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        final Tournament nearExpensive =
+                createTournament(
+                        "Near Expensive",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        now.plusSeconds(86_400),
+                        new BigDecimal("30"),
+                        -34.600,
+                        -58.380);
+        final Tournament farCheap =
+                createTournament(
+                        "Far Cheap",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        now.plusSeconds(172_800),
+                        BigDecimal.ONE,
+                        -34.700,
+                        -58.480);
+        final Tournament noCoordinates =
+                createTournament(
+                        "No Coordinates",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        now.plusSeconds(259_200),
+                        BigDecimal.TEN,
+                        null,
+                        null);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> priceSorted =
+                tournamentDao.findPublicTournaments(
+                        null,
+                        List.of(Sport.PADEL),
+                        null,
+                        null,
+                        null,
+                        null,
+                        TournamentSort.PRICE,
+                        null,
+                        null,
+                        0,
+                        10);
+        final List<Tournament> distanceSorted =
+                tournamentDao.findPublicTournaments(
+                        null,
+                        List.of(Sport.PADEL),
+                        null,
+                        null,
+                        null,
+                        null,
+                        TournamentSort.DISTANCE,
+                        -34.601,
+                        -58.381,
+                        0,
+                        10);
+
+        Assertions.assertEquals(
+                List.of(farCheap.getId(), noCoordinates.getId(), nearExpensive.getId()),
+                tournamentIds(priceSorted));
+        Assertions.assertEquals(
+                List.of(nearExpensive.getId(), farCheap.getId(), noCoordinates.getId()),
+                tournamentIds(distanceSorted));
     }
 
     @Test
@@ -254,6 +474,36 @@ public class TournamentJpaDaoTest {
                 status);
     }
 
+    private Tournament createTournament(
+            final String title,
+            final Sport sport,
+            final TournamentStatus status,
+            final Instant startsAt,
+            final BigDecimal price,
+            final Double latitude,
+            final Double longitude) {
+        return tournamentDao.create(
+                host,
+                sport,
+                title,
+                title + " description",
+                "Club Court 1",
+                latitude,
+                longitude,
+                startsAt,
+                startsAt.plusSeconds(3 * 60 * 60),
+                price,
+                null,
+                TournamentFormat.SINGLE_ELIMINATION,
+                8,
+                2,
+                true,
+                false,
+                startsAt.minusSeconds(7 * 24 * 60 * 60),
+                startsAt.minusSeconds(24 * 60 * 60),
+                status);
+    }
+
     private void insertUser(final long id, final String username, final String email) {
         em.createNativeQuery(
                         "INSERT INTO users (id, username, email, created_at, updated_at)"
@@ -266,5 +516,9 @@ public class TournamentJpaDaoTest {
 
     private static List<Long> ids(final List<TournamentMatch> matches) {
         return matches.stream().map(TournamentMatch::getId).toList();
+    }
+
+    private static List<Long> tournamentIds(final List<Tournament> tournaments) {
+        return tournaments.stream().map(Tournament::getId).toList();
     }
 }

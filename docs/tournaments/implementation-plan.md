@@ -372,6 +372,7 @@ Suggested methods:
 - `Tournament createTournament(User host, CreateTournamentRequest request)`
 - `Optional<Tournament> findPublicTournament(long tournamentId)`
 - `Optional<Tournament> findTournamentForHost(long tournamentId, User host)`
+- `PaginatedResult<Tournament> searchPublicTournaments(...)`
 - `Tournament update(long tournamentId, User actingUser, UpdateTournamentRequest request)`
 - `Tournament cancel(long tournamentId, User actingUser, String reason)`
 
@@ -583,17 +584,27 @@ Acceptance criteria:
 
 Goal: tournaments become discoverable without breaking match feed behavior.
 
-Recommended first implementation:
+Implemented first implementation:
 
-- Add a tournament query and a feed item view model that can wrap either a
-  `Match` or `Tournament`.
-- If mixed pagination is too expensive at first, implement `?type=tournament`
-  first and merge all-feed behavior later.
-- Add a tournament card JSP tag that uses the same visual chrome as match cards.
+- The default `/` feed remains match-only.
+- `/?type=tournament` switches the existing feed to tournament discovery.
+- Tournament discovery uses filter-only pagination rather than mixed
+  match/tournament pagination.
+- Tournament feed filters preserve `type=tournament` across sport, date, price,
+  sort, search, and pagination links.
+- Tournament cards reuse the existing feed card view model and visual chrome,
+  linking to `/tournaments/{id}`.
+- Active public listing includes `REGISTRATION`, `BRACKET_SETUP`, and
+  `IN_PROGRESS`; completed/cancelled tournaments remain reachable by direct URL.
+- Sorting supports `soonest`, `price`, and `distance`; unsupported values such
+  as `spots` normalize to `soonest`.
 
 Likely files:
 
 - `webapp/src/main/java/ar/edu/itba/paw/webapp/controller/TournamentController.java`
+- `webapp/src/main/java/ar/edu/itba/paw/webapp/controller/FeedController.java`
+- `webapp/src/main/java/ar/edu/itba/paw/webapp/utils/EventCardViewModelUtils.java`
+- `webapp/src/main/java/ar/edu/itba/paw/webapp/utils/ImageUrlHelper.java`
 - `webapp/src/main/webapp/WEB-INF/views/tournaments/detail.jsp`
 - `webapp/src/main/webapp/WEB-INF/tags/tournamentBadge.tag`
 - `webapp/src/main/webapp/WEB-INF/tags/tournamentLifecycleBadge.tag`
@@ -613,6 +624,13 @@ Detail page sections:
 
 Tests:
 
+- tournament feed query returns only active, non-deleted tournaments
+- tournament feed query covers text, sport, date, price, count, and sort behavior
+- service pagination clamps out-of-range pages and normalizes invalid sort values
+- `/` remains match mode
+- `/?type=tournament` renders tournament cards and links
+- event-type filter and pagination preserve `type=tournament`
+- Spanish locale renders tournament discovery labels
 - public detail renders for a registration tournament
 - logged-out join redirects to login
 - cancelled/completed public behavior matches decision
@@ -1125,6 +1143,7 @@ I18n:
 - [x] Add public/player bracket page.
 - [x] Add host winner/walkover actions.
 - [x] Add minimum tournament mail service and templates.
-- [ ] Add controller/security tests.
-- [ ] Run `mvn test`.
-- [ ] Run Spotless if formatting fails.
+- [x] Add controller/security tests.
+- [x] Add filter-only tournament feed discovery.
+- [x] Run `mvn test`.
+- [x] Run Spotless if formatting fails.

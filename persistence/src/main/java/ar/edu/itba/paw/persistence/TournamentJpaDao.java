@@ -3,15 +3,22 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.TournamentSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -118,6 +125,37 @@ public class TournamentJpaDao implements TournamentDao {
     }
 
     @Override
+    public List<Tournament> findPublicTournaments(
+            final String query,
+            final List<Sport> sports,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final TournamentSort sort,
+            final Double latitude,
+            final Double longitude,
+            final int offset,
+            final int limit) {
+        final QueryParts parts = publicSearchParts();
+        appendFilters(parts, query, sports, startsAtFrom, startsAtTo, minPrice, maxPrice);
+        return findPage(parts, sort, latitude, longitude, offset, limit);
+    }
+
+    @Override
+    public int countPublicTournaments(
+            final String query,
+            final List<Sport> sports,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        final QueryParts parts = publicSearchParts();
+        appendFilters(parts, query, sports, startsAtFrom, startsAtTo, minPrice, maxPrice);
+        return countTournaments(parts);
+    }
+
+    @Override
     public List<Tournament> findHostedByUser(final User host, final int offset, final int limit) {
         return em.createQuery(
                         "FROM Tournament t"
@@ -135,5 +173,152 @@ public class TournamentJpaDao implements TournamentDao {
     public Tournament update(final Tournament tournament) {
         tournament.setUpdatedAt(Instant.now());
         return em.merge(tournament);
+    }
+
+    private List<Tournament> findPage(
+            final QueryParts parts,
+            final TournamentSort sort,
+            final Double latitude,
+            final Double longitude,
+            final int offset,
+            final int limit) {
+        final String where = whereClause(parts);
+        final TypedQuery<Long> idQuery =
+                em.createQuery(
+                                "SELECT t.id FROM Tournament t JOIN t.host hu"
+                                        + where
+                                        + orderBy(sort, latitude, longitude),
+                                Long.class)
+                        .setFirstResult(Math.max(0, offset))
+                        .setMaxResults(limit);
+        setParams(idQuery, parts.params);
+        if (sort == TournamentSort.DISTANCE) {
+            setDistanceParams(idQuery, latitude, longitude);
+        }
+
+        final List<Long> ids = idQuery.getResultList();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        final TypedQuery<Tournament> tournamentsQuery =
+                em.createQuery("FROM Tournament t WHERE t.id IN :ids", Tournament.class)
+                        .setParameter("ids", ids);
+        final Map<Long, Integer> order = new HashMap<>();
+        for (int i = 0; i < ids.size(); i++) {
+            order.put(ids.get(i), i);
+        }
+
+        return tournamentsQuery.getResultList().stream()
+                .sorted(Comparator.comparingInt(tournament -> order.get(tournament.getId())))
+                .toList();
+    }
+
+    private int countTournaments(final QueryParts parts) {
+        final TypedQuery<Long> countQuery =
+                em.createQuery(
+                        "SELECT COUNT(t.id) FROM Tournament t JOIN t.host hu" + whereClause(parts),
+                        Long.class);
+        setParams(countQuery, parts.params);
+        return countQuery.getSingleResult().intValue();
+    }
+
+    private static QueryParts publicSearchParts() {
+        final QueryParts parts = new QueryParts();
+        parts.where.add("t.deleted = FALSE");
+        parts.where.add("t.status IN :statuses");
+        parts.params.put("statuses", PUBLIC_ACTIVE_STATUSES);
+        return parts;
+    }
+
+    private static void appendFilters(
+            final QueryParts parts,
+            final String query,
+            final List<Sport> sports,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        appendSearchFilter(parts, query);
+        if (sports != null && !sports.isEmpty()) {
+            parts.where.add("t.sport IN :sports");
+            parts.params.put("sports", sports);
+        }
+        if (startsAtFrom != null) {
+            parts.where.add("t.startsAt >= :startsAtFrom");
+            parts.params.put("startsAtFrom", startsAtFrom);
+        }
+        if (startsAtTo != null) {
+            parts.where.add("t.startsAt < :startsAtTo");
+            parts.params.put("startsAtTo", startsAtTo);
+        }
+        if (minPrice != null) {
+            parts.where.add("t.pricePerPlayer >= :minPrice");
+            parts.params.put("minPrice", minPrice);
+        }
+        if (maxPrice != null) {
+            parts.where.add("t.pricePerPlayer <= :maxPrice");
+            parts.params.put("maxPrice", maxPrice);
+        }
+    }
+
+    private static void appendSearchFilter(final QueryParts parts, final String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return;
+        }
+        parts.where.add(
+                "(LOWER(t.title) LIKE :query"
+                        + " OR LOWER(COALESCE(t.description, '')) LIKE :query"
+                        + " OR LOWER(COALESCE(t.address, '')) LIKE :query"
+                        + " OR LOWER(COALESCE(hu.username, '')) LIKE :query)");
+        parts.params.put("query", "%" + query.trim().toLowerCase() + "%");
+    }
+
+    private static String whereClause(final QueryParts parts) {
+        return parts.where.isEmpty() ? "" : " WHERE " + String.join(" AND ", parts.where);
+    }
+
+    private static String orderBy(
+            final TournamentSort sort, final Double latitude, final Double longitude) {
+        final TournamentSort safeSort = sort == null ? TournamentSort.SOONEST : sort;
+        if (safeSort == TournamentSort.DISTANCE && latitude != null && longitude != null) {
+            return " ORDER BY CASE WHEN t.latitude IS NULL OR t.longitude IS NULL THEN 1 ELSE 0 END ASC,"
+                    + " ((t.latitude - :latitude) * (t.latitude - :latitude))"
+                    + " + ((t.longitude - :longitude) * :cosLatitude * (t.longitude - :longitude) * :cosLatitude) ASC,"
+                    + " t.startsAt ASC, t.id ASC";
+        }
+        if (safeSort == TournamentSort.PRICE) {
+            return " ORDER BY COALESCE(t.pricePerPlayer, 0) ASC, t.startsAt ASC, t.id ASC";
+        }
+        return " ORDER BY t.startsAt ASC, t.id ASC";
+    }
+
+    private static void setParams(final Query query, final Map<String, Object> params) {
+        params.forEach(query::setParameter);
+    }
+
+    private static void setDistanceParams(
+            final Query query, final Double latitude, final Double longitude) {
+        if (latitude == null || longitude == null) {
+            return;
+        }
+        setParameterIfPresent(query, "latitude", latitude);
+        setParameterIfPresent(query, "longitude", longitude);
+        setParameterIfPresent(query, "cosLatitude", Math.cos(Math.toRadians(latitude)));
+    }
+
+    private static void setParameterIfPresent(
+            final Query query, final String name, final Object value) {
+        final boolean present =
+                query.getParameters().stream()
+                        .anyMatch(parameter -> name.equals(parameter.getName()));
+        if (present) {
+            query.setParameter(name, value);
+        }
+    }
+
+    private static final class QueryParts {
+        private final List<String> where = new ArrayList<>();
+        private final Map<String, Object> params = new HashMap<>();
     }
 }

@@ -48,6 +48,9 @@
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 								</c:forEach>
+								<c:if test="${selectedType eq 'tournament'}">
+									<input type="hidden" name="type" value="tournament" />
+								</c:if>
 								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
@@ -171,6 +174,9 @@
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
+										<c:if test="${selectedType eq 'tournament'}">
+											<input type="hidden" name="type" value="tournament" />
+										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
@@ -190,6 +196,9 @@
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>
+											<c:if test="${selectedType eq 'tournament'}">
+												<c:param name="type" value="tournament" />
+											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
 											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="minPrice" value="${selectedMinPriceValue}" />
@@ -239,6 +248,9 @@
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
+										<c:if test="${selectedType eq 'tournament'}">
+											<input type="hidden" name="type" value="tournament" />
+										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
@@ -264,6 +276,9 @@
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>
+											<c:if test="${selectedType eq 'tournament'}">
+												<c:param name="type" value="tournament" />
+											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
 											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="startDate" value="${selectedStartDateValue}" />
@@ -320,6 +335,9 @@
 									data-explore-location-form="true"
 									data-location-available="${nearMeAvailable}">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<c:if test="${selectedType eq 'tournament'}">
+										<input type="hidden" name="type" value="tournament" />
+									</c:if>
 									<input type="hidden" id="explore-location-latitude" name="latitude" data-explore-location-latitude="true" />
 									<input type="hidden" id="explore-location-longitude" name="longitude" data-explore-location-longitude="true" />
 								</form>

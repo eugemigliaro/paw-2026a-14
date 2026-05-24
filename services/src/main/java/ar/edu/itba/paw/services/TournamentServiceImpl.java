@@ -1,7 +1,10 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.TournamentSort;
+import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -10,6 +13,9 @@ import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -26,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class TournamentServiceImpl implements TournamentService {
 
+    private static final int DEFAULT_PAGE_SIZE = 12;
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
@@ -84,6 +91,55 @@ public class TournamentServiceImpl implements TournamentService {
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .filter(tournament -> canMutate(tournament, host));
+    }
+
+    @Override
+    public PaginatedResult<Tournament> searchPublicTournaments(
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final Double latitude,
+            final Double longitude) {
+        final List<Sport> sportFilters = parseSports(sport);
+        final TournamentSort sortFilter =
+                hasCoordinates(latitude, longitude)
+                        ? parseSort(sort)
+                        : withoutDistance(parseSort(sort));
+        final ZoneId zoneId = parseZone(timezone);
+        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
+
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_PAGE_SIZE,
+                safePageSize ->
+                        tournamentDao.countPublicTournaments(
+                                query,
+                                sportFilters,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
+                                minPrice,
+                                maxPrice),
+                (offset, safePageSize) ->
+                        tournamentDao.findPublicTournaments(
+                                query,
+                                sportFilters,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
+                                minPrice,
+                                maxPrice,
+                                sortFilter,
+                                latitude,
+                                longitude,
+                                offset,
+                                safePageSize));
     }
 
     @Override
@@ -178,6 +234,82 @@ public class TournamentServiceImpl implements TournamentService {
                 .filter(Objects::nonNull)
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(ADMIN_MOD_AUTHORITY::equals);
+    }
+
+    private static boolean hasCoordinates(final Double latitude, final Double longitude) {
+        return latitude != null && longitude != null;
+    }
+
+    private static TournamentSort withoutDistance(final TournamentSort sort) {
+        return sort == TournamentSort.DISTANCE ? TournamentSort.SOONEST : sort;
+    }
+
+    private static List<Sport> parseSports(final String rawSports) {
+        if (rawSports == null || rawSports.isBlank()) {
+            return List.of();
+        }
+
+        final LinkedHashSet<Sport> sports = new LinkedHashSet<>();
+        for (final String rawSport : rawSports.split(",")) {
+            if (rawSport == null || rawSport.isBlank()) {
+                continue;
+            }
+            PersistableEnum.fromDbValue(Sport.class, rawSport.trim()).ifPresent(sports::add);
+        }
+
+        return List.copyOf(sports);
+    }
+
+    private static DateRange parseDateRange(
+            final String rawStartDate, final String rawEndDate, final ZoneId zoneId) {
+        final LocalDate startDate = parseDate(rawStartDate);
+        final LocalDate endDate = parseDate(rawEndDate);
+
+        if (startDate == null && endDate == null) {
+            return new DateRange(null, null);
+        }
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            final Instant start = endDate.atStartOfDay(zoneId).toInstant();
+            final Instant endExclusive = startDate.plusDays(1).atStartOfDay(zoneId).toInstant();
+            return new DateRange(start, endExclusive);
+        }
+
+        final Instant start = startDate == null ? null : startDate.atStartOfDay(zoneId).toInstant();
+        final Instant endExclusive =
+                endDate == null ? null : endDate.plusDays(1).atStartOfDay(zoneId).toInstant();
+        return new DateRange(start, endExclusive);
+    }
+
+    private static LocalDate parseDate(final String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(rawDate.trim());
+        } catch (final Exception ignored) {
+            return null;
+        }
+    }
+
+    private static TournamentSort parseSort(final String rawSort) {
+        if (rawSort == null || rawSort.isBlank()) {
+            return TournamentSort.SOONEST;
+        }
+        return TournamentSort.fromQueryValue(rawSort).orElse(TournamentSort.SOONEST);
+    }
+
+    private static ZoneId parseZone(final String timezone) {
+        if (timezone == null || timezone.isBlank()) {
+            return ZoneId.systemDefault();
+        }
+
+        try {
+            return ZoneId.of(timezone);
+        } catch (final Exception ignored) {
+            return ZoneId.systemDefault();
+        }
     }
 
     private void validateHost(final User host) {
@@ -333,4 +465,34 @@ public class TournamentServiceImpl implements TournamentService {
         return messageSource.getMessage(
                 Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
+
+    private PaginatedResult<Tournament> paginate(
+            final int page,
+            final int pageSize,
+            final int defaultPageSize,
+            final CountSupplier countSupplier,
+            final SliceSupplier sliceSupplier) {
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : defaultPageSize;
+
+        final int totalCount = countSupplier.count(safePageSize);
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int offset = (clampedPage - 1) * safePageSize;
+        final List<Tournament> items = sliceSupplier.items(offset, safePageSize);
+
+        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface CountSupplier {
+        int count(int safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface SliceSupplier {
+        List<Tournament> items(int offset, int safePageSize);
+    }
+
+    private record DateRange(Instant start, Instant endExclusive) {}
 }
