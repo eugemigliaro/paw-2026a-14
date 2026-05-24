@@ -25,5 +25,7 @@ public interface TournamentTeamDao {
 
     Optional<TournamentTeam> findUserTeam(long tournamentId, long userId);
 
+    List<Tournament> findTournamentsByMember(User user);
+
     long countByTournament(long tournamentId);
 }

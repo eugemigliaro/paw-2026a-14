@@ -9,12 +9,16 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentDao;
+import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
+import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -37,16 +41,22 @@ public class TournamentServiceImpl implements TournamentService {
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDao tournamentDao;
+    private final TournamentSoloEntryDao tournamentSoloEntryDao;
+    private final TournamentTeamDao tournamentTeamDao;
     private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
     private final Clock clock;
 
     public TournamentServiceImpl(
             final TournamentDao tournamentDao,
+            final TournamentSoloEntryDao tournamentSoloEntryDao,
+            final TournamentTeamDao tournamentTeamDao,
             final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
+        this.tournamentSoloEntryDao = tournamentSoloEntryDao;
+        this.tournamentTeamDao = tournamentTeamDao;
         this.tournamentMailService = tournamentMailService;
         this.messageSource = messageSource;
         this.clock = clock;
@@ -140,6 +150,53 @@ public class TournamentServiceImpl implements TournamentService {
                                 longitude,
                                 offset,
                                 safePageSize));
+    }
+
+    @Override
+    public PaginatedResult<Tournament> findHostedTournaments(
+            final User host,
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        validateHost(host);
+        final ZoneId zoneId = parseZone(timezone);
+        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
+        final List<Sport> sports = parseSports(sport);
+        final TournamentSort sortFilter = withoutDistance(parseSort(sort));
+        final String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+
+        final LinkedHashMap<Long, Tournament> userTournaments = new LinkedHashMap<>();
+        addTournaments(userTournaments, tournamentDao.findHostedByUser(host, 0, Integer.MAX_VALUE));
+        addTournaments(userTournaments, tournamentSoloEntryDao.findTournamentsByUser(host));
+        addTournaments(userTournaments, tournamentTeamDao.findTournamentsByMember(host));
+
+        final List<Tournament> filtered =
+                userTournaments.values().stream()
+                        .filter(tournament -> matchesQuery(tournament, normalizedQuery))
+                        .filter(
+                                tournament ->
+                                        sports.isEmpty() || sports.contains(tournament.getSport()))
+                        .filter(tournament -> withinDateRange(tournament, dateRange))
+                        .filter(tournament -> withinPriceRange(tournament, minPrice, maxPrice))
+                        .sorted(hostedComparator(sortFilter))
+                        .toList();
+
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
+        final int totalPages = Math.max(1, (filtered.size() + safePageSize - 1) / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int fromIndex = Math.min((clampedPage - 1) * safePageSize, filtered.size());
+        final int toIndex = Math.min(fromIndex + safePageSize, filtered.size());
+
+        return new PaginatedResult<>(
+                filtered.subList(fromIndex, toIndex), filtered.size(), clampedPage, safePageSize);
     }
 
     @Override
@@ -310,6 +367,75 @@ public class TournamentServiceImpl implements TournamentService {
         } catch (final Exception ignored) {
             return ZoneId.systemDefault();
         }
+    }
+
+    private static boolean matchesQuery(final Tournament tournament, final String query) {
+        if (query == null || query.isBlank()) {
+            return true;
+        }
+        return contains(tournament.getTitle(), query)
+                || contains(tournament.getDescription(), query)
+                || contains(tournament.getAddress(), query)
+                || (tournament.getSport() != null
+                        && tournament
+                                .getSport()
+                                .getDbValue()
+                                .toLowerCase(Locale.ROOT)
+                                .contains(query));
+    }
+
+    private static void addTournaments(
+            final LinkedHashMap<Long, Tournament> target, final List<Tournament> tournaments) {
+        if (tournaments == null) {
+            return;
+        }
+        for (final Tournament tournament : tournaments) {
+            if (tournament != null && tournament.getId() != null) {
+                target.putIfAbsent(tournament.getId(), tournament);
+            }
+        }
+    }
+
+    private static boolean contains(final String value, final String query) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private static boolean withinDateRange(final Tournament tournament, final DateRange dateRange) {
+        final Instant startsAt = tournament.getStartsAt();
+        if (startsAt == null) {
+            return dateRange.start() == null && dateRange.endExclusive() == null;
+        }
+        return (dateRange.start() == null || !startsAt.isBefore(dateRange.start()))
+                && (dateRange.endExclusive() == null
+                        || startsAt.isBefore(dateRange.endExclusive()));
+    }
+
+    private static boolean withinPriceRange(
+            final Tournament tournament, final BigDecimal minPrice, final BigDecimal maxPrice) {
+        final BigDecimal price =
+                tournament.getPricePerPlayer() == null
+                        ? BigDecimal.ZERO
+                        : tournament.getPricePerPlayer();
+        return (minPrice == null || price.compareTo(minPrice) >= 0)
+                && (maxPrice == null || price.compareTo(maxPrice) <= 0);
+    }
+
+    private static Comparator<Tournament> hostedComparator(final TournamentSort sort) {
+        if (TournamentSort.PRICE == sort) {
+            return Comparator.comparing(
+                            (Tournament tournament) ->
+                                    tournament.getPricePerPlayer() == null
+                                            ? BigDecimal.ZERO
+                                            : tournament.getPricePerPlayer())
+                    .thenComparing(hostedSoonestComparator());
+        }
+        return hostedSoonestComparator();
+    }
+
+    private static Comparator<Tournament> hostedSoonestComparator() {
+        return Comparator.comparing(
+                        Tournament::getStartsAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(Tournament::getId);
     }
 
     private void validateHost(final User host) {

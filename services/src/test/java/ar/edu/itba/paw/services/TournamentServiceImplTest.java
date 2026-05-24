@@ -8,6 +8,8 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentDao;
+import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
+import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
@@ -39,6 +41,8 @@ public class TournamentServiceImplTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @Mock private TournamentDao tournamentDao;
+    @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
+    @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private MessageSource messageSource;
 
@@ -49,6 +53,8 @@ public class TournamentServiceImplTest {
         tournamentService =
                 new TournamentServiceImpl(
                         tournamentDao,
+                        tournamentSoloEntryDao,
+                        tournamentTeamDao,
                         tournamentMailService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
@@ -411,6 +417,32 @@ public class TournamentServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals(TournamentSort.DISTANCE, capturedSort.get());
+    }
+
+    @Test
+    public void findHostedTournamentsIncludesSoloPoolAndTeamMemberships() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(1L);
+        final Tournament hosted = tournament(10L, user, TournamentStatus.REGISTRATION);
+        final Tournament solo =
+                tournament(11L, UserUtils.getUser(2L), TournamentStatus.REGISTRATION);
+        final Tournament team =
+                tournament(12L, UserUtils.getUser(3L), TournamentStatus.IN_PROGRESS);
+        Mockito.when(tournamentDao.findHostedByUser(user, 0, Integer.MAX_VALUE))
+                .thenReturn(List.of(hosted));
+        Mockito.when(tournamentSoloEntryDao.findTournamentsByUser(user)).thenReturn(List.of(solo));
+        Mockito.when(tournamentTeamDao.findTournamentsByMember(user)).thenReturn(List.of(team));
+
+        // 2. Exercise
+        final PaginatedResult<Tournament> result =
+                tournamentService.findHostedTournaments(
+                        user, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
+
+        // 3. Assert
+        Assertions.assertEquals(3, result.getTotalCount());
+        Assertions.assertTrue(result.getItems().contains(hosted));
+        Assertions.assertTrue(result.getItems().contains(solo));
+        Assertions.assertTrue(result.getItems().contains(team));
     }
 
     private static CreateTournamentRequest validCreateRequest() {

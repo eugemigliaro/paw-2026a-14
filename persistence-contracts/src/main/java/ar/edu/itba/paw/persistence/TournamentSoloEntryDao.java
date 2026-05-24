@@ -13,6 +13,8 @@ public interface TournamentSoloEntryDao {
 
     Optional<TournamentSoloEntry> findByTournamentAndUser(long tournamentId, long userId);
 
+    List<Tournament> findTournamentsByUser(User user);
+
     List<TournamentSoloEntry> findActiveByTournament(long tournamentId);
 
     long countActiveByTournament(long tournamentId);

@@ -7,12 +7,14 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.FeedSearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
@@ -22,6 +24,8 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -45,6 +49,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class MatchDashboardController {
 
     private static final int PAGE_SIZE = 12;
+    private static final String TYPE_MATCH = "match";
+    private static final String TYPE_TOURNAMENT = "tournament";
 
     private static final List<String> PLAYER_STATUS_OPTIONS =
             List.of("open", "completed", "cancelled");
@@ -52,6 +58,7 @@ public class MatchDashboardController {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
+    private final TournamentService tournamentService;
     private final MessageSource messageSource;
 
     @Autowired
@@ -59,10 +66,12 @@ public class MatchDashboardController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
+            final TournamentService tournamentService,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
+        this.tournamentService = tournamentService;
         this.messageSource = messageSource;
     }
 
@@ -80,15 +89,23 @@ public class MatchDashboardController {
             @RequestParam(value = "status", required = false) final List<String> statuses,
             @RequestParam(value = "category", required = false) final List<String> categories,
             @RequestParam(value = "filter", defaultValue = "upcoming") final String filter,
+            @RequestParam(value = "type", defaultValue = TYPE_MATCH) final String type,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
         final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final String selectedType = normalizeType(type);
         final List<String> selectedSports = normalizeSports(sports);
         final List<String> selectedStatuses =
-                normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
+                TYPE_TOURNAMENT.equals(selectedType)
+                        ? List.of()
+                        : normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
         final List<String> selectedCategories =
-                normalizeValues(
-                        categories, List.of(), List.of("joined", "invited", "pending", "hosted"));
+                TYPE_TOURNAMENT.equals(selectedType)
+                        ? List.of()
+                        : normalizeValues(
+                                categories,
+                                List.of(),
+                                List.of("joined", "invited", "pending", "hosted"));
         final String selectedSort = normalizeSort(sort);
         final String searchQuery = normalizeQuery(query);
         final String selectedTimezone = normalizeTimezone(timezone);
@@ -99,27 +116,45 @@ public class MatchDashboardController {
                 normalizeDateRange(startDate, endDate, context, ZoneId.of(selectedTimezone));
 
         final PaginatedResult<Match> result =
-                getAllUserEventsForFilter(
-                        user,
-                        context,
-                        searchQuery,
-                        encodeCsv(selectedSports),
-                        encodeCsv(selectedStatuses),
-                        selectedDateRange.startDate(),
-                        encodeCsv(selectedCategories),
-                        selectedDateRange.endDate(),
-                        minPrice,
-                        maxPrice,
-                        selectedSort,
-                        selectedTimezone,
-                        page,
-                        PAGE_SIZE);
+                TYPE_TOURNAMENT.equals(selectedType)
+                        ? null
+                        : getAllUserEventsForFilter(
+                                user,
+                                context,
+                                searchQuery,
+                                encodeCsv(selectedSports),
+                                encodeCsv(selectedStatuses),
+                                selectedDateRange.startDate(),
+                                encodeCsv(selectedCategories),
+                                selectedDateRange.endDate(),
+                                minPrice,
+                                maxPrice,
+                                selectedSort,
+                                selectedTimezone,
+                                page,
+                                PAGE_SIZE);
+        final PaginatedResult<Tournament> tournamentResult =
+                TYPE_TOURNAMENT.equals(selectedType)
+                        ? findHostedTournaments(
+                                user,
+                                searchQuery,
+                                encodeCsv(selectedSports),
+                                selectedDateRange.startDate(),
+                                selectedDateRange.endDate(),
+                                selectedSort,
+                                page,
+                                PAGE_SIZE,
+                                selectedTimezone,
+                                minPrice,
+                                maxPrice)
+                        : null;
 
         return buildListPage(
                 "events/list",
                 "/events",
                 "page.title.events",
                 locale,
+                selectedType,
                 searchQuery,
                 selectedSort,
                 selectedDateRange.startDate(),
@@ -132,6 +167,7 @@ public class MatchDashboardController {
                 List.of(),
                 selectedCategories,
                 result,
+                tournamentResult,
                 messageSource.getMessage("events.title", null, locale),
                 messageSource.getMessage("events.description", null, locale),
                 messageSource.getMessage("events.empty", null, locale),
@@ -143,6 +179,7 @@ public class MatchDashboardController {
             final String path,
             final String pageTitleCode,
             final Locale locale,
+            final String selectedType,
             final String searchQuery,
             final String sort,
             final String startDate,
@@ -155,6 +192,7 @@ public class MatchDashboardController {
             final List<String> selectedVisibility,
             final List<String> selectedCategories,
             final PaginatedResult<Match> result,
+            final PaginatedResult<Tournament> tournamentResult,
             final String title,
             final String description,
             final String emptyMessage,
@@ -169,6 +207,7 @@ public class MatchDashboardController {
         mav.addObject("listTitle", title);
         mav.addObject("listDescription", description);
         mav.addObject("emptyMessage", emptyMessage);
+        mav.addObject("selectedType", selectedType);
         mav.addObject("selectedSort", sort);
         mav.addObject("selectedStartDateValue", startDate);
         mav.addObject("selectedEndDateValue", endDate);
@@ -197,27 +236,48 @@ public class MatchDashboardController {
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
-                        selectedCategories));
+                        selectedCategories,
+                        selectedType));
         mav.addObject(
                 "events",
-                result.getItems().stream()
-                        .map(
-                                match ->
-                                        toCard(
-                                                match,
-                                                zoneId,
-                                                locale,
-                                                currentUser,
-                                                messageSource.getMessage(
-                                                        "match.status."
-                                                                + match.getStatus().getValue(),
+                TYPE_TOURNAMENT.equals(selectedType)
+                        ? tournamentResult.getItems().stream()
+                                .map(
+                                        tournament ->
+                                                toCard(
+                                                        tournament,
+                                                        zoneId,
+                                                        locale,
+                                                        currentUser,
+                                                        messageSource.getMessage(
+                                                                "tournament.card.badge",
+                                                                null,
+                                                                locale),
+                                                        tournamentStatusLabel(tournament, locale),
                                                         null,
-                                                        match.getStatus().getValue(),
-                                                        locale),
-                                                messageSource,
-                                                matchParticipationService,
-                                                matchReservationService))
-                        .toList());
+                                                        messageSource))
+                                .toList()
+                        : result.getItems().stream()
+                                .map(
+                                        match ->
+                                                toCard(
+                                                        match,
+                                                        zoneId,
+                                                        locale,
+                                                        currentUser,
+                                                        messageSource.getMessage(
+                                                                "match.status."
+                                                                        + match.getStatus()
+                                                                                .getValue(),
+                                                                null,
+                                                                match.getStatus().getValue(),
+                                                                locale),
+                                                        messageSource,
+                                                        matchParticipationService,
+                                                        matchReservationService))
+                                .toList());
+        final PaginatedResult<?> pageResult =
+                TYPE_TOURNAMENT.equals(selectedType) ? tournamentResult : result;
         mav.addObject(
                 "paginationItems",
                 buildPagination(
@@ -234,10 +294,10 @@ public class MatchDashboardController {
                         selectedSports,
                         selectedVisibility,
                         selectedCategories,
-                        result));
+                        pageResult));
         mav.addObject(
                 "previousPageHref",
-                result.hasPrevious()
+                pageResult.hasPrevious()
                         ? buildPageUrl(
                                 path,
                                 locale,
@@ -252,11 +312,11 @@ public class MatchDashboardController {
                                 selectedSports,
                                 selectedVisibility,
                                 selectedCategories,
-                                result.getPage() - 1)
+                                pageResult.getPage() - 1)
                         : null);
         mav.addObject(
                 "nextPageHref",
-                result.hasNext()
+                pageResult.hasNext()
                         ? buildPageUrl(
                                 path,
                                 locale,
@@ -271,7 +331,7 @@ public class MatchDashboardController {
                                 selectedSports,
                                 selectedVisibility,
                                 selectedCategories,
-                                result.getPage() + 1)
+                                pageResult.getPage() + 1)
                         : null);
         return mav;
     }
@@ -458,6 +518,74 @@ public class MatchDashboardController {
         matches.sort(comparator);
     }
 
+    @SuppressWarnings("unchecked")
+    private PaginatedResult<Tournament> findHostedTournaments(
+            final User user,
+            final String searchQuery,
+            final String sports,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        try {
+            final Method method =
+                    tournamentService
+                            .getClass()
+                            .getMethod(
+                                    "findHostedTournaments",
+                                    User.class,
+                                    String.class,
+                                    String.class,
+                                    String.class,
+                                    String.class,
+                                    String.class,
+                                    int.class,
+                                    int.class,
+                                    String.class,
+                                    BigDecimal.class,
+                                    BigDecimal.class);
+            return (PaginatedResult<Tournament>)
+                    method.invoke(
+                            tournamentService,
+                            user,
+                            searchQuery,
+                            sports,
+                            startDate,
+                            endDate,
+                            sort,
+                            page,
+                            pageSize,
+                            timezone,
+                            minPrice,
+                            maxPrice);
+        } catch (final NoSuchMethodException | IllegalAccessException exception) {
+            return tournamentService.searchPublicTournaments(
+                    searchQuery,
+                    sports,
+                    startDate,
+                    endDate,
+                    sort,
+                    page,
+                    pageSize,
+                    timezone,
+                    minPrice,
+                    maxPrice);
+        } catch (final InvocationTargetException exception) {
+            final Throwable cause = exception.getCause();
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            if (cause instanceof Error error) {
+                throw error;
+            }
+            throw new IllegalStateException(cause);
+        }
+    }
+
     private static boolean belongsToContext(
             final Match match,
             final DateRangeContext context,
@@ -564,8 +692,29 @@ public class MatchDashboardController {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
-            final List<String> selectedCategories) {
+            final List<String> selectedCategories,
+            final String selectedType) {
         final List<FilterGroupViewModel> filterGroups = new ArrayList<>();
+        if ("/events".equals(path)) {
+            filterGroups.add(
+                    new FilterGroupViewModel(
+                            messageSource.getMessage("filter.eventType", null, locale),
+                            buildEventTypeFilterOptions(
+                                    path,
+                                    locale,
+                                    searchQuery,
+                                    sort,
+                                    selectedStartDate,
+                                    selectedEndDate,
+                                    minPrice,
+                                    maxPrice,
+                                    timezone,
+                                    selectedStatuses,
+                                    selectedSports,
+                                    selectedVisibility,
+                                    selectedCategories,
+                                    selectedType)));
+        }
         filterGroups.add(
                 new FilterGroupViewModel(
                         messageSource.getMessage("filter.categories", null, locale),
@@ -584,7 +733,7 @@ public class MatchDashboardController {
                                 selectedVisibility,
                                 selectedCategories)));
 
-        if ("/events".equals(path)) {
+        if ("/events".equals(path) && !TYPE_TOURNAMENT.equals(selectedType)) {
             filterGroups.add(
                     new FilterGroupViewModel(
                             messageSource.getMessage("filter.category", null, locale),
@@ -604,24 +753,26 @@ public class MatchDashboardController {
                                     selectedCategories)));
         }
 
-        filterGroups.add(
-                new FilterGroupViewModel(
-                        messageSource.getMessage("host.filters.status", null, locale),
-                        buildStatusFilterOptions(
-                                path,
-                                locale,
-                                searchQuery,
-                                sort,
-                                selectedStartDate,
-                                selectedEndDate,
-                                minPrice,
-                                maxPrice,
-                                timezone,
-                                selectedStatuses,
-                                selectedSports,
-                                selectedVisibility,
-                                selectedCategories,
-                                PLAYER_STATUS_OPTIONS)));
+        if (!TYPE_TOURNAMENT.equals(selectedType)) {
+            filterGroups.add(
+                    new FilterGroupViewModel(
+                            messageSource.getMessage("host.filters.status", null, locale),
+                            buildStatusFilterOptions(
+                                    path,
+                                    locale,
+                                    searchQuery,
+                                    sort,
+                                    selectedStartDate,
+                                    selectedEndDate,
+                                    minPrice,
+                                    maxPrice,
+                                    timezone,
+                                    selectedStatuses,
+                                    selectedSports,
+                                    selectedVisibility,
+                                    selectedCategories,
+                                    PLAYER_STATUS_OPTIONS)));
+        }
         final List<SelectOptionViewModel> sortOptions =
                 List.of(
                         sortOption(
@@ -714,7 +865,7 @@ public class MatchDashboardController {
             final List<String> selectedSports,
             final List<String> selectedVisibility,
             final List<String> selectedCategories,
-            final PaginatedResult<Match> result) {
+            final PaginatedResult<?> result) {
         return PaginationUtils.buildPaginationItems(
                 result.getPage(),
                 result.getTotalPages(),
@@ -751,9 +902,52 @@ public class MatchDashboardController {
             final List<String> selectedVisibility,
             final List<String> selectedCategories,
             final int page) {
+        String selectedType = TYPE_MATCH;
+        final ServletRequestAttributes attrs =
+                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            selectedType = normalizeType(attrs.getRequest().getParameter("type"));
+        }
+        return buildPageUrl(
+                path,
+                locale,
+                searchQuery,
+                sort,
+                startDate,
+                endDate,
+                minPrice,
+                maxPrice,
+                timezone,
+                selectedStatuses,
+                selectedSports,
+                selectedVisibility,
+                selectedCategories,
+                page,
+                selectedType);
+    }
+
+    private static String buildPageUrl(
+            final String path,
+            final Locale locale,
+            final String searchQuery,
+            final String sort,
+            final String startDate,
+            final String endDate,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final String timezone,
+            final List<String> selectedStatuses,
+            final List<String> selectedSports,
+            final List<String> selectedVisibility,
+            final List<String> selectedCategories,
+            final int page,
+            final String selectedType) {
         final UriComponentsBuilder builder =
                 UriComponentsBuilder.fromPath(path).queryParam("page", page);
         if ("/events".equals(path)) {
+            if (TYPE_TOURNAMENT.equals(normalizeType(selectedType))) {
+                builder.queryParam("type", TYPE_TOURNAMENT);
+            }
             final ServletRequestAttributes attrs =
                     (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
@@ -907,6 +1101,64 @@ public class MatchDashboardController {
                         1),
                 null,
                 active);
+    }
+
+    private List<FilterOptionViewModel> buildEventTypeFilterOptions(
+            final String path,
+            final Locale locale,
+            final String searchQuery,
+            final String sort,
+            final String startDate,
+            final String endDate,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final String timezone,
+            final List<String> selectedStatuses,
+            final List<String> selectedSports,
+            final List<String> selectedVisibility,
+            final List<String> selectedCategories,
+            final String selectedType) {
+        return List.of(
+                new FilterOptionViewModel(
+                        messageSource.getMessage("filter.eventType.matches", null, locale),
+                        buildPageUrl(
+                                path,
+                                locale,
+                                searchQuery,
+                                sort,
+                                startDate,
+                                endDate,
+                                minPrice,
+                                maxPrice,
+                                timezone,
+                                selectedStatuses,
+                                selectedSports,
+                                selectedVisibility,
+                                selectedCategories,
+                                1,
+                                TYPE_MATCH),
+                        null,
+                        TYPE_MATCH.equals(selectedType)),
+                new FilterOptionViewModel(
+                        messageSource.getMessage("filter.eventType.tournaments", null, locale),
+                        buildPageUrl(
+                                path,
+                                locale,
+                                searchQuery,
+                                sort,
+                                startDate,
+                                endDate,
+                                minPrice,
+                                maxPrice,
+                                timezone,
+                                List.of(),
+                                selectedSports,
+                                selectedVisibility,
+                                List.of(),
+                                1,
+                                TYPE_TOURNAMENT),
+                        null,
+                        TYPE_TOURNAMENT.equals(selectedType)));
     }
 
     private List<FilterOptionViewModel> buildSportFilterOptions(
@@ -1178,6 +1430,18 @@ public class MatchDashboardController {
 
     private static String normalizeQuery(final String query) {
         return query == null ? "" : query.trim();
+    }
+
+    private static String normalizeType(final String type) {
+        return TYPE_TOURNAMENT.equalsIgnoreCase(type) ? TYPE_TOURNAMENT : TYPE_MATCH;
+    }
+
+    private String tournamentStatusLabel(final Tournament tournament, final Locale locale) {
+        if (tournament == null || tournament.getStatus() == null) {
+            return null;
+        }
+        return messageSource.getMessage(
+                "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
     private static DateRange normalizeDateRange(

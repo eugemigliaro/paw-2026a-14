@@ -28,6 +28,19 @@ public interface TournamentService {
             Double latitude,
             Double longitude);
 
+    PaginatedResult<Tournament> findHostedTournaments(
+            User host,
+            String query,
+            String sport,
+            String startDate,
+            String endDate,
+            String sort,
+            int page,
+            int pageSize,
+            String timezone,
+            BigDecimal minPrice,
+            BigDecimal maxPrice);
+
     default PaginatedResult<Tournament> searchPublicTournaments(
             final String query,
             final String sport,

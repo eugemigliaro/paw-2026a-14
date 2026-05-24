@@ -94,6 +94,19 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
     }
 
     @Override
+    public List<Tournament> findTournamentsByMember(final User user) {
+        return em.createQuery(
+                        "SELECT DISTINCT tt.tournament FROM TournamentTeamMember ttm"
+                                + " JOIN ttm.team tt"
+                                + " WHERE ttm.user.id = :userId"
+                                + " AND tt.tournament.deleted = FALSE"
+                                + " ORDER BY tt.tournament.startsAt ASC, tt.tournament.id ASC",
+                        Tournament.class)
+                .setParameter("userId", user.getId())
+                .getResultList();
+    }
+
+    @Override
     public long countByTournament(final long tournamentId) {
         return em.createQuery(
                         "SELECT COUNT(tt) FROM TournamentTeam tt"
