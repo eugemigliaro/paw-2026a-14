@@ -53,7 +53,7 @@ public class CreateTournamentForm {
     @NotNull(message = "{CreateTournamentForm.teamSize.NotNull}")
     @Min(value = 1, message = "{CreateTournamentForm.teamSize.Min}")
     @Max(value = 100, message = "{CreateTournamentForm.teamSize.Max}")
-    private Integer teamSize = 1;
+    private Integer teamSize = 2;
 
     @NotNull(message = "{CreateTournamentForm.pricePerPlayer.NotNull}")
     @DecimalMin(

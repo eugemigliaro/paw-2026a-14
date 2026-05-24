@@ -32,6 +32,7 @@
 <c:url var="filterDropdownsHref" value="/js/filter-dropdowns.js" />
 <c:url var="eventsToggleFilterHref" value="/js/events-toggle-filter.js" />
 <c:url var="hostCreateMatchHref" value="/js/host-create-match.js" />
+<c:url var="tournamentTeamSizeHref" value="/js/tournament-team-size.js" />
 <c:url var="recurrenceScheduleHref" value="/js/recurrence-schedule.js?v=20260428" />
 <c:url var="exploreLocationHref" value="/js/explore-location.js" />
 <c:url var="leafletCssHref" value="/css/vendor/leaflet.css" />
@@ -67,6 +68,7 @@
 <script defer src="${filterDropdownsHref}"></script>
 <script defer src="${eventsToggleFilterHref}"></script>
 <script defer src="${hostCreateMatchHref}"></script>
+<script defer src="${tournamentTeamSizeHref}"></script>
 <script defer src="${recurrenceScheduleHref}"></script>
 <script defer src="${exploreLocationHref}"></script>
 <script defer src="${locationPickerHref}"></script>

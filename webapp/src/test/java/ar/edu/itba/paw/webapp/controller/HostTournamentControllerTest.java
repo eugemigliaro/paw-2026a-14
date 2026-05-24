@@ -178,6 +178,20 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void postCreateWithUnsupportedTeamSizeForSportReturnsForm() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(createPost("City Football Cup", "football", "2", true, true))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attributeHasFieldErrors("createTournamentForm", "teamSize"));
+        Assertions.assertNull(createdRequest.get());
+    }
+
+    @Test
     void postCloseRegistrationByNonHostReturnsForbidden() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
@@ -323,11 +337,21 @@ class HostTournamentControllerTest {
                     final String title,
                     final boolean allowSoloSignup,
                     final boolean allowTeamDraft) {
+        return createPost(title, "padel", "1", allowSoloSignup, allowTeamDraft);
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            createPost(
+                    final String title,
+                    final String sport,
+                    final String teamSize,
+                    final boolean allowSoloSignup,
+                    final boolean allowTeamDraft) {
         final org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder builder =
                 post("/host/tournaments")
                         .locale(Locale.ENGLISH)
                         .param("title", title)
-                        .param("sport", "padel")
+                        .param("sport", sport)
                         .param("description", "Open city tournament")
                         .param("address", "Downtown Club")
                         .param("registrationOpensDate", "2030-04-01")
@@ -335,7 +359,7 @@ class HostTournamentControllerTest {
                         .param("registrationClosesDate", "2030-04-09")
                         .param("registrationClosesTime", "20:00")
                         .param("bracketSize", "8")
-                        .param("teamSize", "1")
+                        .param("teamSize", teamSize)
                         .param("pricePerPlayer", "10.00")
                         .param("tz", "UTC");
         if (allowSoloSignup) {

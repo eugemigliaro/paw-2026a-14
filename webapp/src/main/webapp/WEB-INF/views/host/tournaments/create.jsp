@@ -64,7 +64,7 @@
 								<label class="field" for="tournament-sport">
 									<span class="field__label"><spring:message code="tournament.form.sport.label" /></span>
 									<span class="field__select-wrap">
-										<form:select path="sport" id="tournament-sport" cssClass="field__control field__control--select" required="required">
+										<form:select path="sport" id="tournament-sport" cssClass="field__control field__control--select" required="required" data-tournament-sport-select="true">
 											<form:option value="padel" label="${sportPadel}" />
 											<form:option value="football" label="${sportFootball}" />
 											<form:option value="tennis" label="${sportTennis}" />
@@ -170,7 +170,21 @@
 
 								<label class="field" for="tournament-team-size">
 									<span class="field__label"><spring:message code="tournament.form.teamSize.label" /></span>
-									<form:input path="teamSize" id="tournament-team-size" type="number" min="1" max="100" cssClass="field__control" required="required" />
+									<span class="field__select-wrap">
+										<form:select path="teamSize" id="tournament-team-size" cssClass="field__control field__control--select" required="required" data-tournament-team-size-select="true">
+											<form:option value="1" label="1" />
+											<form:option value="2" label="2" />
+											<form:option value="3" label="3" />
+											<form:option value="4" label="4" />
+											<form:option value="5" label="5" />
+											<form:option value="6" label="6" />
+											<form:option value="7" label="7" />
+											<form:option value="8" label="8" />
+											<form:option value="9" label="9" />
+											<form:option value="10" label="10" />
+											<form:option value="11" label="11" />
+										</form:select>
+									</span>
 									<form:errors path="teamSize" cssClass="field__error" element="span" />
 								</label>
 

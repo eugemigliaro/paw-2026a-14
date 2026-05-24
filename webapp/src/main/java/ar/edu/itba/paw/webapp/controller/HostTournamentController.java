@@ -59,6 +59,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class HostTournamentController {
 
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
+    private static final Map<Sport, List<Integer>> SUPPORTED_TEAM_SIZES_BY_SPORT =
+            Map.of(
+                    Sport.PADEL,
+                    List.of(1, 2),
+                    Sport.TENNIS,
+                    List.of(1, 2),
+                    Sport.FOOTBALL,
+                    List.of(5, 7, 8, 11),
+                    Sport.BASKETBALL,
+                    List.of(3, 5),
+                    Sport.OTHER,
+                    List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11));
     private static final DateTimeFormatter TIME_INPUT_FORMATTER =
             DateTimeFormatter.ofPattern("HH:mm");
 
@@ -316,6 +328,7 @@ public class HostTournamentController {
             final Locale locale) {
         validateSport(form, bindingResult, locale);
         validateBracketSize(form, bindingResult, locale);
+        validateTeamSize(form, bindingResult, locale);
         validateJoinMode(form, bindingResult, locale);
         validateCoordinates(form, bindingResult, locale);
         validateRegistrationWindow(form, bindingResult, locale);
@@ -349,6 +362,28 @@ public class HostTournamentController {
                     "CreateTournamentForm.bracketSize.Valid",
                     messageSource.getMessage(
                             "CreateTournamentForm.bracketSize.Valid", null, locale));
+        }
+    }
+
+    private void validateTeamSize(
+            final CreateTournamentForm form,
+            final BindingResult bindingResult,
+            final Locale locale) {
+        if (bindingResult.hasFieldErrors("sport") || bindingResult.hasFieldErrors("teamSize")) {
+            return;
+        }
+        final Sport sport = PersistableEnum.fromDbValue(Sport.class, form.getSport()).orElse(null);
+        if (sport == null) {
+            return;
+        }
+        final List<Integer> supportedTeamSizes =
+                SUPPORTED_TEAM_SIZES_BY_SPORT.getOrDefault(sport, List.of());
+        if (!supportedTeamSizes.contains(form.getTeamSize())) {
+            bindingResult.rejectValue(
+                    "teamSize",
+                    "CreateTournamentForm.teamSize.ValidForSport",
+                    messageSource.getMessage(
+                            "CreateTournamentForm.teamSize.ValidForSport", null, locale));
         }
     }
 
