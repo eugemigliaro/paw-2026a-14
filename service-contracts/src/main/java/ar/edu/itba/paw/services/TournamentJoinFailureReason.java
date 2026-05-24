@@ -1,0 +1,12 @@
+package ar.edu.itba.paw.services;
+
+public enum TournamentJoinFailureReason {
+    TOURNAMENT_NOT_FOUND,
+    FORBIDDEN,
+    SOLO_SIGNUP_DISABLED,
+    REGISTRATION_NOT_OPEN,
+    ALREADY_IN_SOLO_POOL,
+    ALREADY_ON_TEAM,
+    ALREADY_ASSIGNED,
+    NOT_IN_SOLO_POOL
+}

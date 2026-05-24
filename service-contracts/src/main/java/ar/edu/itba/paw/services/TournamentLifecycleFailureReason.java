@@ -1,0 +1,16 @@
+package ar.edu.itba.paw.services;
+
+public enum TournamentLifecycleFailureReason {
+    TOURNAMENT_NOT_FOUND,
+    FORBIDDEN,
+    INVALID_DETAILS,
+    INVALID_FORMAT,
+    INVALID_BRACKET_SIZE,
+    INVALID_TEAM_SIZE,
+    INVALID_JOIN_MODE,
+    INVALID_REGISTRATION_WINDOW,
+    INVALID_SCHEDULE,
+    NOT_EDITABLE,
+    NOT_CANCELLABLE,
+    ALREADY_COMPLETED
+}
