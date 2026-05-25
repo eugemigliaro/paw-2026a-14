@@ -457,7 +457,7 @@ public class HostTournamentController {
             final TournamentBracketView bracketView =
                     tournamentBracketService.getBracket(tournamentId, actingUser);
             final List<TournamentMatchScheduleRequest> schedules =
-                    roundOneSchedules(bracketView, request);
+                    allMatchSchedules(bracketView, request);
             tournamentBracketService.publishBracket(tournamentId, actingUser, schedules);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.publish.success");
@@ -834,10 +834,14 @@ public class HostTournamentController {
                 return "tournament.bracket.error.manualPairingsRequired";
             case UNDER_CAPACITY:
                 return "tournament.bracket.error.underCapacity";
-            case MISSING_ROUND_ONE_SCHEDULE:
-                return "tournament.bracket.error.missingRoundOneSchedule";
+            case MISSING_MATCH_SCHEDULE:
+                return "tournament.bracket.error.missingMatchSchedule";
             case INVALID_SCHEDULE:
                 return "tournament.bracket.error.invalidSchedule";
+            case SCHEDULE_BEFORE_NOW:
+                return "tournament.bracket.error.beforeNow";
+            case INVALID_ROUND_ORDER:
+                return "tournament.bracket.error.invalidRoundOrder";
             case NOT_IN_PROGRESS:
                 return "tournament.bracket.error.notInProgress";
             case MATCH_NOT_READY:
@@ -1050,11 +1054,12 @@ public class HostTournamentController {
                 locale);
     }
 
-    private List<TournamentMatchScheduleRequest> roundOneSchedules(
+    private List<TournamentMatchScheduleRequest> allMatchSchedules(
             final TournamentBracketView bracketView, final HttpServletRequest request) {
         return bracketView.getMatches().stream()
-                .filter(match -> match.getRoundNumber() == 1)
-                .sorted(Comparator.comparingInt(TournamentMatch::getMatchIndex))
+                .sorted(
+                        Comparator.comparingInt(TournamentMatch::getRoundNumber)
+                                .thenComparingInt(TournamentMatch::getMatchIndex))
                 .map(match -> scheduleRequest(match, request))
                 .toList();
     }

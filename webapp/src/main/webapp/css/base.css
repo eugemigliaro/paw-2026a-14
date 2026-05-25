@@ -410,7 +410,6 @@ button.site-header__settings-item {
 	line-height: 1.65;
 	overflow-x: auto;
 	overflow-wrap: break-word;
-	white-space: pre-wrap;
 }
 
 .muted-copy {
