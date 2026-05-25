@@ -105,6 +105,30 @@
           <c:out value="${spanishShortLabel}" />
         </a>
       </nav>
+      <sec:authorize access="isAnonymous()">
+        <spring:message var="loginLabel" code="nav.login" />
+        <spring:message var="registerLabel" code="nav.register" />
+        <div class="site-header__auth">
+          <ui:button label="${loginLabel}" href="${loginHref}" variant="secondary" size="sm" />
+          <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
+        </div>
+      </sec:authorize>
+      <c:if test="${not empty shell.hostAction}">
+        <c:url var="hostActionHref" value="${shell.hostAction.href}" />
+        <a
+          href="${hostActionHref}"
+          class="site-header__nav-link site-header__host-button">
+          <c:out value="${shell.hostAction.label}" />
+        </a>
+      </c:if>
+      <c:if test="${not empty shell.tournamentHostAction}">
+        <c:url var="tournamentHostActionHref" value="${shell.tournamentHostAction.href}" />
+        <a
+          href="${tournamentHostActionHref}"
+          class="site-header__nav-link site-header__host-button">
+          <c:out value="${shell.tournamentHostAction.label}" />
+        </a>
+      </c:if>
       <sec:authorize access="!isAnonymous()">
           <spring:message var="settingsLabel" code="nav.settings" text="Settings" />
           <div class="site-header__settings-menu" data-overflow-menu="true">
@@ -189,32 +213,6 @@
             </div>
           </div>
         </sec:authorize>
-      <sec:authorize access="isAnonymous()">
-        <spring:message var="loginLabel" code="nav.login" />
-        <spring:message var="registerLabel" code="nav.register" />
-        <div class="site-header__auth">
-          <ui:button label="${loginLabel}" href="${loginHref}" variant="secondary" size="sm" />
-          <ui:button label="${registerLabel}" href="${registerHref}" variant="secondary" size="sm" />
-        </div>
-      </sec:authorize>
-      <c:if test="${not empty shell.hostAction}">
-        <c:url var="hostActionHref" value="${shell.hostAction.href}" />
-        <ui:button
-          label="${shell.hostAction.label}"
-          href="${hostActionHref}"
-          variant="secondary"
-          size="md"
-          className="site-header__host-button" />
-      </c:if>
-      <c:if test="${not empty shell.tournamentHostAction}">
-        <c:url var="tournamentHostActionHref" value="${shell.tournamentHostAction.href}" />
-        <ui:button
-          label="${shell.tournamentHostAction.label}"
-          href="${tournamentHostActionHref}"
-          variant="secondary"
-          size="md"
-          className="site-header__host-button" />
-      </c:if>
     </div>
   </div>
 </header>

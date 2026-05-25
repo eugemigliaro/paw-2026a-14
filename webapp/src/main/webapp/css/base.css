@@ -172,12 +172,6 @@ a {
 	white-space: nowrap;
 }
 
-.site-header__host-button:hover,
-.site-header__host-button:active {
-	box-shadow: 0 1px 0 rgba(17, 37, 34, 0.04);
-	transform: none;
-}
-
 .site-header__settings-menu {
 	position: relative;
 }
