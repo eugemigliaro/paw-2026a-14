@@ -202,11 +202,22 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     }
 
     private void requireRegistrationOpen(final Tournament tournament) {
-        if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
+        if (TournamentStatus.REGISTRATION != tournament.getStatus()
+                || !isRegistrationOpenNow(tournament)) {
             throw registrationException(
                     TournamentJoinFailureReason.REGISTRATION_NOT_OPEN,
                     "tournament.registration.error.notOpen");
         }
+    }
+
+    private boolean isRegistrationOpenNow(final Tournament tournament) {
+        final Instant now = Instant.now(clock);
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        final Instant closesAt = tournament.getRegistrationClosesAt();
+        return opensAt != null
+                && closesAt != null
+                && !now.isBefore(opensAt)
+                && now.isBefore(closesAt);
     }
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {

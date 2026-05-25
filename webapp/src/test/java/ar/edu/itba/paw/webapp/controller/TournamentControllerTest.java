@@ -30,7 +30,9 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -69,7 +71,8 @@ class TournamentControllerTest {
                                         tournamentService,
                                         tournamentRegistrationService,
                                         tournamentBracketService,
-                                        messageSource()))
+                                        messageSource(),
+                                        Clock.fixed(NOW, ZoneId.of("UTC"))))
                         .build();
     }
 
@@ -107,6 +110,37 @@ class TournamentControllerTest {
                                         "tournamentPage",
                                         Matchers.hasProperty(
                                                 "requiresLoginToJoin", Matchers.is(true))));
+    }
+
+    @Test
+    void publicDetailTurnsOffJoinBeforeRegistrationOpens() throws Exception {
+        // 1. Arrange
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(futureRegistrationTournament(77L)));
+        Mockito.when(tournamentRegistrationService.findSoloEntry(Mockito.eq(77L), Mockito.isNull()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.isNull()))
+                .thenReturn(Optional.empty());
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(new Locale("es")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tournaments/detail"))
+                .andExpect(model().attributeExists("tournamentPage"))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty("canJoinSolo", Matchers.is(false))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "registrationNotStarted", Matchers.is(true))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "statusLabel", Matchers.is("Inscripción"))));
     }
 
     @Test
@@ -296,9 +330,35 @@ class TournamentControllerTest {
                 1,
                 true,
                 false,
-                Instant.parse("2030-04-01T09:00:00Z"),
-                Instant.parse("2030-04-09T20:00:00Z"),
+                NOW.minusSeconds(3600),
+                NOW.plusSeconds(86400),
                 status,
+                NOW,
+                NOW);
+    }
+
+    private Tournament futureRegistrationTournament(final Long id) {
+        return new Tournament(
+                id,
+                host,
+                Sport.PADEL,
+                "City Padel Cup",
+                "Open city tournament",
+                "Downtown Club",
+                null,
+                null,
+                Instant.parse("2030-04-10T18:00:00Z"),
+                Instant.parse("2030-04-10T21:00:00Z"),
+                BigDecimal.TEN,
+                null,
+                TournamentFormat.SINGLE_ELIMINATION,
+                8,
+                1,
+                true,
+                false,
+                NOW.plusSeconds(3600),
+                NOW.plusSeconds(86400),
+                TournamentStatus.REGISTRATION,
                 NOW,
                 NOW);
     }

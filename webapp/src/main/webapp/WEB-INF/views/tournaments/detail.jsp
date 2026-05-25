@@ -182,6 +182,12 @@
 									<ui:button label="${signInLabel}" href="${loginHref}" fullWidth="${true}" />
 									<p class="booking-panel__note"><spring:message code="tournament.registration.signInNote" /></p>
 								</c:when>
+								<c:when test="${tournamentPage.registrationNotStarted}">
+									<spring:message var="registrationTurnedOffLabel" code="tournament.registration.turnedOff" />
+									<spring:message var="registrationNotStartedNote" code="tournament.registration.turnedOffNote" />
+									<ui:button label="${registrationTurnedOffLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+									<p class="booking-panel__note"><c:out value="${registrationNotStartedNote}" /></p>
+								</c:when>
 								<c:otherwise>
 									<spring:message var="registrationUnavailableLabel" code="tournament.registration.unavailable" />
 									<ui:button label="${registrationUnavailableLabel}" type="button" fullWidth="${true}" disabled="${true}" />

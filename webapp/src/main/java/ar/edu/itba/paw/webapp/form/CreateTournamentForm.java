@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.form;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Max;
@@ -12,6 +13,12 @@ import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 
 public class CreateTournamentForm {
+
+    public CreateTournamentForm() {
+        final LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        registrationOpensDate = now.toLocalDate();
+        registrationOpensTime = now.toLocalTime();
+    }
 
     @NotBlank(message = "{CreateTournamentForm.title.NotBlank}")
     @Size(max = 150, message = "{CreateTournamentForm.title.Size}")
@@ -33,11 +40,11 @@ public class CreateTournamentForm {
 
     @NotNull(message = "{CreateTournamentForm.registrationOpensDate.NotNull}")
     @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private LocalDate registrationOpensDate = LocalDate.now().plusDays(1);
+    private LocalDate registrationOpensDate;
 
     @NotNull(message = "{CreateTournamentForm.registrationOpensTime.NotNull}")
     @DateTimeFormat(pattern = "HH:mm")
-    private LocalTime registrationOpensTime = LocalTime.of(9, 0);
+    private LocalTime registrationOpensTime;
 
     @NotNull(message = "{CreateTournamentForm.registrationClosesDate.NotNull}")
     @DateTimeFormat(pattern = "yyyy-MM-dd")

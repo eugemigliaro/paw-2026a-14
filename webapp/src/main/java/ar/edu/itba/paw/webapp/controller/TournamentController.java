@@ -29,6 +29,7 @@ import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -61,16 +62,19 @@ public class TournamentController {
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
+    private final Clock clock;
 
     public TournamentController(
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final Clock clock) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
+        this.clock = clock;
     }
 
     @GetMapping("/tournaments/{tournamentId:\\d+}")
@@ -236,7 +240,9 @@ public class TournamentController {
             final Optional<TournamentSoloEntry> soloEntry,
             final Optional<TournamentTeam> userTeam,
             final Locale locale) {
-        final boolean registrationOpen = TournamentStatus.REGISTRATION == tournament.getStatus();
+        final Instant now = Instant.now(clock);
+        final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
+        final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
         final TournamentSoloEntryStatus soloStatus =
                 soloEntry.map(TournamentSoloEntry::getStatus).orElse(null);
         final boolean canJoinSolo =
@@ -301,6 +307,7 @@ public class TournamentController {
                 canJoinSolo,
                 canLeaveSolo,
                 requiresLoginToJoin,
+                registrationNotStarted,
                 canCloseRegistration,
                 canEditTournament,
                 canCancelTournament,
@@ -367,6 +374,23 @@ public class TournamentController {
                 "tournament.detail.registrationWindow.value",
                 new Object[] {formatInstant(opensAt, locale), formatInstant(closesAt, locale)},
                 locale);
+    }
+
+    private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        final Instant closesAt = tournament.getRegistrationClosesAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && closesAt != null
+                && !now.isBefore(opensAt)
+                && now.isBefore(closesAt);
+    }
+
+    private boolean isRegistrationNotStarted(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && now.isBefore(opensAt);
     }
 
     private String joinModeLabel(final Tournament tournament, final Locale locale) {

@@ -115,6 +115,32 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
+    public void joinSoloBeforeRegistrationOpensFails() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(
+                        10L,
+                        UserUtils.getUser(1L),
+                        4,
+                        1,
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200));
+        final User user = UserUtils.getUser(2L);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+
+        // 2. Exercise
+        final TournamentRegistrationException exception =
+                Assertions.assertThrows(
+                        TournamentRegistrationException.class,
+                        () -> registrationService.joinSolo(10L, user));
+
+        // 3. Assert
+        Assertions.assertEquals(
+                TournamentJoinFailureReason.REGISTRATION_NOT_OPEN, exception.getReason());
+    }
+
+    @Test
     public void joinSoloTwiceReturnsExistingEntry() {
         // 1. Arrange
         final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
@@ -263,6 +289,32 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
+    public void closeRegistrationBeforeRegistrationOpensFails() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament =
+                tournament(
+                        10L,
+                        host,
+                        4,
+                        2,
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200));
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+
+        // 2. Exercise
+        final TournamentRegistrationException exception =
+                Assertions.assertThrows(
+                        TournamentRegistrationException.class,
+                        () -> registrationService.closeRegistration(10L, host));
+
+        // 3. Assert
+        Assertions.assertEquals(
+                TournamentJoinFailureReason.REGISTRATION_NOT_OPEN, exception.getReason());
+    }
+
+    @Test
     public void userAlreadyOnTeamCannotJoinSolo() {
         // 1. Arrange
         final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
@@ -374,6 +426,39 @@ public class TournamentRegistrationServiceImplTest {
             final User host,
             final int bracketSize,
             final int teamSize,
+            final TournamentStatus status,
+            final Instant registrationOpensAt,
+            final Instant registrationClosesAt) {
+        return new Tournament(
+                id,
+                host,
+                Sport.FOOTBALL,
+                "Saturday Cup",
+                "Friendly tournament",
+                "Club Street 123",
+                -34.60,
+                -58.38,
+                FIXED_NOW.plusSeconds(86400),
+                FIXED_NOW.plusSeconds(90000),
+                BigDecimal.ZERO,
+                null,
+                TournamentFormat.SINGLE_ELIMINATION,
+                bracketSize,
+                teamSize,
+                true,
+                false,
+                registrationOpensAt,
+                registrationClosesAt,
+                status,
+                FIXED_NOW,
+                FIXED_NOW);
+    }
+
+    private static Tournament tournament(
+            final long id,
+            final User host,
+            final int bracketSize,
+            final int teamSize,
             final TournamentStatus status) {
         return new Tournament(
                 id,
@@ -393,7 +478,7 @@ public class TournamentRegistrationServiceImplTest {
                 teamSize,
                 true,
                 false,
-                FIXED_NOW.plusSeconds(3600),
+                FIXED_NOW.minusSeconds(3600),
                 FIXED_NOW.plusSeconds(7200),
                 status,
                 FIXED_NOW,

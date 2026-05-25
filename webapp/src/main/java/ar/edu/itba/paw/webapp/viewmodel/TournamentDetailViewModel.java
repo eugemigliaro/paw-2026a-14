@@ -30,6 +30,7 @@ public class TournamentDetailViewModel {
     private final boolean canJoinSolo;
     private final boolean canLeaveSolo;
     private final boolean requiresLoginToJoin;
+    private final boolean registrationNotStarted;
     private final boolean canCloseRegistration;
     private final boolean canEditTournament;
     private final boolean canCancelTournament;
@@ -63,6 +64,7 @@ public class TournamentDetailViewModel {
             final boolean canJoinSolo,
             final boolean canLeaveSolo,
             final boolean requiresLoginToJoin,
+            final boolean registrationNotStarted,
             final boolean canCloseRegistration,
             final boolean canEditTournament,
             final boolean canCancelTournament,
@@ -94,6 +96,7 @@ public class TournamentDetailViewModel {
         this.canJoinSolo = canJoinSolo;
         this.canLeaveSolo = canLeaveSolo;
         this.requiresLoginToJoin = requiresLoginToJoin;
+        this.registrationNotStarted = registrationNotStarted;
         this.canCloseRegistration = canCloseRegistration;
         this.canEditTournament = canEditTournament;
         this.canCancelTournament = canCancelTournament;
@@ -203,6 +206,10 @@ public class TournamentDetailViewModel {
 
     public boolean isRequiresLoginToJoin() {
         return requiresLoginToJoin;
+    }
+
+    public boolean isRegistrationNotStarted() {
+        return registrationNotStarted;
     }
 
     public boolean isCanCloseRegistration() {
