@@ -12,6 +12,8 @@ public interface TournamentRegistrationService {
 
     void leaveSolo(long tournamentId, User user);
 
+    boolean isSoloPoolFull(long tournamentId);
+
     Optional<TournamentSoloEntry> findSoloEntry(long tournamentId, User user);
 
     Optional<TournamentTeam> findUserTeam(long tournamentId, User user);

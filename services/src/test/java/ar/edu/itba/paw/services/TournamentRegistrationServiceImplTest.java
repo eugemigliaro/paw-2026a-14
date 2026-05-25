@@ -162,6 +162,28 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
+    public void joinSoloWhenPoolIsFullFails() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 2, 2);
+        final User user = UserUtils.getUser(2L);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentSoloEntryDao.countActiveByTournament(10L)).thenReturn(4L);
+
+        // 2. Exercise
+        final TournamentRegistrationException exception =
+                Assertions.assertThrows(
+                        TournamentRegistrationException.class,
+                        () -> registrationService.joinSolo(10L, user));
+
+        // 3. Assert
+        Assertions.assertEquals(TournamentJoinFailureReason.SOLO_POOL_FULL, exception.getReason());
+    }
+
+    @Test
     public void leaveSoloSucceeds() {
         // 1. Arrange
         final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);

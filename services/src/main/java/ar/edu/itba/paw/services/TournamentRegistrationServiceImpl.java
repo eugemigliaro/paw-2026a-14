@@ -77,21 +77,30 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
         final Optional<TournamentSoloEntry> existing =
                 tournamentSoloEntryDao.findByTournamentAndUser(tournamentId, user.getId());
+        if (existing.isPresent()) {
+            final TournamentSoloEntry soloEntry = existing.get();
+            if (TournamentSoloEntryStatus.IN_POOL == soloEntry.getStatus()) {
+                return soloEntry;
+            }
+            if (TournamentSoloEntryStatus.ASSIGNED == soloEntry.getStatus()) {
+                throw registrationException(
+                        TournamentJoinFailureReason.ALREADY_ASSIGNED,
+                        "tournament.registration.error.alreadyAssigned");
+            }
+        }
+
+        if (isSoloPoolFull(tournament)) {
+            throw registrationException(
+                    TournamentJoinFailureReason.SOLO_POOL_FULL,
+                    "tournament.registration.error.soloPoolFull");
+        }
+
         if (existing.isEmpty()) {
             return tournamentSoloEntryDao.create(
                     tournament, user, TournamentSoloEntryStatus.IN_POOL);
         }
 
         final TournamentSoloEntry soloEntry = existing.get();
-        if (TournamentSoloEntryStatus.IN_POOL == soloEntry.getStatus()) {
-            return soloEntry;
-        }
-        if (TournamentSoloEntryStatus.ASSIGNED == soloEntry.getStatus()) {
-            throw registrationException(
-                    TournamentJoinFailureReason.ALREADY_ASSIGNED,
-                    "tournament.registration.error.alreadyAssigned");
-        }
-
         soloEntry.setStatus(TournamentSoloEntryStatus.IN_POOL);
         soloEntry.setAssignedTeam(null);
         soloEntry.setJoinedAt(Instant.now(clock));
@@ -120,6 +129,12 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         soloEntry.setAssignedTeam(null);
         soloEntry.setLeftAt(Instant.now(clock));
         tournamentSoloEntryDao.update(soloEntry);
+    }
+
+    @Override
+    public boolean isSoloPoolFull(final long tournamentId) {
+        final Tournament tournament = findTournamentOrThrow(tournamentId);
+        return isSoloPoolFull(tournament);
     }
 
     @Override
@@ -290,6 +305,13 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final Tournament updatedTournament = tournamentDao.update(tournament);
         tournamentMailService.sendTournamentCancelledEmail(updatedTournament);
         return updatedTournament;
+    }
+
+    private boolean isSoloPoolFull(final Tournament tournament) {
+        final long currentSoloEntries =
+                tournamentSoloEntryDao.countActiveByTournament(tournament.getId());
+        final long maxSoloEntries = (long) tournament.getBracketSize() * tournament.getTeamSize();
+        return currentSoloEntries >= maxSoloEntries;
     }
 
     private String soloTeamName(final int index) {

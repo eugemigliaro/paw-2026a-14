@@ -249,6 +249,7 @@ public class TournamentController {
                 currentUser != null
                         && registrationOpen
                         && tournament.isAllowSoloSignup()
+                        && !tournamentRegistrationService.isSoloPoolFull(tournament.getId())
                         && userTeam.isEmpty()
                         && soloStatus != TournamentSoloEntryStatus.IN_POOL
                         && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
@@ -523,6 +524,8 @@ public class TournamentController {
                 return "tournament.registration.error.alreadyAssigned";
             case NOT_IN_SOLO_POOL:
                 return "tournament.registration.error.notInSoloPool";
+            case SOLO_POOL_FULL:
+                return "tournament.registration.error.soloPoolFull";
             case FORBIDDEN:
                 return "tournament.registration.error.forbidden";
             case TOURNAMENT_NOT_FOUND:

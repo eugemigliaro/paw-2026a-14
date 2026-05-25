@@ -23,10 +23,12 @@ import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
+import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
+import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.math.BigDecimal;
@@ -156,6 +158,34 @@ class TournamentControllerTest {
     }
 
     @Test
+    void publicDetailTurnsOffJoinWhenSoloPoolIsFull() throws Exception {
+        // 1. Arrange
+        final User player = UserUtils.getUser(9L);
+        AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(tournament(77L, TournamentStatus.REGISTRATION)));
+        Mockito.when(
+                        tournamentRegistrationService.findSoloEntry(
+                                Mockito.eq(77L), Mockito.eq(player)))
+                .thenReturn(Optional.empty());
+        Mockito.when(
+                        tournamentRegistrationService.findUserTeam(
+                                Mockito.eq(77L), Mockito.eq(player)))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.isSoloPoolFull(77L)).thenReturn(true);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tournaments/detail"))
+                .andExpect(model().attributeExists("tournamentPage"))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty("canJoinSolo", Matchers.is(false))));
+    }
+
+    @Test
     void hostPublicDetailExposesEditingBeforeRegistrationOpens() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
@@ -218,6 +248,26 @@ class TournamentControllerTest {
                 .andExpect(
                         flash().attribute(
                                         "tournamentNoticeCode", "tournament.registration.joined"));
+    }
+
+    @Test
+    void loggedInJoinWhenPoolIsFullRedirectsWithFlashError() throws Exception {
+        // 1. Arrange
+        final User player = UserUtils.getUser(9L);
+        AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentRegistrationService.joinSolo(77L, player))
+                .thenThrow(
+                        new TournamentRegistrationException(
+                                TournamentJoinFailureReason.SOLO_POOL_FULL, "Tournament is full"));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/tournaments/77/solo-entry"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77"))
+                .andExpect(
+                        flash().attribute(
+                                        "tournamentErrorCode",
+                                        "tournament.registration.error.soloPoolFull"));
     }
 
     @Test
