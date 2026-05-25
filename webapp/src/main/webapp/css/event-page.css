@@ -119,3 +119,20 @@
 .events-toggle-btn.active {
 	color: var(--accent-strong);
 }
+
+.events-search-container {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+}
+
+.events-search-container .search-panel__error {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	margin: 2px 0 0 4px;
+	font-size: 0.78rem;
+	color: #b42318;
+	white-space: nowrap;
+	z-index: 10;
+}

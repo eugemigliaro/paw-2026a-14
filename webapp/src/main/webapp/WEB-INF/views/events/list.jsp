@@ -44,58 +44,63 @@
 											<div class="events-right-section">
 
 												<!-- Search form-->
-												<form:form method="get" action="${listControls.searchAction}"
-													modelAttribute="listSearchForm" cssClass="filters-bar__search">
-													<c:forEach var="selectedSport" items="${selectedSports}">
-														<input type="hidden" name="sport"
-															value="<c:out value='${selectedSport}' />" />
-													</c:forEach>
-													<c:forEach var="selectedStatus" items="${selectedStatuses}">
-														<input type="hidden" name="status"
-															value="<c:out value='${selectedStatus}' />" />
-													</c:forEach>
-													<c:forEach var="selectedCategory" items="${selectedCategories}">
-														<input type="hidden" name="category"
-															value="<c:out value='${selectedCategory}' />" />
-													</c:forEach>
-													<c:if test="${selectedType eq 'tournament'}">
-														<input type="hidden" name="type" value="tournament" />
-													</c:if>
-													<c:forEach var="selectedVisibilityItem"
-														items="${selectedVisibility}">
-														<input type="hidden" name="visibility"
-															value="<c:out value='${selectedVisibilityItem}' />" />
-													</c:forEach>
-													<input type="hidden" name="startDate"
-														value="<c:out value='${selectedStartDateValue}' />" />
-													<input type="hidden" name="endDate"
-														value="<c:out value='${selectedEndDateValue}' />" />
-													<input type="hidden" name="sort"
-														value="<c:out value='${selectedSort}' />" />
-													<input type="hidden" name="tz"
-														value="<c:out value='${selectedTimezone}' />"
-														data-browser-timezone-field="true" />
-													<input type="hidden" name="minPrice"
-														value="<c:out value='${selectedMinPriceValue}' />" />
-													<input type="hidden" name="maxPrice"
-														value="<c:out value='${selectedMaxPriceValue}' />" />
-													<c:if test="${param.filter eq 'past'}">
-														<input type="hidden" name="filter" value="past" />
-													</c:if>
-													<div class="filters-bar__search-row">
-														<form:input path="q" cssClass="filters-bar__search-input"
-															placeholder="${searchPlaceholder}" />
-														<ui:button type="submit" variant="primary"
-															className="filters-bar__search-submit">
-															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-																stroke-width="3" stroke-linecap="round"
-																stroke-linejoin="round">
-																<circle cx="11" cy="11" r="8"></circle>
-																<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-															</svg>
-														</ui:button>
-													</div>
-												</form:form>
+												<c:url var="eventsSearchFormAction" value="${listControls.searchAction}" />
+												<div class="events-search-container">
+													<form:form method="get" action="${eventsSearchFormAction}"
+														modelAttribute="searchForm" cssClass="filters-bar__search"
+														novalidate="novalidate">
+														<c:forEach var="selectedSport" items="${selectedSports}">
+															<input type="hidden" name="sport"
+																value="<c:out value='${selectedSport}' />" />
+														</c:forEach>
+														<c:forEach var="selectedStatus" items="${selectedStatuses}">
+															<input type="hidden" name="status"
+																value="<c:out value='${selectedStatus}' />" />
+														</c:forEach>
+														<c:forEach var="selectedCategory" items="${selectedCategories}">
+															<input type="hidden" name="category"
+																value="<c:out value='${selectedCategory}' />" />
+														</c:forEach>
+														<c:if test="${selectedType eq 'tournament'}">
+															<input type="hidden" name="type" value="tournament" />
+														</c:if>
+														<c:forEach var="selectedVisibilityItem"
+															items="${selectedVisibility}">
+															<input type="hidden" name="visibility"
+																value="<c:out value='${selectedVisibilityItem}' />" />
+														</c:forEach>
+														<input type="hidden" name="startDate"
+															value="<c:out value='${selectedStartDateValue}' />" />
+														<input type="hidden" name="endDate"
+															value="<c:out value='${selectedEndDateValue}' />" />
+														<input type="hidden" name="sort"
+															value="<c:out value='${selectedSort}' />" />
+														<input type="hidden" name="tz"
+															value="<c:out value='${selectedTimezone}' />"
+															data-browser-timezone-field="true" />
+														<input type="hidden" name="minPrice"
+															value="<c:out value='${selectedMinPriceValue}' />" />
+														<input type="hidden" name="maxPrice"
+															value="<c:out value='${selectedMaxPriceValue}' />" />
+														<c:if test="${param.filter eq 'past'}">
+															<input type="hidden" name="filter" value="past" />
+														</c:if>
+														<div class="filters-bar__search-row">
+															<form:input path="q" cssClass="filters-bar__search-input"
+																placeholder="${searchPlaceholder}" />
+															<ui:button type="submit" variant="primary"
+																className="filters-bar__search-submit">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+																	stroke-width="3" stroke-linecap="round"
+																	stroke-linejoin="round">
+																	<circle cx="11" cy="11" r="8"></circle>
+																	<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+																</svg>
+															</ui:button>
+														</div>
+														<form:errors path="q" cssClass="search-panel__error" element="p" />
+													</form:form>
+												</div>
 
 												<!-- Toggle -->
 														<ui:eventsFilterToggle currentFilter="${param.filter}" />
@@ -256,7 +261,8 @@
 															<spring:message code="filter.date" />
 														</button>
 														<div class="filter-dropdown__panel">
-															<form method="get" action="${listControls.searchAction}"
+															<c:url var="dateFormAction" value="${listControls.searchAction}" />
+															<form method="get" action="${dateFormAction}"
 																class="filter-dropdown__form">
 																<input type="hidden" name="q"
 																	value="<c:out value='${listControls.searchQuery}' />" />
@@ -387,7 +393,8 @@
 															<spring:message code="filter.price" />
 														</button>
 														<div class="filter-dropdown__panel">
-															<form method="get" action="${listControls.searchAction}"
+															<c:url var="priceFormAction" value="${listControls.searchAction}" />
+															<form method="get" action="${priceFormAction}"
 																class="filter-dropdown__form">
 																<input type="hidden" name="q"
 																	value="<c:out value='${listControls.searchQuery}' />" />
@@ -521,7 +528,6 @@
 
 													<c:url var="clearSearchHref"
 														value="${listControls.cleanSearchAction}">
-														<c:param name="q" value="${listControls.searchQuery}" />
 														<c:param name="sort" value="${selectedSort}" />
 														<c:param name="tz" value="${selectedTimezone}" />
 														<c:if test="${param.filter eq 'past'}">
@@ -744,13 +750,13 @@
 																	<c:url var="prevHref" value="${previousPageHref}" />
 																	<a class="feed-pagination__control"
 																		href="${prevHref}">
-																		${previousLabel}
+																			<c:out value="${previousLabel}" />
 																	</a>
 																</c:when>
 																<c:otherwise>
 																	<span
 																		class="feed-pagination__control feed-pagination__control--disabled">
-																		${previousLabel}
+																			<c:out value="${previousLabel}" />
 																	</span>
 																</c:otherwise>
 															</c:choose>
@@ -759,14 +765,14 @@
 																<c:forEach var="item" items="${paginationItems}">
 																	<c:choose>
 																		<c:when test="${item.ellipsis}">
-																			<span
-																				class="feed-pagination__ellipsis">${item.label}</span>
+																				<span
+																					class="feed-pagination__ellipsis"><c:out value="${item.label}" /></span>
 																		</c:when>
 																		<c:when test="${item.current}">
 																			<span
 																				class="feed-pagination__page feed-pagination__page--current"
 																				aria-current="page">
-																				${item.label}
+																					<c:out value="${item.label}" />
 																			</span>
 																		</c:when>
 																		<c:otherwise>
@@ -774,7 +780,7 @@
 																				value="${item.href}" />
 																			<a class="feed-pagination__page"
 																				href="${pageHref}">
-																				${item.label}
+																					<c:out value="${item.label}" />
 																			</a>
 																		</c:otherwise>
 																	</c:choose>
@@ -786,13 +792,13 @@
 																	<c:url var="nextHref" value="${nextPageHref}" />
 																	<a class="feed-pagination__control"
 																		href="${nextHref}">
-																		${nextLabel}
+																			<c:out value="${nextLabel}" />
 																	</a>
 																</c:when>
 																<c:otherwise>
 																	<span
 																		class="feed-pagination__control feed-pagination__control--disabled">
-																		${nextLabel}
+																			<c:out value="${nextLabel}" />
 																	</span>
 																</c:otherwise>
 															</c:choose>

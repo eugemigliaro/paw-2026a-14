@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.utils.UrlUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.NavItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ShellViewModel;
@@ -24,6 +26,7 @@ public final class ShellViewModelFactory {
 
     public static ShellViewModel playerShell(
             final MessageSource ms, final Locale locale, final String activePath) {
+        final boolean authenticated = isAuthenticated();
 
         List<NavItemViewModel> navItems =
                 List.of(
@@ -31,48 +34,36 @@ public final class ShellViewModelFactory {
                                 ms.getMessage("nav.explore", null, locale),
                                 UrlUtils.withLang("/", locale),
                                 "/".equals(activePath)));
-        if (isAuthenticated()) {
-            final ArrayList<NavItemViewModel> authenticatedNavItems =
-                    new ArrayList<>(
-                            List.of(
-                                    new NavItemViewModel(
-                                            ms.getMessage("nav.explore", null, locale),
-                                            UrlUtils.withLang("/", locale),
-                                            "/".equals(activePath)),
-                                    new NavItemViewModel(
-                                            ms.getMessage("nav.player.events", null, locale),
-                                            UrlUtils.withLang("/events", locale),
-                                            "/events".equals(activePath)),
-                                    new NavItemViewModel(
-                                            ms.getMessage("nav.player.reports", null, locale),
-                                            UrlUtils.withLang("/reports/mine", locale),
-                                            "/reports/mine".equals(activePath))));
-            if (hasRole("ROLE_ADMIN_MOD")) {
-                authenticatedNavItems.add(
-                        new NavItemViewModel(
-                                ms.getMessage("nav.admin.reports", null, locale),
-                                UrlUtils.withLang("/admin/reports", locale),
-                                "/admin/reports".equals(activePath)));
-            }
-            navItems = authenticatedNavItems;
+        if (authenticated) {
+            navItems =
+                    List.of(
+                            new NavItemViewModel(
+                                    ms.getMessage("nav.explore", null, locale),
+                                    UrlUtils.withLang("/", locale),
+                                    "/".equals(activePath)),
+                            new NavItemViewModel(
+                                    ms.getMessage("nav.player.events", null, locale),
+                                    UrlUtils.withLang("/events", locale),
+                                    "/events".equals(activePath)));
         }
 
         return new ShellViewModel(
                 ms.getMessage("app.brand", null, locale),
-                isAuthenticated()
+                authenticated
                         ? new NavItemViewModel(
                                 ms.getMessage("nav.hostAMatch", null, locale),
                                 UrlUtils.withLang("/host/matches/new", locale),
                                 "/host/matches/new".equals(activePath))
                         : null,
-                isAuthenticated()
+                authenticated
                         ? new NavItemViewModel(
                                 ms.getMessage("nav.hostATournament", null, locale),
                                 UrlUtils.withLang("/host/tournaments/new", locale),
                                 "/host/tournaments/new".equals(activePath))
                         : null,
                 null,
-                navItems);
+                navItems,
+                buildSettingsMenuItems(ms, locale, activePath, authenticated));
     }
 
     public static ShellViewModel hostShell(final MessageSource ms, final Locale locale) {
@@ -81,6 +72,7 @@ public final class ShellViewModelFactory {
 
     public static ShellViewModel hostShell(
             final MessageSource ms, final Locale locale, final String activePath) {
+        final boolean authenticated = isAuthenticated();
 
         List<NavItemViewModel> navItems =
                 List.of(
@@ -88,7 +80,7 @@ public final class ShellViewModelFactory {
                                 ms.getMessage("nav.host.createMatch", null, locale),
                                 UrlUtils.withLang("/host/matches/new", locale),
                                 "/host/matches/new".equals(activePath)));
-        if (isAuthenticated()) {
+        if (authenticated) {
             navItems =
                     List.of(
                             new NavItemViewModel(
@@ -107,7 +99,54 @@ public final class ShellViewModelFactory {
                         ms.getMessage("nav.switchToPlayer", null, locale),
                         UrlUtils.withLang("/", locale),
                         false),
-                navItems);
+                null,
+                null,
+                navItems,
+                buildSettingsMenuItems(ms, locale, activePath, authenticated));
+    }
+
+    private static List<NavItemViewModel> buildSettingsMenuItems(
+            final MessageSource ms,
+            final Locale locale,
+            final String activePath,
+            final boolean authenticated) {
+        if (!authenticated) {
+            return List.of();
+        }
+
+        final User user = SecurityControllerUtils.currentUserOrNull();
+        if (user == null) {
+            return List.of();
+        }
+
+        final String profilePath = "/users/" + user.getUsername();
+
+        final ArrayList<NavItemViewModel> settingsItems =
+                new ArrayList<>(
+                        List.of(
+                                new NavItemViewModel(
+                                        ms.getMessage("nav.profile", null, locale),
+                                        UrlUtils.withLang(profilePath, locale),
+                                        profilePath.equals(activePath)),
+                                new NavItemViewModel(
+                                        ms.getMessage("nav.player.reports", null, locale),
+                                        UrlUtils.withLang("/reports/mine", locale),
+                                        "/reports/mine".equals(activePath))));
+        if (hasRole("ROLE_ADMIN_MOD")) {
+            settingsItems.add(
+                    new NavItemViewModel(
+                            ms.getMessage("nav.admin.reports", null, locale),
+                            UrlUtils.withLang("/admin/reports", locale),
+                            "/admin/reports".equals(activePath)));
+        }
+
+        settingsItems.add(
+                new NavItemViewModel(
+                        ms.getMessage("nav.logout", null, locale),
+                        UrlUtils.withLang("/logout", locale),
+                        false));
+
+        return settingsItems;
     }
 
     private static boolean isAuthenticated() {

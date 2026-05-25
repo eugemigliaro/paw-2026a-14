@@ -16,7 +16,7 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
-import ar.edu.itba.paw.webapp.form.FeedSearchForm;
+import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -119,7 +119,7 @@ public class FeedController {
 
     @GetMapping("/")
     public ModelAndView showFeed(
-            @Valid @ModelAttribute("feedSearchForm") final FeedSearchForm feedSearchForm,
+            @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult,
             @RequestParam(value = "email", required = false) final String email,
             @RequestParam(value = "sport", required = false) final List<String> sports,
@@ -134,9 +134,9 @@ public class FeedController {
             final HttpSession session,
             final Locale locale) {
         final String query =
-                bindingResult.hasFieldErrors("q") || feedSearchForm.getQ() == null
+                bindingResult.hasFieldErrors("q") || searchForm.getQ() == null
                         ? ""
-                        : feedSearchForm.getQ();
+                        : searchForm.getQ();
         final String selectedType = normalizeType(type);
         final ExploreLocation exploreLocation = exploreLocation(session);
         final boolean nearMeUnavailable = exploreLocation == null && "distance".equals(sort);

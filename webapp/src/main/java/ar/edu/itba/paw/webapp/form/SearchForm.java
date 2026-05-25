@@ -3,10 +3,10 @@ package ar.edu.itba.paw.webapp.form;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
-public class FeedSearchForm {
+public class SearchForm {
 
-    @Size(max = 150, message = "{FeedSearchForm.q.Size}")
-    @Pattern(regexp = "^[\\p{L}\\p{N} ]*$", message = "{FeedSearchForm.q.Pattern}")
+    @Size(max = 150, message = "{SearchForm.q.Size}")
+    @Pattern(regexp = "^[\\p{L}\\p{N} ]*$", message = "{SearchForm.q.Pattern}")
     private String q = "";
 
     public String getQ() {

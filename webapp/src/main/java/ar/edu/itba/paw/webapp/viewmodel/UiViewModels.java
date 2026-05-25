@@ -14,12 +14,13 @@ public final class UiViewModels {
         private final NavItemViewModel tournamentHostAction;
         private final NavItemViewModel hostMatchNav;
         private final List<NavItemViewModel> primaryNav;
+        private final List<NavItemViewModel> settingsMenuItems;
 
         public ShellViewModel(
                 final String brandLabel,
                 final NavItemViewModel hostAction,
                 final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, null, null, primaryNav);
+            this(brandLabel, hostAction, null, null, primaryNav, List.of());
         }
 
         public ShellViewModel(
@@ -27,7 +28,7 @@ public final class UiViewModels {
                 final NavItemViewModel hostAction,
                 final NavItemViewModel hostMatchNav,
                 final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, null, hostMatchNav, primaryNav);
+            this(brandLabel, hostAction, null, hostMatchNav, primaryNav, List.of());
         }
 
         public ShellViewModel(
@@ -35,12 +36,14 @@ public final class UiViewModels {
                 final NavItemViewModel hostAction,
                 final NavItemViewModel tournamentHostAction,
                 final NavItemViewModel hostMatchNav,
-                final List<NavItemViewModel> primaryNav) {
+                final List<NavItemViewModel> primaryNav,
+                final List<NavItemViewModel> settingsMenuItems) {
             this.brandLabel = brandLabel;
             this.hostAction = hostAction;
             this.tournamentHostAction = tournamentHostAction;
             this.hostMatchNav = hostMatchNav;
             this.primaryNav = primaryNav;
+            this.settingsMenuItems = settingsMenuItems;
         }
 
         public String getBrandLabel() {
@@ -61,6 +64,10 @@ public final class UiViewModels {
 
         public List<NavItemViewModel> getPrimaryNav() {
             return primaryNav;
+        }
+
+        public List<NavItemViewModel> getSettingsMenuItems() {
+            return settingsMenuItems;
         }
     }
 
@@ -782,18 +789,24 @@ public final class UiViewModels {
         private final String statusLabel;
         private final String statusTone;
         private final boolean current;
+        private final String spotsLabel;
+        private final String spotsTone;
 
         public EventOccurrenceViewModel(
                 final String href,
                 final String schedule,
                 final String statusLabel,
                 final String statusTone,
-                final boolean current) {
+                final boolean current,
+                final String spotsLabel,
+                final String spotsTone) {
             this.href = href;
             this.schedule = schedule;
             this.statusLabel = statusLabel;
             this.statusTone = statusTone;
             this.current = current;
+            this.spotsLabel = spotsLabel;
+            this.spotsTone = spotsTone;
         }
 
         public String getHref() {
@@ -815,6 +828,14 @@ public final class UiViewModels {
         public boolean isCurrent() {
             return current;
         }
+
+        public String getSpotsLabel() {
+            return spotsLabel;
+        }
+
+        public String getSpotsTone() {
+            return spotsTone;
+        }
     }
 
     public static final class ParticipantViewModel {
@@ -823,6 +844,7 @@ public final class UiViewModels {
         private final String profileHref;
         private final String profileImageUrl;
         private final String reviewHref;
+        private final String removeUrl;
 
         public ParticipantViewModel(
                 final String username,
@@ -830,11 +852,22 @@ public final class UiViewModels {
                 final String profileHref,
                 final String profileImageUrl,
                 final String reviewHref) {
+            this(username, avatarLabel, profileHref, profileImageUrl, reviewHref, null);
+        }
+
+        public ParticipantViewModel(
+                final String username,
+                final String avatarLabel,
+                final String profileHref,
+                final String profileImageUrl,
+                final String reviewHref,
+                final String removeUrl) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.profileHref = profileHref;
             this.profileImageUrl = profileImageUrl;
             this.reviewHref = reviewHref;
+            this.removeUrl = removeUrl;
         }
 
         public String getUsername() {
@@ -855,6 +888,10 @@ public final class UiViewModels {
 
         public String getReviewHref() {
             return reviewHref;
+        }
+
+        public String getRemoveUrl() {
+            return removeUrl;
         }
     }
 
@@ -898,6 +935,7 @@ public final class UiViewModels {
         private final String approveUrl;
         private final String rejectUrl;
         private final String profileHref;
+        private final String profileImageUrl;
         private final String matchTitle;
         private final String matchHref;
         private final boolean seriesRequest;
@@ -908,7 +946,16 @@ public final class UiViewModels {
                 final String approveUrl,
                 final String rejectUrl,
                 final String profileHref) {
-            this(username, avatarLabel, approveUrl, rejectUrl, profileHref, null, null, false);
+            this(
+                    username,
+                    avatarLabel,
+                    approveUrl,
+                    rejectUrl,
+                    profileHref,
+                    null,
+                    null,
+                    null,
+                    false);
         }
 
         public PendingRequestViewModel(
@@ -925,6 +972,7 @@ public final class UiViewModels {
                     approveUrl,
                     rejectUrl,
                     null,
+                    null,
                     matchTitle,
                     matchHref,
                     seriesRequest);
@@ -939,11 +987,34 @@ public final class UiViewModels {
                 final String matchTitle,
                 final String matchHref,
                 final boolean seriesRequest) {
+            this(
+                    username,
+                    avatarLabel,
+                    approveUrl,
+                    rejectUrl,
+                    profileHref,
+                    null,
+                    matchTitle,
+                    matchHref,
+                    seriesRequest);
+        }
+
+        public PendingRequestViewModel(
+                final String username,
+                final String avatarLabel,
+                final String approveUrl,
+                final String rejectUrl,
+                final String profileHref,
+                final String profileImageUrl,
+                final String matchTitle,
+                final String matchHref,
+                final boolean seriesRequest) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.approveUrl = approveUrl;
             this.rejectUrl = rejectUrl;
             this.profileHref = profileHref;
+            this.profileImageUrl = profileImageUrl;
             this.matchTitle = matchTitle;
             this.matchHref = matchHref;
             this.seriesRequest = seriesRequest;
@@ -969,6 +1040,10 @@ public final class UiViewModels {
             return profileHref;
         }
 
+        public String getProfileImageUrl() {
+            return profileImageUrl;
+        }
+
         public String getMatchTitle() {
             return matchTitle;
         }
@@ -986,12 +1061,22 @@ public final class UiViewModels {
         private final String username;
         private final String avatarLabel;
         private final String profileHref;
+        private final String profileImageUrl;
 
         public InviteParticipantViewModel(
                 final String username, final String avatarLabel, final String profileHref) {
+            this(username, avatarLabel, profileHref, null);
+        }
+
+        public InviteParticipantViewModel(
+                final String username,
+                final String avatarLabel,
+                final String profileHref,
+                final String profileImageUrl) {
             this.username = username;
             this.avatarLabel = avatarLabel;
             this.profileHref = profileHref;
+            this.profileImageUrl = profileImageUrl;
         }
 
         public String getUsername() {
@@ -1004,6 +1089,10 @@ public final class UiViewModels {
 
         public String getProfileHref() {
             return profileHref;
+        }
+
+        public String getProfileImageUrl() {
+            return profileImageUrl;
         }
     }
 
@@ -1471,6 +1560,24 @@ public final class UiViewModels {
 
         public String getPriceLabel() {
             return priceLabel;
+        }
+    }
+
+    public static final class SportRatingViewModel {
+        private final String sportLabel;
+        private final int elo;
+
+        public SportRatingViewModel(final String sportLabel, final int elo) {
+            this.sportLabel = sportLabel;
+            this.elo = elo;
+        }
+
+        public String getSportLabel() {
+            return sportLabel;
+        }
+
+        public int getElo() {
+            return elo;
         }
     }
 }

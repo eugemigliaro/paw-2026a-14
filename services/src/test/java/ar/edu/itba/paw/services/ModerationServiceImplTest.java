@@ -163,7 +163,8 @@ public class ModerationServiceImplTest {
                         UserUtils.getUser(99L),
                         ReportResolution.USER_BANNED,
                         "Repeated abuse",
-                        ReportStatus.RESOLVED);
+                        ReportStatus.RESOLVED,
+                        7);
 
         Assertions.assertNotNull(resolved, "resolveReport must return the updated report");
         Assertions.assertNotNull(
@@ -171,6 +172,82 @@ public class ModerationServiceImplTest {
         Assertions.assertTrue(
                 capturedBannedUntil.get().isAfter(FIXED_NOW),
                 "Ban expiry must be strictly after the resolution instant");
+    }
+
+    @Test
+    public void resolveReportWithUserBan_usesProvidedBanDuration() {
+        final ModerationReport report = sampleUserReport();
+        final AtomicReference<Instant> capturedBannedUntil = new AtomicReference<>();
+
+        Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://matchpoint.test");
+        Mockito.when(
+                        matchService.findJoinedMatches(
+                                Mockito.any(User.class),
+                                Mockito.anyBoolean(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.anyInt(),
+                                Mockito.anyInt()))
+                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
+        Mockito.when(
+                        matchService.findHostedMatches(
+                                Mockito.any(User.class),
+                                Mockito.anyBoolean(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.anyInt(),
+                                Mockito.anyInt()))
+                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
+
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
+        Mockito.when(
+                        moderationReportDao.resolveReport(
+                                Mockito.eq(77L),
+                                Mockito.eq(UserUtils.getUser(99L)),
+                                Mockito.eq(ReportResolution.USER_BANNED),
+                                Mockito.anyString(),
+                                Mockito.any(),
+                                Mockito.eq(ReportStatus.RESOLVED)))
+                .thenReturn(true);
+        Mockito.when(userBanDao.createBan(Mockito.any(ModerationReport.class), Mockito.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedBannedUntil.set(invocation.getArgument(1));
+                            return new UserBan(
+                                    10L,
+                                    (ModerationReport) invocation.getArgument(0),
+                                    invocation.getArgument(1));
+                        });
+        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+
+        moderationService.resolveReport(
+                77L,
+                UserUtils.getUser(99L),
+                ReportResolution.USER_BANNED,
+                "Repeated abuse",
+                ReportStatus.RESOLVED,
+                30);
+
+        Assertions.assertEquals(
+                FIXED_NOW.plusSeconds(30L * 24L * 3600L),
+                capturedBannedUntil.get(),
+                "The submitted ban duration must determine the ban expiry");
     }
 
     @Test
@@ -240,7 +317,8 @@ public class ModerationServiceImplTest {
                 UserUtils.getUser(99L),
                 ReportResolution.USER_BANNED,
                 "Repeated abuse",
-                ReportStatus.RESOLVED);
+                ReportStatus.RESOLVED,
+                7);
 
         Assertions.assertEquals(
                 77L,
@@ -302,7 +380,8 @@ public class ModerationServiceImplTest {
                         UserUtils.getUser(99L),
                         ReportResolution.CONTENT_DELETED,
                         reason,
-                        ReportStatus.RESOLVED);
+                        ReportStatus.RESOLVED,
+                        7);
 
         Assertions.assertNotNull(resolved);
         Assertions.assertEquals(

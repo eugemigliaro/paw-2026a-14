@@ -35,9 +35,10 @@
 						options="${listControls.sortOptions}" />
 
 					<section class="search-panel matches-search-panel" aria-label="${searchAriaLabel}">
+						<c:url var="matchesSearchFormAction" value="${listControls.searchAction}" />
 						<form:form
 							method="get"
-							action="${listControls.searchAction}"
+							action="${matchesSearchFormAction}"
 							modelAttribute="listSearchForm"
 							cssClass="search-panel__form">
 							<c:forEach var="selectedSport" items="${selectedSports}">
@@ -124,7 +125,8 @@
 									<div class="filter-rail__group-header">
 										<h2 class="filter-rail__title"><spring:message code="filter.datePrice" /></h2>
 									</div>
-									<form method="get" action="${listControls.searchAction}" class="filter-rail__form">
+									<c:url var="matchesFilterFormAction" value="${listControls.searchAction}" />
+									<form method="get" action="${matchesFilterFormAction}" class="filter-rail__form">
 										<input type="hidden" name="q" value="<c:out value='${listControls.searchQuery}' />" />
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
@@ -258,12 +260,12 @@
 											<c:when test="${not empty previousPageHref}">
 												<c:url var="prevHref" value="${previousPageHref}" />
 												<a class="feed-pagination__control" href="${prevHref}">
-													${previousLabel}
+														<c:out value="${previousLabel}" />
 												</a>
 											</c:when>
 											<c:otherwise>
 												<span class="feed-pagination__control feed-pagination__control--disabled">
-													${previousLabel}
+														<c:out value="${previousLabel}" />
 												</span>
 											</c:otherwise>
 										</c:choose>
@@ -272,17 +274,17 @@
 											<c:forEach var="item" items="${paginationItems}">
 												<c:choose>
 													<c:when test="${item.ellipsis}">
-														<span class="feed-pagination__ellipsis">${item.label}</span>
+															<span class="feed-pagination__ellipsis"><c:out value="${item.label}" /></span>
 													</c:when>
 													<c:when test="${item.current}">
 														<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">
-															${item.label}
+																<c:out value="${item.label}" />
 														</span>
 													</c:when>
 													<c:otherwise>
 														<c:url var="pageHref" value="${item.href}" />
 														<a class="feed-pagination__page" href="${pageHref}">
-															${item.label}
+																<c:out value="${item.label}" />
 														</a>
 													</c:otherwise>
 												</c:choose>

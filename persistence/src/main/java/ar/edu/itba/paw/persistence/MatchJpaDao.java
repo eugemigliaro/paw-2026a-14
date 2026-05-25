@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.query.MatchSort;
@@ -270,6 +271,54 @@ public class MatchJpaDao implements MatchDao {
         }
 
         return matches;
+    }
+
+    private static final int DEFAULT_SERIES_PAGE_SIZE = 5;
+
+    @Override
+    public PaginatedResult<Match> findSeriesOccurrencesPage(
+            final Long seriesId, final int page, final int pageSize) {
+        final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_SERIES_PAGE_SIZE;
+
+        final int totalCount =
+                ((Number)
+                                em.createQuery(
+                                                "SELECT COUNT(m) FROM Match m WHERE m.series.id = :seriesId")
+                                        .setParameter("seriesId", seriesId)
+                                        .getSingleResult())
+                        .intValue();
+
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int safePage = Math.min(Math.max(page, 1), totalPages);
+
+        final List<Long> ids =
+                em.createQuery(
+                                "SELECT m.id FROM Match m WHERE m.series.id = :seriesId"
+                                        + " ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
+                                Long.class)
+                        .setParameter("seriesId", seriesId)
+                        .setFirstResult((safePage - 1) * safePageSize)
+                        .setMaxResults(safePageSize)
+                        .getResultList();
+
+        if (ids.isEmpty()) {
+            return new PaginatedResult<>(List.of(), totalCount, safePage, safePageSize);
+        }
+
+        final List<Match> matches =
+                em.createQuery(
+                                "FROM Match m WHERE m.id IN :ids ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
+                                Match.class)
+                        .setParameter("ids", ids)
+                        .getResultList();
+
+        for (final Match match : matches) {
+            if (match != null) {
+                enrichMatchReadModel(match);
+            }
+        }
+
+        return new PaginatedResult<>(matches, totalCount, safePage, safePageSize);
     }
 
     @Override
@@ -650,16 +699,23 @@ public class MatchJpaDao implements MatchDao {
             return;
         }
         parts.where.add(
-                "(LOWER(m.title) LIKE :query"
-                        + " OR LOWER(COALESCE(m.description, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(m.address, '')) LIKE :query"
-                        + " OR LOWER(CAST(m.sport AS string)) LIKE :query"
-                        + " OR LOWER(COALESCE(hu.name, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(hu.lastName, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(hu.username, '')) LIKE :query"
-                        + " OR LOWER(CONCAT(COALESCE(hu.name, ''), ' ', COALESCE(hu.lastName, ''))) LIKE :query"
-                        + " OR LOWER(CONCAT(COALESCE(hu.lastName, ''), ' ', COALESCE(hu.name, ''))) LIKE :query)");
-        parts.params.put("query", "%" + query.trim().toLowerCase() + "%");
+                "(LOWER(m.title) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(m.description, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(m.address, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(CAST(m.sport AS string)) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(hu.name, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(hu.lastName, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(hu.username, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(CONCAT(COALESCE(hu.name, ''), ' ', COALESCE(hu.lastName, ''))) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(CONCAT(COALESCE(hu.lastName, ''), ' ', COALESCE(hu.name, ''))) LIKE :query ESCAPE '\\')");
+
+        final String normalizedQuery = "%" + escapeLikePattern(query.trim().toLowerCase()) + "%";
+
+        parts.params.put("query", normalizedQuery);
+    }
+
+    private static String escapeLikePattern(final String query) {
+        return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     private static void appendDateRangeFilter(

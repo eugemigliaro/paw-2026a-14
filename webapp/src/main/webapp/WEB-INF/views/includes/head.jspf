@@ -33,14 +33,16 @@
 <c:url var="eventsToggleFilterHref" value="/js/events-toggle-filter.js" />
 <c:url var="hostCreateMatchHref" value="/js/host-create-match.js" />
 <c:url var="tournamentTeamSizeHref" value="/js/tournament-team-size.js" />
-<c:url var="recurrenceScheduleHref" value="/js/recurrence-schedule.js?v=20260428" />
 <c:url var="exploreLocationHref" value="/js/explore-location.js" />
 <c:url var="leafletCssHref" value="/css/vendor/leaflet.css" />
 <c:url var="leafletJsHref" value="/js/vendor/leaflet.js" />
 <c:url var="locationPickerHref" value="/js/location-picker.js" />
 <c:url var="eventMapHref" value="/js/event-map.js" />
+<c:url var="eventDetailHostActionsHref" value="/js/event-detail-host-actions.js?v=20260521" />
+<c:url var="inviteNoticeHref" value="/js/invite-notice.js?v=20260521" />
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
 <c:url var="reportFiltersHref" value="/js/report-filters.js" />
+<c:url var="bracketSetupHref" value="/js/bracket-setup.js" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
 <link rel="stylesheet" href="${cssComponentsHref}" />
 <link rel="stylesheet" href="${cssBaseHref}" />
@@ -69,9 +71,11 @@
 <script defer src="${eventsToggleFilterHref}"></script>
 <script defer src="${hostCreateMatchHref}"></script>
 <script defer src="${tournamentTeamSizeHref}"></script>
-<script defer src="${recurrenceScheduleHref}"></script>
 <script defer src="${exploreLocationHref}"></script>
 <script defer src="${locationPickerHref}"></script>
 <script defer src="${eventMapHref}"></script>
+<script defer src="${eventDetailHostActionsHref}"></script>
+<script defer src="${inviteNoticeHref}"></script>
 <script defer src="${reportDropdownsHref}"></script>
 <script defer src="${reportFiltersHref}"></script>
+<script defer src="${bracketSetupHref}"></script>

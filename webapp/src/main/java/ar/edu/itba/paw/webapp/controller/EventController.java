@@ -20,13 +20,16 @@ import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventOccurrenceViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.InviteParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ParticipantViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -49,10 +52,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 public class EventController {
     private static final int DEFAULT_MAP_ZOOM = 14;
+    private static final int SERIES_PAGE_SIZE = 5;
 
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
@@ -122,16 +127,21 @@ public class EventController {
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
             @RequestParam(value = "invite", required = false) final String inviteStatus,
             @RequestParam(value = "inviteError", required = false) final String inviteErrorCode,
+            @RequestParam(value = "seriesPage", defaultValue = "1") final int seriesPage,
             final Model model,
             final Locale locale) {
         final String resolvedReservationStatus =
                 flashString(model, "reservationStatus").orElse(reservationStatus);
         final String resolvedJoinStatus = flashString(model, "joinStatus").orElse(joinStatus);
         final String resolvedInviteStatus = flashString(model, "inviteStatus").orElse(inviteStatus);
+        final String resolvedHostAction = flashString(model, "hostAction").orElse(hostAction);
         return showRealEventDetails(
                 parseEventIdOrThrowNotFound(eventId),
                 resolvedReservationStatus,
-                flashString(model, "hostAction").orElse(hostAction),
+                resolvedHostAction,
+                flashString(model, "hostActionError").orElse(null),
+                flashString(model, "hostActionTarget").orElse(null),
+                flashString(model, "hostInviteEmail").orElse(""),
                 reservationError,
                 seriesReservationErrorCode == null
                         ? null
@@ -142,6 +152,7 @@ public class EventController {
                 joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
                 resolvedInviteStatus,
                 inviteErrorCode == null ? null : inviteErrorMessage(inviteErrorCode, locale),
+                seriesPage,
                 locale);
     }
 
@@ -162,6 +173,9 @@ public class EventController {
                     matchId,
                     null,
                     null,
+                    null,
+                    null,
+                    null,
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     null,
@@ -170,6 +184,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -195,6 +210,9 @@ public class EventController {
                     matchId,
                     null,
                     null,
+                    null,
+                    null,
+                    null,
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     null,
@@ -203,6 +221,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -228,6 +247,9 @@ public class EventController {
                     null,
                     null,
                     null,
+                    null,
+                    null,
+                    null,
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     false,
@@ -235,6 +257,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -259,6 +282,9 @@ public class EventController {
                     null,
                     null,
                     null,
+                    null,
+                    null,
+                    null,
                     reservationErrorMessage(exception.getCode(), locale),
                     null,
                     false,
@@ -266,6 +292,7 @@ public class EventController {
                     null,
                     null,
                     null,
+                    1,
                     locale);
         }
     }
@@ -274,6 +301,9 @@ public class EventController {
             final Long eventId,
             final String reservationStatus,
             final String hostAction,
+            final String hostActionError,
+            final String hostActionTarget,
+            final String hostInviteEmail,
             final String reservationError,
             final String seriesReservationError,
             final String joinStatus,
@@ -282,6 +312,7 @@ public class EventController {
             final String joinError,
             final String inviteStatus,
             final String inviteError,
+            final int seriesPage,
             final Locale locale) {
         final Match match =
                 matchService
@@ -315,10 +346,26 @@ public class EventController {
         final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
-        final List<Match> seriesOccurrences =
-                match.isRecurringOccurrence()
-                        ? matchService.findSeriesOccurrences(match.getSeries().getId())
+        final boolean hostCanManage = isHost(match, currentUser);
+        final boolean hostCanManageParticipants = hostCanManage && canHostManageParticipants(match);
+        final List<User> pendingHostRequests =
+                isHostViewer && isApprovalRequired
+                        ? matchParticipationService.findPendingRequests(eventId, currentUser)
                         : List.of();
+        final List<User> pendingHostInvites =
+                isHostViewer && isInviteOnly
+                        ? matchParticipationService.findInvitedUsers(eventId, currentUser)
+                        : List.of();
+        final List<User> declinedHostInvites =
+                isHostViewer && isInviteOnly
+                        ? matchParticipationService.findDeclinedInvitees(eventId, currentUser)
+                        : List.of();
+        final PaginatedResult<Match> seriesOccurrencesPage =
+                match.isRecurringOccurrence()
+                        ? matchService.findSeriesOccurrencesPage(
+                                match.getSeries().getId(), seriesPage, SERIES_PAGE_SIZE)
+                        : new PaginatedResult<>(List.of(), 0, 1, SERIES_PAGE_SIZE);
+        final List<Match> seriesOccurrences = seriesOccurrencesPage.getItems();
         final SeriesReservationUiState seriesReservationState =
                 match.isRecurringOccurrence()
                         ? buildSeriesReservationUiState(
@@ -335,7 +382,6 @@ public class EventController {
         final boolean suppressReservationErrors =
                 hasPendingRequest || seriesJoinRequestState.pending();
         final ModelAndView mav = new ModelAndView("matches/detail");
-        final boolean hostCanManage = isHost(match, currentUser);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
         mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("isInviteOnly", isInviteOnly);
@@ -344,7 +390,28 @@ public class EventController {
         mav.addObject(
                 "eventPage",
                 buildRealEventPage(
-                        match, confirmedParticipants, seriesOccurrences, currentUser, locale));
+                        match,
+                        confirmedParticipants,
+                        seriesOccurrences,
+                        currentUser,
+                        locale,
+                        hostCanManageParticipants));
+        if (match.isRecurringOccurrence()) {
+            mav.addObject("recurrenceHasPreviousPage", seriesOccurrencesPage.hasPrevious());
+            mav.addObject("recurrenceHasNextPage", seriesOccurrencesPage.hasNext());
+            mav.addObject(
+                    "recurrencePreviousPageHref",
+                    buildSeriesScheduleUrl(eventId, seriesOccurrencesPage.getPage() - 1));
+            mav.addObject(
+                    "recurrenceNextPageHref",
+                    buildSeriesScheduleUrl(eventId, seriesOccurrencesPage.getPage() + 1));
+            mav.addObject(
+                    "recurrencePaginationItems",
+                    PaginationUtils.buildPaginationItems(
+                            seriesOccurrencesPage.getPage(),
+                            seriesOccurrencesPage.getTotalPages(),
+                            p -> buildSeriesScheduleUrl(eventId, p)));
+        }
 
         mav.addObject("reservationEnabled", canReserveMatch(match, isHostViewer));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
@@ -406,12 +473,8 @@ public class EventController {
 
         mav.addObject("hostViewer", isHostViewer);
         mav.addObject("isPrivateEvent", isPrivateEvent);
-        mav.addObject("hostRequestsPath", "/host/matches/" + eventId + "/requests");
-        mav.addObject("hostInvitesPath", "/host/matches/" + eventId + "/invites");
-        mav.addObject("hostParticipantsPath", "/host/matches/" + eventId + "/participants");
         mav.addObject("hostCanManage", hostCanManage);
-        mav.addObject(
-                "hostCanManageParticipants", hostCanManage && canHostManageParticipants(match));
+        mav.addObject("hostCanManageParticipants", hostCanManageParticipants);
         mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
         mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
         mav.addObject(
@@ -425,6 +488,28 @@ public class EventController {
         mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
         mav.addObject("hostSeriesCancelPath", "/host/matches/" + eventId + "/series/cancel");
         mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
+        mav.addObject("hostActionErrorNotice", hostActionError);
+        mav.addObject("hostActionTarget", hostActionTarget);
+        mav.addObject(
+                "hostPendingRequests", toPendingRequestViewModels(pendingHostRequests, eventId));
+        mav.addObject("hostPendingRequestCount", pendingHostRequests.size());
+        mav.addObject(
+                "hostPendingRequestsOpen",
+                !pendingHostRequests.isEmpty()
+                        || isRequestHostAction(hostAction)
+                        || "requests".equalsIgnoreCase(hostActionTarget));
+        mav.addObject("hostPendingInvites", toInviteParticipantViewModels(pendingHostInvites));
+        mav.addObject("hostDeclinedInvites", toInviteParticipantViewModels(declinedHostInvites));
+        mav.addObject("hostPendingInviteCount", pendingHostInvites.size());
+        mav.addObject(
+                "hostPendingInvitesOpen",
+                !pendingHostInvites.isEmpty()
+                        || !declinedHostInvites.isEmpty()
+                        || isInviteHostAction(hostAction)
+                        || "invites".equalsIgnoreCase(hostActionTarget));
+        mav.addObject("hostInviteActionPath", "/host/matches/" + eventId + "/invites");
+        mav.addObject("hostInviteEmail", hostInviteEmail);
+        mav.addObject("hostSeriesInviteAvailable", match.isRecurringOccurrence());
         return mav;
     }
 
@@ -433,7 +518,8 @@ public class EventController {
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
             final User currentUser,
-            final Locale locale) {
+            final Locale locale,
+            final boolean includeHostParticipantActions) {
         final User host = match.getHost();
         final Set<Long> reviewableUserIds =
                 currentUser == null
@@ -461,7 +547,12 @@ public class EventController {
                                 locale),
                 profileHrefFor(host),
                 profileUrlFor(host),
-                toParticipantViewModels(confirmedParticipants, currentUser, reviewableUserIds),
+                toParticipantViewModels(
+                        confirmedParticipants,
+                        match.getId(),
+                        currentUser,
+                        reviewableUserIds,
+                        includeHostParticipantActions),
                 buildParticipantCountLabel(confirmedParticipants.size(), locale),
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale),
                 buildAboutParagraphs(match, locale),
@@ -477,6 +568,15 @@ public class EventController {
                 mapTileUrlTemplate,
                 mapAttribution,
                 mapDefaultZoom);
+    }
+
+    private static String buildSeriesScheduleUrl(final Long eventId, final int page) {
+        return UriComponentsBuilder.fromPath("/matches/" + eventId)
+                .queryParam("seriesPage", page)
+                .fragment("recurrence-schedule-title")
+                .build()
+                .encode()
+                .toUriString();
     }
 
     private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
@@ -524,8 +624,10 @@ public class EventController {
 
     private List<ParticipantViewModel> toParticipantViewModels(
             final List<User> confirmedParticipants,
+            final long matchId,
             final User currentUser,
-            final Set<Long> reviewableUserIds) {
+            final Set<Long> reviewableUserIds,
+            final boolean includeHostParticipantActions) {
         return confirmedParticipants.stream()
                 .map(
                         participant ->
@@ -535,7 +637,52 @@ public class EventController {
                                         profileHrefFor(participant),
                                         profileImageUrlForParticipant(participant),
                                         reviewHrefForParticipant(
-                                                participant, currentUser, reviewableUserIds)))
+                                                participant, currentUser, reviewableUserIds),
+                                        includeHostParticipantActions && participant.getId() != null
+                                                ? "/host/matches/"
+                                                        + matchId
+                                                        + "/participants/"
+                                                        + participant.getId()
+                                                        + "/remove"
+                                                : null))
+                .toList();
+    }
+
+    private List<PendingRequestViewModel> toPendingRequestViewModels(
+            final List<User> users, final long matchId) {
+        return users.stream()
+                .map(
+                        user ->
+                                new PendingRequestViewModel(
+                                        user.getUsername(),
+                                        avatarLabelForUsername(user.getUsername()),
+                                        "/host/matches/"
+                                                + matchId
+                                                + "/requests/"
+                                                + user.getId()
+                                                + "/approve",
+                                        "/host/matches/"
+                                                + matchId
+                                                + "/requests/"
+                                                + user.getId()
+                                                + "/reject",
+                                        profileHrefFor(user),
+                                        profileImageUrlForParticipant(user),
+                                        null,
+                                        null,
+                                        false))
+                .toList();
+    }
+
+    private List<InviteParticipantViewModel> toInviteParticipantViewModels(final List<User> users) {
+        return users.stream()
+                .map(
+                        user ->
+                                new InviteParticipantViewModel(
+                                        user.getUsername(),
+                                        avatarLabelForUsername(user.getUsername()),
+                                        profileHrefFor(user),
+                                        profileImageUrlForParticipant(user)))
                 .toList();
     }
 
@@ -588,7 +735,7 @@ public class EventController {
             final List<Match> occurrences,
             final User currentUser,
             final Locale locale) {
-        if (occurrences == null || occurrences.size() <= 1) {
+        if (occurrences == null || occurrences.isEmpty()) {
             return List.of();
         }
 
@@ -609,7 +756,9 @@ public class EventController {
                                                             .atZone(ZoneId.systemDefault())),
                                     eventStateLabel(state, locale),
                                     state.tone(),
-                                    occurrence.getId().equals(currentMatch.getId()));
+                                    occurrence.getId().equals(currentMatch.getId()),
+                                    buildSpotsLabel(occurrence, state, locale),
+                                    buildSpotsTone(occurrence, state));
                         })
                 .toList();
     }
@@ -792,6 +941,37 @@ public class EventController {
 
     private String eventStateLabel(final EventDisplayState state, final Locale locale) {
         return messageSource.getMessage("match.status." + state.key(), null, locale);
+    }
+
+    private String buildSpotsLabel(
+            final Match occurrence, final EventDisplayState state, final Locale locale) {
+        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
+            return null;
+        }
+        final int spots = occurrence.getAvailableSpots();
+        if (spots <= 0) {
+            return null;
+        }
+        if (spots == 1) {
+            return messageSource.getMessage("event.occurrence.spots.one", null, locale);
+        }
+        return messageSource.getMessage(
+                "event.occurrence.spots.many", new Object[] {spots}, locale);
+    }
+
+    private String buildSpotsTone(final Match occurrence, final EventDisplayState state) {
+        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
+            return null;
+        }
+        final int spots = occurrence.getAvailableSpots();
+        if (spots <= 0) {
+            return null;
+        }
+        if (spots == 1) {
+            return "last";
+        }
+        final int max = occurrence.getMaxPlayers();
+        return (double) spots / max <= 0.33 ? "scarce" : "plenty";
     }
 
     private String eventStateNotice(final Match match, final Locale locale) {
@@ -1026,7 +1206,32 @@ public class EventController {
         if ("seriesCancelled".equalsIgnoreCase(hostAction)) {
             return messageSource.getMessage("host.action.seriesCancelled", null, locale);
         }
+        if ("participantRemoved".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("event.host.participants.removed", null, locale);
+        }
+        if ("requestApproved".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("event.host.requests.approved", null, locale);
+        }
+        if ("requestRejected".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("event.host.requests.rejected", null, locale);
+        }
+        if ("inviteSent".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("event.host.invites.sent", null, locale);
+        }
+        if ("seriesInviteSent".equalsIgnoreCase(hostAction)) {
+            return messageSource.getMessage("event.host.invites.seriesSent", null, locale);
+        }
         return null;
+    }
+
+    private static boolean isRequestHostAction(final String hostAction) {
+        return "requestApproved".equalsIgnoreCase(hostAction)
+                || "requestRejected".equalsIgnoreCase(hostAction);
+    }
+
+    private static boolean isInviteHostAction(final String hostAction) {
+        return "inviteSent".equalsIgnoreCase(hostAction)
+                || "seriesInviteSent".equalsIgnoreCase(hostAction);
     }
 
     private boolean isHost(final Match match, final User currentUser) {

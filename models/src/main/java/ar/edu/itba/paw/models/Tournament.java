@@ -2,9 +2,11 @@ package ar.edu.itba.paw.models;
 
 import ar.edu.itba.paw.models.converters.SportConverter;
 import ar.edu.itba.paw.models.converters.TournamentFormatConverter;
+import ar.edu.itba.paw.models.converters.TournamentPairingStrategyConverter;
 import ar.edu.itba.paw.models.converters.TournamentStatusConverter;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -98,6 +100,10 @@ public class Tournament {
     @Column(name = "status", length = 40, nullable = false)
     @Convert(converter = TournamentStatusConverter.class)
     private TournamentStatus status;
+
+    @Column(name = "pairing_strategy", length = 30)
+    @Convert(converter = TournamentPairingStrategyConverter.class)
+    private TournamentPairingStrategy pairingStrategy;
 
     @Column(name = "registration_closed_at")
     private Instant registrationClosedAt;
@@ -286,6 +292,10 @@ public class Tournament {
         return status;
     }
 
+    public TournamentPairingStrategy getPairingStrategy() {
+        return pairingStrategy;
+    }
+
     public Instant getRegistrationClosedAt() {
         return registrationClosedAt;
     }
@@ -412,6 +422,10 @@ public class Tournament {
 
     public void setRegistrationClosesAt(final Instant registrationClosesAt) {
         this.registrationClosesAt = registrationClosesAt;
+    }
+
+    public void setPairingStrategy(final TournamentPairingStrategy pairingStrategy) {
+        this.pairingStrategy = pairingStrategy;
     }
 
     public void setRegistrationClosedAt(final Instant registrationClosedAt) {

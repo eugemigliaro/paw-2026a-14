@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <c:set var="pageTitle" value="${pageTitle}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -26,18 +27,20 @@
 
 						<div class="error-hero__actions">
 							<spring:message var="browseLabel" code="common.browseEvents" />
-							<spring:message var="hostLabel" code="common.hostEvent" />
 							<c:url var="browseHref" value="/" />
-							<c:url var="hostHref" value="/host/matches/new" />
 							<ui:button
-								label="${browseLabel}"
-								href="${browseHref}"
-								size="lg" />
-							<ui:button
-								label="${hostLabel}"
-								href="${hostHref}"
-								variant="secondary"
-								size="lg" />
+							label="${browseLabel}"
+							href="${browseHref}"
+							size="lg" />
+							<sec:authorize access="!isAnonymous()">
+								<spring:message var="hostLabel" code="common.hostEvent" />
+								<c:url var="hostHref" value="/host/matches/new" />
+								<ui:button
+									label="${hostLabel}"
+									href="${hostHref}"
+									variant="secondary"
+									size="lg" />
+							</sec:authorize>
 						</div>
 					</div>
 

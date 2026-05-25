@@ -67,7 +67,10 @@ public class UserBanAppealController {
                         .withLocale(locale)
                         .withZone(ZoneId.systemDefault())
                         .format(activeBan.getBannedUntil()));
-        mav.addObject("banReason", report.getReason());
+        mav.addObject(
+                "banReason",
+                messageSource.getMessage(
+                        "moderation.reason." + report.getReason().getDbValue(), null, locale));
         mav.addObject("appealReason", report.getAppealReason());
         mav.addObject("appealAllowed", report.getAppealCount() < 1);
         mav.addObject("action", model.asMap().get("action"));

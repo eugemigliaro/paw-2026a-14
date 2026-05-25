@@ -655,6 +655,20 @@ class UiRouteTest {
                     }
 
                     @Override
+                    public PaginatedResult<Match> findSeriesOccurrencesPage(
+                            final Long seriesId, final int page, final int pageSize) {
+                        final List<Match> all = findSeriesOccurrences(seriesId);
+                        final int safePage = Math.max(1, page);
+                        final int offset = Math.max(0, (safePage - 1) * pageSize);
+                        final List<Match> items =
+                                offset >= all.size()
+                                        ? List.of()
+                                        : all.subList(
+                                                offset, Math.min(offset + pageSize, all.size()));
+                        return new PaginatedResult<>(items, all.size(), safePage, pageSize);
+                    }
+
+                    @Override
                     public List<User> findConfirmedParticipants(final Long matchId) {
                         return matchId == 42L
                                 ? List.of(UserUtils.getUser(2L), UserUtils.getUser(3L))
@@ -1086,6 +1100,9 @@ class UiRouteTest {
 
                     @Override
                     public List<User> findPendingRequests(final Long matchId, final User host) {
+                        if (matchId == 52L && host != null && host.getId() == 7L) {
+                            return List.of(UserUtils.getUser(9L));
+                        }
                         return List.of();
                     }
 
@@ -1128,11 +1145,17 @@ class UiRouteTest {
 
                     @Override
                     public List<User> findInvitedUsers(final Long matchId, final User host) {
+                        if (matchId == 51L && host != null && host.getId() == 7L) {
+                            return List.of(UserUtils.getUser(9L));
+                        }
                         return List.of();
                     }
 
                     @Override
                     public List<User> findDeclinedInvitees(final Long matchId, final User host) {
+                        if (matchId == 51L && host != null && host.getId() == 7L) {
+                            return List.of(UserUtils.getUser(10L));
+                        }
                         return List.of();
                     }
 
@@ -1592,6 +1615,10 @@ class UiRouteTest {
         final ModerationService moderationService = Mockito.mock(ModerationService.class);
         Mockito.when(moderationService.findActiveBan(Mockito.any(User.class)))
                 .thenReturn(Optional.empty());
+        final ar.edu.itba.paw.services.UserSportRatingService userSportRatingService =
+                Mockito.mock(ar.edu.itba.paw.services.UserSportRatingService.class);
+        Mockito.when(userSportRatingService.findRatingsForUser(Mockito.any()))
+                .thenReturn(java.util.List.of());
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -1613,8 +1640,11 @@ class UiRouteTest {
                                         "Local Buenos Aires map tiles",
                                         14),
                                 new PublicProfileController(
-                                        userService, playerReviewService,
-                                        moderationService, messageSource),
+                                        userService,
+                                        playerReviewService,
+                                        moderationService,
+                                        userSportRatingService,
+                                        messageSource),
                                 new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
@@ -1833,7 +1863,10 @@ class UiRouteTest {
                                                                 Matchers.hasProperty(
                                                                         "profileImageUrl",
                                                                         Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg"))),
+                                                                                "/assets/default-profile-avatar.svg")),
+                                                                Matchers.hasProperty(
+                                                                        "removeUrl",
+                                                                        Matchers.nullValue())),
                                                         Matchers.allOf(
                                                                 Matchers.hasProperty(
                                                                         "profileHref",
@@ -1842,7 +1875,10 @@ class UiRouteTest {
                                                                 Matchers.hasProperty(
                                                                         "profileImageUrl",
                                                                         Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg")))))));
+                                                                                "/assets/default-profile-avatar.svg")),
+                                                                Matchers.hasProperty(
+                                                                        "removeUrl",
+                                                                        Matchers.nullValue()))))));
     }
 
     @Test
@@ -1910,18 +1946,22 @@ class UiRouteTest {
                 .andExpect(model().attribute("hostCanManage", true))
                 .andExpect(model().attribute("reservationEnabled", true))
                 .andExpect(model().attribute("joinRequestEnabled", false))
-                .andExpect(model().attribute("isInvitedPlayer", false));
+                .andExpect(model().attribute("isInvitedPlayer", false))
+                .andExpect(model().attribute("hostPendingInviteCount", 1))
+                .andExpect(model().attribute("hostPendingInvitesOpen", true))
+                .andExpect(model().attribute("hostDeclinedInvites", Matchers.hasSize(1)));
     }
 
     @Test
     void getRecurringMatchDetailsRouteExposesRecurringOccurrenceStates() throws Exception {
+        // Page 1 (size 5) shows first 5 of 6 occurrences: past, in-progress, current, second, full
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(6))))
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(5))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1954,6 +1994,19 @@ class UiRouteTest {
                                                         Matchers.hasProperty(
                                                                 "statusLabel",
                                                                 Matchers.is("Full"))))))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(
+                        model().attribute(
+                                        "seriesReservationPath",
+                                        "/matches/46/recurring-reservations"));
+
+        // Page 2 shows the 6th occurrence: cancelled
+        mockMvc.perform(get("/matches/46").param("seriesPage", "2"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty("occurrences", Matchers.hasSize(1))))
                 .andExpect(
                         model().attribute(
                                         "eventPage",
@@ -1966,12 +2019,7 @@ class UiRouteTest {
                                                                         Matchers.is("Cancelled")),
                                                                 Matchers.hasProperty(
                                                                         "href",
-                                                                        Matchers.nullValue()))))))
-                .andExpect(model().attribute("seriesReservationEnabled", true))
-                .andExpect(
-                        model().attribute(
-                                        "seriesReservationPath",
-                                        "/matches/46/recurring-reservations"));
+                                                                        Matchers.nullValue()))))));
     }
 
     @Test
@@ -2065,7 +2113,8 @@ class UiRouteTest {
     void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/46"))
+        // Cancelled occurrence is the 6th item, so it appears on page 2 (page size = 5)
+        mockMvc.perform(get("/matches/46").param("seriesPage", "2"))
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
@@ -2167,7 +2216,21 @@ class UiRouteTest {
                 .andExpect(model().attribute("seriesReservationEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
-                .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"));
+                .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"))
+                .andExpect(
+                        model().attribute(
+                                        "eventPage",
+                                        Matchers.hasProperty(
+                                                "participants",
+                                                Matchers.contains(
+                                                        Matchers.hasProperty(
+                                                                "removeUrl",
+                                                                Matchers.is(
+                                                                        "/host/matches/42/participants/2/remove")),
+                                                        Matchers.hasProperty(
+                                                                "removeUrl",
+                                                                Matchers.is(
+                                                                        "/host/matches/42/participants/3/remove"))))));
     }
 
     @Test
@@ -2198,7 +2261,10 @@ class UiRouteTest {
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(model().attribute("joinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
-                .andExpect(model().attribute("hasPendingJoinRequest", false));
+                .andExpect(model().attribute("hasPendingJoinRequest", false))
+                .andExpect(model().attribute("hostPendingRequestCount", 1))
+                .andExpect(model().attribute("hostPendingRequestsOpen", true))
+                .andExpect(model().attribute("hostPendingRequests", Matchers.hasSize(1)));
     }
 
     @Test
@@ -3217,7 +3283,7 @@ class UiRouteTest {
 
         mockMvc.perform(get("/host/requests"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("host/participation/requests"))
+                .andExpect(view().name("host/participation/aggregate-requests"))
                 .andExpect(model().attribute("aggregateRequests", true))
                 .andExpect(model().attributeExists("pendingRequests"))
                 .andExpect(model().attribute("matchesUrl", "/events"));

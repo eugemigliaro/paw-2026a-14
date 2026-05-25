@@ -52,7 +52,7 @@
 								autocomplete="new-password" />
 							<spring:bind path="resetPasswordForm.password">
 								<c:if test="${empty status.errorMessages}">
-									<span class="field__hint">${passwordRequirement}</span>
+										<span class="field__hint"><c:out value="${passwordRequirement}" /></span>
 								</c:if>
 							</spring:bind>
 							<form:errors path="password" cssClass="field__error" element="span" />

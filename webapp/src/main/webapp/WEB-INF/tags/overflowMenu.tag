@@ -9,11 +9,11 @@
   <c:set var="classes" value="${classes} ${className}" />
 </c:if>
 
-<div class="${classes}" data-overflow-menu="true">
+<div class="<c:out value='${classes}' />" data-overflow-menu="true">
   <button
     type="button"
     class="overflow-menu__trigger"
-    aria-label="${ariaLabel}"
+    aria-label="<c:out value='${ariaLabel}' />"
     aria-haspopup="true"
     aria-expanded="false"
     data-overflow-menu-trigger="true">
@@ -26,7 +26,7 @@
   <div
     class="overflow-menu__panel"
     role="menu"
-    <c:if test="${not empty menuAriaLabel}">aria-label="${menuAriaLabel}"</c:if>
+    <c:if test="${not empty menuAriaLabel}">aria-label="<c:out value='${menuAriaLabel}' />"</c:if>
     hidden="hidden"
     data-overflow-menu-panel="true">
     <jsp:doBody />

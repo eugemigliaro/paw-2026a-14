@@ -43,8 +43,8 @@
 							<form:form
 								method="get"
 								action="${feedFormAction}"
-								modelAttribute="feedSearchForm"
-								cssClass="search-panel__form"
+								modelAttribute="searchForm"
+								cssClass="search-panel__form search-panel__form--floating-error"
 								novalidate="novalidate">
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
@@ -203,7 +203,7 @@
 								</button>
 								<div class="filter-dropdown__panel">
 									<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate">
-										<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
+										<input type="hidden" name="q" value="<c:out value='${searchForm.q}' />" />
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
@@ -225,7 +225,7 @@
 										</div>
 
 										<c:url var="clearDateHref" value="${feedPath}">
-											<c:param name="q" value="${feedSearchForm.q}" />
+											<c:param name="q" value="${searchForm.q}" />
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>
@@ -277,7 +277,7 @@
 								</button>
 								<div class="filter-dropdown__panel">
 									<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate">
-										<input type="hidden" name="q" value="<c:out value='${feedSearchForm.q}' />" />
+										<input type="hidden" name="q" value="<c:out value='${searchForm.q}' />" />
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
@@ -305,7 +305,7 @@
 										</div>
 
 										<c:url var="clearPriceHref" value="${feedPath}">
-											<c:param name="q" value="${feedSearchForm.q}" />
+											<c:param name="q" value="${searchForm.q}" />
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>
@@ -617,10 +617,10 @@
 											<c:choose>
 												<c:when test="${not empty feedPage.previousPageHref}">
 													<c:url var="feedPrevHref" value="${feedPage.previousPageHref}" />
-													<a class="feed-pagination__control" href="${feedPrevHref}">${previousLabel}</a>
+														<a class="feed-pagination__control" href="${feedPrevHref}"><c:out value="${previousLabel}" /></a>
 												</c:when>
 												<c:otherwise>
-													<span class="feed-pagination__control feed-pagination__control--disabled">${previousLabel}</span>
+														<span class="feed-pagination__control feed-pagination__control--disabled"><c:out value="${previousLabel}" /></span>
 												</c:otherwise>
 											</c:choose>
 
@@ -628,14 +628,14 @@
 												<c:forEach var="item" items="${feedPage.paginationItems}">
 													<c:choose>
 														<c:when test="${item.ellipsis}">
-															<span class="feed-pagination__ellipsis" aria-hidden="true">${item.label}</span>
+																<span class="feed-pagination__ellipsis" aria-hidden="true"><c:out value="${item.label}" /></span>
 														</c:when>
 														<c:when test="${item.current}">
-															<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">${item.label}</span>
+																<span class="feed-pagination__page feed-pagination__page--current" aria-current="page"><c:out value="${item.label}" /></span>
 														</c:when>
 														<c:otherwise>
 															<c:url var="feedPageItemHref" value="${item.href}" />
-															<a class="feed-pagination__page" href="${feedPageItemHref}">${item.label}</a>
+																<a class="feed-pagination__page" href="${feedPageItemHref}"><c:out value="${item.label}" /></a>
 														</c:otherwise>
 													</c:choose>
 												</c:forEach>
@@ -644,10 +644,10 @@
 											<c:choose>
 												<c:when test="${not empty feedPage.nextPageHref}">
 													<c:url var="feedNextHref" value="${feedPage.nextPageHref}" />
-													<a class="feed-pagination__control" href="${feedNextHref}">${nextLabel}</a>
+														<a class="feed-pagination__control" href="${feedNextHref}"><c:out value="${nextLabel}" /></a>
 												</c:when>
 												<c:otherwise>
-													<span class="feed-pagination__control feed-pagination__control--disabled">${nextLabel}</span>
+														<span class="feed-pagination__control feed-pagination__control--disabled"><c:out value="${nextLabel}" /></span>
 												</c:otherwise>
 											</c:choose>
 										</nav>

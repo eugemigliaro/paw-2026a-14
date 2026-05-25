@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
@@ -152,7 +153,8 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final int soloTeamCount =
                 Math.min(activeEntries.size() / tournament.getTeamSize(), availableTeamSlots);
 
-        if (existingTeamCount + soloTeamCount < tournament.getBracketSize()) {
+        final int finalTeamCount = existingTeamCount + soloTeamCount;
+        if (finalTeamCount < 2) {
             markUnassigned(activeEntries);
             return cancelUnderCapacity(tournament);
         }
@@ -181,6 +183,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         markUnassigned(activeEntries.subList(assignableEntries, activeEntries.size()));
 
         final Instant now = Instant.now(clock);
+        tournament.setPairingStrategy(TournamentPairingStrategy.RANDOM);
         tournament.setStatus(TournamentStatus.BRACKET_SETUP);
         tournament.setRegistrationClosedAt(now);
         tournament.setUpdatedAt(now);

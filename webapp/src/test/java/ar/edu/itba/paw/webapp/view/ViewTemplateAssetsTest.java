@@ -21,8 +21,8 @@ class ViewTemplateAssetsTest {
         assertTrue(head.contains("/css/auth.css"));
         assertTrue(head.contains("/js/overflow-menu.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
-        assertTrue(head.contains("/js/recurrence-schedule.js"));
         assertTrue(head.contains("/js/event-map.js"));
+        assertTrue(head.contains("/js/event-detail-host-actions.js"));
     }
 
     @Test
@@ -342,28 +342,23 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void matchDetailUsesOverflowMenuForHostActions() throws IOException {
+    void matchDetailUsesHostActionCardInsteadOfOverflowMenuForHostActions() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(detailView.contains("<ui:overflowMenu"));
-        assertTrue(detailView.contains("host.manage.menu.trigger"));
-        assertTrue(detailView.contains("overflow-menu__item--danger"));
+        assertTrue(detailView.contains("host-action-card"));
+        assertTrue(detailView.contains("event.host.action.editSeries"));
+        assertTrue(detailView.contains("event.host.action.cancelSeries"));
+        assertFalse(detailView.contains("<ui:overflowMenu"));
+        assertFalse(detailView.contains("host.manage"));
+        assertFalse(detailView.contains("overflow-menu__item--danger"));
         assertTrue(detailView.contains("hostSeriesEditPath"));
         assertTrue(detailView.contains("hostSeriesCancelPath"));
-        assertTrue(detailView.contains("host.manage.editSeries"));
-        assertTrue(detailView.contains("host.manage.cancelSeries"));
-        assertFalse(detailView.contains("label=\"${hostManageEditLabel}\""));
-        assertFalse(detailView.contains("label=\"${hostManageCancelLabel}\""));
-        assertEquals("Edit recurring dates", english.getProperty("host.manage.editSeries"));
-        assertEquals(
-                "Cancel all upcoming recurring dates",
-                english.getProperty("host.manage.cancelSeries"));
-        assertEquals("Editar fechas recurrentes", spanish.getProperty("host.manage.editSeries"));
-        assertEquals(
-                "Cancelar todas las fechas recurrentes pr\u00f3ximas",
-                spanish.getProperty("host.manage.cancelSeries"));
+        assertEquals("Edit series", english.getProperty("event.host.action.editSeries"));
+        assertEquals("Cancel series", english.getProperty("event.host.action.cancelSeries"));
+        assertEquals("Editar serie", spanish.getProperty("event.host.action.editSeries"));
+        assertEquals("Cancelar serie", spanish.getProperty("event.host.action.cancelSeries"));
     }
 
     @Test
@@ -450,11 +445,10 @@ class ViewTemplateAssetsTest {
     @Test
     void hostRequestsIncludesAggregateRecurringRequestCopy() throws IOException {
         final String requestView =
-                read("src/main/webapp/WEB-INF/views/host/participation/requests.jsp");
+                read("src/main/webapp/WEB-INF/views/host/participation/aggregate-requests.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(requestView.contains("aggregateRequests"));
         assertTrue(requestView.contains("host.requests.all.description"));
         assertTrue(requestView.contains("host.requests.seriesBadge"));
         assertEquals("Join requests", english.getProperty("nav.host.joinRequests"));
@@ -465,13 +459,12 @@ class ViewTemplateAssetsTest {
 
     @Test
     void hostInvitesIncludesLocalizedSeriesInviteOption() throws IOException {
-        final String inviteView =
-                read("src/main/webapp/WEB-INF/views/host/participation/invites.jsp");
+        final String inviteView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(inviteView.contains("seriesInviteAvailable"));
-        assertTrue(inviteView.contains("path=\"inviteSeries\""));
+        assertTrue(inviteView.contains("hostSeriesInviteAvailable"));
+        assertTrue(inviteView.contains("name=\"inviteSeries\""));
         assertTrue(inviteView.contains("host.invites.inviteSeries"));
         assertEquals(
                 "Invite to all dates in this series",
@@ -482,30 +475,46 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void matchDetailCollapsesLongRecurringSchedule() throws IOException {
+    void matchDetailHostManagementListsUseScopedLabelsAndOptionalProfileLinks() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+
+        assertTrue(detailView.contains("aria-labelledby=\"pending-requests-title\""));
+        assertTrue(detailView.contains("aria-labelledby=\"pending-invitations-title\""));
+        assertTrue(detailView.contains("<c:when test=\"${not empty req.profileHref}\">"));
+        assertTrue(detailView.contains("<c:when test=\"${not empty invite.profileHref}\">"));
+    }
+
+    @Test
+    void matchDetailPaginatesRecurringSchedule() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final String eventDetailCss = read("src/main/webapp/css/event-detail.css");
-        final String recurrenceScript = read("src/main/webapp/js/recurrence-schedule.js");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(detailView.contains("var=\"recurrencePreviewLimit\" value=\"3\""));
-        assertTrue(detailView.contains("data-recurrence-extra-date=\"true\""));
-        assertTrue(detailView.contains("hidden=\"hidden\""));
-        assertTrue(detailView.contains("and not occurrence.current"));
+        assertTrue(detailView.contains("recurrencePaginationItems"));
+        assertTrue(detailView.contains("feed-pagination"));
+        assertTrue(detailView.contains("recurrenceHasPreviousPage"));
+        assertTrue(detailView.contains("recurrenceHasNextPage"));
         assertTrue(detailView.contains("<c:when test=\"${not empty occurrence.href}\">"));
         assertTrue(detailView.contains("recurrence-schedule__text"));
-        assertTrue(detailView.contains("data-recurrence-toggle=\"true\""));
-        assertTrue(detailView.contains("event.recurrence.showMore"));
-        assertTrue(detailView.contains("event.recurrence.showLess"));
-        assertTrue(eventDetailCss.contains(".recurrence-schedule__item[hidden]"));
         assertTrue(eventDetailCss.contains(".recurrence-schedule__text"));
-        assertTrue(recurrenceScript.contains("data-recurrence-toggle"));
-        assertTrue(recurrenceScript.contains("aria-expanded"));
-        assertEquals("Show more", english.getProperty("event.recurrence.showMore"));
-        assertEquals("Show less", english.getProperty("event.recurrence.showLess"));
-        assertEquals("Ver m\u00e1s", spanish.getProperty("event.recurrence.showMore"));
-        assertEquals("Ver menos", spanish.getProperty("event.recurrence.showLess"));
+        assertTrue(detailView.contains("code=\"event.recurrence.pagination.aria\""));
+        assertTrue(
+                detailView.contains(
+                        "<section class=\"feed-pagination\" aria-label=\"${recurrenceScheduleTitle}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<nav class=\"feed-pagination__nav\" aria-label=\"${recurrenceScheduleTitle}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<span class=\"feed-pagination__ellipsis\" aria-hidden=\"true\">${item.label}</span>"));
+        assertFalse(detailView.contains("aria-label=\"\""));
+        assertEquals("Previous", english.getProperty("pagination.previous"));
+        assertEquals("Next", english.getProperty("pagination.next"));
+        assertEquals("Anterior", spanish.getProperty("pagination.previous"));
+        assertEquals("Siguiente", spanish.getProperty("pagination.next"));
+        assertNotNull(english.getProperty("event.recurrence.pagination.aria"));
+        assertNotNull(spanish.getProperty("event.recurrence.pagination.aria"));
     }
 
     @Test

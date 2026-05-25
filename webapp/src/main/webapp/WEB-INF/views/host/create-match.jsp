@@ -251,19 +251,19 @@
 																data-duration-minutes="60">
 																<input type="radio" name="durationPresetUi" value="60"
 																	class="duration-option__input" />
-																<span>${durationOneHour}</span>
+																	<span><c:out value="${durationOneHour}" /></span>
 															</label>
 															<label class="chip duration-option"
 																data-duration-minutes="90">
 																<input type="radio" name="durationPresetUi" value="90"
 																	class="duration-option__input" />
-																<span>${durationNinetyMinutes}</span>
+																	<span><c:out value="${durationNinetyMinutes}" /></span>
 															</label>
 															<label class="chip duration-option"
 																data-duration-minutes="custom">
 																<input type="radio" name="durationPresetUi"
 																	value="custom" class="duration-option__input" />
-																<span>${durationCustom}</span>
+																	<span><c:out value="${durationCustom}" /></span>
 															</label>
 														</div>
 													</div>
@@ -484,7 +484,7 @@
 																</span>
 																<c:set var="selectedRecurrenceEndMode"
 																	value="${empty createEventForm.recurrenceEndMode ? 'until_date' : createEventForm.recurrenceEndMode}" />
-																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--two"
+																<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--two recurrence-segmented-full-width"
 																	id="match-recurrence-end-mode-toggle"
 																	data-events-toggle="true"
 																	data-events-toggle-right-value="occurrence_count"

@@ -14,6 +14,7 @@ import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
+import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentLifecycleFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
@@ -50,6 +51,7 @@ class HostTournamentControllerTest {
     private MockMvc mockMvc;
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
+    private TournamentBracketService tournamentBracketService;
     private AtomicReference<CreateTournamentRequest> createdRequest;
     private AtomicReference<UpdateTournamentRequest> updatedRequest;
     private AtomicReference<String> cancelReason;
@@ -59,6 +61,7 @@ class HostTournamentControllerTest {
         SecurityContextHolder.clearContext();
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
+        tournamentBracketService = Mockito.mock(TournamentBracketService.class);
         createdRequest = new AtomicReference<>();
         updatedRequest = new AtomicReference<>();
         cancelReason = new AtomicReference<>();
@@ -70,6 +73,7 @@ class HostTournamentControllerTest {
                                 new HostTournamentController(
                                         tournamentService,
                                         tournamentRegistrationService,
+                                        tournamentBracketService,
                                         messageSource,
                                         clock))
                         .setValidator(validator(messageSource))
