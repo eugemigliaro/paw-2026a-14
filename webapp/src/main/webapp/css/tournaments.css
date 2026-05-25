@@ -101,6 +101,32 @@
 	white-space: normal;
 }
 
+.tournament-detail .event-info-panel__row--registration-window dd {
+	display: grid;
+	gap: 0.2rem;
+	justify-items: end;
+	text-align: right;
+}
+
+.tournament-detail .event-info-panel__registration-window-list {
+	display: grid;
+	gap: 0.2rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	text-align: right;
+}
+
+.tournament-detail .event-info-panel__registration-window-item {
+	display: block;
+	overflow-wrap: anywhere;
+}
+
+.tournament-detail .event-info-panel__registration-window-label {
+	color: var(--text-secondary);
+	font-weight: 700;
+}
+
 .tournament-bracket-page__heading {
 	align-items: flex-start;
 	display: flex;

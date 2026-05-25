@@ -206,9 +206,29 @@
 									<dt><spring:message code="tournament.detail.schedule" /></dt>
 									<dd><c:out value="${tournamentPage.scheduleLabel}" /></dd>
 								</div>
-								<div class="booking-panel__detail-row event-info-panel__row">
+								<div class="booking-panel__detail-row event-info-panel__row event-info-panel__row--registration-window">
 									<dt><spring:message code="tournament.detail.registrationWindow" /></dt>
-									<dd><c:out value="${tournamentPage.registrationWindowLabel}" /></dd>
+									<dd class="event-info-panel__registration-window">
+										<c:choose>
+											<c:when test="${not empty tournamentPage.registrationWindowStartLabel and not empty tournamentPage.registrationWindowEndLabel}">
+												<ul class="event-info-panel__registration-window-list">
+													<li class="event-info-panel__registration-window-item">
+														<span class="event-info-panel__registration-window-label"><spring:message code="tournament.detail.registrationWindow.startsAt" />:</span>
+														<c:out value="${tournamentPage.registrationWindowStartLabel}" />
+													</li>
+													<li class="event-info-panel__registration-window-item">
+														<span class="event-info-panel__registration-window-label"><spring:message code="tournament.detail.registrationWindow.endsAt" />:</span>
+														<c:out value="${tournamentPage.registrationWindowEndLabel}" />
+													</li>
+												</ul>
+											</c:when>
+											<c:otherwise>
+												<span class="event-info-panel__registration-window-tbd">
+													<spring:message code="tournament.detail.registrationWindow.tbd" />
+												</span>
+											</c:otherwise>
+										</c:choose>
+									</dd>
 								</div>
 								<div class="booking-panel__detail-row event-info-panel__row">
 									<dt><spring:message code="tournament.detail.venue" /></dt>

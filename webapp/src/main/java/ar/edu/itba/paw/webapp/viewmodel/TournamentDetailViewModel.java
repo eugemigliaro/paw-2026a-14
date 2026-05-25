@@ -12,7 +12,8 @@ public class TournamentDetailViewModel {
     private final String statusTone;
     private final String address;
     private final String scheduleLabel;
-    private final String registrationWindowLabel;
+    private final String registrationWindowStartLabel;
+    private final String registrationWindowEndLabel;
     private final String bracketSizeLabel;
     private final String teamSizeLabel;
     private final String formatLabel;
@@ -46,7 +47,8 @@ public class TournamentDetailViewModel {
             final String statusTone,
             final String address,
             final String scheduleLabel,
-            final String registrationWindowLabel,
+            final String registrationWindowStartLabel,
+            final String registrationWindowEndLabel,
             final String bracketSizeLabel,
             final String teamSizeLabel,
             final String formatLabel,
@@ -78,7 +80,8 @@ public class TournamentDetailViewModel {
         this.statusTone = statusTone;
         this.address = address;
         this.scheduleLabel = scheduleLabel;
-        this.registrationWindowLabel = registrationWindowLabel;
+        this.registrationWindowStartLabel = registrationWindowStartLabel;
+        this.registrationWindowEndLabel = registrationWindowEndLabel;
         this.bracketSizeLabel = bracketSizeLabel;
         this.teamSizeLabel = teamSizeLabel;
         this.formatLabel = formatLabel;
@@ -136,8 +139,12 @@ public class TournamentDetailViewModel {
         return scheduleLabel;
     }
 
-    public String getRegistrationWindowLabel() {
-        return registrationWindowLabel;
+    public String getRegistrationWindowStartLabel() {
+        return registrationWindowStartLabel;
+    }
+
+    public String getRegistrationWindowEndLabel() {
+        return registrationWindowEndLabel;
     }
 
     public String getBracketSizeLabel() {

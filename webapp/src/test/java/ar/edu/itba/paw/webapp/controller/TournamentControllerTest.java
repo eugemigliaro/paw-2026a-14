@@ -104,6 +104,18 @@ class TournamentControllerTest {
                 .andExpect(
                         model().attribute(
                                         "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "registrationWindowStartLabel",
+                                                Matchers.not(Matchers.isEmptyOrNullString()))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "registrationWindowEndLabel",
+                                                Matchers.not(Matchers.isEmptyOrNullString()))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
                                         Matchers.hasProperty("canJoinSolo", Matchers.is(false))))
                 .andExpect(
                         model().attribute(

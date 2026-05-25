@@ -285,7 +285,8 @@ public class TournamentController {
                 tournament.getStatus().getDbValue().replace('_', '-'),
                 tournament.getAddress(),
                 scheduleLabel(tournament, locale),
-                registrationWindowLabel(tournament, locale),
+                registrationWindowStartLabel(tournament, locale),
+                registrationWindowEndLabel(tournament, locale),
                 messageSource.getMessage(
                         "tournament.detail.bracketSize.value",
                         new Object[] {tournament.getBracketSize()},
@@ -366,17 +367,12 @@ public class TournamentController {
                 locale);
     }
 
-    private String registrationWindowLabel(final Tournament tournament, final Locale locale) {
-        final Instant opensAt = tournament.getRegistrationOpensAt();
-        final Instant closesAt = tournament.getRegistrationClosesAt();
-        if (opensAt == null || closesAt == null) {
-            return messageSource.getMessage(
-                    "tournament.detail.registrationWindow.tbd", null, locale);
-        }
-        return messageSource.getMessage(
-                "tournament.detail.registrationWindow.value",
-                new Object[] {formatInstant(opensAt, locale), formatInstant(closesAt, locale)},
-                locale);
+    private String registrationWindowStartLabel(final Tournament tournament, final Locale locale) {
+        return formatInstant(tournament.getRegistrationOpensAt(), locale);
+    }
+
+    private String registrationWindowEndLabel(final Tournament tournament, final Locale locale) {
+        return formatInstant(tournament.getRegistrationClosesAt(), locale);
     }
 
     private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {

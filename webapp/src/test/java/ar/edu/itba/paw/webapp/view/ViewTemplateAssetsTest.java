@@ -374,6 +374,8 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("tournament.host.cancel.loading"));
         assertTrue(detailView.contains("closeRegistrationPath"));
         assertTrue(detailView.contains("tournament.host.closeRegistration"));
+        assertTrue(detailView.contains("tournament.detail.registrationWindow.startsAt"));
+        assertTrue(detailView.contains("tournament.detail.registrationWindow.endsAt"));
         assertTrue(detailView.contains("not tournamentPage.registrationOpen"));
         assertTrue(
                 detailView.contains(
