@@ -218,10 +218,10 @@
 										<dt class="detail-label"><spring:message code="admin.reports.appeal.resolution.label" /></dt>
 										<dd><c:out value="${appealDecisionLabel}" /></dd>
 									</div>
-									<c:if test="${not empty report.appealResolvedByUserId}">
+									<c:if test="${not empty report.appealResolvedBy}">
 										<div class="report-section-field report-section-field__row">
 											<dt class="detail-label"><spring:message code="admin.reports.appealResolvedBy" /></dt>
-											<dd><c:out value="${report.appealResolvedByUserId}" /></dd>
+											<dd><c:out value="${report.appealResolvedBy.username}" /></dd>
 										</div>
 									</c:if>
 									<c:if test="${not empty report.appealResolvedAtLabel}">
