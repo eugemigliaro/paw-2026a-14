@@ -367,6 +367,23 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void tournamentDetailIncludesLocalizedHostCancelAction() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/tournaments/detail.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(detailView.contains("cancelTournamentPath"));
+        assertTrue(detailView.contains("tournament.host.cancel"));
+        assertTrue(detailView.contains("tournament.host.cancel.loading"));
+        assertTrue(detailView.contains("variant=\"danger\""));
+        assertEquals("Cancel tournament", english.getProperty("tournament.host.cancel"));
+        assertEquals(
+                "Tournament cancelled.", english.getProperty("tournament.host.cancel.success"));
+        assertEquals("Cancelar torneo", spanish.getProperty("tournament.host.cancel"));
+        assertEquals("Torneo cancelado.", spanish.getProperty("tournament.host.cancel.success"));
+    }
+
+    @Test
     void matchDetailIncludesPinnedLocationMapWhenCoordinatesExist() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final Path scriptPath = Path.of("src/main/webapp/js/event-map.js");

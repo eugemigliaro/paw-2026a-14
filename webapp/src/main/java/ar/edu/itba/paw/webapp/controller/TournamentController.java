@@ -90,6 +90,7 @@ public class TournamentController {
         mav.addObject(
                 "closeRegistrationPath",
                 "/host/tournaments/" + tournamentId + "/close-registration");
+        mav.addObject("cancelTournamentPath", "/host/tournaments/" + tournamentId + "/cancel");
         mav.addObject(
                 "tournamentNoticeCode", flashString(model, "tournamentNoticeCode").orElse(null));
         mav.addObject(
@@ -153,6 +154,10 @@ public class TournamentController {
                 currentUser == null && registrationOpen && tournament.isAllowSoloSignup();
         final boolean canCloseRegistration =
                 registrationOpen && (isHost(tournament, currentUser) || isAdminMod());
+        final boolean canCancelTournament =
+                TournamentStatus.COMPLETED != tournament.getStatus()
+                        && TournamentStatus.CANCELLED != tournament.getStatus()
+                        && (isHost(tournament, currentUser) || isAdminMod());
 
         return new TournamentDetailViewModel(
                 tournament.getId(),
@@ -188,7 +193,8 @@ public class TournamentController {
                 canJoinSolo,
                 canLeaveSolo,
                 requiresLoginToJoin,
-                canCloseRegistration);
+                canCloseRegistration,
+                canCancelTournament);
     }
 
     private void handleRegistrationException(

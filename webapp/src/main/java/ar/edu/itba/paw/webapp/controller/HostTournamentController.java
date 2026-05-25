@@ -171,6 +171,30 @@ public class HostTournamentController {
         }
     }
 
+    @PostMapping("/host/tournaments/{tournamentId:\\d+}/cancel")
+    public ModelAndView cancelTournament(
+            @PathVariable("tournamentId") final Long tournamentId,
+            final RedirectAttributes redirectAttributes) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+
+        try {
+            tournamentService.cancel(tournamentId, actingUser, "Host cancelled tournament");
+            redirectAttributes.addFlashAttribute(
+                    "tournamentNoticeCode", "tournament.host.cancel.success");
+            return new ModelAndView("redirect:/tournaments/" + tournamentId);
+        } catch (final TournamentLifecycleException exception) {
+            if (TournamentLifecycleFailureReason.TOURNAMENT_NOT_FOUND == exception.getReason()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            if (TournamentLifecycleFailureReason.FORBIDDEN == exception.getReason()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+            redirectAttributes.addFlashAttribute(
+                    "tournamentErrorCode", lifecycleErrorCode(exception.getReason()));
+            return new ModelAndView("redirect:/tournaments/" + tournamentId);
+        }
+    }
+
     private ModelAndView createFormView(
             final CreateTournamentForm form, final String formError, final Locale locale) {
         final ModelAndView mav = new ModelAndView("host/tournaments/create");

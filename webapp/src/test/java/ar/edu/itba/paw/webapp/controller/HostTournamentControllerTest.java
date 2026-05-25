@@ -15,8 +15,10 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
+import ar.edu.itba.paw.services.TournamentLifecycleFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -47,6 +49,7 @@ class HostTournamentControllerTest {
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
     private AtomicReference<CreateTournamentRequest> createdRequest;
+    private AtomicReference<String> cancelReason;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +57,7 @@ class HostTournamentControllerTest {
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         createdRequest = new AtomicReference<>();
+        cancelReason = new AtomicReference<>();
 
         final MessageSource messageSource = messageSource();
         final Clock clock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
@@ -193,6 +197,62 @@ class HostTournamentControllerTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/close-registration"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void postCancelTournamentByHostRedirectsToTournamentDetail() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentService.cancel(
+                                Mockito.eq(77L), Mockito.any(User.class), Mockito.anyString()))
+                .thenAnswer(
+                        invocation -> {
+                            cancelReason.set(invocation.getArgument(2));
+                            return tournament(77L, host, TournamentStatus.CANCELLED);
+                        });
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77"));
+        Assertions.assertEquals("Host cancelled tournament", cancelReason.get());
+    }
+
+    @Test
+    void postCancelTournamentByNonHostReturnsForbidden() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(9L), "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentService.cancel(
+                                Mockito.eq(77L), Mockito.any(User.class), Mockito.anyString()))
+                .thenThrow(
+                        new TournamentLifecycleException(
+                                TournamentLifecycleFailureReason.FORBIDDEN, "Forbidden"));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/cancel")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void postCancelCompletedTournamentRedirectsWithError() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentService.cancel(
+                                Mockito.eq(77L), Mockito.any(User.class), Mockito.anyString()))
+                .thenThrow(
+                        new TournamentLifecycleException(
+                                TournamentLifecycleFailureReason.NOT_CANCELLABLE,
+                                "Not cancellable"));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/cancel"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77"));
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

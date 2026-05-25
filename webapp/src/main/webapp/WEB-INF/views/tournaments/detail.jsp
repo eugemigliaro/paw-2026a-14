@@ -77,19 +77,30 @@
 					</div>
 
 					<aside class="detail-top__sidebar">
-						<c:if test="${tournamentPage.canCloseRegistration}">
+						<c:if test="${tournamentPage.canCloseRegistration or tournamentPage.canCancelTournament}">
 							<article class="panel host-panel">
 								<div class="host-panel__note">
 									<p class="detail-label"><spring:message code="tournament.host.panel.label" /></p>
 									<p><spring:message code="tournament.host.panel.detail" /></p>
 								</div>
-								<c:url var="closeRegistrationAction" value="${closeRegistrationPath}" />
-								<spring:message var="closeRegistrationLabel" code="tournament.host.closeRegistration" />
-								<spring:message var="closingRegistrationLabel" code="tournament.host.closeRegistration.loading" />
-								<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}">
-									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-									<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="secondary" />
-								</form>
+								<c:if test="${tournamentPage.canCloseRegistration}">
+									<c:url var="closeRegistrationAction" value="${closeRegistrationPath}" />
+									<spring:message var="closeRegistrationLabel" code="tournament.host.closeRegistration" />
+									<spring:message var="closingRegistrationLabel" code="tournament.host.closeRegistration.loading" />
+									<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}">
+										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+									</form>
+								</c:if>
+								<c:if test="${tournamentPage.canCancelTournament}">
+									<c:url var="cancelTournamentAction" value="${cancelTournamentPath}" />
+									<spring:message var="cancelTournamentLabel" code="tournament.host.cancel" />
+									<spring:message var="cancellingTournamentLabel" code="tournament.host.cancel.loading" />
+									<form method="post" action="${cancelTournamentAction}" data-submit-guard="true" data-submit-loading-label="${cancellingTournamentLabel}">
+										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+										<ui:button label="${cancelTournamentLabel}" type="submit" fullWidth="${true}" variant="danger" />
+									</form>
+								</c:if>
 							</article>
 						</c:if>
 						<article class="panel player-actions-panel">
