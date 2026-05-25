@@ -44,6 +44,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -61,6 +62,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @PreAuthorize("isAuthenticated()")
 public class HostTournamentController {
+
+    private static final double DEFAULT_MAP_LATITUDE = -34.6037;
+    private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
+    private static final int DEFAULT_MAP_ZOOM = 14;
 
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
     private static final Map<Sport, List<Integer>> SUPPORTED_TEAM_SIZES_BY_SPORT =
@@ -83,6 +88,40 @@ public class HostTournamentController {
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
     private final Clock clock;
+    private final boolean mapPickerEnabled;
+    private final String mapTileUrlTemplate;
+    private final String mapAttribution;
+    private final double mapDefaultLatitude;
+    private final double mapDefaultLongitude;
+    private final int mapDefaultZoom;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public HostTournamentController(
+            final TournamentService tournamentService,
+            final TournamentRegistrationService tournamentRegistrationService,
+            final TournamentBracketService tournamentBracketService,
+            final MessageSource messageSource,
+            final Clock clock,
+            @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
+            @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
+            @Value("${map.tiles.attribution:}") final String mapAttribution,
+            @Value("${map.default.latitude:" + DEFAULT_MAP_LATITUDE + "}")
+                    final double mapDefaultLatitude,
+            @Value("${map.default.longitude:" + DEFAULT_MAP_LONGITUDE + "}")
+                    final double mapDefaultLongitude,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
+        this.tournamentService = tournamentService;
+        this.tournamentRegistrationService = tournamentRegistrationService;
+        this.tournamentBracketService = tournamentBracketService;
+        this.messageSource = messageSource;
+        this.clock = clock;
+        this.mapPickerEnabled = mapPickerEnabled;
+        this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
+        this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
+        this.mapDefaultLatitude = mapDefaultLatitude;
+        this.mapDefaultLongitude = mapDefaultLongitude;
+        this.mapDefaultZoom = mapDefaultZoom;
+    }
 
     public HostTournamentController(
             final TournamentService tournamentService,
@@ -90,11 +129,18 @@ public class HostTournamentController {
             final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource,
             final Clock clock) {
-        this.tournamentService = tournamentService;
-        this.tournamentRegistrationService = tournamentRegistrationService;
-        this.tournamentBracketService = tournamentBracketService;
-        this.messageSource = messageSource;
-        this.clock = clock;
+        this(
+                tournamentService,
+                tournamentRegistrationService,
+                tournamentBracketService,
+                messageSource,
+                clock,
+                false,
+                "",
+                "",
+                DEFAULT_MAP_LATITUDE,
+                DEFAULT_MAP_LONGITUDE,
+                DEFAULT_MAP_ZOOM);
     }
 
     @ModelAttribute("createTournamentForm")
@@ -492,6 +538,12 @@ public class HostTournamentController {
         mav.addObject("submitLabel", formConfig.submitLabel());
         mav.addObject("submitLoadingLabel", formConfig.submitLoadingLabel());
         mav.addObject("isEditMode", formConfig.editMode());
+        mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
+        mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
+        mav.addObject("mapAttribution", mapAttribution);
+        mav.addObject("mapDefaultLatitude", mapDefaultLatitude);
+        mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
+        mav.addObject("mapDefaultZoom", mapDefaultZoom);
         return mav;
     }
 

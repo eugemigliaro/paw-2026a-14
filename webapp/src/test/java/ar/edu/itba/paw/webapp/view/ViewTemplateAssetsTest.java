@@ -239,6 +239,30 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void hostTournamentCreateUsesSharedLocationPickerSection() throws IOException {
+        final String hostTournamentCreate =
+                read("src/main/webapp/WEB-INF/views/host/tournaments/create.jsp");
+
+        assertTrue(hostTournamentCreate.contains("data-location-picker=\"true\""));
+        assertTrue(
+                hostTournamentCreate.contains(
+                        "data-latitude-input=\"#tournament-location-latitude\""));
+        assertTrue(
+                hostTournamentCreate.contains(
+                        "data-longitude-input=\"#tournament-location-longitude\""));
+        assertTrue(hostTournamentCreate.contains("data-location-map=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-zoom-in=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-zoom-out=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-current=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-clear=\"true\""));
+        assertTrue(hostTournamentCreate.contains("host.form.location.map"));
+        assertTrue(hostTournamentCreate.contains("host.form.location.map.aria"));
+        assertTrue(hostTournamentCreate.contains("mapDefaultLatitude"));
+        assertTrue(hostTournamentCreate.contains("mapDefaultLongitude"));
+        assertFalse(hostTournamentCreate.contains("${pageContext.request.contextPath}"));
+    }
+
+    @Test
     void mapPickerUsesCommittedTileDefaults() throws IOException {
         final Properties local = properties("../config/local.example.properties");
         final Properties pampero = properties("../config/pampero.example.properties");

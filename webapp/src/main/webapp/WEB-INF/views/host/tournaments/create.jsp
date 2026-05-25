@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
@@ -14,6 +15,7 @@
 			<spring:message var="titlePlaceholder" code="tournament.form.title.placeholder" />
 			<spring:message var="descPlaceholder" code="tournament.form.description.placeholder" />
 			<spring:message var="locationPlaceholder" code="tournament.form.location.placeholder" />
+			<spring:message var="locationMapAria" code="host.form.location.map.aria" />
 			<spring:message var="sportPadel" code="sport.padel" />
 			<spring:message var="sportFootball" code="sport.football" />
 			<spring:message var="sportTennis" code="sport.tennis" />
@@ -96,6 +98,45 @@
 								<form:hidden path="longitude" id="tournament-location-longitude" />
 								<form:errors path="latitude" cssClass="field__error" element="span" />
 								<form:errors path="longitude" cssClass="field__error" element="span" />
+								<c:if test="${mapPickerEnabled}">
+									<c:url var="appRootUrl" value="/" />
+									<c:set var="contextAwareMapTileUrlTemplate"
+										value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
+									<section
+										class="location-picker"
+										data-location-picker="true"
+										data-latitude-input="#tournament-location-latitude"
+										data-longitude-input="#tournament-location-longitude"
+										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
+										data-attribution="${mapAttribution}"
+										data-default-latitude="${mapDefaultLatitude}"
+										data-default-longitude="${mapDefaultLongitude}"
+										data-default-zoom="${mapDefaultZoom}">
+										<div class="location-picker__header">
+											<div>
+												<span class="field__label"><spring:message code="host.form.location.map" /></span>
+											</div>
+											<div class="location-picker__actions">
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
+													<spring:message code="host.form.location.zoomOut" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
+													<spring:message code="host.form.location.zoomIn" />
+												</button>
+												<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
+													<spring:message code="host.form.location.current" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
+													<spring:message code="host.form.location.clear" />
+												</button>
+											</div>
+										</div>
+										<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
+										<c:if test="${not empty mapAttribution}">
+											<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
+										</c:if>
+									</section>
+								</c:if>
 							</div>
 						</article>
 
