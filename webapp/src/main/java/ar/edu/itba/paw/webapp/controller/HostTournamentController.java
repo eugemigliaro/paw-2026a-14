@@ -11,6 +11,7 @@ import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentLifecycleFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.services.UpdateTournamentRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
@@ -80,7 +81,7 @@ public class HostTournamentController {
     @GetMapping("/host/tournaments/new")
     public ModelAndView showCreateTournament(final Locale locale) {
         SecurityControllerUtils.requireAuthenticatedUser();
-        return createFormView(createTournamentForm(), null, locale);
+        return createFormView(createTournamentForm(), null, locale, createFormConfig(locale));
     }
 
     @PostMapping("/host/tournaments")
@@ -91,10 +92,10 @@ public class HostTournamentController {
             final Locale locale) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
 
-        applyFormValidation(createTournamentForm, bindingResult, locale);
+        applyFormValidation(createTournamentForm, bindingResult, locale, true);
 
         if (bindingResult.hasErrors()) {
-            return createFormView(createTournamentForm, null, locale);
+            return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
         }
 
         final Sport sport =
@@ -132,10 +133,90 @@ public class HostTournamentController {
             return new ModelAndView("redirect:/tournaments/" + createdTournament.getId());
         } catch (final TournamentLifecycleException exception) {
             applyServiceError(exception, bindingResult, locale);
-            return createFormView(createTournamentForm, null, locale);
+            return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
         } catch (final IllegalArgumentException exception) {
-            return createFormView(createTournamentForm, exception.getMessage(), locale);
+            return createFormView(
+                    createTournamentForm, exception.getMessage(), locale, createFormConfig(locale));
         }
+    }
+
+    @GetMapping("/host/tournaments/{tournamentId:\\d+}/edit")
+    public ModelAndView showEditTournament(
+            @PathVariable("tournamentId") final Long tournamentId, final Locale locale) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final Tournament tournament =
+                tournamentService
+                        .findTournamentForHost(tournamentId, actingUser)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!isEditable(tournament)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return createFormView(toForm(tournament), null, locale, editFormConfig(tournament, locale));
+    }
+
+    @PostMapping("/host/tournaments/{tournamentId:\\d+}/edit")
+    public ModelAndView updateTournament(
+            @PathVariable("tournamentId") final Long tournamentId,
+            @Valid @ModelAttribute("createTournamentForm")
+                    final CreateTournamentForm createTournamentForm,
+            final BindingResult bindingResult,
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final Tournament tournament =
+                tournamentService
+                        .findTournamentForHost(tournamentId, actingUser)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final TournamentFormConfig formConfig = editFormConfig(tournament, locale);
+
+        applyFormValidation(createTournamentForm, bindingResult, locale, false);
+
+        if (bindingResult.hasErrors()) {
+            return createFormView(createTournamentForm, null, locale, formConfig);
+        }
+
+        final Sport sport =
+                PersistableEnum.fromDbValue(Sport.class, createTournamentForm.getSport())
+                        .orElse(Sport.PADEL);
+        final UpdateTournamentRequest request =
+                new UpdateTournamentRequest(
+                        sport,
+                        createTournamentForm.getTitle(),
+                        createTournamentForm.getDescription(),
+                        createTournamentForm.getAddress(),
+                        parseCoordinate(createTournamentForm.getLatitude()),
+                        parseCoordinate(createTournamentForm.getLongitude()),
+                        tournament.getStartsAt(),
+                        tournament.getEndsAt(),
+                        createTournamentForm.getPricePerPlayer(),
+                        tournament.getBannerImageMetadata(),
+                        createTournamentForm.getBracketSize(),
+                        createTournamentForm.getTeamSize(),
+                        toInstant(
+                                createTournamentForm.getRegistrationOpensDate(),
+                                createTournamentForm.getRegistrationOpensTime(),
+                                createTournamentForm.getTz()),
+                        toInstant(
+                                createTournamentForm.getRegistrationClosesDate(),
+                                createTournamentForm.getRegistrationClosesTime(),
+                                createTournamentForm.getTz()));
+
+        try {
+            tournamentService.update(tournamentId, actingUser, request);
+        } catch (final TournamentLifecycleException exception) {
+            if (TournamentLifecycleFailureReason.TOURNAMENT_NOT_FOUND == exception.getReason()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            if (TournamentLifecycleFailureReason.FORBIDDEN == exception.getReason()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+            applyServiceError(exception, bindingResult, locale);
+            return createFormView(createTournamentForm, null, locale, formConfig);
+        }
+
+        redirectAttributes.addFlashAttribute(
+                "tournamentNoticeCode", "tournament.host.edit.success");
+        return new ModelAndView("redirect:/tournaments/" + tournamentId);
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/close-registration")
@@ -196,41 +277,94 @@ public class HostTournamentController {
     }
 
     private ModelAndView createFormView(
-            final CreateTournamentForm form, final String formError, final Locale locale) {
+            final CreateTournamentForm form,
+            final String formError,
+            final Locale locale,
+            final TournamentFormConfig formConfig) {
         final ModelAndView mav = new ModelAndView("host/tournaments/create");
-        mav.addObject(
-                "pageTitle",
-                messageSource.getMessage("page.title.hostTournamentCreate", null, locale));
+        mav.addObject("pageTitle", formConfig.pageTitle());
         mav.addObject(
                 "shell",
                 ShellViewModelFactory.playerShell(messageSource, locale, "/host/tournaments/new"));
         mav.addObject("createTournamentForm", form);
         mav.addObject("formError", formError);
-        mav.addObject(
-                "formTitle", messageSource.getMessage("tournament.create.title", null, locale));
-        mav.addObject(
-                "formDescription",
-                messageSource.getMessage("tournament.create.description", null, locale));
-        mav.addObject("formAction", "/host/tournaments");
-        mav.addObject(
-                "submitLabel",
-                messageSource.getMessage("tournament.form.submit.create", null, locale));
-        mav.addObject(
-                "submitLoadingLabel",
-                messageSource.getMessage("tournament.form.submit.creating", null, locale));
+        mav.addObject("formTitle", formConfig.title());
+        mav.addObject("formDescription", formConfig.description());
+        mav.addObject("formAction", formConfig.action());
+        mav.addObject("submitLabel", formConfig.submitLabel());
+        mav.addObject("submitLoadingLabel", formConfig.submitLoadingLabel());
+        mav.addObject("isEditMode", formConfig.editMode());
         return mav;
+    }
+
+    private TournamentFormConfig createFormConfig(final Locale locale) {
+        return new TournamentFormConfig(
+                messageSource.getMessage("page.title.hostTournamentCreate", null, locale),
+                messageSource.getMessage("tournament.create.title", null, locale),
+                messageSource.getMessage("tournament.create.description", null, locale),
+                "/host/tournaments",
+                messageSource.getMessage("tournament.form.submit.create", null, locale),
+                messageSource.getMessage("tournament.form.submit.creating", null, locale),
+                false);
+    }
+
+    private TournamentFormConfig editFormConfig(final Tournament tournament, final Locale locale) {
+        return new TournamentFormConfig(
+                messageSource.getMessage(
+                        "page.title.hostTournamentEdit",
+                        new Object[] {tournament.getTitle()},
+                        locale),
+                messageSource.getMessage("tournament.edit.title", null, locale),
+                messageSource.getMessage("tournament.edit.description", null, locale),
+                "/host/tournaments/" + tournament.getId() + "/edit",
+                messageSource.getMessage("tournament.form.submit.edit", null, locale),
+                messageSource.getMessage("tournament.form.submit.saving", null, locale),
+                true);
     }
 
     private void applyFormValidation(
             final CreateTournamentForm form,
             final BindingResult bindingResult,
-            final Locale locale) {
+            final Locale locale,
+            final boolean requireFutureRegistrationClose) {
         validateSport(form, bindingResult, locale);
         validateBracketSize(form, bindingResult, locale);
         validateTeamSize(form, bindingResult, locale);
         validateJoinMode(form, bindingResult, locale);
         validateCoordinates(form, bindingResult, locale);
-        validateRegistrationWindow(form, bindingResult, locale);
+        validateRegistrationWindow(form, bindingResult, locale, requireFutureRegistrationClose);
+    }
+
+    private CreateTournamentForm toForm(final Tournament tournament) {
+        final ZoneId zoneId = ZoneId.systemDefault();
+        final CreateTournamentForm form = new CreateTournamentForm();
+        form.setTitle(tournament.getTitle());
+        form.setDescription(tournament.getDescription());
+        form.setAddress(tournament.getAddress());
+        form.setLatitude(
+                tournament.getLatitude() == null ? "" : tournament.getLatitude().toString());
+        form.setLongitude(
+                tournament.getLongitude() == null ? "" : tournament.getLongitude().toString());
+        form.setSport(tournament.getSport().getDbValue());
+        form.setBracketSize(tournament.getBracketSize());
+        form.setTeamSize(tournament.getTeamSize());
+        form.setAllowSoloSignup(tournament.isAllowSoloSignup());
+        form.setAllowTeamDraft(tournament.isAllowTeamDraft());
+        form.setPricePerPlayer(tournament.getPricePerPlayer());
+        form.setRegistrationOpensDate(
+                LocalDate.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
+        form.setRegistrationOpensTime(
+                LocalTime.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
+        form.setRegistrationClosesDate(
+                LocalDate.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
+        form.setRegistrationClosesTime(
+                LocalTime.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
+        form.setTz(zoneId.getId());
+        return form;
+    }
+
+    private boolean isEditable(final Tournament tournament) {
+        return TournamentStatus.REGISTRATION == tournament.getStatus();
     }
 
     private void validateSport(
@@ -341,7 +475,8 @@ public class HostTournamentController {
     private void validateRegistrationWindow(
             final CreateTournamentForm form,
             final BindingResult bindingResult,
-            final Locale locale) {
+            final Locale locale,
+            final boolean requireFutureRegistrationClose) {
         if (bindingResult.hasFieldErrors("registrationOpensDate")
                 || bindingResult.hasFieldErrors("registrationOpensTime")
                 || bindingResult.hasFieldErrors("registrationClosesDate")
@@ -368,7 +503,7 @@ public class HostTournamentController {
                             "CreateTournamentForm.registrationClosesTime.AfterOpen", null, locale));
             return;
         }
-        if (!closesAt.isAfter(Instant.now(clock))) {
+        if (requireFutureRegistrationClose && !closesAt.isAfter(Instant.now(clock))) {
             bindingResult.rejectValue(
                     "registrationClosesTime",
                     "CreateTournamentForm.registrationClosesTime.Future",
@@ -492,4 +627,13 @@ public class HostTournamentController {
     private static String normalizeBlank(final String value) {
         return value == null ? "" : value.trim();
     }
+
+    private record TournamentFormConfig(
+            String pageTitle,
+            String title,
+            String description,
+            String action,
+            String submitLabel,
+            String submitLoadingLabel,
+            boolean editMode) {}
 }

@@ -206,8 +206,7 @@ public class TournamentServiceImpl implements TournamentService {
         final Tournament tournament = findByIdOrThrow(tournamentId);
         validateCanMutate(tournament, actingUser);
 
-        if (TournamentStatus.COMPLETED == tournament.getStatus()
-                || TournamentStatus.CANCELLED == tournament.getStatus()) {
+        if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
             throw lifecycleException(
                     TournamentLifecycleFailureReason.NOT_EDITABLE,
                     "tournament.lifecycle.error.notEditable");
@@ -225,6 +224,10 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setEndsAt(request.getEndsAt());
         tournament.setPricePerPlayer(request.getPricePerPlayer());
         tournament.setBannerImageMetadata(request.getBannerImageMetadata());
+        tournament.setBracketSize(request.getBracketSize());
+        tournament.setTeamSize(request.getTeamSize());
+        tournament.setRegistrationOpensAt(request.getRegistrationOpensAt());
+        tournament.setRegistrationClosesAt(request.getRegistrationClosesAt());
         tournament.setUpdatedAt(Instant.now(clock));
         return tournamentDao.update(tournament);
     }
@@ -481,6 +484,8 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getPricePerPlayer(),
                 request.getLatitude(),
                 request.getLongitude());
+        validateBracketSize(request.getBracketSize());
+        validateTeamSize(request.getTeamSize());
         validateRegistrationWindow(
                 request.getRegistrationOpensAt(), request.getRegistrationClosesAt());
     }

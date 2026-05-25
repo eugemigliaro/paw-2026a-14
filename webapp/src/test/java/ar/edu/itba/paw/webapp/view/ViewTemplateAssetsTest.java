@@ -372,14 +372,20 @@ class ViewTemplateAssetsTest {
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
+        assertTrue(detailView.contains("editTournamentPath"));
+        assertTrue(detailView.contains("tournament.host.edit"));
         assertTrue(detailView.contains("cancelTournamentPath"));
         assertTrue(detailView.contains("tournament.host.cancel"));
         assertTrue(detailView.contains("tournament.host.cancel.loading"));
         assertTrue(detailView.contains("variant=\"danger\""));
+        assertEquals("Edit tournament", english.getProperty("tournament.host.edit"));
         assertEquals("Cancel tournament", english.getProperty("tournament.host.cancel"));
+        assertEquals("Tournament updated.", english.getProperty("tournament.host.edit.success"));
         assertEquals(
                 "Tournament cancelled.", english.getProperty("tournament.host.cancel.success"));
+        assertEquals("Editar torneo", spanish.getProperty("tournament.host.edit"));
         assertEquals("Cancelar torneo", spanish.getProperty("tournament.host.cancel"));
+        assertEquals("Torneo actualizado.", spanish.getProperty("tournament.host.edit.success"));
         assertEquals("Torneo cancelado.", spanish.getProperty("tournament.host.cancel.success"));
     }
 

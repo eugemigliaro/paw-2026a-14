@@ -17,6 +17,8 @@ public class UpdateTournamentRequest {
     private final Instant endsAt;
     private final BigDecimal pricePerPlayer;
     private final ImageMetadata bannerImageMetadata;
+    private final int bracketSize;
+    private final int teamSize;
     private final Instant registrationOpensAt;
     private final Instant registrationClosesAt;
 
@@ -31,6 +33,8 @@ public class UpdateTournamentRequest {
             final Instant endsAt,
             final BigDecimal pricePerPlayer,
             final ImageMetadata bannerImageMetadata,
+            final int bracketSize,
+            final int teamSize,
             final Instant registrationOpensAt,
             final Instant registrationClosesAt) {
         this.sport = sport;
@@ -43,6 +47,8 @@ public class UpdateTournamentRequest {
         this.endsAt = endsAt;
         this.pricePerPlayer = pricePerPlayer;
         this.bannerImageMetadata = bannerImageMetadata;
+        this.bracketSize = bracketSize;
+        this.teamSize = teamSize;
         this.registrationOpensAt = registrationOpensAt;
         this.registrationClosesAt = registrationClosesAt;
     }
@@ -85,6 +91,14 @@ public class UpdateTournamentRequest {
 
     public ImageMetadata getBannerImageMetadata() {
         return bannerImageMetadata;
+    }
+
+    public int getBracketSize() {
+        return bracketSize;
+    }
+
+    public int getTeamSize() {
+        return teamSize;
     }
 
     public Instant getRegistrationOpensAt() {

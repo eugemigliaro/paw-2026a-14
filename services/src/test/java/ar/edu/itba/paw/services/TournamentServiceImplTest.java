@@ -235,6 +235,11 @@ public class TournamentServiceImplTest {
         Assertions.assertEquals(request.getTitle(), result.getTitle());
         Assertions.assertEquals(request.getAddress(), result.getAddress());
         Assertions.assertEquals(request.getStartsAt(), result.getStartsAt());
+        Assertions.assertEquals(request.getBracketSize(), result.getBracketSize());
+        Assertions.assertEquals(request.getTeamSize(), result.getTeamSize());
+        Assertions.assertEquals(request.getRegistrationOpensAt(), result.getRegistrationOpensAt());
+        Assertions.assertEquals(
+                request.getRegistrationClosesAt(), result.getRegistrationClosesAt());
         Assertions.assertEquals(FIXED_NOW, result.getUpdatedAt());
     }
 
@@ -263,6 +268,24 @@ public class TournamentServiceImplTest {
         final User host = UserUtils.getUser(1L);
         Mockito.when(tournamentDao.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
+
+        // 2. Exercise
+        final TournamentLifecycleException exception =
+                Assertions.assertThrows(
+                        TournamentLifecycleException.class,
+                        () -> tournamentService.update(10L, host, validUpdateRequest()));
+
+        // 3. Assert
+        Assertions.assertEquals(
+                TournamentLifecycleFailureReason.NOT_EDITABLE, exception.getReason());
+    }
+
+    @Test
+    public void updateFailsAfterRegistrationState() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        Mockito.when(tournamentDao.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.BRACKET_SETUP)));
 
         // 2. Exercise
         final TournamentLifecycleException exception =
@@ -489,12 +512,24 @@ public class TournamentServiceImplTest {
                 FIXED_NOW.plusSeconds(176400),
                 BigDecimal.TEN,
                 null,
+                8,
+                2,
                 FIXED_NOW.plusSeconds(3600),
                 FIXED_NOW.plusSeconds(7200));
     }
 
     private static Tournament tournament(
             final long id, final User host, final TournamentStatus status) {
+        return tournamentWithRegistrationWindow(
+                id, host, status, futureRegistrationOpen(), futureRegistrationClose());
+    }
+
+    private static Tournament tournamentWithRegistrationWindow(
+            final long id,
+            final User host,
+            final TournamentStatus status,
+            final Instant registrationOpensAt,
+            final Instant registrationClosesAt) {
         return new Tournament(
                 id,
                 host,
@@ -513,8 +548,8 @@ public class TournamentServiceImplTest {
                 1,
                 true,
                 false,
-                futureRegistrationOpen(),
-                futureRegistrationClose(),
+                registrationOpensAt,
+                registrationClosesAt,
                 status,
                 FIXED_NOW,
                 FIXED_NOW);

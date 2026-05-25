@@ -127,17 +127,25 @@
 										<form:errors path="registrationClosesTime" cssClass="field__error" element="span" />
 									</label>
 								</div>
-								<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-solo">
-									<form:checkbox path="allowSoloSignup" id="tournament-allow-solo" cssClass="recurrence-toggle__input" />
-									<span class="recurrence-toggle__switch" aria-hidden="true">
-										<span class="recurrence-toggle__knob"></span>
-									</span>
-									<span class="recurrence-toggle__copy">
-										<span class="recurrence-toggle__title"><spring:message code="tournament.form.allowSoloSignup.label" /></span>
-										<span class="recurrence-toggle__hint"><spring:message code="tournament.form.allowSoloSignup.hint" /></span>
-									</span>
-								</label>
-								<form:errors path="allowSoloSignup" cssClass="field__error" element="span" />
+								<c:choose>
+									<c:when test="${isEditMode}">
+										<form:hidden path="allowSoloSignup" />
+										<form:hidden path="allowTeamDraft" />
+									</c:when>
+									<c:otherwise>
+										<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-solo">
+											<form:checkbox path="allowSoloSignup" id="tournament-allow-solo" cssClass="recurrence-toggle__input" />
+											<span class="recurrence-toggle__switch" aria-hidden="true">
+												<span class="recurrence-toggle__knob"></span>
+											</span>
+											<span class="recurrence-toggle__copy">
+												<span class="recurrence-toggle__title"><spring:message code="tournament.form.allowSoloSignup.label" /></span>
+												<span class="recurrence-toggle__hint"><spring:message code="tournament.form.allowSoloSignup.hint" /></span>
+											</span>
+										</label>
+										<form:errors path="allowSoloSignup" cssClass="field__error" element="span" />
+									</c:otherwise>
+								</c:choose>
 							</div>
 						</article>
 

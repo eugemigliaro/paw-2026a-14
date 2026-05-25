@@ -394,8 +394,24 @@ public class Tournament {
         this.bannerImageMetadata = bannerImageMetadata;
     }
 
+    public void setBracketSize(final int bracketSize) {
+        this.bracketSize = (short) bracketSize;
+    }
+
+    public void setTeamSize(final int teamSize) {
+        this.teamSize = (short) teamSize;
+    }
+
     public void setStatus(final TournamentStatus status) {
         this.status = status;
+    }
+
+    public void setRegistrationOpensAt(final Instant registrationOpensAt) {
+        this.registrationOpensAt = registrationOpensAt;
+    }
+
+    public void setRegistrationClosesAt(final Instant registrationClosesAt) {
+        this.registrationClosesAt = registrationClosesAt;
     }
 
     public void setRegistrationClosedAt(final Instant registrationClosedAt) {

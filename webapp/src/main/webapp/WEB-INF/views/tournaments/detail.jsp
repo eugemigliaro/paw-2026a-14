@@ -77,12 +77,17 @@
 					</div>
 
 					<aside class="detail-top__sidebar">
-						<c:if test="${tournamentPage.canCloseRegistration or tournamentPage.canCancelTournament}">
+						<c:if test="${tournamentPage.canCloseRegistration or tournamentPage.canEditTournament or tournamentPage.canCancelTournament}">
 							<article class="panel host-panel">
 								<div class="host-panel__note">
 									<p class="detail-label"><spring:message code="tournament.host.panel.label" /></p>
 									<p><spring:message code="tournament.host.panel.detail" /></p>
 								</div>
+								<c:if test="${tournamentPage.canEditTournament}">
+									<c:url var="editTournamentHref" value="${editTournamentPath}" />
+									<spring:message var="editTournamentLabel" code="tournament.host.edit" />
+									<ui:button label="${editTournamentLabel}" href="${editTournamentHref}" fullWidth="${true}" variant="secondary" />
+								</c:if>
 								<c:if test="${tournamentPage.canCloseRegistration}">
 									<c:url var="closeRegistrationAction" value="${closeRegistrationPath}" />
 									<spring:message var="closeRegistrationLabel" code="tournament.host.closeRegistration" />

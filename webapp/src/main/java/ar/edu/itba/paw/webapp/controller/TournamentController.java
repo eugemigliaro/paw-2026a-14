@@ -90,6 +90,7 @@ public class TournamentController {
         mav.addObject(
                 "closeRegistrationPath",
                 "/host/tournaments/" + tournamentId + "/close-registration");
+        mav.addObject("editTournamentPath", "/host/tournaments/" + tournamentId + "/edit");
         mav.addObject("cancelTournamentPath", "/host/tournaments/" + tournamentId + "/cancel");
         mav.addObject(
                 "tournamentNoticeCode", flashString(model, "tournamentNoticeCode").orElse(null));
@@ -154,6 +155,7 @@ public class TournamentController {
                 currentUser == null && registrationOpen && tournament.isAllowSoloSignup();
         final boolean canCloseRegistration =
                 registrationOpen && (isHost(tournament, currentUser) || isAdminMod());
+        final boolean canEditTournament = canCloseRegistration;
         final boolean canCancelTournament =
                 TournamentStatus.COMPLETED != tournament.getStatus()
                         && TournamentStatus.CANCELLED != tournament.getStatus()
@@ -194,6 +196,7 @@ public class TournamentController {
                 canLeaveSolo,
                 requiresLoginToJoin,
                 canCloseRegistration,
+                canEditTournament,
                 canCancelTournament);
     }
 

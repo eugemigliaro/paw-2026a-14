@@ -18,6 +18,7 @@ import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentLifecycleFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.services.UpdateTournamentRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
@@ -27,6 +28,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -49,6 +51,7 @@ class HostTournamentControllerTest {
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
     private AtomicReference<CreateTournamentRequest> createdRequest;
+    private AtomicReference<UpdateTournamentRequest> updatedRequest;
     private AtomicReference<String> cancelReason;
 
     @BeforeEach
@@ -57,6 +60,7 @@ class HostTournamentControllerTest {
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         createdRequest = new AtomicReference<>();
+        updatedRequest = new AtomicReference<>();
         cancelReason = new AtomicReference<>();
 
         final MessageSource messageSource = messageSource();
@@ -200,6 +204,62 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void getEditTournamentByHostReturnsPrefilledForm() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findTournamentForHost(Mockito.eq(77L), Mockito.any()))
+                .thenReturn(Optional.of(tournament(77L, host, TournamentStatus.REGISTRATION)));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/host/tournaments/77/edit").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attribute("isEditMode", true));
+    }
+
+    @Test
+    void postEditTournamentWithValidFormRedirectsToTournamentDetail() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findTournamentForHost(Mockito.eq(77L), Mockito.any()))
+                .thenReturn(Optional.of(tournament(77L, host, TournamentStatus.REGISTRATION)));
+        Mockito.when(
+                        tournamentService.update(
+                                Mockito.eq(77L),
+                                Mockito.any(User.class),
+                                Mockito.any(UpdateTournamentRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            updatedRequest.set(invocation.getArgument(2));
+                            return tournament(77L, host, TournamentStatus.REGISTRATION);
+                        });
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(editPost(77L, "Updated City Cup"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77"));
+        Assertions.assertNotNull(updatedRequest.get());
+        Assertions.assertEquals("Updated City Cup", updatedRequest.get().getTitle());
+        Assertions.assertEquals(Sport.PADEL, updatedRequest.get().getSport());
+        Assertions.assertEquals(16, updatedRequest.get().getBracketSize());
+        Assertions.assertEquals(2, updatedRequest.get().getTeamSize());
+    }
+
+    @Test
+    void postEditTournamentByNonHostReturnsNotFound() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(9L), "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findTournamentForHost(Mockito.eq(77L), Mockito.any()))
+                .thenReturn(Optional.empty());
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(editPost(77L, "Updated City Cup")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void postCancelTournamentByHostRedirectsToTournamentDetail() throws Exception {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
@@ -258,6 +318,26 @@ class HostTournamentControllerTest {
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             validCreatePost() {
         return createPost("City Padel Cup");
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            editPost(final long tournamentId, final String title) {
+        return post("/host/tournaments/" + tournamentId + "/edit")
+                .locale(Locale.ENGLISH)
+                .param("title", title)
+                .param("sport", "padel")
+                .param("description", "Updated tournament")
+                .param("address", "Updated Club")
+                .param("registrationOpensDate", "2030-04-01")
+                .param("registrationOpensTime", "09:00")
+                .param("registrationClosesDate", "2030-04-09")
+                .param("registrationClosesTime", "20:00")
+                .param("bracketSize", "16")
+                .param("teamSize", "2")
+                .param("pricePerPlayer", "15.00")
+                .param("allowSoloSignup", "true")
+                .param("_allowTeamDraft", "on")
+                .param("tz", "UTC");
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

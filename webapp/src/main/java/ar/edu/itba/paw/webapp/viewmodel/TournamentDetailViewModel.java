@@ -31,6 +31,7 @@ public class TournamentDetailViewModel {
     private final boolean canLeaveSolo;
     private final boolean requiresLoginToJoin;
     private final boolean canCloseRegistration;
+    private final boolean canEditTournament;
     private final boolean canCancelTournament;
 
     public TournamentDetailViewModel(
@@ -61,6 +62,7 @@ public class TournamentDetailViewModel {
             final boolean canLeaveSolo,
             final boolean requiresLoginToJoin,
             final boolean canCloseRegistration,
+            final boolean canEditTournament,
             final boolean canCancelTournament) {
         this.id = id;
         this.title = title;
@@ -89,6 +91,7 @@ public class TournamentDetailViewModel {
         this.canLeaveSolo = canLeaveSolo;
         this.requiresLoginToJoin = requiresLoginToJoin;
         this.canCloseRegistration = canCloseRegistration;
+        this.canEditTournament = canEditTournament;
         this.canCancelTournament = canCancelTournament;
     }
 
@@ -198,6 +201,10 @@ public class TournamentDetailViewModel {
 
     public boolean isCanCloseRegistration() {
         return canCloseRegistration;
+    }
+
+    public boolean isCanEditTournament() {
+        return canEditTournament;
     }
 
     public boolean isCanCancelTournament() {
