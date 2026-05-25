@@ -160,6 +160,11 @@ public class TournamentController {
         mav.addObject("bracketPage", buildBracketPage(bracketView, locale));
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
+                "matchDatesSetupPath",
+                canDefineMatchDates(bracketView.getTournament(), currentUser)
+                        ? "/host/tournaments/" + tournamentId + "/bracket/setup"
+                        : null);
+        mav.addObject(
                 "tournamentNoticeCode", flashString(model, "tournamentNoticeCode").orElse(null));
         mav.addObject(
                 "tournamentErrorCode", flashString(model, "tournamentErrorCode").orElse(null));
@@ -458,6 +463,12 @@ public class TournamentController {
         return tournament.getHost() != null
                 && currentUser != null
                 && tournament.getHost().getId().equals(currentUser.getId());
+    }
+
+    private static boolean canDefineMatchDates(
+            final Tournament tournament, final User currentUser) {
+        return TournamentStatus.BRACKET_SETUP == tournament.getStatus()
+                && (isHost(tournament, currentUser) || isAdminMod());
     }
 
     private static boolean isAdminMod() {

@@ -170,6 +170,30 @@ public class TournamentJpaDao implements TournamentDao {
     }
 
     @Override
+    public Optional<Tournament> refreshScheduleWindow(final long tournamentId) {
+        final Tournament tournament = em.find(Tournament.class, tournamentId);
+        if (tournament == null) {
+            return Optional.empty();
+        }
+
+        final Object[] scheduleWindow =
+                em.createQuery(
+                                "SELECT MIN(tm.scheduledStartsAt),"
+                                        + " MAX(COALESCE(tm.scheduledEndsAt, tm.scheduledStartsAt))"
+                                        + " FROM TournamentMatch tm"
+                                        + " WHERE tm.tournament.id = :tournamentId"
+                                        + " AND tm.scheduledStartsAt IS NOT NULL",
+                                Object[].class)
+                        .setParameter("tournamentId", tournamentId)
+                        .getSingleResult();
+
+        tournament.setStartsAt((Instant) scheduleWindow[0]);
+        tournament.setEndsAt((Instant) scheduleWindow[1]);
+        tournament.setUpdatedAt(Instant.now());
+        return Optional.of(tournament);
+    }
+
+    @Override
     public Tournament update(final Tournament tournament) {
         tournament.setUpdatedAt(Instant.now());
         return em.merge(tournament);

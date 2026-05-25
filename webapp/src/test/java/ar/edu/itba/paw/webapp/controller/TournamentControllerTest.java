@@ -179,6 +179,27 @@ class TournamentControllerTest {
     }
 
     @Test
+    void hostBracketBeforePublishIncludesMatchDateSetupAction() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.BRACKET_SETUP);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(tournamentBracketService.getBracket(77L, host))
+                .thenReturn(
+                        new TournamentBracketView(
+                                tournament, List.of(), List.of(match), null, match));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tournaments/bracket"))
+                .andExpect(
+                        model().attribute(
+                                        "matchDatesSetupPath",
+                                        Matchers.is("/host/tournaments/77/bracket/setup")));
+    }
+
+    @Test
     void publicBracketBeforePublishIsForbidden() throws Exception {
         // 1. Arrange
         Mockito.when(tournamentBracketService.getBracket(77L, null))

@@ -342,6 +342,116 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldFindMemberTournamentsOnceOrderedByStartDate() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        final Tournament later =
+                createTournament(
+                        "Later Cup",
+                        Sport.PADEL,
+                        TournamentStatus.BRACKET_SETUP,
+                        now.plusSeconds(172_800),
+                        BigDecimal.ZERO,
+                        -34.56,
+                        -58.45);
+        final Tournament earlier =
+                createTournament(
+                        "Earlier Cup",
+                        Sport.PADEL,
+                        TournamentStatus.BRACKET_SETUP,
+                        now.plusSeconds(86_400),
+                        BigDecimal.ZERO,
+                        -34.56,
+                        -58.45);
+        final TournamentTeam laterTeam =
+                tournamentTeamDao.create(later, "Later squad", TournamentTeamOrigin.SOLO_POOL, 1);
+        final TournamentTeam earlierTeamOne =
+                tournamentTeamDao.create(
+                        earlier, "Earlier squad #1", TournamentTeamOrigin.SOLO_POOL, 1);
+        final TournamentTeam earlierTeamTwo =
+                tournamentTeamDao.create(
+                        earlier, "Earlier squad #2", TournamentTeamOrigin.SOLO_POOL, 2);
+        tournamentTeamDao.addMember(laterTeam, player, false);
+        tournamentTeamDao.addMember(earlierTeamOne, player, false);
+        tournamentTeamDao.addMember(earlierTeamTwo, player, false);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> tournaments = tournamentTeamDao.findTournamentsByMember(player);
+
+        Assertions.assertEquals(
+                List.of(earlier.getId(), later.getId()), tournamentIds(tournaments));
+    }
+
+    @Test
+    public void shouldRefreshTournamentScheduleWindowFromScheduledMatches() {
+        final Instant now = Instant.parse("2026-04-05T00:00:00Z");
+        final Tournament tournament =
+                tournamentDao.create(
+                        host,
+                        Sport.PADEL,
+                        "Derived Schedule Cup",
+                        "Tournament with scheduled fixtures",
+                        "Club Court 1",
+                        -34.56,
+                        -58.45,
+                        null,
+                        null,
+                        BigDecimal.ZERO,
+                        null,
+                        TournamentFormat.SINGLE_ELIMINATION,
+                        4,
+                        1,
+                        true,
+                        false,
+                        now.minusSeconds(86_400),
+                        now.plusSeconds(86_400),
+                        TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam teamOne =
+                tournamentTeamDao.create(tournament, "Team 1", TournamentTeamOrigin.SOLO_POOL, 1);
+        final TournamentTeam teamTwo =
+                tournamentTeamDao.create(tournament, "Team 2", TournamentTeamOrigin.SOLO_POOL, 2);
+        final TournamentTeam teamThree =
+                tournamentTeamDao.create(tournament, "Team 3", TournamentTeamOrigin.SOLO_POOL, 3);
+        final TournamentTeam teamFour =
+                tournamentTeamDao.create(tournament, "Team 4", TournamentTeamOrigin.SOLO_POOL, 4);
+        final TournamentMatch laterMatch =
+                tournamentMatchDao.create(
+                        tournament,
+                        1,
+                        0,
+                        teamOne,
+                        teamTwo,
+                        TournamentMatchStatus.SCHEDULED,
+                        null,
+                        null);
+        final TournamentMatch earlierMatch =
+                tournamentMatchDao.create(
+                        tournament,
+                        1,
+                        1,
+                        teamThree,
+                        teamFour,
+                        TournamentMatchStatus.SCHEDULED,
+                        null,
+                        null);
+        laterMatch.setScheduledStartsAt(now.plusSeconds(10_800));
+        laterMatch.setScheduledEndsAt(now.plusSeconds(14_400));
+        earlierMatch.setScheduledStartsAt(now.plusSeconds(3_600));
+        earlierMatch.setScheduledEndsAt(now.plusSeconds(7_200));
+        tournamentMatchDao.update(laterMatch);
+        tournamentMatchDao.update(earlierMatch);
+        em.flush();
+        em.clear();
+
+        final Tournament refreshed =
+                tournamentDao.refreshScheduleWindow(tournament.getId()).orElseThrow();
+
+        Assertions.assertEquals(now.plusSeconds(3_600), refreshed.getStartsAt());
+        Assertions.assertEquals(now.plusSeconds(14_400), refreshed.getEndsAt());
+    }
+
+    @Test
     public void shouldRejectDuplicateSeedPosition() {
         final Tournament tournament = createTournament(TournamentStatus.BRACKET_SETUP);
         tournamentTeamDao.create(tournament, "Solo squad #1", TournamentTeamOrigin.SOLO_POOL, 1);

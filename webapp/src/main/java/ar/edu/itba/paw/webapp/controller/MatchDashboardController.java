@@ -113,7 +113,10 @@ public class MatchDashboardController {
         final DateRangeContext context =
                 "past".equalsIgnoreCase(filter) ? DateRangeContext.PAST : DateRangeContext.UPCOMING;
         final DateRange selectedDateRange =
-                normalizeDateRange(startDate, endDate, context, ZoneId.of(selectedTimezone));
+                TYPE_TOURNAMENT.equals(selectedType)
+                        ? normalizeExplicitDateRange(startDate, endDate)
+                        : normalizeDateRange(
+                                startDate, endDate, context, ZoneId.of(selectedTimezone));
 
         final PaginatedResult<Match> result =
                 TYPE_TOURNAMENT.equals(selectedType)
@@ -1476,6 +1479,22 @@ public class MatchDashboardController {
                 startDate = null;
             }
         }
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            final LocalDate temp = startDate;
+            startDate = endDate;
+            endDate = temp;
+        }
+
+        return new DateRange(
+                startDate == null ? null : startDate.toString(),
+                endDate == null ? null : endDate.toString());
+    }
+
+    private static DateRange normalizeExplicitDateRange(
+            final String rawStartDate, final String rawEndDate) {
+        LocalDate startDate = parseDate(rawStartDate);
+        LocalDate endDate = parseDate(rawEndDate);
 
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             final LocalDate temp = startDate;

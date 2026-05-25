@@ -64,5 +64,7 @@ public interface TournamentDao {
 
     List<Tournament> findHostedByUser(User host, int offset, int limit);
 
+    Optional<Tournament> refreshScheduleWindow(long tournamentId);
+
     Tournament update(Tournament tournament);
 }

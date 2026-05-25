@@ -24,6 +24,11 @@
 							<spring:message code="tournament.bracket.public.description" />
 						</p>
 					</div>
+					<c:if test="${not empty matchDatesSetupPath}">
+						<c:url var="matchDatesSetupHref" value="${matchDatesSetupPath}" />
+						<spring:message var="defineMatchDatesLabel" code="tournament.bracket.defineMatchDates" />
+						<ui:button label="${defineMatchDatesLabel}" href="${matchDatesSetupHref}" variant="secondary" />
+					</c:if>
 				</header>
 
 				<c:if test="${not empty tournamentNoticeCode}">

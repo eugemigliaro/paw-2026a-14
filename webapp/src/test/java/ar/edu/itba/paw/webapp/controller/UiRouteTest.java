@@ -1553,8 +1553,8 @@ class UiRouteTest {
                         "Tournament Club",
                         null,
                         null,
-                        Instant.parse("2026-04-12T10:00:00Z"),
-                        Instant.parse("2026-04-12T18:00:00Z"),
+                        null,
+                        null,
                         BigDecimal.TEN,
                         null,
                         TournamentFormat.SINGLE_ELIMINATION,
@@ -1581,7 +1581,12 @@ class UiRouteTest {
                                 Mockito.anyString(),
                                 Mockito.any(),
                                 Mockito.any()))
-                .thenReturn(new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12));
+                .thenAnswer(
+                        invocation ->
+                                invocation.getArgument(3) == null
+                                                && invocation.getArgument(4) == null
+                                        ? new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12)
+                                        : new PaginatedResult<>(List.of(), 0, 1, 12));
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
         final ModerationService moderationService = Mockito.mock(ModerationService.class);

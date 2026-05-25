@@ -139,7 +139,11 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         tournament.setStatus(TournamentStatus.IN_PROGRESS);
         tournament.setStartedAt(now);
         tournament.setUpdatedAt(now);
-        final Tournament updatedTournament = tournamentDao.update(tournament);
+        final Tournament persistedTournament = tournamentDao.update(tournament);
+        final Tournament updatedTournament =
+                tournamentDao
+                        .refreshScheduleWindow(persistedTournament.getId())
+                        .orElse(persistedTournament);
         tournamentMailService.sendBracketPublishedEmail(updatedTournament);
         return updatedTournament;
     }
