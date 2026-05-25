@@ -92,29 +92,6 @@
 								</form>
 							</article>
 						</c:if>
-						<c:if test="${tournamentPage.canManageBracket}">
-							<article class="panel host-panel">
-								<div class="host-panel__note">
-									<p class="detail-label"><spring:message code="tournament.host.bracket.panel.label" /></p>
-									<p><spring:message code="tournament.host.bracket.panel.detail" /></p>
-								</div>
-								<c:url var="bracketSetupHref" value="/host/tournaments/${tournamentPage.id}/bracket/setup" />
-								<spring:message var="bracketSetupLabel" code="tournament.host.bracket.setup" />
-								<ui:button label="${bracketSetupLabel}" href="${bracketSetupHref}" fullWidth="${true}" variant="secondary" />
-							</article>
-						</c:if>
-						<c:if test="${tournamentPage.canViewBracket}">
-							<article class="panel host-panel">
-								<div class="host-panel__note">
-									<p class="detail-label"><spring:message code="tournament.bracket.panel.label" /></p>
-									<p><spring:message code="tournament.bracket.panel.detail" /></p>
-								</div>
-								<c:url var="publicBracketHref" value="/tournaments/${tournamentPage.id}/bracket" />
-								<spring:message var="publicBracketLabel" code="tournament.bracket.view" />
-								<ui:button label="${publicBracketLabel}" href="${publicBracketHref}" fullWidth="${true}" variant="secondary" />
-							</article>
-						</c:if>
-
 						<article class="panel player-actions-panel">
 							<p class="detail-label player-actions-panel__title">
 								<spring:message code="tournament.registration.panel.title" />

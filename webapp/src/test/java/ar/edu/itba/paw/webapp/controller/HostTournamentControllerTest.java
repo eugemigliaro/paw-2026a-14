@@ -8,20 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import ar.edu.itba.paw.models.Tournament;
-import ar.edu.itba.paw.models.TournamentMatch;
-import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
-import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
-import ar.edu.itba.paw.services.TournamentBracketService;
-import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
-import ar.edu.itba.paw.services.TournamentMatchScheduleRequest;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
@@ -31,7 +24,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
@@ -54,18 +46,14 @@ class HostTournamentControllerTest {
     private MockMvc mockMvc;
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
-    private TournamentBracketService tournamentBracketService;
     private AtomicReference<CreateTournamentRequest> createdRequest;
-    private AtomicReference<List<TournamentMatchScheduleRequest>> publishedSchedules;
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
-        tournamentBracketService = Mockito.mock(TournamentBracketService.class);
         createdRequest = new AtomicReference<>();
-        publishedSchedules = new AtomicReference<>();
 
         final MessageSource messageSource = messageSource();
         final Clock clock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
@@ -74,7 +62,6 @@ class HostTournamentControllerTest {
                                 new HostTournamentController(
                                         tournamentService,
                                         tournamentRegistrationService,
-                                        tournamentBracketService,
                                         messageSource,
                                         clock))
                         .setValidator(validator(messageSource))
@@ -121,11 +108,11 @@ class HostTournamentControllerTest {
         Assertions.assertEquals(8, createdRequest.get().getBracketSize());
         Assertions.assertEquals(1, createdRequest.get().getTeamSize());
         Assertions.assertTrue(createdRequest.get().isAllowSoloSignup());
-        Assertions.assertTrue(createdRequest.get().isAllowTeamDraft());
+        Assertions.assertFalse(createdRequest.get().isAllowTeamDraft());
     }
 
     @Test
-    void postCreateWithTeamDraftOnlyRedirectsToTournamentDetail() throws Exception {
+    void postCreateWithSubmittedTeamDraftStillCreatesSoloOnlyTournament() throws Exception {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
@@ -140,12 +127,12 @@ class HostTournamentControllerTest {
                         });
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(createPost("City Padel Cup", false, true))
+        mockMvc.perform(createPost("City Padel Cup", true, true))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/99"));
         Assertions.assertNotNull(createdRequest.get());
-        Assertions.assertFalse(createdRequest.get().isAllowSoloSignup());
-        Assertions.assertTrue(createdRequest.get().isAllowTeamDraft());
+        Assertions.assertTrue(createdRequest.get().isAllowSoloSignup());
+        Assertions.assertFalse(createdRequest.get().isAllowTeamDraft());
     }
 
     @Test
@@ -163,7 +150,7 @@ class HostTournamentControllerTest {
     }
 
     @Test
-    void postCreateWithNoJoinModeReturnsForm() throws Exception {
+    void postCreateWithSoloDisabledReturnsForm() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
                 UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
@@ -184,7 +171,7 @@ class HostTournamentControllerTest {
                 UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(createPost("City Football Cup", "football", "2", true, true))
+        mockMvc.perform(createPost("City Football Cup", "football", "2", true, false))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attributeHasFieldErrors("createTournamentForm", "teamSize"));
@@ -208,120 +195,6 @@ class HostTournamentControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    @Test
-    void postGenerateBracketRedirectsToSetup() throws Exception {
-        // 1. Arrange
-        final User host = UserUtils.getUser(7L);
-        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(post("/host/tournaments/77/bracket/generate"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/tournaments/77/bracket/setup"));
-    }
-
-    @Test
-    void getBracketSetupForHostRendersGeneratedBracket() throws Exception {
-        // 1. Arrange
-        final User host = UserUtils.getUser(7L);
-        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
-        final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
-        final TournamentTeam firstTeam = team(1L, tournament, "Team One");
-        final TournamentTeam secondTeam = team(2L, tournament, "Team Two");
-        final TournamentMatch match =
-                new TournamentMatch(
-                        10L,
-                        tournament,
-                        1,
-                        0,
-                        firstTeam,
-                        secondTeam,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        TournamentMatchStatus.PENDING,
-                        null,
-                        null,
-                        FIXED_NOW,
-                        FIXED_NOW);
-        Mockito.when(tournamentService.findTournamentForHost(77L, host))
-                .thenReturn(java.util.Optional.of(tournament));
-        Mockito.when(tournamentBracketService.getBracket(77L, host))
-                .thenReturn(
-                        new TournamentBracketView(
-                                tournament,
-                                java.util.List.of(firstTeam, secondTeam),
-                                java.util.List.of(match),
-                                null,
-                                match));
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/77/bracket/setup"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("host/tournaments/bracket-setup"))
-                .andExpect(model().attributeExists("bracketPage"));
-    }
-
-    @Test
-    void postPublishBracketWithValidRoundOneScheduleRedirectsToDetail() throws Exception {
-        // 1. Arrange
-        final User host = UserUtils.getUser(7L);
-        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
-        final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
-        final TournamentMatch match = bracketMatch(10L, tournament);
-        Mockito.when(tournamentBracketService.getBracket(77L, host))
-                .thenReturn(
-                        new TournamentBracketView(
-                                tournament,
-                                java.util.List.of(match.getTeamA(), match.getTeamB()),
-                                java.util.List.of(match),
-                                null,
-                                match));
-        Mockito.when(
-                        tournamentBracketService.publishBracket(
-                                Mockito.eq(77L), Mockito.eq(host), Mockito.anyList()))
-                .thenAnswer(
-                        invocation -> {
-                            publishedSchedules.set(invocation.getArgument(2));
-                            return tournament(77L, host, TournamentStatus.IN_PROGRESS);
-                        });
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(validPublishPost())
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/tournaments/77"));
-        Assertions.assertNotNull(publishedSchedules.get());
-        Assertions.assertEquals(1, publishedSchedules.get().size());
-        Assertions.assertEquals(10L, publishedSchedules.get().get(0).getMatchId());
-        Assertions.assertEquals("Downtown Club", publishedSchedules.get().get(0).getAddress());
-    }
-
-    @Test
-    void postPublishBracketWithMissingScheduleRedirectsToSetup() throws Exception {
-        // 1. Arrange
-        final User host = UserUtils.getUser(7L);
-        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
-        final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
-        final TournamentMatch match = bracketMatch(10L, tournament);
-        Mockito.when(tournamentBracketService.getBracket(77L, host))
-                .thenReturn(
-                        new TournamentBracketView(
-                                tournament,
-                                java.util.List.of(match.getTeamA(), match.getTeamB()),
-                                java.util.List.of(match),
-                                null,
-                                match));
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(post("/host/tournaments/77/bracket/publish").param("tz", "UTC"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/tournaments/77/bracket/setup"));
-        Assertions.assertNull(publishedSchedules.get());
-    }
-
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             validCreatePost() {
         return createPost("City Padel Cup");
@@ -329,7 +202,7 @@ class HostTournamentControllerTest {
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             createPost(final String title) {
-        return createPost(title, true, true);
+        return createPost(title, true, false);
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -375,19 +248,6 @@ class HostTournamentControllerTest {
         return builder;
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validPublishPost() {
-        return post("/host/tournaments/77/bracket/publish")
-                .param("startDate_10", "2030-04-10")
-                .param("startTime_10", "18:00")
-                .param("endDate_10", "2030-04-10")
-                .param("endTime_10", "19:00")
-                .param("address_10", "Downtown Club")
-                .param("latitude_10", "-34.6")
-                .param("longitude_10", "-58.4")
-                .param("tz", "UTC");
-    }
-
     private static Tournament tournament(
             final Long id, final User host, final TournamentStatus status) {
         return new Tournament(
@@ -411,33 +271,6 @@ class HostTournamentControllerTest {
                 Instant.parse("2030-04-01T09:00:00Z"),
                 Instant.parse("2030-04-09T20:00:00Z"),
                 status,
-                FIXED_NOW,
-                FIXED_NOW);
-    }
-
-    private static TournamentTeam team(
-            final Long id, final Tournament tournament, final String name) {
-        return new TournamentTeam(
-                id, tournament, name, TournamentTeamOrigin.SOLO_POOL, null, FIXED_NOW);
-    }
-
-    private static TournamentMatch bracketMatch(final Long id, final Tournament tournament) {
-        return new TournamentMatch(
-                id,
-                tournament,
-                1,
-                0,
-                team(1L, tournament, "Team One"),
-                team(2L, tournament, "Team Two"),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                TournamentMatchStatus.PENDING,
-                null,
-                null,
                 FIXED_NOW,
                 FIXED_NOW);
     }
