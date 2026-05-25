@@ -83,19 +83,19 @@
 									<p class="detail-label"><spring:message code="tournament.host.panel.label" /></p>
 									<p><spring:message code="tournament.host.panel.detail" /></p>
 								</div>
-								<c:if test="${tournamentPage.canEditTournament}">
-									<c:url var="editTournamentHref" value="${editTournamentPath}" />
-									<spring:message var="editTournamentLabel" code="tournament.host.edit" />
-									<ui:button label="${editTournamentLabel}" href="${editTournamentHref}" fullWidth="${true}" variant="secondary" />
-								</c:if>
 								<c:if test="${tournamentPage.canCloseRegistration}">
 									<c:url var="closeRegistrationAction" value="${closeRegistrationPath}" />
 									<spring:message var="closeRegistrationLabel" code="tournament.host.closeRegistration" />
 									<spring:message var="closingRegistrationLabel" code="tournament.host.closeRegistration.loading" />
 									<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}">
 										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="primary" disabled="${not tournamentPage.registrationOpen}" />
 									</form>
+								</c:if>
+								<c:if test="${tournamentPage.canEditTournament}">
+									<c:url var="editTournamentHref" value="${editTournamentPath}" />
+									<spring:message var="editTournamentLabel" code="tournament.host.edit" />
+									<ui:button label="${editTournamentLabel}" href="${editTournamentHref}" fullWidth="${true}" variant="secondary" />
 								</c:if>
 								<c:if test="${tournamentPage.canCancelTournament}">
 									<c:url var="cancelTournamentAction" value="${cancelTournamentPath}" />

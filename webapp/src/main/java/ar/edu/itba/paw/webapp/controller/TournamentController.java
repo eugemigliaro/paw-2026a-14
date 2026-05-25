@@ -259,8 +259,11 @@ public class TournamentController {
         final boolean requiresLoginToJoin =
                 currentUser == null && registrationOpen && tournament.isAllowSoloSignup();
         final boolean canCloseRegistration =
-                registrationOpen && (isHost(tournament, currentUser) || isAdminMod());
-        final boolean canEditTournament = canCloseRegistration;
+                TournamentStatus.REGISTRATION == tournament.getStatus()
+                        && (isHost(tournament, currentUser) || isAdminMod());
+        final boolean canEditTournament =
+                TournamentStatus.REGISTRATION == tournament.getStatus()
+                        && (isHost(tournament, currentUser) || isAdminMod());
         final boolean canCancelTournament =
                 TournamentStatus.COMPLETED != tournament.getStatus()
                         && TournamentStatus.CANCELLED != tournament.getStatus()

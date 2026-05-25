@@ -372,14 +372,31 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("cancelTournamentPath"));
         assertTrue(detailView.contains("tournament.host.cancel"));
         assertTrue(detailView.contains("tournament.host.cancel.loading"));
+        assertTrue(detailView.contains("closeRegistrationPath"));
+        assertTrue(detailView.contains("tournament.host.closeRegistration"));
+        assertTrue(detailView.contains("not tournamentPage.registrationOpen"));
+        assertTrue(
+                detailView.contains(
+                        "variant=\"primary\" disabled=\"${not tournamentPage.registrationOpen}\""));
         assertTrue(detailView.contains("variant=\"danger\""));
+        assertTrue(
+                detailView.indexOf("closeRegistrationPath")
+                        < detailView.indexOf("editTournamentPath"));
+        assertTrue(
+                detailView.indexOf("editTournamentPath")
+                        < detailView.indexOf("cancelTournamentPath"));
         assertEquals("Edit tournament", english.getProperty("tournament.host.edit"));
         assertEquals("Cancel tournament", english.getProperty("tournament.host.cancel"));
+        assertEquals(
+                "Close registration", english.getProperty("tournament.host.closeRegistration"));
         assertEquals("Tournament updated.", english.getProperty("tournament.host.edit.success"));
         assertEquals(
                 "Tournament cancelled.", english.getProperty("tournament.host.cancel.success"));
         assertEquals("Editar torneo", spanish.getProperty("tournament.host.edit"));
         assertEquals("Cancelar torneo", spanish.getProperty("tournament.host.cancel"));
+        assertEquals(
+                "Cerrar inscripci\u00f3n",
+                spanish.getProperty("tournament.host.closeRegistration"));
         assertEquals("Torneo actualizado.", spanish.getProperty("tournament.host.edit.success"));
         assertEquals("Torneo cancelado.", spanish.getProperty("tournament.host.cancel.success"));
     }

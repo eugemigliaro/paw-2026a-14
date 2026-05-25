@@ -144,6 +144,38 @@ class TournamentControllerTest {
     }
 
     @Test
+    void hostPublicDetailExposesEditingBeforeRegistrationOpens() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(futureRegistrationTournament(77L)));
+        Mockito.when(tournamentRegistrationService.findSoloEntry(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tournaments/detail"))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "canCloseRegistration", Matchers.is(true))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "canEditTournament", Matchers.is(true))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "registrationNotStarted", Matchers.is(true))));
+    }
+
+    @Test
     void loggedOutJoinIsDenied() throws Exception {
         // 1. Arrange
 
