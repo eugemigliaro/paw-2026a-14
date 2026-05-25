@@ -98,6 +98,7 @@ class ShellViewModelFactoryTest {
         messageSource.addMessage("nav.profile", Locale.ENGLISH, "Profile");
         messageSource.addMessage("nav.logout", Locale.ENGLISH, "Logout");
         messageSource.addMessage("nav.hostAMatch", Locale.ENGLISH, "Host a match");
+        messageSource.addMessage("nav.hostATournament", Locale.ENGLISH, "Host a tournament");
         return messageSource;
     }
 }
