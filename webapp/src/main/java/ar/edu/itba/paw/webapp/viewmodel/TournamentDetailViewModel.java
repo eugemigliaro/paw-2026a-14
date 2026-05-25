@@ -33,6 +33,8 @@ public class TournamentDetailViewModel {
     private final boolean canCloseRegistration;
     private final boolean canEditTournament;
     private final boolean canCancelTournament;
+    private final boolean canManageBracket;
+    private final boolean canViewBracket;
 
     public TournamentDetailViewModel(
             final Long id,
@@ -63,7 +65,9 @@ public class TournamentDetailViewModel {
             final boolean requiresLoginToJoin,
             final boolean canCloseRegistration,
             final boolean canEditTournament,
-            final boolean canCancelTournament) {
+            final boolean canCancelTournament,
+            final boolean canManageBracket,
+            final boolean canViewBracket) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -93,6 +97,8 @@ public class TournamentDetailViewModel {
         this.canCloseRegistration = canCloseRegistration;
         this.canEditTournament = canEditTournament;
         this.canCancelTournament = canCancelTournament;
+        this.canManageBracket = canManageBracket;
+        this.canViewBracket = canViewBracket;
     }
 
     public Long getId() {
@@ -209,5 +215,13 @@ public class TournamentDetailViewModel {
 
     public boolean isCanCancelTournament() {
         return canCancelTournament;
+    }
+
+    public boolean isCanManageBracket() {
+        return canManageBracket;
+    }
+
+    public boolean isCanViewBracket() {
+        return canViewBracket;
     }
 }

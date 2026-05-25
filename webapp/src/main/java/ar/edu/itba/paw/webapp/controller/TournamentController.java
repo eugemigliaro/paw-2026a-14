@@ -8,26 +8,37 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.sportLabel;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.UserRole;
+import ar.edu.itba.paw.services.TournamentBracketFailureReason;
+import ar.edu.itba.paw.services.TournamentBracketService;
+import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
+import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
@@ -38,6 +49,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -47,14 +59,17 @@ public class TournamentController {
 
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
+    private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
 
     public TournamentController(
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
+            final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
+        this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
     }
 
@@ -115,6 +130,90 @@ public class TournamentController {
         return new ModelAndView("redirect:/tournaments/" + tournamentId);
     }
 
+    @GetMapping("/tournaments/{tournamentId:\\d+}/bracket")
+    public ModelAndView showBracket(
+            @PathVariable("tournamentId") final Long tournamentId,
+            final Model model,
+            final Locale locale) {
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
+        final TournamentBracketView bracketView;
+        try {
+            bracketView = tournamentBracketService.getBracket(tournamentId, currentUser);
+        } catch (final TournamentBracketException exception) {
+            if (TournamentBracketFailureReason.TOURNAMENT_NOT_FOUND == exception.getReason()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            if (TournamentBracketFailureReason.FORBIDDEN == exception.getReason()
+                    || TournamentBracketFailureReason.BRACKET_NOT_GENERATED
+                            == exception.getReason()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+            throw exception;
+        }
+
+        final ModelAndView mav = new ModelAndView("tournaments/bracket");
+        mav.addObject(
+                "pageTitle",
+                messageSource.getMessage(
+                        "page.title.tournamentBracket",
+                        new Object[] {bracketView.getTournament().getTitle()},
+                        locale));
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
+        mav.addObject("bracketPage", buildBracketPage(bracketView, locale));
+        mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
+        mav.addObject(
+                "matchDatesSetupPath",
+                canDefineMatchDates(bracketView.getTournament(), currentUser)
+                        ? "/host/tournaments/" + tournamentId + "/bracket/setup"
+                        : null);
+        mav.addObject(
+                "tournamentNoticeCode", flashString(model, "tournamentNoticeCode").orElse(null));
+        mav.addObject(
+                "tournamentErrorCode", flashString(model, "tournamentErrorCode").orElse(null));
+        return mav;
+    }
+
+    @PostMapping("/host/tournaments/{tournamentId:\\d+}/matches/{matchId:\\d+}/winner")
+    @PreAuthorize("isAuthenticated()")
+    public ModelAndView declareWinner(
+            @PathVariable("tournamentId") final Long tournamentId,
+            @PathVariable("matchId") final Long matchId,
+            @RequestParam("winnerTeamId") final Long winnerTeamId,
+            final RedirectAttributes redirectAttributes) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        try {
+            tournamentBracketService.declareWinner(
+                    tournamentId,
+                    matchId,
+                    new TournamentWinnerDeclarationRequest(winnerTeamId),
+                    actingUser);
+            redirectAttributes.addFlashAttribute(
+                    "tournamentNoticeCode", "tournament.bracket.result.saved");
+        } catch (final TournamentBracketException exception) {
+            handleBracketMutationException(exception, redirectAttributes);
+        }
+        return new ModelAndView("redirect:/tournaments/" + tournamentId + "/bracket");
+    }
+
+    @PostMapping("/host/tournaments/{tournamentId:\\d+}/matches/{matchId:\\d+}/walkover")
+    @PreAuthorize("isAuthenticated()")
+    public ModelAndView recordWalkover(
+            @PathVariable("tournamentId") final Long tournamentId,
+            @PathVariable("matchId") final Long matchId,
+            @RequestParam("forfeitingTeamId") final Long forfeitingTeamId,
+            final RedirectAttributes redirectAttributes) {
+        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        try {
+            tournamentBracketService.recordWalkover(
+                    tournamentId, matchId, forfeitingTeamId, actingUser);
+            redirectAttributes.addFlashAttribute(
+                    "tournamentNoticeCode", "tournament.bracket.walkover.saved");
+        } catch (final TournamentBracketException exception) {
+            handleBracketMutationException(exception, redirectAttributes);
+        }
+        return new ModelAndView("redirect:/tournaments/" + tournamentId + "/bracket");
+    }
+
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry/leave")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView leaveSolo(
@@ -160,6 +259,13 @@ public class TournamentController {
                 TournamentStatus.COMPLETED != tournament.getStatus()
                         && TournamentStatus.CANCELLED != tournament.getStatus()
                         && (isHost(tournament, currentUser) || isAdminMod());
+        final boolean canManageBracket =
+                TournamentStatus.BRACKET_SETUP == tournament.getStatus()
+                        && (isHost(tournament, currentUser) || isAdminMod());
+        final boolean canViewBracket =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus()
+                        || TournamentStatus.COMPLETED == tournament.getStatus()
+                        || TournamentStatus.CANCELLED == tournament.getStatus();
 
         return new TournamentDetailViewModel(
                 tournament.getId(),
@@ -197,7 +303,9 @@ public class TournamentController {
                 requiresLoginToJoin,
                 canCloseRegistration,
                 canEditTournament,
-                canCancelTournament);
+                canCancelTournament,
+                canManageBracket,
+                canViewBracket);
     }
 
     private void handleRegistrationException(
@@ -262,8 +370,14 @@ public class TournamentController {
     }
 
     private String joinModeLabel(final Tournament tournament, final Locale locale) {
+        if (tournament.isAllowSoloSignup() && tournament.isAllowTeamDraft()) {
+            return messageSource.getMessage("tournament.detail.joinMode.both", null, locale);
+        }
         if (tournament.isAllowSoloSignup()) {
             return messageSource.getMessage("tournament.detail.joinMode.solo", null, locale);
+        }
+        if (tournament.isAllowTeamDraft()) {
+            return messageSource.getMessage("tournament.detail.joinMode.teamDraft", null, locale);
         }
         return messageSource.getMessage("tournament.detail.joinMode.closed", null, locale);
     }
@@ -360,6 +474,12 @@ public class TournamentController {
                 && tournament.getHost().getId().equals(currentUser.getId());
     }
 
+    private static boolean canDefineMatchDates(
+            final Tournament tournament, final User currentUser) {
+        return TournamentStatus.BRACKET_SETUP == tournament.getStatus()
+                && (isHost(tournament, currentUser) || isAdminMod());
+    }
+
     private static boolean isAdminMod() {
         return CurrentAuthenticatedUser.get()
                 .map(principal -> UserRole.ADMIN_MOD == principal.getRole())
@@ -386,6 +506,229 @@ public class TournamentController {
             default:
                 return "tournament.registration.error.notFound";
         }
+    }
+
+    private void handleBracketMutationException(
+            final TournamentBracketException exception,
+            final RedirectAttributes redirectAttributes) {
+        if (TournamentBracketFailureReason.TOURNAMENT_NOT_FOUND == exception.getReason()
+                || TournamentBracketFailureReason.MATCH_NOT_FOUND == exception.getReason()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (TournamentBracketFailureReason.FORBIDDEN == exception.getReason()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        redirectAttributes.addFlashAttribute(
+                "tournamentErrorCode", bracketErrorCode(exception.getReason()));
+    }
+
+    private static String bracketErrorCode(final TournamentBracketFailureReason reason) {
+        switch (reason) {
+            case MATCH_NOT_FOUND:
+                return "tournament.bracket.error.matchNotFound";
+            case NOT_READY_FOR_BRACKET:
+                return "tournament.bracket.error.notReady";
+            case BRACKET_ALREADY_GENERATED:
+                return "tournament.bracket.error.alreadyGenerated";
+            case BRACKET_NOT_GENERATED:
+                return "tournament.bracket.error.notGenerated";
+            case UNDER_CAPACITY:
+                return "tournament.bracket.error.underCapacity";
+            case MISSING_ROUND_ONE_SCHEDULE:
+                return "tournament.bracket.error.missingRoundOneSchedule";
+            case INVALID_SCHEDULE:
+                return "tournament.bracket.error.invalidSchedule";
+            case NOT_IN_PROGRESS:
+                return "tournament.bracket.error.notInProgress";
+            case MATCH_NOT_READY:
+                return "tournament.bracket.error.matchNotReady";
+            case MATCH_ALREADY_DECIDED:
+                return "tournament.bracket.error.matchAlreadyDecided";
+            case WINNER_NOT_IN_MATCH:
+                return "tournament.bracket.error.winnerNotInMatch";
+            case FORFEITING_TEAM_NOT_IN_MATCH:
+                return "tournament.bracket.error.forfeitingTeamNotInMatch";
+            case FORBIDDEN:
+                return "tournament.bracket.error.forbidden";
+            case TOURNAMENT_NOT_FOUND:
+            case TEAM_NOT_FOUND:
+            default:
+                return "tournament.bracket.error.notFound";
+        }
+    }
+
+    private TournamentBracketViewModel buildBracketPage(
+            final TournamentBracketView bracketView, final Locale locale) {
+        final Tournament tournament = bracketView.getTournament();
+        final Long focusedMatchId =
+                bracketView.getFocusedMatch() == null
+                        ? null
+                        : bracketView.getFocusedMatch().getId();
+        final Long viewerTeamId =
+                bracketView.getViewerTeam() == null ? null : bracketView.getViewerTeam().getId();
+        final boolean canManageResults =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus()
+                        && (isHost(tournament, SecurityControllerUtils.currentUserOrNull())
+                                || isAdminMod());
+        final Map<Integer, List<TournamentMatch>> matchesByRound =
+                bracketView.getMatches().stream()
+                        .sorted(
+                                Comparator.comparingInt(TournamentMatch::getRoundNumber)
+                                        .thenComparingInt(TournamentMatch::getMatchIndex))
+                        .collect(
+                                Collectors.groupingBy(
+                                        TournamentMatch::getRoundNumber,
+                                        LinkedHashMap::new,
+                                        Collectors.toList()));
+        final List<TournamentBracketViewModel.RoundViewModel> rounds =
+                matchesByRound.entrySet().stream()
+                        .map(
+                                entry ->
+                                        new TournamentBracketViewModel.RoundViewModel(
+                                                entry.getKey(),
+                                                roundLabel(
+                                                        entry.getKey(),
+                                                        matchesByRound.size(),
+                                                        locale),
+                                                entry.getValue().stream()
+                                                        .map(
+                                                                match ->
+                                                                        new TournamentBracketViewModel
+                                                                                .MatchViewModel(
+                                                                                match.getId(),
+                                                                                teamId(
+                                                                                        match
+                                                                                                .getTeamA()),
+                                                                                teamId(
+                                                                                        match
+                                                                                                .getTeamB()),
+                                                                                matchLabel(
+                                                                                        match,
+                                                                                        locale),
+                                                                                teamName(
+                                                                                        match
+                                                                                                .getTeamA(),
+                                                                                        locale),
+                                                                                teamName(
+                                                                                        match
+                                                                                                .getTeamB(),
+                                                                                        locale),
+                                                                                matchStatusLabel(
+                                                                                        match,
+                                                                                        locale),
+                                                                                Objects.equals(
+                                                                                        focusedMatchId,
+                                                                                        match
+                                                                                                .getId()),
+                                                                                sameTeam(
+                                                                                        match
+                                                                                                .getTeamA(),
+                                                                                        viewerTeamId),
+                                                                                sameTeam(
+                                                                                        match
+                                                                                                .getTeamB(),
+                                                                                        viewerTeamId),
+                                                                                canManageResults
+                                                                                        && canRecordResult(
+                                                                                                match),
+                                                                                matchScheduleLabel(
+                                                                                        match,
+                                                                                        locale),
+                                                                                "",
+                                                                                "",
+                                                                                "",
+                                                                                "",
+                                                                                "",
+                                                                                "",
+                                                                                ""))
+                                                        .toList()))
+                        .toList();
+
+        return new TournamentBracketViewModel(
+                tournament.getId(),
+                tournament.getTitle(),
+                statusLabel(tournament, locale),
+                tournament.getStatus().getDbValue().replace('_', '-'),
+                focusedMatchLabel(bracketView.getFocusedMatch(), locale),
+                focusedMatchTeamsLabel(bracketView.getFocusedMatch(), locale),
+                matchScheduleLabel(bracketView.getFocusedMatch(), locale),
+                bracketView.getFocusedMatch() == null
+                        ? null
+                        : bracketView.getFocusedMatch().getAddress(),
+                true,
+                false,
+                canManageResults,
+                rounds);
+    }
+
+    private String roundLabel(final int roundNumber, final int roundCount, final Locale locale) {
+        if (roundNumber == roundCount) {
+            return messageSource.getMessage("tournament.bracket.round.final", null, locale);
+        }
+        return messageSource.getMessage(
+                "tournament.bracket.round.number", new Object[] {roundNumber}, locale);
+    }
+
+    private String matchLabel(final TournamentMatch match, final Locale locale) {
+        return messageSource.getMessage(
+                "tournament.bracket.match.label", new Object[] {match.getMatchIndex() + 1}, locale);
+    }
+
+    private String teamName(final TournamentTeam team, final Locale locale) {
+        return team == null
+                ? messageSource.getMessage("tournament.bracket.team.tbd", null, locale)
+                : team.getName();
+    }
+
+    private static Long teamId(final TournamentTeam team) {
+        return team == null ? null : team.getId();
+    }
+
+    private static boolean canRecordResult(final TournamentMatch match) {
+        return match.getTeamA() != null
+                && match.getTeamB() != null
+                && match.getWinnerTeam() == null;
+    }
+
+    private String matchStatusLabel(final TournamentMatch match, final Locale locale) {
+        return messageSource.getMessage(
+                "tournament.match.status." + match.getStatus().getDbValue(), null, locale);
+    }
+
+    private String matchScheduleLabel(final TournamentMatch match, final Locale locale) {
+        if (match == null || match.getScheduledStartsAt() == null) {
+            return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
+        }
+        if (match.getScheduledEndsAt() == null) {
+            return formatInstant(match.getScheduledStartsAt(), locale);
+        }
+        return messageSource.getMessage(
+                "tournament.bracket.schedule.range",
+                new Object[] {
+                    formatInstant(match.getScheduledStartsAt(), locale),
+                    formatInstant(match.getScheduledEndsAt(), locale)
+                },
+                locale);
+    }
+
+    private String focusedMatchLabel(final TournamentMatch match, final Locale locale) {
+        return match == null ? null : matchLabel(match, locale);
+    }
+
+    private String focusedMatchTeamsLabel(final TournamentMatch match, final Locale locale) {
+        if (match == null) {
+            return null;
+        }
+        return messageSource.getMessage(
+                "tournament.bracket.match.teams",
+                new Object[] {
+                    teamName(match.getTeamA(), locale), teamName(match.getTeamB(), locale)
+                },
+                locale);
+    }
+
+    private static boolean sameTeam(final TournamentTeam team, final Long teamId) {
+        return team != null && team.getId() != null && Objects.equals(team.getId(), teamId);
     }
 
     private static Optional<String> flashString(final Model model, final String name) {

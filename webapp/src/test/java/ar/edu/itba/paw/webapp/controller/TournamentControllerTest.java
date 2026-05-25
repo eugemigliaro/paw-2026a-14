@@ -9,19 +9,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
+import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
+import ar.edu.itba.paw.services.TournamentBracketFailureReason;
+import ar.edu.itba.paw.services.TournamentBracketService;
+import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
+import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.hamcrest.Matchers;
@@ -42,6 +52,7 @@ class TournamentControllerTest {
     private MockMvc mockMvc;
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
+    private TournamentBracketService tournamentBracketService;
     private User host;
 
     @BeforeEach
@@ -49,6 +60,7 @@ class TournamentControllerTest {
         SecurityContextHolder.clearContext();
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
+        tournamentBracketService = Mockito.mock(TournamentBracketService.class);
         host = UserUtils.getUser(7L);
 
         mockMvc =
@@ -56,6 +68,7 @@ class TournamentControllerTest {
                                 new TournamentController(
                                         tournamentService,
                                         tournamentRegistrationService,
+                                        tournamentBracketService,
                                         messageSource()))
                         .build();
     }
@@ -144,35 +157,124 @@ class TournamentControllerTest {
     }
 
     @Test
-    void publicBracketRouteIsNotMapped() throws Exception {
+    void publicBracketRendersInProgressTournament() throws Exception {
         // 1. Arrange
+        final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(tournamentBracketService.getBracket(77L, null))
+                .thenReturn(
+                        new TournamentBracketView(
+                                tournament, List.of(), List.of(match), null, match));
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/tournaments/77/bracket")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tournaments/bracket"))
+                .andExpect(model().attributeExists("bracketPage"))
+                .andExpect(
+                        model().attribute(
+                                        "bracketPage",
+                                        Matchers.hasProperty(
+                                                "title", Matchers.is("City Padel Cup"))));
     }
 
     @Test
-    void hostWinnerRouteIsNotMapped() throws Exception {
+    void hostBracketBeforePublishIncludesMatchDateSetupAction() throws Exception {
         // 1. Arrange
-        AuthenticationUtils.authenticateUser(
-                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.BRACKET_SETUP);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(tournamentBracketService.getBracket(77L, host))
+                .thenReturn(
+                        new TournamentBracketView(
+                                tournament, List.of(), List.of(match), null, match));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tournaments/bracket"))
+                .andExpect(
+                        model().attribute(
+                                        "matchDatesSetupPath",
+                                        Matchers.is("/host/tournaments/77/bracket/setup")));
+    }
+
+    @Test
+    void publicBracketBeforePublishIsForbidden() throws Exception {
+        // 1. Arrange
+        Mockito.when(tournamentBracketService.getBracket(77L, null))
+                .thenThrow(
+                        new TournamentBracketException(
+                                TournamentBracketFailureReason.FORBIDDEN, "Forbidden"));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77/bracket")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void hostCanDeclareWinner() throws Exception {
+        // 1. Arrange
+        final User hostUser = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(hostUser, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(
+                        tournamentBracketService.declareWinner(
+                                Mockito.eq(77L),
+                                Mockito.eq(10L),
+                                Mockito.any(TournamentWinnerDeclarationRequest.class),
+                                Mockito.eq(hostUser)))
+                .thenReturn(match);
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/matches/10/winner").param("winnerTeamId", "1"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77/bracket"))
+                .andExpect(
+                        flash().attribute(
+                                        "tournamentNoticeCode", "tournament.bracket.result.saved"));
     }
 
     @Test
-    void hostWalkoverRouteIsNotMapped() throws Exception {
+    void nonHostDeclareWinnerIsForbidden() throws Exception {
         // 1. Arrange
-        AuthenticationUtils.authenticateUser(
-                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        final User user = UserUtils.getUser(9L);
+        AuthenticationUtils.authenticateUser(user, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentBracketService.declareWinner(
+                                Mockito.eq(77L),
+                                Mockito.eq(10L),
+                                Mockito.any(TournamentWinnerDeclarationRequest.class),
+                                Mockito.eq(user)))
+                .thenThrow(
+                        new TournamentBracketException(
+                                TournamentBracketFailureReason.FORBIDDEN, "Forbidden"));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/matches/10/winner").param("winnerTeamId", "1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void hostCanRecordWalkover() throws Exception {
+        // 1. Arrange
+        final User hostUser = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(hostUser, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(tournamentBracketService.recordWalkover(77L, 10L, 1L, hostUser))
+                .thenReturn(match);
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(
                         post("/host/tournaments/77/matches/10/walkover")
                                 .param("forfeitingTeamId", "1"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77/bracket"))
+                .andExpect(
+                        flash().attribute(
+                                        "tournamentNoticeCode",
+                                        "tournament.bracket.walkover.saved"));
     }
 
     private Tournament tournament(final Long id, final TournamentStatus status) {
@@ -199,6 +301,34 @@ class TournamentControllerTest {
                 status,
                 NOW,
                 NOW);
+    }
+
+    private TournamentMatch bracketMatch(final Long id, final Tournament tournament) {
+        final TournamentTeam firstTeam = team(1L, tournament, "Team One");
+        final TournamentTeam secondTeam = team(2L, tournament, "Team Two");
+        return new TournamentMatch(
+                id,
+                tournament,
+                1,
+                0,
+                firstTeam,
+                secondTeam,
+                null,
+                Instant.parse("2030-04-10T18:00:00Z"),
+                Instant.parse("2030-04-10T19:00:00Z"),
+                "Downtown Club",
+                null,
+                null,
+                TournamentMatchStatus.SCHEDULED,
+                null,
+                null,
+                NOW,
+                NOW);
+    }
+
+    private static TournamentTeam team(
+            final Long id, final Tournament tournament, final String name) {
+        return new TournamentTeam(id, tournament, name, TournamentTeamOrigin.SOLO_POOL, null, NOW);
     }
 
     private static MessageSource messageSource() {

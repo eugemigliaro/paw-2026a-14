@@ -141,7 +141,7 @@ public class HostTournamentController {
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
                         createTournamentForm.isAllowSoloSignup(),
-                        false,
+                        createTournamentForm.isAllowTeamDraft(),
                         toInstant(
                                 createTournamentForm.getRegistrationOpensDate(),
                                 createTournamentForm.getRegistrationOpensTime(),
@@ -627,7 +627,7 @@ public class HostTournamentController {
             final CreateTournamentForm form,
             final BindingResult bindingResult,
             final Locale locale) {
-        if (!form.isAllowSoloSignup()) {
+        if (!form.isAllowSoloSignup() && !form.isAllowTeamDraft()) {
             bindingResult.rejectValue(
                     "allowSoloSignup",
                     "CreateTournamentForm.joinMode.Required",
@@ -732,7 +732,7 @@ public class HostTournamentController {
                 bindingResult.rejectValue("registrationClosesTime", code, message);
                 break;
             case INVALID_SCHEDULE:
-                bindingResult.rejectValue("startTime", code, message);
+                bindingResult.reject("CreateTournamentForm.global", message);
                 break;
             case INVALID_JOIN_MODE:
                 bindingResult.rejectValue("allowSoloSignup", code, message);

@@ -64,7 +64,7 @@ public class CreateTournamentForm {
 
     private boolean allowSoloSignup = true;
 
-    private boolean allowTeamDraft = false;
+    private boolean allowTeamDraft = true;
 
     private String tz = "";
 

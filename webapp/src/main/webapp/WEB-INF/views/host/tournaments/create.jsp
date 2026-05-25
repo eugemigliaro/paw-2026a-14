@@ -127,25 +127,28 @@
 										<form:errors path="registrationClosesTime" cssClass="field__error" element="span" />
 									</label>
 								</div>
-								<c:choose>
-									<c:when test="${isEditMode}">
-										<form:hidden path="allowSoloSignup" />
-										<form:hidden path="allowTeamDraft" />
-									</c:when>
-									<c:otherwise>
-										<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-solo">
-											<form:checkbox path="allowSoloSignup" id="tournament-allow-solo" cssClass="recurrence-toggle__input" />
-											<span class="recurrence-toggle__switch" aria-hidden="true">
-												<span class="recurrence-toggle__knob"></span>
-											</span>
-											<span class="recurrence-toggle__copy">
-												<span class="recurrence-toggle__title"><spring:message code="tournament.form.allowSoloSignup.label" /></span>
-												<span class="recurrence-toggle__hint"><spring:message code="tournament.form.allowSoloSignup.hint" /></span>
-											</span>
-										</label>
-										<form:errors path="allowSoloSignup" cssClass="field__error" element="span" />
-									</c:otherwise>
-								</c:choose>
+								<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-solo">
+									<form:checkbox path="allowSoloSignup" id="tournament-allow-solo" cssClass="recurrence-toggle__input" />
+									<span class="recurrence-toggle__switch" aria-hidden="true">
+										<span class="recurrence-toggle__knob"></span>
+									</span>
+									<span class="recurrence-toggle__copy">
+										<span class="recurrence-toggle__title"><spring:message code="tournament.form.allowSoloSignup.label" /></span>
+										<span class="recurrence-toggle__hint"><spring:message code="tournament.form.allowSoloSignup.hint" /></span>
+									</span>
+								</label>
+								<form:errors path="allowSoloSignup" cssClass="field__error" element="span" />
+								<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-team-draft">
+									<form:checkbox path="allowTeamDraft" id="tournament-allow-team-draft" cssClass="recurrence-toggle__input" />
+									<span class="recurrence-toggle__switch" aria-hidden="true">
+										<span class="recurrence-toggle__knob"></span>
+									</span>
+									<span class="recurrence-toggle__copy">
+										<span class="recurrence-toggle__title"><spring:message code="tournament.form.allowTeamDraft.label" /></span>
+										<span class="recurrence-toggle__hint"><spring:message code="tournament.form.allowTeamDraft.hint" /></span>
+									</span>
+								</label>
+								<form:errors path="allowTeamDraft" cssClass="field__error" element="span" />
 							</div>
 						</article>
 

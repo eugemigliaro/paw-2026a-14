@@ -337,6 +337,51 @@ public class TournamentBracketServiceImplTest {
     }
 
     @Test
+    public void publishReturnsTournamentWithDerivedScheduleWindow() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
+        tournament.setStartsAt(null);
+        tournament.setEndsAt(null);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+        Mockito.when(tournamentDao.refreshScheduleWindow(10L))
+                .thenAnswer(
+                        invocation -> {
+                            tournament.setStartsAt(FIXED_NOW.plusSeconds(3_600));
+                            tournament.setEndsAt(FIXED_NOW.plusSeconds(14_400));
+                            return Optional.of(tournament);
+                        });
+
+        // 2. Exercise
+        final Tournament result =
+                bracketService.publishBracket(
+                        10L,
+                        tournament.getHost(),
+                        List.of(
+                                new TournamentMatchScheduleRequest(
+                                        matches.get(0).getId(),
+                                        FIXED_NOW.plusSeconds(7_200),
+                                        FIXED_NOW.plusSeconds(10_800),
+                                        "Club Court 1",
+                                        -34.56,
+                                        -58.45),
+                                new TournamentMatchScheduleRequest(
+                                        matches.get(1).getId(),
+                                        FIXED_NOW.plusSeconds(3_600),
+                                        FIXED_NOW.plusSeconds(14_400),
+                                        "Club Court 2",
+                                        -34.56,
+                                        -58.45)));
+
+        // 3. Assert
+        Assertions.assertEquals(TournamentStatus.IN_PROGRESS, result.getStatus());
+        Assertions.assertEquals(FIXED_NOW.plusSeconds(3_600), result.getStartsAt());
+        Assertions.assertEquals(FIXED_NOW.plusSeconds(14_400), result.getEndsAt());
+    }
+
+    @Test
     public void nonHostCannotDeclareWinner() {
         // 1. Arrange
         final Tournament tournament =
