@@ -1437,22 +1437,6 @@ public class MatchDashboardController {
                 endDate == null ? null : endDate.toString());
     }
 
-    private static DateRange normalizeExplicitDateRange(
-            final String rawStartDate, final String rawEndDate) {
-        LocalDate startDate = parseDate(rawStartDate);
-        LocalDate endDate = parseDate(rawEndDate);
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            final LocalDate temp = startDate;
-            startDate = endDate;
-            endDate = temp;
-        }
-
-        return new DateRange(
-                startDate == null ? null : startDate.toString(),
-                endDate == null ? null : endDate.toString());
-    }
-
     private static DateRangeBounds dateRangeBounds(final String path, final ZoneId zoneId) {
         final LocalDate today = LocalDate.now(zoneId);
         if (path.endsWith("/finished") || path.endsWith("/past")) {
