@@ -560,10 +560,14 @@ public class TournamentController {
                 return "tournament.bracket.error.notGenerated";
             case UNDER_CAPACITY:
                 return "tournament.bracket.error.underCapacity";
-            case MISSING_ROUND_ONE_SCHEDULE:
-                return "tournament.bracket.error.missingRoundOneSchedule";
+            case MISSING_MATCH_SCHEDULE:
+                return "tournament.bracket.error.missingMatchSchedule";
             case INVALID_SCHEDULE:
                 return "tournament.bracket.error.invalidSchedule";
+            case SCHEDULE_BEFORE_NOW:
+                return "tournament.bracket.error.beforeNow";
+            case INVALID_ROUND_ORDER:
+                return "tournament.bracket.error.invalidRoundOrder";
             case NOT_IN_PROGRESS:
                 return "tournament.bracket.error.notInProgress";
             case MATCH_NOT_READY:

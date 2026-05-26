@@ -174,27 +174,20 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     "tournament.bracket.error.notGenerated");
         }
 
-        final List<TournamentMatch> roundOneMatches =
-                matches.stream().filter(match -> match.getRoundNumber() == 1).toList();
-        if (roundOneMatches.isEmpty()) {
-            throw bracketException(
-                    TournamentBracketFailureReason.BRACKET_NOT_GENERATED,
-                    "tournament.bracket.error.notGenerated");
-        }
-
         final Map<Long, TournamentMatchScheduleRequest> schedulesByMatch =
                 schedulesByMatchId(schedules);
-        validateOnlyRoundOneSchedules(roundOneMatches, schedulesByMatch);
+        validateScheduleCoverage(matches, schedulesByMatch);
 
         final Instant now = Instant.now(clock);
-        for (final TournamentMatch match : roundOneMatches) {
+        validateRoundOrdering(matches, schedulesByMatch);
+        for (final TournamentMatch match : matches) {
             final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
             if (schedule == null) {
                 throw bracketException(
-                        TournamentBracketFailureReason.MISSING_ROUND_ONE_SCHEDULE,
-                        "tournament.bracket.error.missingRoundOneSchedule");
+                        TournamentBracketFailureReason.MISSING_MATCH_SCHEDULE,
+                        "tournament.bracket.error.missingMatchSchedule");
             }
-            validateSchedule(schedule);
+            validateSchedule(schedule, now);
             applySchedule(match, schedule, now);
             tournamentMatchDao.update(match);
         }
@@ -657,19 +650,25 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         return schedulesByMatch;
     }
 
-    private void validateOnlyRoundOneSchedules(
-            final List<TournamentMatch> roundOneMatches,
+    private void validateScheduleCoverage(
+            final List<TournamentMatch> matches,
             final Map<Long, TournamentMatchScheduleRequest> schedulesByMatch) {
-        final Set<Long> roundOneMatchIds =
-                roundOneMatches.stream().map(TournamentMatch::getId).collect(Collectors.toSet());
-        if (!roundOneMatchIds.containsAll(schedulesByMatch.keySet())) {
+        final Set<Long> matchIds =
+                matches.stream().map(TournamentMatch::getId).collect(Collectors.toSet());
+        if (!matchIds.containsAll(schedulesByMatch.keySet())) {
             throw bracketException(
                     TournamentBracketFailureReason.INVALID_SCHEDULE,
                     "tournament.bracket.error.invalidSchedule");
         }
+        if (!schedulesByMatch.keySet().containsAll(matchIds)) {
+            throw bracketException(
+                    TournamentBracketFailureReason.MISSING_MATCH_SCHEDULE,
+                    "tournament.bracket.error.missingMatchSchedule");
+        }
     }
 
-    private void validateSchedule(final TournamentMatchScheduleRequest schedule) {
+    private void validateSchedule(
+            final TournamentMatchScheduleRequest schedule, final Instant now) {
         if (schedule.getStartsAt() == null
                 || schedule.getEndsAt() == null
                 || !schedule.getEndsAt().isAfter(schedule.getStartsAt())
@@ -677,6 +676,11 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             throw bracketException(
                     TournamentBracketFailureReason.INVALID_SCHEDULE,
                     "tournament.bracket.error.invalidSchedule");
+        }
+        if (schedule.getStartsAt().isBefore(now)) {
+            throw bracketException(
+                    TournamentBracketFailureReason.SCHEDULE_BEFORE_NOW,
+                    "tournament.bracket.error.beforeNow");
         }
         if ((schedule.getLatitude() == null) != (schedule.getLongitude() == null)) {
             throw bracketException(
@@ -694,6 +698,43 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             throw bracketException(
                     TournamentBracketFailureReason.INVALID_SCHEDULE,
                     "tournament.bracket.error.invalidLocation");
+        }
+    }
+
+    private void validateRoundOrdering(
+            final List<TournamentMatch> matches,
+            final Map<Long, TournamentMatchScheduleRequest> schedulesByMatch) {
+        final Map<Integer, Instant> latestRoundEnd = new HashMap<>();
+        for (final TournamentMatch match : matches) {
+            final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
+            if (schedule == null || schedule.getEndsAt() == null) {
+                continue;
+            }
+            latestRoundEnd.compute(
+                    match.getRoundNumber(),
+                    (round, existingEnd) ->
+                            existingEnd == null || schedule.getEndsAt().isAfter(existingEnd)
+                                    ? schedule.getEndsAt()
+                                    : existingEnd);
+        }
+
+        for (final TournamentMatch match : matches) {
+            final int previousRound = match.getRoundNumber() - 1;
+            if (previousRound < 1) {
+                continue;
+            }
+            final Instant previousRoundLatestEnd = latestRoundEnd.get(previousRound);
+            if (previousRoundLatestEnd == null) {
+                continue;
+            }
+            final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
+            if (schedule != null
+                    && schedule.getStartsAt() != null
+                    && schedule.getStartsAt().isBefore(previousRoundLatestEnd)) {
+                throw bracketException(
+                        TournamentBracketFailureReason.INVALID_ROUND_ORDER,
+                        "tournament.bracket.error.invalidRoundOrder");
+            }
         }
     }
 

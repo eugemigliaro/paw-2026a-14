@@ -414,12 +414,17 @@ class HostTournamentControllerTest {
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
         final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
         final TournamentMatch match = bracketMatch(10L, tournament);
+        final TournamentMatch match2 = bracketMatch(11L, tournament);
         Mockito.when(tournamentBracketService.getBracket(77L, host))
                 .thenReturn(
                         new TournamentBracketView(
                                 tournament,
-                                java.util.List.of(match.getTeamA(), match.getTeamB()),
-                                java.util.List.of(match),
+                                java.util.List.of(
+                                        match.getTeamA(),
+                                        match.getTeamB(),
+                                        match2.getTeamA(),
+                                        match2.getTeamB()),
+                                java.util.List.of(match, match2),
                                 null,
                                 match));
         Mockito.when(
@@ -436,9 +441,10 @@ class HostTournamentControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/77"));
         Assertions.assertNotNull(publishedSchedules.get());
-        Assertions.assertEquals(1, publishedSchedules.get().size());
+        Assertions.assertEquals(2, publishedSchedules.get().size());
         Assertions.assertEquals(10L, publishedSchedules.get().get(0).getMatchId());
         Assertions.assertEquals("Downtown Club", publishedSchedules.get().get(0).getAddress());
+        Assertions.assertEquals(11L, publishedSchedules.get().get(1).getMatchId());
     }
 
     @Test
@@ -547,6 +553,13 @@ class HostTournamentControllerTest {
                 .param("address_10", "Downtown Club")
                 .param("latitude_10", "-34.6")
                 .param("longitude_10", "-58.4")
+                .param("startDate_11", "2030-04-10")
+                .param("startTime_11", "18:00")
+                .param("endDate_11", "2030-04-10")
+                .param("endTime_11", "19:00")
+                .param("address_11", "Downtown Club")
+                .param("latitude_11", "-34.6")
+                .param("longitude_11", "-58.4")
                 .param("tz", "UTC");
     }
 

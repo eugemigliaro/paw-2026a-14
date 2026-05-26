@@ -328,8 +328,18 @@ public class TournamentBracketServiceImplTest {
                         10L,
                         UserUtils.getUser(99L),
                         List.of(
-                                schedule(matches.get(0).getId()),
-                                schedule(matches.get(1).getId())));
+                                scheduleAt(
+                                        matches.get(0).getId(),
+                                        FIXED_NOW.plusSeconds(3600),
+                                        FIXED_NOW.plusSeconds(7200)),
+                                scheduleAt(
+                                        matches.get(1).getId(),
+                                        FIXED_NOW.plusSeconds(3600),
+                                        FIXED_NOW.plusSeconds(7200)),
+                                scheduleAt(
+                                        matches.get(2).getId(),
+                                        FIXED_NOW.plusSeconds(7500),
+                                        FIXED_NOW.plusSeconds(9000))));
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.IN_PROGRESS, result.getStatus());
@@ -515,7 +525,7 @@ public class TournamentBracketServiceImplTest {
     }
 
     @Test
-    public void publishRejectsMissingRoundOneSchedules() {
+    public void publishRejectsMissingMatchSchedules() {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
@@ -535,7 +545,7 @@ public class TournamentBracketServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals(
-                TournamentBracketFailureReason.MISSING_ROUND_ONE_SCHEDULE, exception.getReason());
+                TournamentBracketFailureReason.MISSING_MATCH_SCHEDULE, exception.getReason());
     }
 
     @Test
@@ -553,8 +563,18 @@ public class TournamentBracketServiceImplTest {
                         10L,
                         tournament.getHost(),
                         List.of(
-                                schedule(matches.get(0).getId()),
-                                schedule(matches.get(1).getId())));
+                                scheduleAt(
+                                        matches.get(0).getId(),
+                                        FIXED_NOW.plusSeconds(3600),
+                                        FIXED_NOW.plusSeconds(7200)),
+                                scheduleAt(
+                                        matches.get(1).getId(),
+                                        FIXED_NOW.plusSeconds(3600),
+                                        FIXED_NOW.plusSeconds(7200)),
+                                scheduleAt(
+                                        matches.get(2).getId(),
+                                        FIXED_NOW.plusSeconds(7500),
+                                        FIXED_NOW.plusSeconds(9000))));
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.IN_PROGRESS, result.getStatus());
@@ -562,8 +582,111 @@ public class TournamentBracketServiceImplTest {
         Assertions.assertEquals(FIXED_NOW, result.getUpdatedAt());
         Assertions.assertTrue(
                 matches.stream()
-                        .filter(match -> match.getRoundNumber() == 1)
                         .allMatch(match -> TournamentMatchStatus.SCHEDULED == match.getStatus()));
+    }
+
+    @Test
+    public void publishRejectsScheduleBeforeNow() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+
+        // 2. Exercise
+        final TournamentBracketException exception =
+                Assertions.assertThrows(
+                        TournamentBracketException.class,
+                        () ->
+                                bracketService.publishBracket(
+                                        10L,
+                                        tournament.getHost(),
+                                        List.of(
+                                                scheduleAt(
+                                                        matches.get(0).getId(),
+                                                        FIXED_NOW.minusSeconds(3600),
+                                                        FIXED_NOW.plusSeconds(3600)),
+                                                scheduleAt(
+                                                        matches.get(1).getId(),
+                                                        FIXED_NOW.plusSeconds(3600),
+                                                        FIXED_NOW.plusSeconds(7200)),
+                                                scheduleAt(
+                                                        matches.get(2).getId(),
+                                                        FIXED_NOW.plusSeconds(7500),
+                                                        FIXED_NOW.plusSeconds(9000)))));
+
+        // 3. Assert
+        Assertions.assertEquals(
+                TournamentBracketFailureReason.SCHEDULE_BEFORE_NOW, exception.getReason());
+    }
+
+    @Test
+    public void publishRejectsInvalidRoundOrder() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+
+        // 2. Exercise
+        final TournamentBracketException exception =
+                Assertions.assertThrows(
+                        TournamentBracketException.class,
+                        () ->
+                                bracketService.publishBracket(
+                                        10L,
+                                        tournament.getHost(),
+                                        List.of(
+                                                scheduleAt(
+                                                        matches.get(0).getId(),
+                                                        FIXED_NOW.plusSeconds(3600),
+                                                        FIXED_NOW.plusSeconds(7200)),
+                                                scheduleAt(
+                                                        matches.get(1).getId(),
+                                                        FIXED_NOW.plusSeconds(3900),
+                                                        FIXED_NOW.plusSeconds(7800)),
+                                                scheduleAt(
+                                                        matches.get(2).getId(),
+                                                        FIXED_NOW.plusSeconds(5400),
+                                                        FIXED_NOW.plusSeconds(9000)))));
+
+        // 3. Assert
+        Assertions.assertEquals(
+                TournamentBracketFailureReason.INVALID_ROUND_ORDER, exception.getReason());
+    }
+
+    @Test
+    public void publishAllowsSameRoundOverlap() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+
+        // 2. Exercise
+        final Tournament result =
+                bracketService.publishBracket(
+                        10L,
+                        tournament.getHost(),
+                        List.of(
+                                scheduleAt(
+                                        matches.get(0).getId(),
+                                        FIXED_NOW.plusSeconds(3600),
+                                        FIXED_NOW.plusSeconds(7200)),
+                                scheduleAt(
+                                        matches.get(1).getId(),
+                                        FIXED_NOW.plusSeconds(3600),
+                                        FIXED_NOW.plusSeconds(7200)),
+                                scheduleAt(
+                                        matches.get(2).getId(),
+                                        FIXED_NOW.plusSeconds(7500),
+                                        FIXED_NOW.plusSeconds(9000))));
+
+        // 3. Assert
+        Assertions.assertEquals(TournamentStatus.IN_PROGRESS, result.getStatus());
     }
 
     @Test
@@ -770,10 +893,19 @@ public class TournamentBracketServiceImplTest {
         // 2. Exercise
         final List<TournamentMatch> generated = bracketService.generateBracket(10L, host);
         final List<TournamentMatchScheduleRequest> schedules =
-                generated.stream()
-                        .filter(match -> match.getRoundNumber() == 1)
-                        .map(match -> schedule(match.getId()))
-                        .toList();
+                List.of(
+                        scheduleAt(
+                                generated.get(0).getId(),
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200)),
+                        scheduleAt(
+                                generated.get(1).getId(),
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200)),
+                        scheduleAt(
+                                generated.get(2).getId(),
+                                FIXED_NOW.plusSeconds(7500),
+                                FIXED_NOW.plusSeconds(9000)));
         bracketService.publishBracket(10L, host, schedules);
 
         final TournamentMatch firstRoundFirst = persistedMatches.get(0);
@@ -934,13 +1066,13 @@ public class TournamentBracketServiceImplTest {
     }
 
     private static TournamentMatchScheduleRequest schedule(final long matchId) {
+        return scheduleAt(matchId, FIXED_NOW.plusSeconds(3600), FIXED_NOW.plusSeconds(7200));
+    }
+
+    private static TournamentMatchScheduleRequest scheduleAt(
+            final long matchId, final Instant startsAt, final Instant endsAt) {
         return new TournamentMatchScheduleRequest(
-                matchId,
-                FIXED_NOW.plusSeconds(3600),
-                FIXED_NOW.plusSeconds(7200),
-                "Club Court 1",
-                -34.56,
-                -58.45);
+                matchId, startsAt, endsAt, "Club Court 1", -34.56, -58.45);
     }
 
     private static TournamentMatch match(
