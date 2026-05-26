@@ -108,13 +108,17 @@ class TournamentControllerTest {
                                         "tournamentPage",
                                         Matchers.hasProperty(
                                                 "registrationWindowStartLabel",
-                                                Matchers.not(Matchers.isEmptyOrNullString()))))
+                                                Matchers.not(
+                                                        Matchers.is(
+                                                                Matchers.emptyOrNullString())))))
                 .andExpect(
                         model().attribute(
                                         "tournamentPage",
                                         Matchers.hasProperty(
                                                 "registrationWindowEndLabel",
-                                                Matchers.not(Matchers.isEmptyOrNullString()))))
+                                                Matchers.not(
+                                                        Matchers.is(
+                                                                Matchers.emptyOrNullString())))))
                 .andExpect(
                         model().attribute(
                                         "tournamentPage",
@@ -137,7 +141,7 @@ class TournamentControllerTest {
                 .thenReturn(Optional.empty());
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/tournaments/77").locale(new Locale("es")))
+        mockMvc.perform(get("/tournaments/77").locale(Locale.of("es")))
                 .andExpect(status().isOk())
                 .andExpect(view().name("tournaments/detail"))
                 .andExpect(model().attributeExists("tournamentPage"))
