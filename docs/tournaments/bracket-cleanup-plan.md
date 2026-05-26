@@ -1,15 +1,21 @@
-# Tournament Bracket Cleanup, Result Hardening, and Host-Only Mutations
+# Tournament Bracket Cleanup And Reconciliation Notes
 
-Mark each feature as completed after implementation.
+This document originally proposed a narrower `solo-pool + random bracket`
+cleanup. During branch reconciliation, the project kept the richer
+`merge/tournaments-bracket` behavior for manual/ELO pairing and admin/mod host
+controls, while removing walkover support and porting selected UX fixes from
+`feat/tournaments`.
 
 ## Summary
 
-- Freeze tournaments to the supported `solo-pool + random bracket` flow for now: hide team draft and remove manual/walkover result variants.
+- Preserve manual/random/ELO pairing and the existing bracket setup page.
+- Remove walkover result variants; forfeits are represented by declaring the
+  non-forfeiting team as winner.
 - Simplify bracket scheduling to one start datetime per match plus a tournament-wide `matchDurationMinutes` configured on create/edit.
 - Keep per-match venue/location scheduling, add an optional short public match note, and make those details visible to players on the public bracket.
 - Clean up the bracket UI: remove the match-focus rail, make winners obvious, and make `/tournaments/{id}` host/bracket panels match the rest of the site.
-- Replace the host “registered players” idea with a solo-pool availability counter only, shown in match-style wording.
-- Remove admin-as-host behavior for tournaments: only the real tournament host can access `/host/tournaments/**` mutations and host controls.
+- Show the registration-phase participant roster on tournament detail.
+- Preserve admin/mod host-equivalent tournament controls for this branch.
 
 ## Implementation Changes
 

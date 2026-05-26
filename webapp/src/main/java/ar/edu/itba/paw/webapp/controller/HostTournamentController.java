@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.User;
@@ -11,6 +12,7 @@ import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
+import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
@@ -24,9 +26,12 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
+import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -86,6 +91,7 @@ public class HostTournamentController {
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
+    private final ImageService imageService;
     private final MessageSource messageSource;
     private final Clock clock;
     private final boolean mapPickerEnabled;
@@ -100,6 +106,7 @@ public class HostTournamentController {
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
+            final ImageService imageService,
             final MessageSource messageSource,
             final Clock clock,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
@@ -113,6 +120,7 @@ public class HostTournamentController {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
+        this.imageService = imageService;
         this.messageSource = messageSource;
         this.clock = clock;
         this.mapPickerEnabled = mapPickerEnabled;
@@ -128,11 +136,39 @@ public class HostTournamentController {
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource,
+            final Clock clock,
+            final boolean mapPickerEnabled,
+            final String mapTileUrlTemplate,
+            final String mapAttribution,
+            final double mapDefaultLatitude,
+            final double mapDefaultLongitude,
+            final int mapDefaultZoom) {
+        this(
+                tournamentService,
+                tournamentRegistrationService,
+                tournamentBracketService,
+                null,
+                messageSource,
+                clock,
+                mapPickerEnabled,
+                mapTileUrlTemplate,
+                mapAttribution,
+                mapDefaultLatitude,
+                mapDefaultLongitude,
+                mapDefaultZoom);
+    }
+
+    public HostTournamentController(
+            final TournamentService tournamentService,
+            final TournamentRegistrationService tournamentRegistrationService,
+            final TournamentBracketService tournamentBracketService,
+            final MessageSource messageSource,
             final Clock clock) {
         this(
                 tournamentService,
                 tournamentRegistrationService,
                 tournamentBracketService,
+                null,
                 messageSource,
                 clock,
                 false,
@@ -168,6 +204,20 @@ public class HostTournamentController {
             return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
         }
 
+        final ImageMetadata bannerImageMetadata;
+        try {
+            bannerImageMetadata = storeBannerIfPresent(createTournamentForm, null);
+        } catch (final IllegalArgumentException exception) {
+            return createFormView(
+                    createTournamentForm, exception.getMessage(), locale, createFormConfig(locale));
+        } catch (final IOException exception) {
+            return createFormView(
+                    createTournamentForm,
+                    messageSource.getMessage("host.imageError", null, locale),
+                    locale,
+                    createFormConfig(locale));
+        }
+
         final Sport sport =
                 PersistableEnum.fromDbValue(Sport.class, createTournamentForm.getSport())
                         .orElse(Sport.PADEL);
@@ -182,7 +232,7 @@ public class HostTournamentController {
                         null,
                         null,
                         createTournamentForm.getPricePerPlayer(),
-                        null,
+                        bannerImageMetadata,
                         TournamentFormat.SINGLE_ELIMINATION,
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
@@ -245,6 +295,20 @@ public class HostTournamentController {
             return createFormView(createTournamentForm, null, locale, formConfig);
         }
 
+        final ImageMetadata bannerImageMetadata;
+        try {
+            bannerImageMetadata =
+                    storeBannerIfPresent(createTournamentForm, tournament.getBannerImageMetadata());
+        } catch (final IllegalArgumentException exception) {
+            return createFormView(createTournamentForm, exception.getMessage(), locale, formConfig);
+        } catch (final IOException exception) {
+            return createFormView(
+                    createTournamentForm,
+                    messageSource.getMessage("host.imageError", null, locale),
+                    locale,
+                    formConfig);
+        }
+
         final Sport sport =
                 PersistableEnum.fromDbValue(Sport.class, createTournamentForm.getSport())
                         .orElse(Sport.PADEL);
@@ -259,7 +323,7 @@ public class HostTournamentController {
                         tournament.getStartsAt(),
                         tournament.getEndsAt(),
                         createTournamentForm.getPricePerPlayer(),
-                        tournament.getBannerImageMetadata(),
+                        bannerImageMetadata,
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
                         toInstant(
@@ -538,6 +602,7 @@ public class HostTournamentController {
         mav.addObject("submitLabel", formConfig.submitLabel());
         mav.addObject("submitLoadingLabel", formConfig.submitLoadingLabel());
         mav.addObject("isEditMode", formConfig.editMode());
+        mav.addObject("currentBannerImageUrl", formConfig.bannerImageUrl());
         mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
         mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
         mav.addObject("mapAttribution", mapAttribution);
@@ -560,7 +625,8 @@ public class HostTournamentController {
                 "/host/tournaments",
                 messageSource.getMessage("tournament.form.submit.create", null, locale),
                 messageSource.getMessage("tournament.form.submit.creating", null, locale),
-                false);
+                false,
+                null);
     }
 
     private TournamentFormConfig editFormConfig(final Tournament tournament, final Locale locale) {
@@ -574,7 +640,31 @@ public class HostTournamentController {
                 "/host/tournaments/" + tournament.getId() + "/edit",
                 messageSource.getMessage("tournament.form.submit.edit", null, locale),
                 messageSource.getMessage("tournament.form.submit.saving", null, locale),
-                true);
+                true,
+                ImageUrlHelper.bannerUrlFor(tournament));
+    }
+
+    private ImageMetadata storeBannerIfPresent(
+            final CreateTournamentForm form, final ImageMetadata fallbackBannerImage)
+            throws IOException {
+        if (form.getBannerImage() == null || form.getBannerImage().isEmpty()) {
+            return fallbackBannerImage;
+        }
+        if (imageService == null) {
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("host.imageError", null, Locale.getDefault()));
+        }
+
+        Long imageId;
+        try (InputStream inputStream = form.getBannerImage().getInputStream()) {
+            imageId =
+                    imageService.store(
+                            form.getBannerImage().getContentType(),
+                            form.getBannerImage().getSize(),
+                            inputStream);
+        }
+        return new ImageMetadata(
+                imageId, form.getBannerImage().getContentType(), form.getBannerImage().getSize());
     }
 
     private void applyFormValidation(
@@ -902,8 +992,6 @@ public class HostTournamentController {
                 return "tournament.bracket.error.matchAlreadyDecided";
             case WINNER_NOT_IN_MATCH:
                 return "tournament.bracket.error.winnerNotInMatch";
-            case FORFEITING_TEAM_NOT_IN_MATCH:
-                return "tournament.bracket.error.forfeitingTeamNotInMatch";
             case FORBIDDEN:
                 return "tournament.bracket.error.forbidden";
             case TOURNAMENT_NOT_FOUND:
@@ -1236,5 +1324,6 @@ public class HostTournamentController {
             String action,
             String submitLabel,
             String submitLoadingLabel,
-            boolean editMode) {}
+            boolean editMode,
+            String bannerImageUrl) {}
 }

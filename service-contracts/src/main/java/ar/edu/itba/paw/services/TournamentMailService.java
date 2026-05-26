@@ -14,12 +14,6 @@ public interface TournamentMailService {
             TournamentTeam winner,
             TournamentTeam loser);
 
-    void sendWalkoverEmail(
-            Tournament tournament,
-            TournamentMatch match,
-            TournamentTeam advancingTeam,
-            TournamentTeam forfeitingTeam);
-
     void sendTournamentCompletedEmail(Tournament tournament, TournamentTeam champion);
 
     void sendTournamentCancelledEmail(Tournament tournament);

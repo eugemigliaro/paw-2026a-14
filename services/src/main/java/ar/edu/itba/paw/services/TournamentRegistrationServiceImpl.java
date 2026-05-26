@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
@@ -151,6 +152,45 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
             return Optional.empty();
         }
         return tournamentTeamDao.findUserTeam(tournamentId, user.getId());
+    }
+
+    @Override
+    public List<TournamentSoloEntry> listActiveSoloEntries(final long tournamentId) {
+        final Tournament tournament = findTournamentOrThrow(tournamentId);
+        if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
+            return List.of();
+        }
+        return tournamentSoloEntryDao.findActiveByTournament(tournamentId);
+    }
+
+    @Override
+    public List<TournamentTeamMember> listTeamMembers(final long tournamentId) {
+        final Tournament tournament = findTournamentOrThrow(tournamentId);
+        if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
+            return List.of();
+        }
+        return tournamentTeamDao.findMembersByTournament(tournamentId);
+    }
+
+    @Override
+    public TournamentRegistrationReadiness getRegistrationReadiness(
+            final long tournamentId, final User actingUser) {
+        final Tournament tournament = findTournamentOrThrow(tournamentId);
+        validateCanMutate(tournament, actingUser);
+        if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
+            return new TournamentRegistrationReadiness(0, 0, 0, false);
+        }
+
+        final int activeSoloEntries =
+                Math.toIntExact(tournamentSoloEntryDao.countActiveByTournament(tournamentId));
+        final int existingTeamCount =
+                Math.toIntExact(tournamentTeamDao.countByTournament(tournamentId));
+        final int availableTeamSlots = Math.max(0, tournament.getBracketSize() - existingTeamCount);
+        final int soloTeamCount =
+                Math.min(activeSoloEntries / tournament.getTeamSize(), availableTeamSlots);
+        final int finalTeamCount = existingTeamCount + soloTeamCount;
+        return new TournamentRegistrationReadiness(
+                activeSoloEntries, existingTeamCount, finalTeamCount, finalTeamCount < 2);
     }
 
     @Override

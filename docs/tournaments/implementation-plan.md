@@ -57,7 +57,6 @@ Confirmed route convention:
   - `GET /host/tournaments/{tournamentId}/bracket/setup`
   - `POST /host/tournaments/{tournamentId}/bracket/publish`
   - `POST /host/tournaments/{tournamentId}/matches/{matchId}/winner`
-  - `POST /host/tournaments/{tournamentId}/matches/{matchId}/walkover`
   - `POST /host/tournaments/{tournamentId}/cancel`
 
 Acceptance criteria:
@@ -88,8 +87,7 @@ Recommended enum values:
 - `TournamentFormat`: `SINGLE_ELIMINATION`
 - `TournamentTeamOrigin`: `SOLO_POOL`, `TEAM_DRAFT`
 - `TournamentSoloEntryStatus`: `IN_POOL`, `LEFT`, `ASSIGNED`, `UNASSIGNED`
-- `TournamentMatchStatus`: `PENDING`, `SCHEDULED`, `AWAITING_RESULT`, `DONE`,
-  `WALKOVER`
+- `TournamentMatchStatus`: `PENDING`, `SCHEDULED`, `AWAITING_RESULT`, `DONE`
 
 Tasks:
 
@@ -451,7 +449,6 @@ Responsibilities:
 - publish bracket
 - load bracket view
 - declare winner
-- record walkover
 - propagate winner
 - complete tournament
 
@@ -461,7 +458,6 @@ Suggested methods:
 - `Tournament publishBracket(long tournamentId, User actingUser, List<TournamentMatchScheduleRequest> schedules)`
 - `TournamentBracketView getBracket(long tournamentId, User viewer)`
 - `TournamentMatch declareWinner(long tournamentId, long matchId, long winnerTeamId, User actingUser)`
-- `TournamentMatch recordWalkover(long tournamentId, long matchId, long forfeitingTeamId, User actingUser)`
 
 Bracket generation rules:
 
@@ -492,12 +488,6 @@ Winner declaration rules:
 - If child fixture now has both teams, it becomes `SCHEDULED`.
 - If final fixture gets a winner, tournament becomes `COMPLETED`.
 
-Walkover rules:
-
-- Same as winner declaration, but host selects forfeiting team.
-- Non-forfeiting team advances.
-- Fixture status is `WALKOVER`.
-
 Tests:
 
 - generates correct fixture count for 4/8/16
@@ -510,17 +500,16 @@ Tests:
 - winner propagates to child team A
 - winner propagates to child team B
 - final declaration completes tournament
-- walkover advances non-forfeiting team
 
 Implemented backend status:
 
 - `TournamentBracketServiceImpl` now implements generation, publication,
-  bracket loading, winner declaration, walkovers, propagation, completion, and
+  bracket loading, winner declaration, propagation, completion, and
   host/admin authorization checks.
 - Service tests cover generation sizes, no duplicate round-one teams, parent
   links, under-capacity and lifecycle guards, duplicate generation, non-host
   denial, admin/mod mutation, publication schedules, bracket read
-  authorization, viewer focus, propagation, final completion, walkovers, and a
+  authorization, viewer focus, propagation, final completion, and a
   service-level bracket run from generation to completion.
 - Web controllers, JSPs, routes, UI messages, and email dispatch remain
   future phases.
@@ -796,20 +785,18 @@ Acceptance criteria:
 
 - Players can understand where they are in the tournament.
 
-## Phase 10: Host Winner Declaration And Walkovers
+## Phase 10: Host Winner Declaration
 
 Goal: host can run the tournament to completion.
 
 Routes:
 
 - `POST /host/tournaments/{id}/matches/{matchId}/winner`
-- `POST /host/tournaments/{id}/matches/{matchId}/walkover`
 
 Tasks:
 
 - Add winner declaration form/modal/page in host bracket rail.
 - Add confirmation screen or modal text.
-- Add walkover action where host selects forfeiting team.
 - Persist result.
 - Propagate winner.
 - Complete final.
@@ -825,7 +812,6 @@ Tests:
 - cannot declare team outside fixture
 - child fixture receives winner
 - final winner completes tournament
-- walkover stores `WALKOVER` and advances other team
 
 Acceptance criteria:
 
@@ -1141,7 +1127,7 @@ I18n:
 - [x] Add bracket generation host page.
 - [x] Add bracket publication with round-one schedule.
 - [x] Add public/player bracket page.
-- [x] Add host winner/walkover actions.
+- [x] Add host winner actions.
 - [x] Add minimum tournament mail service and templates.
 - [x] Add controller/security tests.
 - [x] Add filter-only tournament feed discovery.

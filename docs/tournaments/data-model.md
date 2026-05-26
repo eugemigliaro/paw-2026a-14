@@ -132,7 +132,7 @@ One row per match in the bracket. For an 8-team single-elim tournament there are
 | winner_team_id | BIGINT FK → TournamentTeam | Nullable until host declares. |
 | scheduled_at | TIMESTAMPTZ | Nullable, defaults from `Tournament` per-round defaults. |
 | venue | TEXT or JSONB | Same shape as Tournament.default_venue. |
-| status | ENUM | `PENDING` (team(s) not known) / `SCHEDULED` / `AWAITING_RESULT` (past scheduled time, no winner) / `WALKOVER` / `DONE`. |
+| status | ENUM | `PENDING` (team(s) not known) / `SCHEDULED` / `AWAITING_RESULT` (past scheduled time, no winner) / `DONE`. |
 | parent_match_a_id | BIGINT FK self | The round-N–1 match whose winner becomes team_a. NULL for round 1. |
 | parent_match_b_id | BIGINT FK self | Same for team_b. |
 | created_at / updated_at | TIMESTAMPTZ | |

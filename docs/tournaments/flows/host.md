@@ -142,8 +142,7 @@ The host's home for a live tournament is the [bracket + match focus](../ui-patte
 3. Tapping "Declare winner" opens a modal:
    - "ROUND N · MATCH M" eyebrow, "Who won?" headline
    - Two large team cards side-by-side; tapping one selects it (visual: highlighted card with "✓ Winner")
-   - Secondary action: "↳ record walkover / forfeit" (opens the walkover sub-flow, see below)
-   - Primary action: "Confirm winner → advance"
+  - Primary action: "Confirm winner → advance"
 4. On confirm:
    - Persist `winner_team_id` on the match.
    - Propagate winner into the child match's appropriate slot.
@@ -152,14 +151,8 @@ The host's home for a live tournament is the [bracket + match focus](../ui-patte
    - Fire `round_complete` notification if this was the last un-played match in the round.
    - If this was the final match, transition tournament to `COMPLETED` and fire `tournament_completed` notifications.
 
-### Walkover / forfeit sub-flow
-
-When the host clicks "↳ record walkover / forfeit" from the declare-winner modal:
-
-1. Modal pivots to "Which team is forfeiting?" with the same two team cards.
-2. Host taps a team → that team forfeits; the other team advances.
-3. Match status is set to `WALKOVER`, not `DONE`.
-4. The forfeiting team's players get a special "walkover recorded against you" notification.
+Forfeits do not have a separate match state. If one side forfeits, the host
+uses the same winner declaration flow and selects the non-forfeiting team.
 
 ### Per-match flow: edit schedule
 
@@ -169,11 +162,11 @@ When the host clicks "↳ record walkover / forfeit" from the declare-winner mod
    - Persist the new schedule.
    - Fire `match_rescheduled` notifications to all players on both teams.
 
-Only future matches (status SCHEDULED or PENDING) are editable. Done and walkover matches are read-only.
+Only future matches (status SCHEDULED or PENDING) are editable. Done matches are read-only.
 
 ### Per-round flow: unlock the next round
 
-After all matches in round N are DONE or WALKOVER:
+After all matches in round N are DONE:
 
 1. The page shows a banner: "Round N complete ✓ — ready for {next round name}"
 2. Single CTA: "Unlock & notify · {next round name}"

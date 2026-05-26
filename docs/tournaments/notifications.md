@@ -32,7 +32,6 @@ Implement only these first:
 | Tournament under-capacity cancelled | All registered players | "Spring Cup was cancelled because there were not enough teams." | "Spring Cup has been cancelled" |
 | Winner declared - you won | Winning team's players | "You beat FC Pampa. Next: vs Norte United." | "You advanced to the semi-finals" |
 | Winner declared - you lost | Losing team's players | "FC Pampa took it. Spring Cup keeps going." | "Your tournament run has ended" |
-| Walkover recorded against you | Forfeiting team's players | "A walkover was recorded for your quarter-final." | "Walkover recorded" |
 | Tournament completed - champion | Champion team's players | "Your team won Spring Cup." | "You won Spring Cup" |
 | Tournament completed - participant | Players who lost earlier | "Spring Cup is over. Los Galacticos took it." | "Spring Cup has concluded" |
 | Tournament cancelled mid-play | All remaining players | "Spring Cup was cancelled by the host." | "Tournament cancelled" |

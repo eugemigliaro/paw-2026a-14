@@ -79,7 +79,6 @@ Allowed actions for the host:
 
 - Edit date, time, and venue for any future match.
 - Declare a winner for any awaiting match.
-- Record a walkover or forfeit for a match.
 - Cancel the tournament.
 - Send a manual notification to all participants.
 
@@ -133,7 +132,7 @@ actions are available.
 | Host: generate bracket | no | yes | no | no |
 | Host: re-seed / drag-swap | no | yes | no | no |
 | Host: edit match schedule | no | yes (R1) | yes (future only) | no |
-| Host: declare winner / walkover | no | no | yes | no |
+| Host: declare winner | no | no | yes | no |
 | Player: join solo / leave pool | yes | no | no | no |
 | Player: start / disband team draft | yes | no | no | no |
 | Player: accept / decline invite | yes | no | no | no |

@@ -475,33 +475,6 @@ public class ThymeleafMailTemplateRenderer {
                 textMailTemplateEngine.process("tournament-email", context));
     }
 
-    public MailContent renderTournamentWalkoverEmail(
-            final TournamentLifecycleMailTemplateData templateData) {
-        final Locale locale = resolvedLocale(templateData.getLocale());
-        final Context context = buildTournamentLifecycleContext(templateData, locale);
-        context.setVariable("mailEyebrow", message("mail.tournament.walkover.eyebrow", locale));
-        context.setVariable(
-                "title",
-                message(
-                        "mail.tournament.walkover.title",
-                        new Object[] {templateData.getTournamentTitle()},
-                        locale));
-        context.setVariable(
-                "summary",
-                message(
-                        "mail.tournament.walkover.summary",
-                        new Object[] {templateData.getWinnerName(), templateData.getLoserName()},
-                        locale));
-
-        return new MailContent(
-                message(
-                        "mail.tournament.walkover.subject",
-                        new Object[] {templateData.getTournamentTitle()},
-                        locale),
-                htmlMailTemplateEngine.process("tournament-email", context),
-                textMailTemplateEngine.process("tournament-email", context));
-    }
-
     public MailContent renderTournamentCompletedEmail(
             final TournamentLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());

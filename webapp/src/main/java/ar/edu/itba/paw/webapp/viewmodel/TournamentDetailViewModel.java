@@ -26,6 +26,8 @@ public class TournamentDetailViewModel {
     private final String participationLabel;
     private final String nextStepLabel;
     private final List<String> aboutParagraphs;
+    private final List<ParticipantViewModel> participants;
+    private final String closeRegistrationConfirmMessage;
     private final boolean registrationOpen;
     private final boolean allowSoloSignup;
     private final boolean canJoinSolo;
@@ -61,6 +63,8 @@ public class TournamentDetailViewModel {
             final String participationLabel,
             final String nextStepLabel,
             final List<String> aboutParagraphs,
+            final List<ParticipantViewModel> participants,
+            final String closeRegistrationConfirmMessage,
             final boolean registrationOpen,
             final boolean allowSoloSignup,
             final boolean canJoinSolo,
@@ -94,6 +98,8 @@ public class TournamentDetailViewModel {
         this.participationLabel = participationLabel;
         this.nextStepLabel = nextStepLabel;
         this.aboutParagraphs = aboutParagraphs == null ? List.of() : List.copyOf(aboutParagraphs);
+        this.participants = participants == null ? List.of() : List.copyOf(participants);
+        this.closeRegistrationConfirmMessage = closeRegistrationConfirmMessage;
         this.registrationOpen = registrationOpen;
         this.allowSoloSignup = allowSoloSignup;
         this.canJoinSolo = canJoinSolo;
@@ -195,6 +201,18 @@ public class TournamentDetailViewModel {
         return aboutParagraphs;
     }
 
+    public List<ParticipantViewModel> getParticipants() {
+        return participants;
+    }
+
+    public String getCloseRegistrationConfirmMessage() {
+        return closeRegistrationConfirmMessage;
+    }
+
+    public boolean isHasParticipants() {
+        return !participants.isEmpty();
+    }
+
     public boolean isRegistrationOpen() {
         return registrationOpen;
     }
@@ -237,5 +255,24 @@ public class TournamentDetailViewModel {
 
     public boolean isCanViewBracket() {
         return canViewBracket;
+    }
+
+    public static class ParticipantViewModel {
+
+        private final String primaryLabel;
+        private final String secondaryLabel;
+
+        public ParticipantViewModel(final String primaryLabel, final String secondaryLabel) {
+            this.primaryLabel = primaryLabel;
+            this.secondaryLabel = secondaryLabel;
+        }
+
+        public String getPrimaryLabel() {
+            return primaryLabel;
+        }
+
+        public String getSecondaryLabel() {
+            return secondaryLabel;
+        }
     }
 }

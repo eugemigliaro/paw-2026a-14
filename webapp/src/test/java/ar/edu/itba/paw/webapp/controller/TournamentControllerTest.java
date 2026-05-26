@@ -230,7 +230,7 @@ class TournamentControllerTest {
     }
 
     @Test
-    void loggedInJoinRedirectsWithFlashState() throws Exception {
+    void loggedInJoinRedirectsWithoutRedundantSuccessFlash() throws Exception {
         // 1. Arrange
         final User player = UserUtils.getUser(9L);
         AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
@@ -249,9 +249,7 @@ class TournamentControllerTest {
         mockMvc.perform(post("/tournaments/77/solo-entry"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/77"))
-                .andExpect(
-                        flash().attribute(
-                                        "tournamentNoticeCode", "tournament.registration.joined"));
+                .andExpect(flash().attributeCount(0));
     }
 
     @Test
@@ -275,7 +273,7 @@ class TournamentControllerTest {
     }
 
     @Test
-    void loggedInLeaveRedirectsWithFlashState() throws Exception {
+    void loggedInLeaveRedirectsWithoutRedundantSuccessFlash() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
                 UserUtils.getUser(9L), "{bcrypt}hash", UserRole.USER, true);
@@ -284,8 +282,7 @@ class TournamentControllerTest {
         mockMvc.perform(post("/tournaments/77/solo-entry/leave"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/77"))
-                .andExpect(
-                        flash().attribute("tournamentNoticeCode", "tournament.registration.left"));
+                .andExpect(flash().attributeCount(0));
     }
 
     @Test
@@ -385,28 +382,6 @@ class TournamentControllerTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/matches/10/winner").param("winnerTeamId", "1"))
                 .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void hostCanRecordWalkover() throws Exception {
-        // 1. Arrange
-        final User hostUser = UserUtils.getUser(7L);
-        AuthenticationUtils.authenticateUser(hostUser, "{bcrypt}hash", UserRole.USER, true);
-        final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
-        final TournamentMatch match = bracketMatch(10L, tournament);
-        Mockito.when(tournamentBracketService.recordWalkover(77L, 10L, 1L, hostUser))
-                .thenReturn(match);
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(
-                        post("/host/tournaments/77/matches/10/walkover")
-                                .param("forfeitingTeamId", "1"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/tournaments/77/bracket"))
-                .andExpect(
-                        flash().attribute(
-                                        "tournamentNoticeCode",
-                                        "tournament.bracket.walkover.saved"));
     }
 
     private Tournament tournament(final Long id, final TournamentStatus status) {

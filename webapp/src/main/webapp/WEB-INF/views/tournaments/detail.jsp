@@ -87,7 +87,7 @@
 									<c:url var="closeRegistrationAction" value="${closeRegistrationPath}" />
 									<spring:message var="closeRegistrationLabel" code="tournament.host.closeRegistration" />
 									<spring:message var="closingRegistrationLabel" code="tournament.host.closeRegistration.loading" />
-									<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}">
+									<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}" data-submit-confirm-message="${tournamentPage.closeRegistrationConfirmMessage}">
 										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="primary" disabled="${not tournamentPage.registrationOpen}" />
 									</form>
@@ -195,6 +195,24 @@
 								</c:otherwise>
 							</c:choose>
 						</article>
+
+						<c:if test="${tournamentPage.hasParticipants}">
+							<article class="panel event-info-panel">
+								<p class="detail-label player-actions-panel__title">
+									<spring:message code="tournament.participants.title" />
+								</p>
+								<ul class="event-info-panel__list">
+									<c:forEach var="participant" items="${tournamentPage.participants}">
+										<li class="booking-panel__detail-row event-info-panel__row">
+											<span><c:out value="${participant.primaryLabel}" /></span>
+											<c:if test="${not empty participant.secondaryLabel}">
+												<span><c:out value="${participant.secondaryLabel}" /></span>
+											</c:if>
+										</li>
+									</c:forEach>
+								</ul>
+							</article>
+						</c:if>
 
 						<article class="panel event-info-panel">
 							<dl class="event-info-panel__list">

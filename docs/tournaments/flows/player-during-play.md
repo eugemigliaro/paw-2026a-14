@@ -207,7 +207,6 @@ Email-first for the current app. See `notifications.md` for full copy and the fu
 - `match_rescheduled` (when host edits a future match)
 - `match_result` win variant → opens to §4a
 - `match_result` loss variant → opens to §4b
-- `match_walkover` → opens to §4b with walkover-specific copy
 - `round_complete` → "Round 1 complete. Semi-finals are scheduled for Apr 24."
 - `tournament_completed` champion variant → opens to §5
 - `tournament_completed` participant variant → opens to §4b "tournament concluded"

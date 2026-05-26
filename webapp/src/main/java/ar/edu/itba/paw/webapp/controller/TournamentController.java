@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -19,6 +20,7 @@ import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
+import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
@@ -126,8 +128,6 @@ public class TournamentController {
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
         try {
             tournamentRegistrationService.joinSolo(tournamentId, currentUser);
-            redirectAttributes.addFlashAttribute(
-                    "tournamentNoticeCode", "tournament.registration.joined");
         } catch (final TournamentRegistrationException exception) {
             handleRegistrationException(exception, redirectAttributes);
         }
@@ -199,25 +199,6 @@ public class TournamentController {
         return new ModelAndView("redirect:/tournaments/" + tournamentId + "/bracket");
     }
 
-    @PostMapping("/host/tournaments/{tournamentId:\\d+}/matches/{matchId:\\d+}/walkover")
-    @PreAuthorize("isAuthenticated()")
-    public ModelAndView recordWalkover(
-            @PathVariable("tournamentId") final Long tournamentId,
-            @PathVariable("matchId") final Long matchId,
-            @RequestParam("forfeitingTeamId") final Long forfeitingTeamId,
-            final RedirectAttributes redirectAttributes) {
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        try {
-            tournamentBracketService.recordWalkover(
-                    tournamentId, matchId, forfeitingTeamId, actingUser);
-            redirectAttributes.addFlashAttribute(
-                    "tournamentNoticeCode", "tournament.bracket.walkover.saved");
-        } catch (final TournamentBracketException exception) {
-            handleBracketMutationException(exception, redirectAttributes);
-        }
-        return new ModelAndView("redirect:/tournaments/" + tournamentId + "/bracket");
-    }
-
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry/leave")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView leaveSolo(
@@ -226,8 +207,6 @@ public class TournamentController {
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
         try {
             tournamentRegistrationService.leaveSolo(tournamentId, currentUser);
-            redirectAttributes.addFlashAttribute(
-                    "tournamentNoticeCode", "tournament.registration.left");
         } catch (final TournamentRegistrationException exception) {
             handleRegistrationException(exception, redirectAttributes);
         }
@@ -276,6 +255,11 @@ public class TournamentController {
                 TournamentStatus.IN_PROGRESS == tournament.getStatus()
                         || TournamentStatus.COMPLETED == tournament.getStatus()
                         || TournamentStatus.CANCELLED == tournament.getStatus();
+        final TournamentRegistrationReadiness readiness =
+                canCloseRegistration
+                        ? tournamentRegistrationService.getRegistrationReadiness(
+                                tournament.getId(), currentUser)
+                        : null;
 
         return new TournamentDetailViewModel(
                 tournament.getId(),
@@ -307,6 +291,8 @@ public class TournamentController {
                 participationLabel(soloEntry, userTeam, locale),
                 nextStepLabel(tournament, locale),
                 aboutParagraphs(tournament, locale),
+                participantRows(tournament, locale),
+                closeRegistrationConfirmMessage(readiness, locale),
                 registrationOpen,
                 tournament.isAllowSoloSignup(),
                 canJoinSolo,
@@ -318,6 +304,42 @@ public class TournamentController {
                 canCancelTournament,
                 canManageBracket,
                 canViewBracket);
+    }
+
+    private String closeRegistrationConfirmMessage(
+            final TournamentRegistrationReadiness readiness, final Locale locale) {
+        if (readiness == null || !readiness.isCancellationRisk()) {
+            return null;
+        }
+        return messageSource.getMessage(
+                "tournament.host.closeRegistration.cancelConfirm",
+                new Object[] {readiness.getFinalTeamCount()},
+                locale);
+    }
+
+    private List<TournamentDetailViewModel.ParticipantViewModel> participantRows(
+            final Tournament tournament, final Locale locale) {
+        if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
+            return List.of();
+        }
+        final List<TournamentDetailViewModel.ParticipantViewModel> rows =
+                new java.util.ArrayList<>();
+        for (final TournamentTeamMember member :
+                tournamentRegistrationService.listTeamMembers(tournament.getId())) {
+            rows.add(
+                    new TournamentDetailViewModel.ParticipantViewModel(
+                            hostLabel(member.getUser(), locale),
+                            member.getTeam() == null ? null : member.getTeam().getName()));
+        }
+        for (final TournamentSoloEntry entry :
+                tournamentRegistrationService.listActiveSoloEntries(tournament.getId())) {
+            rows.add(
+                    new TournamentDetailViewModel.ParticipantViewModel(
+                            hostLabel(entry.getUser(), locale),
+                            messageSource.getMessage(
+                                    "tournament.participants.soloPool", null, locale)));
+        }
+        return rows;
     }
 
     private void handleRegistrationException(
@@ -576,8 +598,6 @@ public class TournamentController {
                 return "tournament.bracket.error.matchAlreadyDecided";
             case WINNER_NOT_IN_MATCH:
                 return "tournament.bracket.error.winnerNotInMatch";
-            case FORFEITING_TEAM_NOT_IN_MATCH:
-                return "tournament.bracket.error.forfeitingTeamNotInMatch";
             case FORBIDDEN:
                 return "tournament.bracket.error.forbidden";
             case TOURNAMENT_NOT_FOUND:

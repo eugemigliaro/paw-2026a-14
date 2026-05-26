@@ -75,10 +75,10 @@ Default: declining the pool happens implicitly when the user accepts a draft inv
 The host UI has a "Cancel match…" button. We did not fully design what cancellation means:
 
 - A: Cancel = cancel the entire tournament. (Simple, brutal.)
-- B: Cancel = mark this match as void → host must declare a winner manually anyway (treat as walkover for one or both teams).
+- B: Cancel = mark this match as void → host must declare a winner manually anyway.
 - C: Cancel = pause the whole bracket until host re-schedules and removes the cancel flag.
 
-Recommend B — the host either picks one side to advance (walkover), or marks neither and the whole tournament becomes stuck (which is a strong nudge to use walkover instead).
+Recommend B — the host either picks one side to advance, or marks neither and the whole tournament becomes stuck.
 
 ### Host wants to undo a declared winner [BLOCKING]
 
@@ -92,13 +92,11 @@ Options:
 
 Recommend A + C combined (player-facing safety net is the 30s toast; admin can fix later if a real dispute arises).
 
-### What does "walkover" mean to the losing side? [DEFERRED]
+### What does "forfeit" mean to the losing side? [RESOLVED]
 
-In the wireframes, "Record walkover / forfeit" is a host action. Defaults:
-
-- The losing team's players get a notification: "Walkover recorded — your tournament run ended".
-- Their participation history shows the match with status `WALKOVER` and the team they forfeited to.
-- Reputational consequence: none in v1. (Possible future: walkovers count toward a no-show flag on the player profile.)
+There is no separate walkover state in this implementation. A forfeit is handled
+by declaring the non-forfeiting team as the winner, so participant history and
+notifications use the normal result path.
 
 ### Mid-tournament team-member changes [BLOCKING]
 

@@ -395,32 +395,6 @@ public class TournamentBracketServiceImplTest {
     }
 
     @Test
-    public void adminModCanRecordWalkoverForAnotherHost() {
-        // 1. Arrange
-        authenticateAdminMod();
-        final Tournament tournament =
-                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
-        final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        final TournamentMatch firstRoundMatch = matches.get(0);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
-                .thenReturn(Optional.of(firstRoundMatch));
-        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
-
-        // 2. Exercise
-        final TournamentMatch result =
-                bracketService.recordWalkover(
-                        10L,
-                        firstRoundMatch.getId(),
-                        firstRoundMatch.getTeamA().getId(),
-                        UserUtils.getUser(99L));
-
-        // 3. Assert
-        Assertions.assertSame(firstRoundMatch.getTeamB(), result.getWinnerTeam());
-        Assertions.assertEquals(TournamentMatchStatus.WALKOVER, result.getStatus());
-    }
-
-    @Test
     public void publicCannotReadBracketBeforePublish() {
         // 1. Arrange
         final Tournament tournament =
@@ -852,33 +826,6 @@ public class TournamentBracketServiceImplTest {
         Assertions.assertEquals(TournamentStatus.COMPLETED, tournament.getStatus());
         Assertions.assertEquals(FIXED_NOW, tournament.getCompletedAt());
         Assertions.assertEquals(FIXED_NOW, tournament.getUpdatedAt());
-    }
-
-    @Test
-    public void walkoverAdvancesNonForfeitingTeam() {
-        // 1. Arrange
-        final Tournament tournament =
-                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
-        final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        final TournamentMatch firstRoundMatch = matches.get(0);
-        final TournamentMatch finalMatch = matches.get(2);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
-                .thenReturn(Optional.of(firstRoundMatch));
-        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
-
-        // 2. Exercise
-        final TournamentMatch result =
-                bracketService.recordWalkover(
-                        10L,
-                        firstRoundMatch.getId(),
-                        firstRoundMatch.getTeamA().getId(),
-                        tournament.getHost());
-
-        // 3. Assert
-        Assertions.assertSame(firstRoundMatch.getTeamB(), result.getWinnerTeam());
-        Assertions.assertEquals(TournamentMatchStatus.WALKOVER, result.getStatus());
-        Assertions.assertSame(firstRoundMatch.getTeamB(), finalMatch.getTeamA());
     }
 
     @Test

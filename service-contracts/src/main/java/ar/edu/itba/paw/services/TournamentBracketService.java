@@ -22,9 +22,6 @@ public interface TournamentBracketService {
             TournamentWinnerDeclarationRequest request,
             User actingUser);
 
-    TournamentMatch recordWalkover(
-            long tournamentId, long matchId, long forfeitingTeamId, User actingUser);
-
     List<TournamentTeam> listTeamsForSetup(long tournamentId, User actingUser);
 
     Tournament updatePairingStrategy(

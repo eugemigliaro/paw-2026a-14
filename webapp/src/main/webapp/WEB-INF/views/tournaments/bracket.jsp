@@ -61,7 +61,6 @@
 											<c:if test="${bracketPage.canManageResults && match.canRecordResult}">
 												<div class="tournament-result-actions">
 													<c:url var="winnerAction" value="/host/tournaments/${bracketPage.tournamentId}/matches/${match.id}/winner" />
-													<c:url var="walkoverAction" value="/host/tournaments/${bracketPage.tournamentId}/matches/${match.id}/walkover" />
 													<form method="post" action="${winnerAction}" data-submit-guard="true">
 														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 														<input type="hidden" name="winnerTeamId" value="${match.teamAId}" />
@@ -73,18 +72,6 @@
 														<input type="hidden" name="winnerTeamId" value="${match.teamBId}" />
 														<spring:message var="declareTeamBLabel" code="tournament.bracket.result.declareWinner" arguments="${match.teamB}" />
 														<ui:button label="${declareTeamBLabel}" type="submit" size="sm" fullWidth="${true}" variant="secondary" />
-													</form>
-													<form method="post" action="${walkoverAction}" data-submit-guard="true">
-														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-														<input type="hidden" name="forfeitingTeamId" value="${match.teamAId}" />
-														<spring:message var="walkoverTeamALabel" code="tournament.bracket.result.walkover" arguments="${match.teamA}" />
-														<ui:button label="${walkoverTeamALabel}" type="submit" size="sm" fullWidth="${true}" variant="secondary" />
-													</form>
-													<form method="post" action="${walkoverAction}" data-submit-guard="true">
-														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-														<input type="hidden" name="forfeitingTeamId" value="${match.teamBId}" />
-														<spring:message var="walkoverTeamBLabel" code="tournament.bracket.result.walkover" arguments="${match.teamB}" />
-														<ui:button label="${walkoverTeamBLabel}" type="submit" size="sm" fullWidth="${true}" variant="secondary" />
 													</form>
 												</div>
 											</c:if>

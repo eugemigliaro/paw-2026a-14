@@ -11,6 +11,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
 
 public class CreateTournamentForm {
 
@@ -72,6 +73,8 @@ public class CreateTournamentForm {
     private boolean allowSoloSignup = true;
 
     private boolean allowTeamDraft = true;
+
+    private MultipartFile bannerImage;
 
     private String tz = "";
 
@@ -193,6 +196,14 @@ public class CreateTournamentForm {
 
     public void setAllowTeamDraft(final boolean allowTeamDraft) {
         this.allowTeamDraft = allowTeamDraft;
+    }
+
+    public MultipartFile getBannerImage() {
+        return bannerImage;
+    }
+
+    public void setBannerImage(final MultipartFile bannerImage) {
+        this.bannerImage = bannerImage;
     }
 
     public String getTz() {

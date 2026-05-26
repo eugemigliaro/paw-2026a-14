@@ -64,22 +64,6 @@ public class TournamentMailServiceImpl implements TournamentMailService {
     }
 
     @Override
-    public void sendWalkoverEmail(
-            final Tournament tournament,
-            final TournamentMatch match,
-            final TournamentTeam advancingTeam,
-            final TournamentTeam forfeitingTeam) {
-        for (final User recipient : recipients(tournament)) {
-            final TournamentLifecycleMailTemplateData templateData =
-                    buildTemplateData(
-                            recipient, tournament, match, advancingTeam, forfeitingTeam, null);
-            final MailContent content =
-                    templateRenderer.renderTournamentWalkoverEmail(templateData);
-            mailDispatchService.dispatch(recipient.getEmail(), content);
-        }
-    }
-
-    @Override
     public void sendTournamentCompletedEmail(
             final Tournament tournament, final TournamentTeam champion) {
         for (final User recipient : recipients(tournament)) {

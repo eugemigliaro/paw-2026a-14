@@ -254,37 +254,6 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         return updatedMatch;
     }
 
-    @Override
-    @Transactional
-    public TournamentMatch recordWalkover(
-            final long tournamentId,
-            final long matchId,
-            final long forfeitingTeamId,
-            final User actingUser) {
-        final Tournament tournament = findTournamentOrThrow(tournamentId);
-        validateCanMutate(tournament, actingUser);
-        requireInProgress(tournament);
-
-        final TournamentMatch match = findMatchOrThrow(tournamentId, matchId);
-        validateMatchReadyForDecision(match);
-        final TournamentTeam advancingTeam = advancingTeam(match, forfeitingTeamId);
-
-        final Instant now = Instant.now(clock);
-        match.setWinnerTeam(advancingTeam);
-        match.setStatus(TournamentMatchStatus.WALKOVER);
-        match.setUpdatedAt(now);
-        final TournamentMatch updatedMatch = tournamentMatchDao.update(match);
-
-        final TournamentTeam forfeitingTeam = losingTeam(updatedMatch, advancingTeam);
-        final boolean completed = propagateWinner(tournament, updatedMatch, advancingTeam, now);
-        tournamentMailService.sendWalkoverEmail(
-                tournament, updatedMatch, advancingTeam, forfeitingTeam);
-        if (completed) {
-            tournamentMailService.sendTournamentCompletedEmail(tournament, advancingTeam);
-        }
-        return updatedMatch;
-    }
-
     private List<TournamentMatch> createFixtures(
             final Tournament tournament, final List<TournamentTeam> teams) {
         final int teamCount = teams.size();
@@ -780,18 +749,6 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         throw bracketException(
                 TournamentBracketFailureReason.WINNER_NOT_IN_MATCH,
                 "tournament.bracket.error.winnerNotInMatch");
-    }
-
-    private TournamentTeam advancingTeam(final TournamentMatch match, final long forfeitingTeamId) {
-        if (sameId(match.getTeamA(), forfeitingTeamId)) {
-            return match.getTeamB();
-        }
-        if (sameId(match.getTeamB(), forfeitingTeamId)) {
-            return match.getTeamA();
-        }
-        throw bracketException(
-                TournamentBracketFailureReason.FORFEITING_TEAM_NOT_IN_MATCH,
-                "tournament.bracket.error.forfeitingTeamNotInMatch");
     }
 
     private boolean propagateWinner(

@@ -58,7 +58,7 @@ Keep service flows separate:
 - `TournamentService` owns tournament CRUD and lifecycle transitions.
 - `TournamentRegistrationService` owns solo entries and team drafts.
 - `TournamentBracketService` owns bracket generation, scheduling, winner
-  declaration, walkovers, and propagation.
+  declaration, and propagation.
 - `TournamentMailService` wraps the existing mail infrastructure for tournament
   emails. A persisted in-app notification center does not exist today and is
   out of scope.
@@ -84,7 +84,7 @@ fewest moving parts:
 - host generates the bracket
 - host schedules round-one fixtures
 - players can view the bracket
-- host declares winners or walkovers
+- host declares winners
 - winners propagate to later rounds
 - final winner completes the tournament
 - minimum emails are sent for bracket publication, match result,
@@ -171,10 +171,10 @@ These decisions remove ambiguity from the current docs.
 | User accepts invite while already in another draft/team | Block with a clear service error. No implicit switching between teams. |
 | Captain disbands draft | Draft is disbanded and all accepted/pending invitees are notified. No captain promotion in v1. |
 | Roster changes after bracket setup | Not allowed. Rosters are locked when registration closes. |
-| Per-match cancellation | Do not build a separate cancel-match state. Use walkover/forfeit to advance one team, or cancel the whole tournament. |
+| Per-match cancellation | Do not build a separate cancel-match state. The host records the winner; a forfeit is represented by declaring the non-forfeiting team as winner. |
 | Winner undo | Defer player-facing 30-second undo. Use confirmation modal first; admin/mod correction can be a future tool. |
 | Live updates | Full page reload after POST is acceptable. Manual refresh is acceptable for player bracket watching. |
-| Scores | No scores. The host only declares winner or walkover. |
+| Scores | No scores. The host only declares the winner. |
 | Payments | Informational price only. No platform payment processing. |
 
 ## Personas And Capabilities
@@ -182,7 +182,7 @@ These decisions remove ambiguity from the current docs.
 ### Host
 
 The host can create, close registration, generate the bracket, schedule
-round-one fixtures, publish the bracket, declare winners or walkovers, cancel
+round-one fixtures, publish the bracket, declare winners, cancel
 before completion, and complete the tournament through the final result.
 
 The host cannot change format, bracket size, or team size after creation;
@@ -323,7 +323,6 @@ For the first spine, implement the smallest useful set:
 
 - bracket published / first match scheduled
 - match result: won/lost
-- walkover result
 - tournament cancelled
 - tournament completed: champion/participant
 
@@ -370,7 +369,7 @@ The first tournament spine is done when:
 6. The host can generate a valid single-elimination bracket.
 7. The host can publish a round-one schedule.
 8. Players can see the bracket after publication.
-9. The host can declare winners and walkovers.
+9. The host can declare winners.
 10. Winners propagate correctly until a final champion is produced.
 11. The final winner completes the tournament.
 12. Required minimum emails are sent.

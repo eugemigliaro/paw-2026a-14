@@ -19,6 +19,5 @@ public enum TournamentBracketFailureReason {
     NOT_IN_PROGRESS,
     MATCH_NOT_READY,
     MATCH_ALREADY_DECIDED,
-    WINNER_NOT_IN_MATCH,
-    FORFEITING_TEAM_NOT_IN_MATCH
+    WINNER_NOT_IN_MATCH
 }

@@ -35,6 +35,7 @@
 						method="post"
 						action="${resolvedFormAction}"
 						modelAttribute="createTournamentForm"
+						enctype="multipart/form-data"
 						id="create-tournament-form"
 						data-submit-guard="true"
 						data-submit-loading-label="${submitLoadingLabel}"
@@ -138,6 +139,44 @@
 									</section>
 								</c:if>
 							</div>
+						</article>
+
+						<article class="panel upload-card">
+							<span class="detail-label"><spring:message code="host.section.banner" /></span>
+							<h2 class="form-card__title"><spring:message code="host.section.banner.subtitle" /></h2>
+							<c:if test="${not empty currentBannerImageUrl}">
+								<c:url var="currentBannerSrc" value="${currentBannerImageUrl}" />
+								<div class="upload-card__preview">
+									<span class="upload-card__preview-label">
+										<spring:message code="host.form.bannerImage.current" />
+									</span>
+									<img class="upload-card__preview-image" src="${currentBannerSrc}" alt="" loading="lazy" decoding="async" />
+								</div>
+							</c:if>
+							<label class="field upload-card__field" for="tournament-banner-image">
+								<span class="field__label"><spring:message code="host.form.bannerImage" /></span>
+								<span class="upload-card__dropzone">
+									<span class="upload-card__dropzone-icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="M4 17.5V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5Z" />
+											<path d="m8 14 2.2-2.2a1.2 1.2 0 0 1 1.7 0L16 16" />
+											<path d="m13.5 13.5 1.1-1.1a1.2 1.2 0 0 1 1.7 0L20 16" />
+											<circle cx="8.5" cy="8.5" r="1.2" />
+										</svg>
+									</span>
+									<span class="upload-card__dropzone-copy">
+										<span class="upload-card__dropzone-title">
+											<spring:message code="host.form.bannerImage.guidanceTitle" />
+										</span>
+										<span class="field__hint">
+											<spring:message code="host.form.bannerImage.hint" />
+										</span>
+									</span>
+									<form:input path="bannerImage" id="tournament-banner-image" type="file"
+										accept="image/png,image/jpeg,image/webp,image/gif"
+										cssClass="upload-card__file-input" />
+								</span>
+							</label>
 						</article>
 
 						<article class="panel form-card">

@@ -4,8 +4,7 @@ public enum TournamentMatchStatus implements PersistableEnum {
     PENDING("pending"),
     SCHEDULED("scheduled"),
     AWAITING_RESULT("awaiting_result"),
-    DONE("done"),
-    WALKOVER("walkover");
+    DONE("done");
 
     private final String dbValue;
 

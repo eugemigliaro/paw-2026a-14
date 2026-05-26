@@ -31,6 +31,12 @@
 
 	function guardFormSubmit(form) {
 		form.addEventListener("submit", function(event) {
+			var confirmMessage = form.dataset.submitConfirmMessage;
+			if (confirmMessage && !window.confirm(confirmMessage)) {
+				event.preventDefault();
+				return;
+			}
+
 			if (form.dataset.submitting === "true") {
 				event.preventDefault();
 				return;

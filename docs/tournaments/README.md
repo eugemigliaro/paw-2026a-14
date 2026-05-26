@@ -15,8 +15,8 @@ wireframe behavior.
 
 A tournament is an event-like aggregate hosted by a user. Players register
 before the window closes, teams are locked, a single-elimination bracket is
-generated, and the host advances the bracket by declaring winners or walkovers.
-There is no score handling in v1.
+generated, and the host advances the bracket by declaring winners. There is no
+score or walkover handling in v1.
 
 The important architecture decision is that bracket fixtures are not normal
 matches:
@@ -56,7 +56,8 @@ come after that spine works.
 2. Bracket size: 4, 8, or 16 teams.
 3. First spine: solo registration only. Add captain-led team drafts after the
    bracket lifecycle works end to end.
-4. Scores: none. Host declares winner or walkover only.
+4. Scores: none. Host declares the winning team only; forfeits are handled by
+   marking the forfeiting side as the loser.
 5. Lifecycle statuses for new code: `REGISTRATION`, `BRACKET_SETUP`,
    `IN_PROGRESS`, `COMPLETED`, `CANCELLED`.
 6. Public tournament detail URL: `/tournaments/{id}`.
