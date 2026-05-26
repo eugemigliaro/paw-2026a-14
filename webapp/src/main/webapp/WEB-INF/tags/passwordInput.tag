@@ -17,17 +17,13 @@
 
 <c:set var="resolvedName" value="${empty name ? path : name}" />
 <c:set var="resolvedId" value="${empty id ? resolvedName : id}" />
-<c:set var="escapedValue" value="${fn:escapeXml(value)}" />
 <c:set var="escapedPlaceholder" value="${fn:escapeXml(placeholder)}" />
 <c:set var="escapedAutocomplete" value="${fn:escapeXml(autocomplete)}" />
 <c:set var="fieldClass" value="field" />
 <c:if test="${required}">
   <c:set var="fieldClass" value="field field--required" />
 </c:if>
-<c:set var="escapedShowLabel" value="${fn:escapeXml(showLabel)}" />
-<c:set var="escapedHideLabel" value="${fn:escapeXml(hideLabel)}" />
-
-<label class="${fieldClass}" for="${resolvedId}">
+<label class="<c:out value='${fieldClass}' />" for="<c:out value='${resolvedId}' />">
   <span class="field__label"><c:out value="${label}" /></span>
   <div class="password-field" data-password-visibility="true">
     <c:choose>
@@ -36,18 +32,18 @@
           path="${path}"
           id="${resolvedId}"
           cssClass="field__control password-field__input"
-          placeholder="${placeholder}"
-          autocomplete="${autocomplete}" />
+          placeholder="${escapedPlaceholder}"
+          autocomplete="${escapedAutocomplete}" />
       </c:when>
       <c:otherwise>
         <input
-          id="${resolvedId}"
-          name="${resolvedName}"
+          id="<c:out value='${resolvedId}' />"
+          name="<c:out value='${resolvedName}' />"
           type="password"
           class="field__control password-field__input"
-          <c:if test="${not empty value}">value="${escapedValue}"</c:if>
-          <c:if test="${not empty placeholder}">placeholder="${escapedPlaceholder}"</c:if>
-          <c:if test="${not empty autocomplete}">autocomplete="${escapedAutocomplete}"</c:if>
+          <c:if test="${not empty value}">value="<c:out value='${value}' />"</c:if>
+          <c:if test="${not empty placeholder}">placeholder="<c:out value='${placeholder}' />"</c:if>
+          <c:if test="${not empty autocomplete}">autocomplete="<c:out value='${autocomplete}' />"</c:if>
           <c:if test="${required}">required="required" aria-required="true"</c:if> />
       </c:otherwise>
     </c:choose>
@@ -55,9 +51,9 @@
       type="button"
       class="password-field__toggle"
       data-password-toggle="true"
-      data-label-show="${escapedShowLabel}"
-      data-label-hide="${escapedHideLabel}"
-      aria-label="${escapedShowLabel}"
+      data-label-show="<c:out value='${showLabel}' />"
+      data-label-hide="<c:out value='${hideLabel}' />"
+      aria-label="<c:out value='${showLabel}' />"
       aria-pressed="false">
       <span class="password-field__icon password-field__icon--show" aria-hidden="true">
         <svg viewBox="0 0 24 24" focusable="false">

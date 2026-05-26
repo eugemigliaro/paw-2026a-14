@@ -17,19 +17,21 @@ public interface MatchService {
 
     List<Match> findSeriesOccurrences(Long seriesId);
 
+    PaginatedResult<Match> findSeriesOccurrencesPage(Long seriesId, int page, int pageSize);
+
     List<User> findConfirmedParticipants(Long matchId);
 
-    Match updateMatch(Long matchId, Long actingUserId, UpdateMatchRequest request);
+    Match updateMatch(Long matchId, User actingUser, UpdateMatchRequest request);
 
     List<Match> updateSeriesFromOccurrence(
-            Long matchId, Long actingUserId, UpdateMatchRequest request);
+            Long matchId, User actingUser, UpdateMatchRequest request);
 
-    Match cancelMatch(Long matchId, Long actingUserId);
+    Match cancelMatch(Long matchId, User actingUser);
 
-    List<Match> cancelSeriesFromOccurrence(Long matchId, Long actingUserId);
+    List<Match> cancelSeriesFromOccurrence(Long matchId, User actingUser);
 
     PaginatedResult<Match> findHostedMatches(
-            Long hostUserId,
+            User hostUser,
             Boolean upcoming,
             String query,
             String sport,
@@ -45,7 +47,7 @@ public interface MatchService {
             int pageSize);
 
     PaginatedResult<Match> findJoinedMatches(
-            Long userId,
+            User user,
             Boolean upcoming,
             String query,
             String sport,

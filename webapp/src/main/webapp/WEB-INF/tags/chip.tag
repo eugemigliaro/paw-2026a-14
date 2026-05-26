@@ -17,9 +17,9 @@
 
 <c:choose>
   <c:when test="${not empty href}">
-    <a href="${href}" class="${classes}"><c:out value="${label}" /></a>
+    <a href="<c:out value='${href}' />" class="<c:out value='${classes}' />"><c:out value="${label}" /></a>
   </c:when>
   <c:otherwise>
-    <button type="button" class="${classes}" aria-pressed="${active ? 'true' : 'false'}"><c:out value="${label}" /></button>
+    <button type="button" class="<c:out value='${classes}' />" aria-pressed="${active ? 'true' : 'false'}"><c:out value="${label}" /></button>
   </c:otherwise>
 </c:choose>

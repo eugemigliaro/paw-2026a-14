@@ -1,8 +1,9 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.UserRole;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -41,9 +42,9 @@ public interface UserDao {
             String name,
             String lastName,
             String phone,
-            Long profileImageId);
+            ImageMetadata profileImageMetadata);
 
-    void updateProfileImage(Long id, Long profileImageId);
+    void updateProfileImage(Long id, ImageMetadata profileImageMetadata);
 
     void updatePasswordHash(Long id, String passwordHash);
 

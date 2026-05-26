@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.utils;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;

@@ -26,7 +26,7 @@ public class BannedAccountAuthorizationFilter extends OncePerRequestFilter {
         final AuthenticatedUserPrincipal principal = CurrentAuthenticatedUser.get().orElse(null);
         final String path = requestPath(request);
         if (principal != null
-                && userBanDao.findActiveBanForUser(principal.getUserId(), Instant.now()).isPresent()
+                && userBanDao.findActiveBanForUser(principal.getUser(), Instant.now()).isPresent()
                 && !isAllowedForBannedAccount(path, request.getMethod())) {
             response.sendRedirect(request.getContextPath() + "/account/ban");
             return;

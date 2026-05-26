@@ -4,18 +4,18 @@ import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeSort;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
-import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.currentUserIdOrNull;
-import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.Sport;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.form.FeedSearchForm;
+import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
@@ -30,11 +30,14 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -52,7 +55,6 @@ public class MatchDashboardController {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
-    private final UserService userService;
     private final MessageSource messageSource;
 
     @Autowired
@@ -60,19 +62,18 @@ public class MatchDashboardController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
-            final UserService userService,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
-        this.userService = userService;
         this.messageSource = messageSource;
     }
 
     @GetMapping("/events")
     @PreAuthorize("isAuthenticated()")
     public ModelAndView showEventsPage(
-            @RequestParam(value = "q", required = false) final String query,
+            @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
+            final BindingResult bindingResult,
             @RequestParam(value = "sort", required = false) final String sort,
             @RequestParam(value = "startDate", required = false) final String startDate,
             @RequestParam(value = "endDate", required = false) final String endDate,
@@ -85,7 +86,7 @@ public class MatchDashboardController {
             @RequestParam(value = "filter", defaultValue = "upcoming") final String filter,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
-        final long userId = requireAuthenticatedUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final List<String> selectedSports = normalizeSports(sports);
         final List<String> selectedStatuses =
                 normalizeValues(statuses, List.of(), PLAYER_STATUS_OPTIONS);
@@ -93,7 +94,10 @@ public class MatchDashboardController {
                 normalizeValues(
                         categories, List.of(), List.of("joined", "invited", "pending", "hosted"));
         final String selectedSort = normalizeSort(sort);
-        final String searchQuery = normalizeQuery(query);
+        final String searchQuery =
+                bindingResult.hasFieldErrors("q") || searchForm.getQ() == null
+                        ? ""
+                        : searchForm.getQ().trim();
         final String selectedTimezone = normalizeTimezone(timezone);
 
         final DateRangeContext context =
@@ -103,7 +107,7 @@ public class MatchDashboardController {
 
         final PaginatedResult<Match> result =
                 getAllUserEventsForFilter(
-                        userId,
+                        user,
                         context,
                         searchQuery,
                         encodeCsv(selectedSports),
@@ -123,6 +127,7 @@ public class MatchDashboardController {
                 "/events",
                 "page.title.events",
                 locale,
+                searchForm,
                 searchQuery,
                 selectedSort,
                 selectedDateRange.startDate(),
@@ -146,6 +151,7 @@ public class MatchDashboardController {
             final String path,
             final String pageTitleCode,
             final Locale locale,
+            final SearchForm searchForm,
             final String searchQuery,
             final String sort,
             final String startDate,
@@ -165,7 +171,7 @@ public class MatchDashboardController {
         final ModelAndView mav = new ModelAndView(view);
         final ZoneId zoneId = ZoneId.of(timezone);
         final DateRangeBounds dateBounds = dateRangeBounds(path, ZoneId.of(timezone));
-        final Long currentUserId = currentUserIdOrNull();
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         mav.addObject("shell", shell);
         mav.addObject("pageTitleCode", pageTitleCode);
@@ -184,7 +190,7 @@ public class MatchDashboardController {
         mav.addObject("selectedTimezone", timezone);
         mav.addObject("selectedMinPriceValue", formatNullablePriceValue(minPrice));
         mav.addObject("selectedMaxPriceValue", formatNullablePriceValue(maxPrice));
-        mav.addObject("listSearchForm", buildSearchForm(searchQuery));
+        mav.addObject("searchForm", searchForm);
         mav.addObject(
                 "listControls",
                 buildListControls(
@@ -210,7 +216,7 @@ public class MatchDashboardController {
                                                 match,
                                                 zoneId,
                                                 locale,
-                                                currentUserId,
+                                                currentUser,
                                                 messageSource.getMessage(
                                                         "match.status."
                                                                 + match.getStatus().getValue(),
@@ -218,7 +224,6 @@ public class MatchDashboardController {
                                                         match.getStatus().getValue(),
                                                         locale),
                                                 messageSource,
-                                                userService,
                                                 matchParticipationService,
                                                 matchReservationService))
                         .toList());
@@ -281,7 +286,7 @@ public class MatchDashboardController {
     }
 
     private PaginatedResult<Match> getAllUserEventsForFilter(
-            final long userId,
+            final User user,
             final DateRangeContext context,
             final String searchQuery,
             final String sports,
@@ -309,7 +314,7 @@ public class MatchDashboardController {
         final List<Match> pendingMatches =
                 !allowPending
                         ? List.of()
-                        : matchParticipationService.findPendingRequestMatches(userId).stream()
+                        : matchParticipationService.findPendingRequestMatches(user).stream()
                                 .filter(match -> belongsToContext(match, context, today, timezone))
                                 .filter(
                                         match ->
@@ -324,7 +329,7 @@ public class MatchDashboardController {
         final List<Match> invitedMatches =
                 !allowInvited
                         ? List.of()
-                        : matchParticipationService.findInvitedMatches(userId).stream()
+                        : matchParticipationService.findInvitedMatches(user).stream()
                                 .filter(match -> belongsToContext(match, context, today, timezone))
                                 .filter(
                                         match ->
@@ -346,7 +351,7 @@ public class MatchDashboardController {
                 !allowJoined
                         ? new PaginatedResult<>(List.of(), 0, requestedPage, fetchPageSize)
                         : matchService.findJoinedMatches(
-                                userId,
+                                user,
                                 isUpcoming,
                                 searchQuery,
                                 sports,
@@ -365,7 +370,7 @@ public class MatchDashboardController {
                 !allowHosted
                         ? new PaginatedResult<>(List.of(), 0, requestedPage, fetchPageSize)
                         : matchService.findHostedMatches(
-                                userId,
+                                user,
                                 isUpcoming,
                                 searchQuery,
                                 sports,
@@ -678,22 +683,8 @@ public class MatchDashboardController {
                                 messageSource.getMessage("feed.sort.spots", null, locale)));
 
         return new MatchListControlsViewModel(
-                buildSearchAction(
-                        path, locale, sort, null, null, null, null, timezone, List.of(), List.of(),
-                        List.of(), List.of()),
-                buildSearchAction(
-                        path,
-                        locale,
-                        sort,
-                        selectedStartDate,
-                        selectedEndDate,
-                        minPrice,
-                        maxPrice,
-                        timezone,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        selectedCategories),
+                path,
+                path,
                 messageSource.getMessage("feed.aria.search", null, locale),
                 searchQuery,
                 messageSource.getMessage("feed.search.placeholder", null, locale),
@@ -808,36 +799,6 @@ public class MatchDashboardController {
         }
 
         return builder.build().encode().toUriString();
-    }
-
-    private String buildSearchAction(
-            final String path,
-            final Locale locale,
-            final String sort,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String timezone,
-            final List<String> selectedStatuses,
-            final List<String> selectedSports,
-            final List<String> selectedVisibility,
-            final List<String> selectedCategories) {
-        return buildPageUrl(
-                path,
-                locale,
-                null,
-                sort,
-                startDate,
-                endDate,
-                minPrice,
-                maxPrice,
-                timezone,
-                selectedStatuses,
-                selectedSports,
-                selectedVisibility,
-                selectedCategories,
-                1);
     }
 
     private SelectOptionViewModel sortOption(
@@ -1180,10 +1141,6 @@ public class MatchDashboardController {
                         messageSource.getMessage("category.hosted", null, locale)));
     }
 
-    private static String normalizeQuery(final String query) {
-        return query == null ? "" : query.trim();
-    }
-
     private static DateRange normalizeDateRange(
             final String rawStartDate,
             final String rawEndDate,
@@ -1264,7 +1221,9 @@ public class MatchDashboardController {
         final List<String> normalized = normalizeCsvValues(rawSports);
         final List<String> sports = new ArrayList<>();
         for (final String sport : normalized) {
-            Sport.fromDbValue(sport).map(Sport::getDbValue).ifPresent(sports::add);
+            PersistableEnum.fromDbValue(Sport.class, sport)
+                    .map(Sport::getDbValue)
+                    .ifPresent(sports::add);
         }
         return List.copyOf(sports);
     }
@@ -1286,12 +1245,6 @@ public class MatchDashboardController {
         }
 
         return List.copyOf(filtered);
-    }
-
-    private static FeedSearchForm buildSearchForm(final String searchQuery) {
-        final FeedSearchForm form = new FeedSearchForm();
-        form.setQ(searchQuery == null ? "" : searchQuery);
-        return form;
     }
 
     private static String formatNullablePriceValue(final BigDecimal price) {

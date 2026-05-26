@@ -81,6 +81,56 @@
 	font-size: 1.25rem;
 }
 
+.public-profile-ratings {
+	margin-top: 1.5rem;
+}
+
+.public-profile-ratings__header {
+	margin: 0;
+}
+
+.public-profile-ratings__title {
+	font-family: "Plus Jakarta Sans", sans-serif;
+	font-size: 1.6rem;
+	margin: 0;
+}
+
+.public-profile-ratings__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.public-profile-ratings__item {
+	align-items: baseline;
+	border-bottom: 1px solid rgba(28, 46, 43, 0.08);
+	display: flex;
+	justify-content: space-between;
+	padding: 0.75rem 0;
+}
+
+.public-profile-ratings__item:first-child {
+	border-top: 1px solid rgba(28, 46, 43, 0.08);
+}
+
+.public-profile-ratings__sport {
+	color: var(--text-primary);
+}
+
+.public-profile-ratings__elo {
+	color: var(--text-primary);
+	font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+	font-size: 1.1rem;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+}
+
+.public-profile-ratings__empty {
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+	margin: 0;
+}
+
 .public-profile-reviews {
 	margin-top: 1.5rem;
 }
@@ -187,42 +237,96 @@
 	color: #b91c1c;
 }
 
-.public-profile-review-actions {
+
+.public-profile-review-stat--locked {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.public-profile-review-locked {
 	align-items: center;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;
-	justify-content: space-between;
-}
-
-.public-profile-review-current {
-	align-items: center;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.55rem;
-}
-
-.public-profile-review-current__label {
-	color: var(--text-secondary);
-	font-size: 0.84rem;
-	font-weight: 800;
-	text-transform: uppercase;
-}
-
-.public-profile-review-prompt {
-	background: #fbfbf9;
+	background: var(--bg-muted);
 	border: 1px solid rgba(28, 46, 43, 0.08);
 	border-radius: 12px;
 	color: var(--text-secondary);
-	font-weight: 700;
-	line-height: 1.5;
+	display: flex;
+	font-size: 0.93rem;
+	gap: 0.75rem;
+	line-height: 1.55;
 	margin: 0;
-	padding: 1rem;
+	padding: 0.85rem 1rem;
 }
 
-.public-profile-review-menu .overflow-menu__panel {
-	right: 0;
+.public-profile-review-locked__icon {
+	align-items: center;
+	display: inline-flex;
+	flex: 0 0 auto;
+	height: 1.05rem;
+	width: 1.05rem;
 }
+
+.public-profile-review-locked__icon svg {
+	display: block;
+	height: 100%;
+	width: 100%;
+}
+
+.public-profile-review-mine {
+	background: var(--bg-muted);
+	border: 1px solid rgba(28, 46, 43, 0.08);
+	border-radius: 12px;
+	display: grid;
+	gap: 0.75rem;
+	padding: 1rem 1.15rem;
+}
+
+.public-profile-review-mine__prompt {
+	color: var(--text-secondary);
+	font-size: 0.95rem;
+	font-style: italic;
+	line-height: 1.55;
+	margin: 0;
+}
+
+.public-profile-review-mine__comment {
+	color: var(--text-primary);
+	line-height: 1.6;
+	margin: 0;
+	white-space: pre-line;
+}
+
+.public-profile-review-mine__actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	justify-content: flex-end;
+}
+
+.public-profile-review-mine__icon {
+	align-items: center;
+	display: inline-flex;
+	flex: 0 0 auto;
+	height: 1rem;
+	margin-right: 0.3rem;
+	width: 1rem;
+}
+
+.public-profile-review-mine__icon svg {
+	display: block;
+	height: 100%;
+	width: 100%;
+}
+
+.public-profile-review-mine__delete-form {
+	margin: 0;
+}
+
+.public-profile-review-mine__delete {
+	aspect-ratio: 1;
+	padding: 0.5rem;
+}
+
 
 .public-profile-review-form-panel {
 	background: #fbfbf9;
@@ -241,26 +345,6 @@
 .public-profile-review-form {
 	display: grid;
 	gap: 1rem;
-}
-
-.public-profile-review-form__fieldset {
-	border: 0;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.8rem;
-	margin: 0;
-	padding: 0;
-}
-
-.public-profile-review-option {
-	align-items: center;
-	background: var(--bg-muted);
-	border: 1px solid rgba(28, 46, 43, 0.09);
-	border-radius: 999px;
-	cursor: pointer;
-	display: inline-flex;
-	gap: 0.45rem;
-	padding: 0.7rem 0.95rem;
 }
 
 .public-profile-review-form__comment {

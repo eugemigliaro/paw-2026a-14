@@ -3,12 +3,16 @@ package ar.edu.itba.paw.webapp.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.persistence.UserBanDao;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -16,8 +20,6 @@ import org.mockito.Mockito;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class BannedAccountAuthorizationFilterTest {
@@ -30,9 +32,10 @@ class BannedAccountAuthorizationFilterTest {
     @Test
     void redirectsBannedUserToBanPageForProtectedRoute() throws Exception {
         final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
-        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(7L), Mockito.any()))
+        final User u = UserUtils.getUser(7L);
+        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(u), Mockito.any()))
                 .thenReturn(Optional.of(sampleBan()));
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
 
         final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/account");
         final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -47,9 +50,10 @@ class BannedAccountAuthorizationFilterTest {
     @Test
     void allowsBannedUserAppealRoute() throws Exception {
         final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
-        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(7L), Mockito.any()))
+        final User u = UserUtils.getUser(7L);
+        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(u), Mockito.any()))
                 .thenReturn(Optional.of(sampleBan()));
-        authenticateUser(7L);
+        AuthenticationUtils.authenticateUser(7L);
 
         final MockHttpServletRequest request =
                 new MockHttpServletRequest("POST", "/account/ban/appeal");
@@ -62,23 +66,30 @@ class BannedAccountAuthorizationFilterTest {
         assertNull(response.getRedirectedUrl());
     }
 
-    private static UserBan sampleBan() {
-        return new UserBan(11L, 1L, Instant.now().plusSeconds(600));
+    private static ModerationReport sampleReport() {
+        return new ModerationReport(
+                1L,
+                UserUtils.getUser(7L),
+                ReportTargetType.USER,
+                7L,
+                ReportReason.SPAM,
+                "Details",
+                ReportStatus.RESOLVED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                (short) 0,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                Instant.now());
     }
 
-    private static void authenticateUser(final Long userId) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"))),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+    private static UserBan sampleBan() {
+        return new UserBan(11L, sampleReport(), Instant.now().plusSeconds(600));
     }
 }

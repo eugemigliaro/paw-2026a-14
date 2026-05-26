@@ -103,6 +103,26 @@
 					</div>
 
 				</section>
+				<section class="panel public-profile-panel public-profile-ratings">
+					<header class="public-profile-ratings__header">
+						<h2 class="public-profile-ratings__title"><c:out value="${profileRatingsTitle}" /></h2>
+					</header>
+					<c:choose>
+						<c:when test="${empty profileRatings}">
+							<p class="public-profile-ratings__empty"><c:out value="${profileRatingsEmpty}" /></p>
+						</c:when>
+						<c:otherwise>
+							<ul class="public-profile-ratings__list">
+								<c:forEach var="rating" items="${profileRatings}">
+									<li class="public-profile-ratings__item">
+										<span class="public-profile-ratings__sport"><c:out value="${rating.sportLabel}" /></span>
+										<span class="public-profile-ratings__elo"><c:out value="${rating.elo}" /></span>
+									</li>
+								</c:forEach>
+							</ul>
+						</c:otherwise>
+					</c:choose>
+				</section>
 				<section id="reviews" class="panel public-profile-panel public-profile-reviews">
 					<header class="page-heading public-profile-reviews__header">
 						<h2 class="public-profile-reviews__title"><spring:message code="profile.reviews.title" /></h2>
@@ -159,8 +179,6 @@
 						<spring:message var="addCommentLabel" code="profile.reviews.form.addComment" />
 						<spring:message var="editCommentLabel" code="profile.reviews.form.editComment" />
 						<spring:message var="deleteReviewLabel" code="profile.reviews.form.delete" />
-						<spring:message var="reviewMenuAria" code="profile.reviews.menu.aria" />
-						<spring:message var="reviewMenuLabel" code="profile.reviews.menu.label" />
 					</c:if>
 					<div class="public-profile-review-stats" aria-label="${reviewSummaryAria}">
 						<c:choose>
@@ -188,7 +206,8 @@
 								</form>
 							</c:when>
 							<c:otherwise>
-								<div class="public-profile-review-stat public-profile-review-stat--like">
+								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedMessage}"> aria-describedby="reviewLockedNote"</c:if>
+									class="public-profile-review-stat public-profile-review-stat--like public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
 											<svg viewBox="0 0 24 24" focusable="false">
@@ -198,7 +217,7 @@
 										<c:out value="${reviewSummary.likeCount}" />
 									</span>
 									<span class="public-profile-review-stat__label"><c:out value="${reviewLikeLabel}" /></span>
-								</div>
+								</button>
 							</c:otherwise>
 						</c:choose>
 						<c:choose>
@@ -226,7 +245,8 @@
 								</form>
 							</c:when>
 							<c:otherwise>
-								<div class="public-profile-review-stat public-profile-review-stat--dislike">
+								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedMessage}"> aria-describedby="reviewLockedNote"</c:if>
+									class="public-profile-review-stat public-profile-review-stat--dislike public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
 											<svg viewBox="0 0 24 24" focusable="false">
@@ -236,67 +256,64 @@
 										<c:out value="${reviewSummary.dislikeCount}" />
 									</span>
 									<span class="public-profile-review-stat__label"><c:out value="${reviewDislikeLabel}" /></span>
-								</div>
+								</button>
 							</c:otherwise>
 						</c:choose>
 					</div>
 
-					<c:if test="${reviewCanSubmit and not empty viewerReview}">
-						<div class="public-profile-review-actions">
-							<div class="public-profile-review-current">
-								<span class="public-profile-review-current__label"><spring:message code="profile.reviews.form.selectedReaction" /></span>
-								<span class="public-profile-review-list__reaction public-profile-review-list__reaction--${viewerReview.reaction.dbValue}">
-									<span class="public-profile-review-icon public-profile-review-icon--${viewerReview.reaction.dbValue}" aria-hidden="true">
-										<c:choose>
-											<c:when test="${viewerReview.reaction.dbValue eq 'like'}">
-												<svg viewBox="0 0 24 24" focusable="false">
-													<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
-												</svg>
-											</c:when>
-											<c:otherwise>
-												<svg viewBox="0 0 24 24" focusable="false">
-													<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
-												</svg>
-											</c:otherwise>
-										</c:choose>
-									</span>
-									<c:choose>
-										<c:when test="${viewerReview.reaction.dbValue eq 'like'}">
-											<spring:message code="profile.reviews.reaction.like" />
-										</c:when>
-										<c:otherwise>
-											<spring:message code="profile.reviews.reaction.dislike" />
-										</c:otherwise>
-									</c:choose>
-								</span>
-							</div>
-							<ui:overflowMenu
-								ariaLabel="${reviewMenuAria}"
-								menuAriaLabel="${reviewMenuLabel}"
-								className="public-profile-review-menu">
-								<a class="overflow-menu__item" href="${reviewFormHref}" role="menuitem">
-									<c:choose>
-										<c:when test="${empty viewerReview.comment}">
-											<c:out value="${addCommentLabel}" />
-										</c:when>
-										<c:otherwise>
-											<c:out value="${editCommentLabel}" />
-										</c:otherwise>
-									</c:choose>
-								</a>
-								<c:url var="reviewDeleteAction" value="${reviewDeletePath}" />
-								<form method="post" action="${reviewDeleteAction}">
-									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-									<button class="overflow-menu__item overflow-menu__item--danger" type="submit" role="menuitem">
-										<c:out value="${deleteReviewLabel}" />
-									</button>
-								</form>
-							</ui:overflowMenu>
-						</div>
+					<c:if test="${not empty reviewLockedMessage}">
+						<p id="reviewLockedNote" class="public-profile-review-locked">
+							<span class="public-profile-review-locked__icon" aria-hidden="true">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+									<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+									<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+								</svg>
+							</span>
+							<span class="public-profile-review-locked__text"><c:out value="${reviewLockedMessage}" /></span>
+						</p>
 					</c:if>
 
-					<c:if test="${reviewFormVisible and empty viewerReview}">
-						<p class="public-profile-review-prompt"><spring:message code="profile.reviews.form.chooseReaction" /></p>
+					<c:if test="${reviewCanSubmit and not empty viewerReview}">
+						<div class="public-profile-review-mine">
+							<c:choose>
+								<c:when test="${empty viewerReview.comment}">
+									<p class="public-profile-review-mine__prompt"><c:out value="${reviewCommentPromptLabel}" /></p>
+								</c:when>
+								<c:otherwise>
+									<p class="public-profile-review-mine__comment"><c:out value="${viewerReview.comment}" /></p>
+								</c:otherwise>
+							</c:choose>
+							<div class="public-profile-review-mine__actions">
+								<a href="${reviewFormHref}"
+									class="btn btn--ghost btn--md public-profile-review-mine__edit"
+									aria-label="${empty viewerReview.comment ? addCommentLabel : editCommentLabel}">
+									<span class="public-profile-review-mine__icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+											<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+											<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+										</svg>
+									</span>
+									<c:out value="${empty viewerReview.comment ? addCommentLabel : editCommentLabel}" />
+								</a>
+								<c:url var="reviewDeleteAction" value="${reviewDeletePath}" />
+								<form method="post" action="${reviewDeleteAction}" class="public-profile-review-mine__delete-form">
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<button type="submit"
+										class="btn btn--secondary btn--md public-profile-review-mine__delete"
+										aria-label="${deleteReviewLabel}">
+										<span class="public-profile-review-mine__icon" aria-hidden="true">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+												<polyline points="3 6 5 6 21 6"/>
+												<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+												<path d="M10 11v6"/>
+												<path d="M14 11v6"/>
+												<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+											</svg>
+										</span>
+									</button>
+								</form>
+							</div>
+						</div>
 					</c:if>
 
 					<c:if test="${reviewFormVisible and not empty viewerReview}">
@@ -448,7 +465,7 @@
 											<c:when test="${not empty reviewPreviousPageHref}">
 												<c:url var="reviewPrevHref" value="${reviewPreviousPageHref}" />
 												<a class="feed-pagination__control" href="${reviewPrevHref}">
-													${previousLabel}
+														<c:out value="${previousLabel}" />
 												</a>
 											</c:when>
 											<c:otherwise>
@@ -462,11 +479,11 @@
 											<c:forEach var="item" items="${reviewPaginationItems}">
 												<c:choose>
 													<c:when test="${item.ellipsis}">
-														<span class="feed-pagination__ellipsis" aria-hidden="true">${item.label}</span>
+															<span class="feed-pagination__ellipsis" aria-hidden="true"><c:out value="${item.label}" /></span>
 													</c:when>
 													<c:when test="${item.current}">
 														<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">
-															${item.label}
+																<c:out value="${item.label}" />
 														</span>
 													</c:when>
 													<c:otherwise>

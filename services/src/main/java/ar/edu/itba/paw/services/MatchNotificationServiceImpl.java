@@ -23,20 +23,17 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
     private final MailDispatchService mailDispatchService;
     private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MessageSource messageSource;
-    private final UserService userService;
 
     @Autowired
     public MatchNotificationServiceImpl(
             final MatchParticipantDao matchParticipantDao,
             final MailDispatchService mailDispatchService,
             final ThymeleafMailTemplateRenderer templateRenderer,
-            final MessageSource messageSource,
-            final UserService userService) {
+            final MessageSource messageSource) {
         this.matchParticipantDao = matchParticipantDao;
         this.mailDispatchService = mailDispatchService;
         this.templateRenderer = templateRenderer;
         this.messageSource = messageSource;
-        this.userService = userService;
     }
 
     @Override
@@ -103,37 +100,33 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
     @Override
     public void notifyHostPlayerJoined(final Match match, final User player) {
-        userService
-                .findById(match.getHostUserId())
-                .ifPresent(
-                        host -> {
-                            final MatchLifecycleMailTemplateData templateData =
-                                    buildTemplateData(
-                                            host,
-                                            match,
-                                            player.getName() + " " + player.getLastName());
-                            final MailContent content =
-                                    templateRenderer.renderPlayerJoinedNotification(templateData);
-                            mailDispatchService.dispatch(host.getEmail(), content);
-                        });
+        final User host = match.getHost();
+
+        if (host == null) {
+            return;
+        }
+
+        final MatchLifecycleMailTemplateData templateData =
+                buildTemplateData(host, match, displayName(player));
+
+        final MailContent content = templateRenderer.renderPlayerJoinedNotification(templateData);
+
+        mailDispatchService.dispatch(host.getEmail(), content);
     }
 
     @Override
     public void notifyHostJoinRequestReceived(final Match match, final User player) {
-        userService
-                .findById(match.getHostUserId())
-                .ifPresent(
-                        host -> {
-                            final MatchLifecycleMailTemplateData templateData =
-                                    buildTemplateData(
-                                            host,
-                                            match,
-                                            player.getName() + " " + player.getLastName());
-                            final MailContent content =
-                                    templateRenderer.renderJoinRequestReceivedNotification(
-                                            templateData);
-                            mailDispatchService.dispatch(host.getEmail(), content);
-                        });
+        final User host = match.getHost();
+
+        if (host == null) {
+            return;
+        }
+
+        final MatchLifecycleMailTemplateData templateData =
+                buildTemplateData(host, match, displayName(player));
+        final MailContent content =
+                templateRenderer.renderJoinRequestReceivedNotification(templateData);
+        mailDispatchService.dispatch(host.getEmail(), content);
     }
 
     @Override
@@ -178,53 +171,44 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
     @Override
     public void notifyHostInviteAccepted(final Match match, final User player) {
-        userService
-                .findById(match.getHostUserId())
-                .ifPresent(
-                        host -> {
-                            final MatchLifecycleMailTemplateData templateData =
-                                    buildTemplateData(
-                                            host,
-                                            match,
-                                            player.getName() + " " + player.getLastName());
-                            final MailContent content =
-                                    templateRenderer.renderInviteAcceptedNotification(templateData);
-                            mailDispatchService.dispatch(host.getEmail(), content);
-                        });
+        final User host = match.getHost();
+
+        if (host == null) {
+            return;
+        }
+
+        final MatchLifecycleMailTemplateData templateData =
+                buildTemplateData(host, match, displayName(player));
+        final MailContent content = templateRenderer.renderInviteAcceptedNotification(templateData);
+        mailDispatchService.dispatch(host.getEmail(), content);
     }
 
     @Override
     public void notifyHostInviteDeclined(final Match match, final User player) {
-        userService
-                .findById(match.getHostUserId())
-                .ifPresent(
-                        host -> {
-                            final MatchLifecycleMailTemplateData templateData =
-                                    buildTemplateData(
-                                            host,
-                                            match,
-                                            player.getName() + " " + player.getLastName());
-                            final MailContent content =
-                                    templateRenderer.renderInviteDeclinedNotification(templateData);
-                            mailDispatchService.dispatch(host.getEmail(), content);
-                        });
+        final User host = match.getHost();
+
+        if (host == null) {
+            return;
+        }
+
+        final MatchLifecycleMailTemplateData templateData =
+                buildTemplateData(host, match, displayName(player));
+        final MailContent content = templateRenderer.renderInviteDeclinedNotification(templateData);
+        mailDispatchService.dispatch(host.getEmail(), content);
     }
 
     @Override
     public void notifyHostPlayerLeft(final Match match, final User player) {
-        userService
-                .findById(match.getHostUserId())
-                .ifPresent(
-                        host -> {
-                            final MatchLifecycleMailTemplateData templateData =
-                                    buildTemplateData(
-                                            host,
-                                            match,
-                                            player.getName() + " " + player.getLastName());
-                            final MailContent content =
-                                    templateRenderer.renderPlayerLeftNotification(templateData);
-                            mailDispatchService.dispatch(host.getEmail(), content);
-                        });
+        final User host = match.getHost();
+
+        if (host == null) {
+            return;
+        }
+
+        final MatchLifecycleMailTemplateData templateData =
+                buildTemplateData(host, match, displayName(player));
+        final MailContent content = templateRenderer.renderPlayerLeftNotification(templateData);
+        mailDispatchService.dispatch(host.getEmail(), content);
     }
 
     @Override
@@ -273,6 +257,29 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return List.of();
         }
         return users.stream().filter(user -> user != null && user.getEmail() != null).toList();
+    }
+
+    private static String displayName(final User user) {
+        final String firstName = clean(user.getName());
+        final String lastName = clean(user.getLastName());
+
+        if (firstName != null && lastName != null) {
+            return firstName + " " + lastName;
+        }
+
+        final String username = clean(user.getUsername());
+        if (username != null) {
+            return username;
+        }
+
+        return user.getEmail();
+    }
+
+    private static String clean(final String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private record AffectedRecurringParticipant(

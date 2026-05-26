@@ -2,34 +2,35 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.PlayerReviewFilter;
-import ar.edu.itba.paw.models.PlayerReviewReaction;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.UserSportRating;
+import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.UserSportRatingService;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PublicProfilePageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SportRatingViewModel;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -52,16 +53,19 @@ public class PublicProfileController {
     private final UserService userService;
     private final PlayerReviewService playerReviewService;
     private final ModerationService moderationService;
+    private final UserSportRatingService userSportRatingService;
     private final MessageSource messageSource;
 
     public PublicProfileController(
             final UserService userService,
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
+            final UserSportRatingService userSportRatingService,
             final MessageSource messageSource) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
         this.moderationService = moderationService;
+        this.userSportRatingService = userSportRatingService;
         this.messageSource = messageSource;
     }
 
@@ -89,7 +93,10 @@ public class PublicProfileController {
                         new Object[] {user.getUsername()},
                         "Match Point | " + user.getUsername(),
                         resolvedLocale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, resolvedLocale));
+        mav.addObject(
+                "shell",
+                ShellViewModelFactory.playerShell(
+                        messageSource, resolvedLocale, "/users/" + username));
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(
@@ -121,14 +128,11 @@ public class PublicProfileController {
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
-        final Long currentUserId =
-                CurrentAuthenticatedUser.get()
-                        .map(AuthenticatedUserPrincipal::getUserId)
-                        .orElse(null);
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
         final boolean reportUserCanSubmit =
-                currentUserId != null && !currentUserId.equals(user.getId());
+                currentUser != null && !currentUser.getId().equals(user.getId());
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
-        final Optional<UserBan> activeBan = moderationService.findActiveBan(user.getId());
+        final Optional<UserBan> activeBan = moderationService.findActiveBan(user);
         mav.addObject("profileBanned", activeBan.isPresent());
         mav.addObject(
                 "profileBannedLabel",
@@ -143,7 +147,7 @@ public class PublicProfileController {
                                     .format(ban.getBannedUntil().atZone(ZoneId.systemDefault())));
                 });
         CurrentAuthenticatedUser.get()
-                .filter(principal -> principal.getUserId().equals(user.getId()))
+                .filter(principal -> principal.getUser().getId().equals(user.getId()))
                 .ifPresent(
                         principal -> {
                             mav.addObject("profileEditHref", "/account");
@@ -155,6 +159,7 @@ public class PublicProfileController {
                                             "Edit profile",
                                             resolvedLocale));
                         });
+        addRatingsModel(mav, user, resolvedLocale);
         return mav;
     }
 
@@ -166,16 +171,15 @@ public class PublicProfileController {
             @RequestParam(value = "comment", required = false) final String comment,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
         final Optional<PlayerReviewReaction> reaction =
-                PlayerReviewReaction.fromDbValue(reactionValue);
+                PersistableEnum.fromDbValue(PlayerReviewReaction.class, reactionValue);
         if (reaction.isEmpty()) {
             return redirectToProfile(username, "invalid_reaction", null);
         }
 
         try {
-            playerReviewService.submitReview(
-                    currentUser.getUserId(), reviewedUser.getId(), reaction.get(), comment);
+            playerReviewService.submitReview(currentUser, reviewedUser, reaction.get(), comment);
             return redirectToProfile(username, null, "saved", redirectAttributes);
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
@@ -188,14 +192,38 @@ public class PublicProfileController {
             @PathVariable("username") final String username,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            playerReviewService.deleteReview(currentUser.getUserId(), reviewedUser.getId());
+            playerReviewService.deleteReview(currentUser, reviewedUser);
             return redirectToProfile(username, null, "deleted", redirectAttributes);
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
         }
+    }
+
+    private void addRatingsModel(final ModelAndView mav, final User user, final Locale locale) {
+        final List<SportRatingViewModel> ratings =
+                userSportRatingService.findRatingsForUser(user).stream()
+                        .sorted(Comparator.comparingInt(UserSportRating::getElo).reversed())
+                        .map(
+                                r ->
+                                        new SportRatingViewModel(
+                                                messageSource.getMessage(
+                                                        "sport." + r.getSport().getDbValue(),
+                                                        null,
+                                                        r.getSport().getDisplayName(),
+                                                        locale),
+                                                r.getElo()))
+                        .toList();
+        mav.addObject("profileRatings", ratings);
+        mav.addObject(
+                "profileRatingsTitle",
+                messageSource.getMessage("profile.ratings.title", null, "Sport ratings", locale));
+        mav.addObject(
+                "profileRatingsEmpty",
+                messageSource.getMessage(
+                        "profile.ratings.empty", null, "No sport ratings yet.", locale));
     }
 
     private void addReviewModel(
@@ -205,40 +233,25 @@ public class PublicProfileController {
             final String reviewFilter,
             final int reviewPage,
             final Locale locale) {
-        final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user.getId());
+        final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user);
         final PlayerReviewFilter selectedFilter =
                 PlayerReviewFilter.fromQueryValueOrDefault(reviewFilter);
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
-                        user.getId(), selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
-        final Map<Long, User> reviewersById =
-                userService
-                        .findByIds(
-                                reviewResult.getItems().stream()
-                                        .map(PlayerReview::getReviewerUserId)
-                                        .filter(Objects::nonNull)
-                                        .distinct()
-                                        .toList())
-                        .stream()
-                        .collect(
-                                Collectors.toMap(
-                                        User::getId, Function.identity(), (left, right) -> left));
+                        user, selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
         final List<PlayerReviewViewModel> reviews =
                 reviewResult.getItems().stream()
-                        .map(review -> toReviewViewModel(review, reviewersById, locale))
+                        .map(review -> toReviewViewModel(review, locale))
                         .toList();
-        final Long currentUserId =
-                CurrentAuthenticatedUser.get()
-                        .map(AuthenticatedUserPrincipal::getUserId)
-                        .orElse(null);
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
         final Optional<PlayerReview> viewerReview =
-                currentUserId == null
+                currentUser == null
                         ? Optional.empty()
-                        : playerReviewService.findReviewByPair(currentUserId, user.getId());
+                        : playerReviewService.findReviewByPair(currentUser, user);
         final boolean reviewCanSubmit =
-                currentUserId != null
-                        && !currentUserId.equals(user.getId())
-                        && playerReviewService.canReview(currentUserId, user.getId());
+                currentUser != null
+                        && !currentUser.getId().equals(user.getId())
+                        && playerReviewService.canReview(currentUser, user);
         final String profilePath = "/users/" + user.getUsername();
 
         mav.addObject("reviewSummary", summary);
@@ -284,6 +297,25 @@ public class PublicProfileController {
         mav.addObject(
                 "reviewSectionPath",
                 buildReviewPageUrl(user, selectedFilter, reviewResult.getPage()));
+        if (reviewCanSubmit) {
+            mav.addObject(
+                    "reviewCommentPromptLabel",
+                    messageSource.getMessage(
+                            "profile.reviews.commentPrompt",
+                            new Object[] {user.getUsername()},
+                            locale));
+        }
+        final boolean isSelf = currentUser != null && currentUser.getId().equals(user.getId());
+        if (!reviewCanSubmit && !isSelf) {
+            final String lockedKey =
+                    currentUser == null
+                            ? "profile.reviews.locked.anonymous"
+                            : "profile.reviews.locked.authenticated";
+            final Object[] lockedArgs =
+                    currentUser == null ? null : new Object[] {user.getUsername()};
+            mav.addObject(
+                    "reviewLockedMessage", messageSource.getMessage(lockedKey, lockedArgs, locale));
+        }
     }
 
     private List<FilterOptionViewModel> reviewFilterOptions(
@@ -371,10 +403,10 @@ public class PublicProfileController {
     }
 
     private PlayerReviewViewModel toReviewViewModel(
-            final PlayerReview review, final Map<Long, User> reviewersById, final Locale locale) {
-        final User reviewer = reviewersById.get(review.getReviewerUserId());
+            final PlayerReview review, final Locale locale) {
+        final User reviewer = review.getReviewer();
         final String reviewerUsername =
-                reviewer == null
+                reviewer == null || reviewer.getUsername() == null
                         ? messageSource.getMessage(
                                 "profile.reviews.unknownReviewer", null, "Unknown player", locale)
                         : reviewer.getUsername();
@@ -432,11 +464,6 @@ public class PublicProfileController {
         return userService
                 .findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    }
-
-    private static AuthenticatedUserPrincipal requireAuthenticatedUser() {
-        return CurrentAuthenticatedUser.get()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private static ModelAndView redirectToProfile(

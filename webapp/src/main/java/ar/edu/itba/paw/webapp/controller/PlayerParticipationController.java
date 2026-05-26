@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.SecurityControllerUtils.requireAuthenticatedUserId;
-
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,11 +31,11 @@ public class PlayerParticipationController {
     public ModelAndView requestToJoin(
             @PathVariable("matchId") final String matchId,
             final RedirectAttributes redirectAttributes) {
-        final long userId = requireAuthenticatedUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
-            matchParticipationService.requestToJoin(resolvedMatchId, userId);
+            matchParticipationService.requestToJoin(resolvedMatchId, user);
             redirectAttributes.addFlashAttribute("joinRequested", true);
             return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
@@ -51,11 +51,11 @@ public class PlayerParticipationController {
     public ModelAndView requestToJoinSeries(
             @PathVariable("matchId") final String matchId,
             final RedirectAttributes redirectAttributes) {
-        final long userId = requireAuthenticatedUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
-            matchParticipationService.requestToJoinSeries(resolvedMatchId, userId);
+            matchParticipationService.requestToJoinSeries(resolvedMatchId, user);
             redirectAttributes.addFlashAttribute("seriesJoinRequested", true);
             return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
@@ -68,11 +68,11 @@ public class PlayerParticipationController {
     public ModelAndView cancelJoinRequest(
             @PathVariable("matchId") final String matchId,
             final RedirectAttributes redirectAttributes) {
-        final long userId = requireAuthenticatedUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
-            matchParticipationService.cancelJoinRequest(resolvedMatchId, userId);
+            matchParticipationService.cancelJoinRequest(resolvedMatchId, user);
             redirectAttributes.addFlashAttribute("joinStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
@@ -85,11 +85,11 @@ public class PlayerParticipationController {
     public ModelAndView acceptInvite(
             @PathVariable("matchId") final String matchId,
             final RedirectAttributes redirectAttributes) {
-        final long userId = requireAuthenticatedUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
-            matchParticipationService.acceptInvite(resolvedMatchId, userId);
+            matchParticipationService.acceptInvite(resolvedMatchId, user);
             redirectAttributes.addFlashAttribute("inviteStatus", "accepted");
             return new ModelAndView("redirect:/matches/" + resolvedMatchId);
         } catch (final MatchParticipationException e) {
@@ -100,11 +100,11 @@ public class PlayerParticipationController {
 
     @PostMapping("/matches/{matchId}/invites/decline")
     public ModelAndView declineInvite(@PathVariable("matchId") final String matchId) {
-        final long userId = requireAuthenticatedUserId();
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final long resolvedMatchId = parseMatchIdOrThrow(matchId);
 
         try {
-            matchParticipationService.declineInvite(resolvedMatchId, userId);
+            matchParticipationService.declineInvite(resolvedMatchId, user);
             return new ModelAndView("redirect:/events");
         } catch (final MatchParticipationException e) {
             return new ModelAndView(

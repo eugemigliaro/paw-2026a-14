@@ -41,14 +41,14 @@
 <c:choose>
   <c:when test="${not empty href}">
     <a
-      href="${href}"
-      class="${classes}"
-      <c:if test="${not empty id}">id="${id}"</c:if>
-      <c:if test="${not empty title}">title="${title}"</c:if>
-      <c:if test="${not empty ariaLabel}">aria-label="${ariaLabel}"</c:if>
-      <c:if test="${not empty onClick}">onclick="${onClick}"</c:if>
-      <c:if test="${not empty target}">target="${target}"</c:if>
-      <c:if test="${not empty rel}">rel="${rel}"</c:if>>
+      href="<c:out value='${href}' />"
+      class="<c:out value='${classes}' />"
+      <c:if test="${not empty id}">id="<c:out value='${id}' />"</c:if>
+      <c:if test="${not empty title}">title="<c:out value='${title}' />"</c:if>
+      <c:if test="${not empty ariaLabel}">aria-label="<c:out value='${ariaLabel}' />"</c:if>
+      <c:if test="${not empty onClick}">onclick="<c:out value='${onClick}' />"</c:if>
+      <c:if test="${not empty target}">target="<c:out value='${target}' />"</c:if>
+      <c:if test="${not empty rel}">rel="<c:out value='${rel}' />"</c:if>>
       <c:choose>
         <c:when test="${not empty trimmedBody}">
           ${buttonBody}
@@ -61,16 +61,16 @@
   </c:when>
   <c:otherwise>
     <button
-      type="${resolvedType}"
-      class="${classes}"
-      <c:if test="${not empty id}">id="${id}"</c:if>
-      <c:if test="${not empty name}">name="${name}"</c:if>
-      <c:if test="${not empty value}">value="${value}"</c:if>
-      <c:if test="${not empty title}">title="${title}"</c:if>
-      <c:if test="${not empty ariaLabel}">aria-label="${ariaLabel}"</c:if>
-      <c:if test="${not empty onClick}">onclick="${onClick}"</c:if>
-      <c:if test="${not empty form}">form="${form}"</c:if>
-      <c:if test="${not empty submitAction}">formaction="${submitAction}"</c:if>
+      type="<c:out value='${resolvedType}' />"
+      class="<c:out value='${classes}' />"
+      <c:if test="${not empty id}">id="<c:out value='${id}' />"</c:if>
+      <c:if test="${not empty name}">name="<c:out value='${name}' />"</c:if>
+      <c:if test="${not empty value}">value="<c:out value='${value}' />"</c:if>
+      <c:if test="${not empty title}">title="<c:out value='${title}' />"</c:if>
+      <c:if test="${not empty ariaLabel}">aria-label="<c:out value='${ariaLabel}' />"</c:if>
+      <c:if test="${not empty onClick}">onclick="<c:out value='${onClick}' />"</c:if>
+      <c:if test="${not empty form}">form="<c:out value='${form}' />"</c:if>
+      <c:if test="${not empty submitAction}">formaction="<c:out value='${submitAction}' />"</c:if>
       <c:if test="${disabled}">disabled="disabled" aria-disabled="true"</c:if>>
       <c:choose>
         <c:when test="${not empty trimmedBody}">

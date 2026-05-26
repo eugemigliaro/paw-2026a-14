@@ -16,14 +16,14 @@
   <c:set var="classes" value="${classes} ${className}" />
 </c:if>
 
-<label class="${classes}" for="${resolvedId}">
+<label class="<c:out value='${classes}' />" for="<c:out value='${resolvedId}' />">
   <span class="field__label"><c:out value="${label}" /></span>
   <textarea
-    id="${resolvedId}"
-    name="${name}"
-    rows="${resolvedRows}"
+    id="<c:out value='${resolvedId}' />"
+    name="<c:out value='${name}' />"
+    rows="<c:out value='${resolvedRows}' />"
     class="field__control field__control--textarea"
-    <c:if test="${not empty placeholder}">placeholder="${placeholder}"</c:if>><c:out value="${value}" /></textarea>
+    <c:if test="${not empty placeholder}">placeholder="<c:out value='${placeholder}' />"</c:if>><c:out value="${value}" /></textarea>
   <c:if test="${not empty hint}">
     <span class="field__hint"><c:out value="${hint}" /></span>
   </c:if>

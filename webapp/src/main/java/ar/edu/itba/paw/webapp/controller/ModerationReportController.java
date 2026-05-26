@@ -5,17 +5,17 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlayerReview;
-import ar.edu.itba.paw.models.ReportReason;
-import ar.edu.itba.paw.models.ReportTargetType;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportPageViewModel;
@@ -76,7 +76,6 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        requireAuthenticatedUser();
         final User reportedUser = findUserByUsernameOrThrow(username);
         return baseReportView(
                 locale,
@@ -113,10 +112,9 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        requireAuthenticatedUser();
         final PlayerReview review = findReviewByIdOrThrow(reviewId);
-        final User author = findUserByIdOrThrow(review.getReviewerUserId());
-        final User reviewedUser = findUserByIdOrThrow(review.getReviewedUserId());
+        final User author = review.getReviewer();
+        final User reviewedUser = review.getReviewed();
         return baseReportView(
                 locale,
                 Boolean.TRUE.equals(model.asMap().get("reportSent")) ? "sent" : reportStatus,
@@ -163,9 +161,8 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        requireAuthenticatedUser();
         final Match match = findMatchByIdOrThrow(matchId);
-        final User host = findUserByIdOrThrow(match.getHostUserId());
+        final User host = match.getHost();
         return baseReportView(
                 locale,
                 Boolean.TRUE.equals(model.asMap().get("reportSent")) ? "sent" : reportStatus,
@@ -201,12 +198,12 @@ public class ModerationReportController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final User reportedUser = findUserByUsernameOrThrow(username);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
             LOGGER.warn(
                     "Report submission failed validation for user={} targetUser={} reason={} errors={}",
-                    currentUser.getUserId(),
+                    currentUser.getId(),
                     username,
                     form.getReason(),
                     errors.getAllErrors());
@@ -216,14 +213,14 @@ public class ModerationReportController {
         try {
             LOGGER.info(
                     "User {} is reporting user {} for reason: {}",
-                    currentUser.getUserId(),
+                    currentUser.getId(),
                     reportedUser.getId(),
                     form.getReason());
             moderationService.reportContent(
-                    currentUser.getUserId(),
+                    currentUser,
                     ReportTargetType.USER,
                     reportedUser.getId(),
-                    ReportReason.fromDbValue(form.getReason())
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(
@@ -249,12 +246,12 @@ public class ModerationReportController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final PlayerReview review = findReviewByIdOrThrow(reviewId);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
             LOGGER.warn(
                     "Report submission failed validation for user={} targetReview={} reason={} errors={}",
-                    currentUser.getUserId(),
+                    currentUser.getId(),
                     reviewId,
                     form.getReason(),
                     errors.getAllErrors());
@@ -264,14 +261,14 @@ public class ModerationReportController {
         try {
             LOGGER.info(
                     "User {} is reporting review {} for reason: {}",
-                    currentUser.getUserId(),
+                    currentUser.getId(),
                     review.getId(),
                     form.getReason());
             moderationService.reportContent(
-                    currentUser.getUserId(),
+                    currentUser,
                     ReportTargetType.REVIEW,
                     review.getId(),
-                    ReportReason.fromDbValue(form.getReason())
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(
@@ -297,12 +294,12 @@ public class ModerationReportController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final Match match = findMatchByIdOrThrow(matchId);
-        final AuthenticatedUserPrincipal currentUser = requireAuthenticatedUser();
+        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
             LOGGER.warn(
                     "Report submission failed validation for user={} targetMatch={} reason={} errors={}",
-                    currentUser.getUserId(),
+                    currentUser.getId(),
                     matchId,
                     form.getReason(),
                     errors.getAllErrors());
@@ -312,14 +309,14 @@ public class ModerationReportController {
         try {
             LOGGER.info(
                     "User {} is reporting match {} for reason: {}",
-                    currentUser.getUserId(),
+                    currentUser.getId(),
                     match.getId(),
                     form.getReason());
             moderationService.reportContent(
-                    currentUser.getUserId(),
+                    currentUser,
                     ReportTargetType.MATCH,
                     match.getId(),
-                    ReportReason.fromDbValue(form.getReason())
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(
@@ -377,12 +374,6 @@ public class ModerationReportController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
-    private User findUserByIdOrThrow(final Long userId) {
-        return userService
-                .findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    }
-
     private PlayerReview findReviewByIdOrThrow(final Long reviewId) {
         return playerReviewService
                 .findReviewByIdIncludingDeleted(reviewId)
@@ -394,11 +385,6 @@ public class ModerationReportController {
         return matchService
                 .findMatchById(matchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    }
-
-    private static AuthenticatedUserPrincipal requireAuthenticatedUser() {
-        return CurrentAuthenticatedUser.get()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     private ModelAndView redirectToReportUser(

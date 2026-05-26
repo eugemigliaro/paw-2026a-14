@@ -445,6 +445,10 @@
 	gap: 0.55rem;
 }
 
+.search-panel__form--floating-error {
+	position: relative;
+}
+
 .search-panel .btn {
 	min-height: 3.3rem;
 	min-width: auto;
@@ -517,6 +521,16 @@
 	font-weight: 600;
 	margin: 0;
 	padding: 0.5rem;
+}
+
+.search-panel__form--floating-error .search-panel__error {
+	left: 0;
+	margin: 8px 0 0 4px;
+	padding: 0;
+	position: absolute;
+	top: 100%;
+	white-space: nowrap;
+	z-index: 10;
 }
 
 .sort-panel {

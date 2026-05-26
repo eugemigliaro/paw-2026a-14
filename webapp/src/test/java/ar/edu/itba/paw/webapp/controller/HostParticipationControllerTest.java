@@ -6,23 +6,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ar.edu.itba.paw.models.EventJoinPolicy;
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserRole;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
-import java.time.Instant;
-import java.util.List;
+import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -33,17 +31,22 @@ class HostParticipationControllerTest {
     private MatchService matchService;
     private MatchParticipationService matchParticipationService;
     private MessageSource messageSource;
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
         matchService = Mockito.mock(MatchService.class);
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
         messageSource = Mockito.mock(MessageSource.class);
+        userService = Mockito.mock(UserService.class);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostParticipationController(
-                                        matchService, matchParticipationService, messageSource))
+                                        matchService,
+                                        matchParticipationService,
+                                        userService,
+                                        messageSource))
                         .build();
     }
 
@@ -54,69 +57,131 @@ class HostParticipationControllerTest {
 
     @Test
     void approveRequestRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L); // Host user
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User host = Mockito.mock(User.class);
+        final User requestedUser = Mockito.mock(User.class);
+
         Match mockMatch = Mockito.mock(Match.class);
-        when(mockMatch.getHostUserId()).thenReturn(1L);
+
+        when(mockMatch.getHost()).thenReturn(host);
+        when(mockMatch.getHost().getId()).thenReturn(1L);
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
+
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
 
         mockMvc.perform(post("/host/matches/42/requests/9/approve"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/requests"))
-                .andExpect(flash().attribute("action", "approved"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostAction", "requestApproved"));
+    }
+
+    @Test
+    void approveRequestMapsClosedError() throws Exception {
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User requestedUser = Mockito.mock(User.class);
+        final Match mockMatch = Mockito.mock(Match.class);
+
+        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
+        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
+        when(messageSource.getMessage(
+                        Mockito.eq("event.host.requests.error.closed"),
+                        Mockito.isNull(),
+                        Mockito.<Locale>any()))
+                .thenReturn("This event is closed.");
+        Mockito.doThrow(new MatchParticipationException("closed", "The event is not open."))
+                .when(matchParticipationService)
+                .approveRequest(
+                        Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
+
+        mockMvc.perform(post("/host/matches/42/requests/9/approve"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostActionTarget", "requests"))
+                .andExpect(flash().attribute("hostActionError", "This event is closed."));
     }
 
     @Test
     void rejectRequestRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User host = Mockito.mock(User.class);
+        final User requestedUser = Mockito.mock(User.class);
+
         Match mockMatch = Mockito.mock(Match.class);
-        when(mockMatch.getHostUserId()).thenReturn(1L);
+
+        when(mockMatch.getHost()).thenReturn(host);
+        when(mockMatch.getHost().getId()).thenReturn(1L);
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
+
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
 
         mockMvc.perform(post("/host/matches/42/requests/9/reject"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/requests"))
-                .andExpect(flash().attribute("action", "rejected"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostAction", "requestRejected"));
     }
 
     @Test
     void inviteUserRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User host = Mockito.mock(User.class);
+        final User requestedUser = Mockito.mock(User.class);
         Match mockMatch = Mockito.mock(Match.class);
-        when(mockMatch.getHostUserId()).thenReturn(1L);
+
+        when(mockMatch.getHost()).thenReturn(host);
+        when(mockMatch.getHost().getId()).thenReturn(1L);
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.INVITE_ONLY);
+
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
 
         mockMvc.perform(post("/host/matches/42/invites").param("email", "test@test.com"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/invites"))
-                .andExpect(flash().attribute("action", "invited"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostAction", "inviteSent"));
     }
 
     @Test
     void removeParticipantRedirectsWithSuccess() throws Exception {
-        authenticateUser(1L);
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User requestedUser = Mockito.mock(User.class);
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
 
         mockMvc.perform(post("/host/matches/42/participants/9/remove"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/matches/42/participants"))
-                .andExpect(flash().attribute("action", "removed"));
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostAction", "participantRemoved"));
     }
 
-    private static void authenticateUser(final Long userId) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedUserPrincipal(
-                                        new UserAccount(
-                                                userId,
-                                                "user@test.com",
-                                                "user",
-                                                "{bcrypt}hash",
-                                                UserRole.USER,
-                                                Instant.parse("2026-04-10T10:00:00Z"))),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+    @Test
+    void removeParticipantMapsStartedError() throws Exception {
+        AuthenticationUtils.authenticateUser(1L);
+
+        final User requestedUser = Mockito.mock(User.class);
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
+        when(messageSource.getMessage(
+                        Mockito.eq("event.host.participants.error.started"),
+                        Mockito.isNull(),
+                        Mockito.<Locale>any()))
+                .thenReturn("This event has already started.");
+        Mockito.doThrow(
+                        new MatchParticipationException(
+                                "started", "The event has already started."))
+                .when(matchParticipationService)
+                .removeParticipant(
+                        Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
+
+        mockMvc.perform(post("/host/matches/42/participants/9/remove"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/42"))
+                .andExpect(flash().attribute("hostActionTarget", "participants"))
+                .andExpect(flash().attribute("hostActionError", "This event has already started."));
     }
 }

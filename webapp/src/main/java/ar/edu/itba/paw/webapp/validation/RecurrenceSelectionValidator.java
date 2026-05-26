@@ -1,7 +1,8 @@
 package ar.edu.itba.paw.webapp.validation;
 
-import ar.edu.itba.paw.models.RecurrenceEndMode;
-import ar.edu.itba.paw.models.RecurrenceFrequency;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.RecurrenceEndMode;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import java.time.LocalDate;
 import javax.validation.ConstraintValidator;
@@ -23,7 +24,9 @@ public class RecurrenceSelectionValidator
         context.disableDefaultConstraintViolation();
 
         final RecurrenceFrequency frequency =
-                RecurrenceFrequency.fromValue(form.getRecurrenceFrequency()).orElse(null);
+                PersistableEnum.fromDbValue(
+                                RecurrenceFrequency.class, form.getRecurrenceFrequency())
+                        .orElse(null);
         if (frequency == null) {
             reject(
                     context,
@@ -35,7 +38,8 @@ public class RecurrenceSelectionValidator
         }
 
         final RecurrenceEndMode endMode =
-                RecurrenceEndMode.fromValue(form.getRecurrenceEndMode()).orElse(null);
+                PersistableEnum.fromDbValue(RecurrenceEndMode.class, form.getRecurrenceEndMode())
+                        .orElse(null);
         if (endMode == null) {
             reject(
                     context,
