@@ -6,6 +6,27 @@ current Maven multi-module Spring MVC/JSP application.
 The plan is intentionally staged. Do not start with the whole data model plus
 every UI flow. Build a vertical spine first, then expand it.
 
+## Current Branch Status
+
+As of the reconciliation on `merge/tournaments-bracket`, the solo-registration
+and bracket lifecycle spine is implemented end to end: host creation and edit,
+feed/detail visibility, solo pool join/leave, participant roster during
+registration, manual registration close, bracket setup, bracket publication,
+winner declaration, propagation, and completion.
+
+The reconciled implementation intentionally keeps the branch's richer
+manual/random/ELO pairing and admin/mod host-equivalent controls. Walkover has
+been removed; forfeits are represented by declaring the non-forfeiting team as
+the winner.
+
+The next work should be split into smaller sessions:
+
+- polish the bracket setup and public bracket UI
+- tighten tournament detail panels and entry-state copy
+- expand team drafts after the solo/bracket lifecycle stays stable
+- design result correction/undo and score support separately
+- add scheduled automation only after manual lifecycle flows remain reliable
+
 ## Ground Rules
 
 - Use Java 21, Spring MVC, JSP/JSTL/EL, Spring DI, JPA/Hibernate, Flyway,

@@ -1,128 +1,106 @@
 # Tournament Bracket Cleanup And Reconciliation Notes
 
-This document originally proposed a narrower `solo-pool + random bracket`
-cleanup. During branch reconciliation, the project kept the richer
-`merge/tournaments-bracket` behavior for manual/ELO pairing and admin/mod host
-controls, while removing walkover support and porting selected UX fixes from
+This document tracks the reconciliation between `feat/tournaments` and
+`merge/tournaments-bracket`. The branch now keeps the richer bracket work from
+`merge/tournaments-bracket` and ports only the compatible fixes from
 `feat/tournaments`.
 
-## Summary
+## Reconciled State
 
 - Preserve manual/random/ELO pairing and the existing bracket setup page.
-- Remove walkover result variants; forfeits are represented by declaring the
-  non-forfeiting team as winner.
-- Simplify bracket scheduling to one start datetime per match plus a tournament-wide `matchDurationMinutes` configured on create/edit.
-- Keep per-match venue/location scheduling, add an optional short public match note, and make those details visible to players on the public bracket.
-- Clean up the bracket UI: remove the match-focus rail, make winners obvious, and make `/tournaments/{id}` host/bracket panels match the rest of the site.
-- Show the registration-phase participant roster on tournament detail.
-- Preserve admin/mod host-equivalent tournament controls for this branch.
+- Preserve admin/mod host-equivalent tournament controls from this branch.
+- Remove walkover result variants. A forfeit is handled by declaring the
+  non-forfeiting team as the winner.
+- Keep tournament match scheduling as explicit start/end datetimes per bracket
+  fixture.
+- Keep score entry out of scope.
+- Reuse the match-style venue/location picker behavior on tournament create and
+  edit.
+- Reuse the existing image pipeline for optional tournament banner uploads.
+- Show a participant roster during `REGISTRATION`.
+- Warn the host before closing registration when the current participant set
+  would cancel the tournament.
+- Avoid redundant solo-pool join/leave success flashes.
+- Ensure My Events can show tournaments immediately after switching to the
+  tournament event type.
 
-## Implementation Changes
+## Implemented In This Reconciliation
 
-- Tournament configuration:
-  - Add `matchDurationMinutes` to tournament persistence, model, create/update requests, form validation, and edit flow.
-  - Backfill existing tournaments with a default of `90` minutes.
-  - Keep the value editable only while the tournament is still editable.
+- Removed `WALKOVER` from tournament match status and service/controller/mail
+  surfaces.
+- Added migrations that convert any existing persisted `walkover` matches to
+  `done` and recreate the tournament match status constraint without
+  `walkover`.
+- Added `bannerImage` handling to the tournament create/update flow using the
+  existing `ImageService`.
+- Added tournament participant rows to the detail view model and rendered the
+  roster while registration is open.
+- Added registration-readiness data so the close-registration action can ask for
+  confirmation when it will cancel the tournament.
+- Updated the shared submit guard to support per-form confirmation messages.
+- Removed success flashes for solo-pool join/leave; the persistent entry state
+  is the source of truth.
+- Fixed My Events tournament filter generation so match-only date/status filters
+  do not hide tournaments until another filter is clicked.
+- Updated tournament docs to describe the no-walkover result model.
 
-- Bracket scheduling and match data:
-  - Change bracket setup to collect per match:
-    - required `start datetime`
-    - required `venue/address`
-    - optional `latitude/longitude` pair
-    - optional short public `description` / match note, max `500` chars
-  - Stop collecting manual end datetime. Derive `scheduledEndsAt = scheduledStartsAt + matchDurationMinutes`.
-  - Keep current schedule ordering checks, but compute them from derived end times.
-  - Store the optional match note on `tournament_matches` as a nullable field.
+## Verified Flows
 
-- Result flow:
-  - Remove walkover end-to-end:
-    - delete the separate `recordWalkover` service/controller route
-    - remove `WALKOVER` status and walkover-only failure/copy/mail paths
-    - migrate existing persisted `walkover` matches to `done` while preserving `winner_team_id`
-  - Keep only “team A won” / “team B won”.
-  - Tighten result validation so a winner can only be recorded when:
-    - tournament is `IN_PROGRESS`
-    - both teams are present
-    - no winner is already set
-    - `now >= scheduledEndsAt`
-  - Keep score out of scope for this slice.
+- Clean local database migration from scratch.
+- Host login with bootstrap admin.
+- Tournament creation with venue/location fields and banner upload.
+- Registration detail with solo entry and participant roster.
+- Invalid close-registration confirmation.
+- My Events tournament filter initial render.
+- Valid registration close for a four-team solo tournament.
+- Bracket setup open, bracket generation, schedule publication, public bracket
+  viewing, winner recording, and tournament completion.
 
-- Solo pool and team naming:
-  - Hide/disable team-draft controls from tournament create/edit.
-  - Keep bracket pairing fixed to `RANDOM` for this slice and remove pairing-strategy/manual-pairing UI and reachable backend paths.
-  - Rename auto-generated solo teams:
-    - if `team_size == 1`, team name = player username
-    - if `team_size > 1`, use localized generic names `Team {n}` / `Equipo {n}`
+## Remaining Cleanup Units
 
-- Public and host UI:
-  - `/host/tournaments/{id}/bracket/setup`:
-    - remove pairing-strategy and manual-pairing blocks
-    - remove end date/time fields
-    - keep venue/location inputs
-    - add optional match note input
-  - `/tournaments/{id}/bracket`:
-    - remove the “Match focus” sidebar
-    - make each match card show schedule and venue directly
-    - show the optional note when present
-    - if coordinates exist, expose a map/open-location link
-    - show the winner clearly on finished matches and visually de-emphasize the loser
-  - `/tournaments/{id}`:
-    - restyle bracket/host panels to match the rest of the detail page
-    - show solo-pool availability in match-style wording during `REGISTRATION` only:
-      - `X of Y solo spots left`
-      - where `Y = bracket_size * team_size`
-      - and `X = Y - active solo-pool entries`
-    - do not count team members or formed teams in this label
+### Unit 1: Bracket Setup UX
 
-- Admin/authorization:
-  - Restrict tournament host mutations to the real host only.
-  - Remove admin/mod override from tournament lifecycle, registration-close, and bracket-mutation services.
-  - Change tournament host-page access so admins who are not the host receive `403`, not host-equivalent access.
-  - Remove admin-based host controls from tournament detail and bracket pages; admin users can still use public tournament pages and separate admin/moderation features, but not `/host/tournaments/**` flows unless they are the host.
+- Make the bracket setup page visually consistent with the rest of the webapp.
+- Reduce the repeated "generate/publish" screen feel after a bracket is already
+  generated.
+- Make validation summary and schedule inputs denser and easier to scan.
+- Keep the existing pairing strategy behavior unless the product decision
+  changes.
 
-## Public Interfaces / Types
+### Unit 2: Public Bracket Polish
 
-- Extend tournament create/update flows with `matchDurationMinutes`.
-- Extend `TournamentMatchScheduleRequest` with optional `description`, and keep `address` plus optional coordinates.
-- Remove `recordWalkover(...)` from `TournamentBracketService`.
-- Remove walkover-only enum/status/failure surfaces from tournament bracket contracts.
-- Extend bracket view models so public match cards can render:
-  - venue/address
-  - optional note
-  - optional map link
-  - explicit winner/loser state
+- Make winners and losers more visually obvious on completed matches.
+- Revisit the match-focus side rail; either make it useful or remove it.
+- Ensure public bracket cards show schedule and venue in a compact,
+  match-card-like layout.
 
-## Test Plan
+### Unit 3: Tournament Detail Panels
 
-- Service tests:
-  - create/update persists valid duration and rejects invalid duration
-  - publish derives end time from start + duration
-  - result entry before derived end time fails; after derived end time succeeds
-  - walkover API/status paths are gone and existing winner propagation still works
-  - random pairing is the only supported bracket strategy for this slice
-  - solo team naming works for both single-player and multi-player teams
-  - multi-player team tournaments still generate, publish, and complete correctly
-  - solo-pool availability label values are derived only from active solo entries
-  - admin/mod users who are not the host are rejected by tournament mutation services with `FORBIDDEN`
+- Bring host action, entry status, bracket link, and participant roster panels
+  closer to the match detail page visual language.
+- Replace duplicated closed/in-progress entry text with a single concise state.
+- Show solo-pool capacity during registration if product wants a capacity label.
 
-- Web/controller/view tests:
-  - create/edit no longer expose team-draft or pairing-strategy UI
-  - bracket setup renders start/venue/note fields and no end-time or walkover actions
-  - public bracket no longer renders match focus and now renders venue/note details
-  - finished matches clearly expose winner state
-  - tournament detail shows the solo-pool availability label only in registration state
-  - admin/mod users who are not the host get `403` on `/host/tournaments/**` routes and do not see host controls on public tournament pages
+### Unit 4: Bracket Scheduling Enhancements
 
-- Persistence/migration tests:
-  - migration adds `match_duration_minutes` and per-match description
-  - migration converts existing `walkover` rows to `done` without losing winner data
-  - updated constraints still allow required address and optional coordinate pairs
+- Decide whether to keep explicit start/end datetimes per match or introduce a
+  tournament-level default duration.
+- If default duration is added, migrate schema and derive match end times from
+  start time plus duration.
+- If per-match notes are added, expose them on both setup and public bracket.
 
-## Assumptions
+### Unit 5: Team Draft Expansion
 
-- Separate public bracket and host bracket-setup pages remain; this slice simplifies them instead of merging them into `/tournaments/{id}`.
-- The optional match note is public to all bracket viewers.
-- Venue/address stays per match; it is not forced to inherit from the tournament-level venue.
-- Solo-pool availability is shown only while registration is open or not yet closed; it disappears once the tournament moves out of `REGISTRATION`.
-- Score entry remains explicitly deferred.
-- The admin restriction is tournament-only; existing non-tournament host/moderation behavior stays unchanged in this slice.
+- Team drafts remain broader-scope work.
+- Preserve one active participation path per user per tournament.
+- Add draft invitations, captain flows, draft locking, and related emails only
+  after the solo/bracket lifecycle remains stable.
+
+## Test Focus For Future Units
+
+- Service tests for any new scheduling or result-validation rules.
+- Controller tests for host/admin authorization on tournament mutations.
+- View/controller tests for participant roster, entry states, and bracket setup
+  pages.
+- Browser smoke for create -> register -> close -> generate -> publish ->
+  declare winners whenever the bracket pages change.
