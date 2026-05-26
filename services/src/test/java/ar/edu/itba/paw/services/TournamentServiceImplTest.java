@@ -459,13 +459,59 @@ public class TournamentServiceImplTest {
         // 2. Exercise
         final PaginatedResult<Tournament> result =
                 tournamentService.findHostedTournaments(
-                        user, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
+                        user, false, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
 
         // 3. Assert
         Assertions.assertEquals(3, result.getTotalCount());
         Assertions.assertTrue(result.getItems().contains(hosted));
         Assertions.assertTrue(result.getItems().contains(solo));
         Assertions.assertTrue(result.getItems().contains(team));
+    }
+
+    @Test
+    public void findHostedTournamentsIncludesActiveTournamentWithoutScheduleInUpcoming() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(1L);
+        final Tournament unscheduled =
+                tournamentWithSchedule(10L, user, TournamentStatus.REGISTRATION, null, null);
+        final Tournament completed =
+                tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
+        Mockito.when(tournamentDao.findHostedByUser(user, 0, Integer.MAX_VALUE))
+                .thenReturn(List.of(unscheduled, completed));
+        Mockito.when(tournamentSoloEntryDao.findTournamentsByUser(user)).thenReturn(List.of());
+        Mockito.when(tournamentTeamDao.findTournamentsByMember(user)).thenReturn(List.of());
+
+        // 2. Exercise
+        final PaginatedResult<Tournament> result =
+                tournamentService.findHostedTournaments(
+                        user, false, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(unscheduled, result.getItems().get(0));
+    }
+
+    @Test
+    public void findHostedTournamentsExcludesActiveTournamentWithoutScheduleFromPast() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(1L);
+        final Tournament unscheduled =
+                tournamentWithSchedule(10L, user, TournamentStatus.REGISTRATION, null, null);
+        final Tournament completed =
+                tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
+        Mockito.when(tournamentDao.findHostedByUser(user, 0, Integer.MAX_VALUE))
+                .thenReturn(List.of(unscheduled, completed));
+        Mockito.when(tournamentSoloEntryDao.findTournamentsByUser(user)).thenReturn(List.of());
+        Mockito.when(tournamentTeamDao.findTournamentsByMember(user)).thenReturn(List.of());
+
+        // 2. Exercise
+        final PaginatedResult<Tournament> result =
+                tournamentService.findHostedTournaments(
+                        user, true, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(completed, result.getItems().get(0));
     }
 
     private static CreateTournamentRequest validCreateRequest() {
@@ -530,6 +576,40 @@ public class TournamentServiceImplTest {
             final TournamentStatus status,
             final Instant registrationOpensAt,
             final Instant registrationClosesAt) {
+        return tournamentWithSchedule(
+                id,
+                host,
+                status,
+                FIXED_NOW.plusSeconds(86400),
+                FIXED_NOW.plusSeconds(90000),
+                registrationOpensAt,
+                registrationClosesAt);
+    }
+
+    private static Tournament tournamentWithSchedule(
+            final long id,
+            final User host,
+            final TournamentStatus status,
+            final Instant startsAt,
+            final Instant endsAt) {
+        return tournamentWithSchedule(
+                id,
+                host,
+                status,
+                startsAt,
+                endsAt,
+                futureRegistrationOpen(),
+                futureRegistrationClose());
+    }
+
+    private static Tournament tournamentWithSchedule(
+            final long id,
+            final User host,
+            final TournamentStatus status,
+            final Instant startsAt,
+            final Instant endsAt,
+            final Instant registrationOpensAt,
+            final Instant registrationClosesAt) {
         return new Tournament(
                 id,
                 host,
@@ -539,8 +619,8 @@ public class TournamentServiceImplTest {
                 "Club Street 123",
                 -34.60,
                 -58.38,
-                FIXED_NOW.plusSeconds(86400),
-                FIXED_NOW.plusSeconds(90000),
+                startsAt,
+                endsAt,
                 BigDecimal.ZERO,
                 null,
                 TournamentFormat.SINGLE_ELIMINATION,

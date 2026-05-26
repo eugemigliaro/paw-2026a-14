@@ -3317,10 +3317,17 @@ class UiRouteTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         final MvcResult result =
-                mockMvc.perform(get("/events").param("type", "tournament"))
+                mockMvc.perform(
+                                get("/events")
+                                        .param("type", "tournament")
+                                        .param("startDate", "2099-04-10")
+                                        .param("endDate", "2099-04-11"))
                         .andExpect(status().isOk())
                         .andExpect(view().name("events/list"))
                         .andExpect(model().attribute("selectedType", "tournament"))
+                        .andExpect(
+                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
+                        .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()))
                         .andReturn();
 
         final List<EventCardViewModel> events = getEventsModel(result);

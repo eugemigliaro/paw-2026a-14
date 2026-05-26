@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -24,8 +25,6 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -121,7 +120,7 @@ public class MatchDashboardController {
                 "past".equalsIgnoreCase(filter) ? DateRangeContext.PAST : DateRangeContext.UPCOMING;
         final DateRange selectedDateRange =
                 TYPE_TOURNAMENT.equals(selectedType)
-                        ? normalizeExplicitDateRange(startDate, endDate)
+                        ? new DateRange(null, null)
                         : normalizeDateRange(
                                 startDate, endDate, context, ZoneId.of(selectedTimezone));
 
@@ -147,6 +146,7 @@ public class MatchDashboardController {
                 TYPE_TOURNAMENT.equals(selectedType)
                         ? findHostedTournaments(
                                 user,
+                                context,
                                 searchQuery,
                                 encodeCsv(selectedSports),
                                 selectedDateRange.startDate(),
@@ -530,9 +530,9 @@ public class MatchDashboardController {
         matches.sort(comparator);
     }
 
-    @SuppressWarnings("unchecked")
     private PaginatedResult<Tournament> findHostedTournaments(
             final User user,
+            final DateRangeContext context,
             final String searchQuery,
             final String sports,
             final String startDate,
@@ -543,59 +543,44 @@ public class MatchDashboardController {
             final String timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
-        try {
-            final Method method =
-                    tournamentService
-                            .getClass()
-                            .getMethod(
-                                    "findHostedTournaments",
-                                    User.class,
-                                    String.class,
-                                    String.class,
-                                    String.class,
-                                    String.class,
-                                    String.class,
-                                    int.class,
-                                    int.class,
-                                    String.class,
-                                    BigDecimal.class,
-                                    BigDecimal.class);
-            return (PaginatedResult<Tournament>)
-                    method.invoke(
-                            tournamentService,
-                            user,
-                            searchQuery,
-                            sports,
-                            startDate,
-                            endDate,
-                            sort,
-                            page,
-                            pageSize,
-                            timezone,
-                            minPrice,
-                            maxPrice);
-        } catch (final NoSuchMethodException | IllegalAccessException exception) {
-            return tournamentService.searchPublicTournaments(
-                    searchQuery,
-                    sports,
-                    startDate,
-                    endDate,
-                    sort,
-                    page,
-                    pageSize,
-                    timezone,
-                    minPrice,
-                    maxPrice);
-        } catch (final InvocationTargetException exception) {
-            final Throwable cause = exception.getCause();
-            if (cause instanceof RuntimeException runtimeException) {
-                throw runtimeException;
-            }
-            if (cause instanceof Error error) {
-                throw error;
-            }
-            throw new IllegalStateException(cause);
+        final PaginatedResult<Tournament> tournaments =
+                tournamentService.findHostedTournaments(
+                        user,
+                        searchQuery,
+                        sports,
+                        startDate,
+                        endDate,
+                        sort,
+                        1,
+                        Integer.MAX_VALUE,
+                        timezone,
+                        minPrice,
+                        maxPrice);
+        final List<Tournament> filtered =
+                tournaments.getItems().stream()
+                        .filter(tournament -> belongsToTournamentContext(tournament, context))
+                        .toList();
+
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : PAGE_SIZE;
+        final int startIndex = Math.min((safePage - 1) * safePageSize, filtered.size());
+        final int endIndex = Math.min(startIndex + safePageSize, filtered.size());
+        return new PaginatedResult<>(
+                filtered.subList(startIndex, endIndex), filtered.size(), safePage, safePageSize);
+    }
+
+    private static boolean belongsToTournamentContext(
+            final Tournament tournament, final DateRangeContext context) {
+        if (tournament == null || tournament.getStatus() == null) {
+            return false;
         }
+        if (context == DateRangeContext.PAST) {
+            return TournamentStatus.COMPLETED == tournament.getStatus()
+                    || TournamentStatus.CANCELLED == tournament.getStatus();
+        }
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                || TournamentStatus.BRACKET_SETUP == tournament.getStatus()
+                || TournamentStatus.IN_PROGRESS == tournament.getStatus();
     }
 
     private static boolean belongsToContext(

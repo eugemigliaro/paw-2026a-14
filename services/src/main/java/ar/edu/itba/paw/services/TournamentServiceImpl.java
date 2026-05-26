@@ -165,6 +165,52 @@ public class TournamentServiceImpl implements TournamentService {
             final String timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
+        return findHostedTournaments(
+                host, null, query, sport, startDate, endDate, sort, page, pageSize, timezone,
+                minPrice, maxPrice);
+    }
+
+    public PaginatedResult<Tournament> findHostedTournaments(
+            final User host,
+            final boolean past,
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
+        return findHostedTournaments(
+                host,
+                Boolean.valueOf(past),
+                query,
+                sport,
+                startDate,
+                endDate,
+                sort,
+                page,
+                pageSize,
+                timezone,
+                minPrice,
+                maxPrice);
+    }
+
+    private PaginatedResult<Tournament> findHostedTournaments(
+            final User host,
+            final Boolean past,
+            final String query,
+            final String sport,
+            final String startDate,
+            final String endDate,
+            final String sort,
+            final int page,
+            final int pageSize,
+            final String timezone,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice) {
         validateHost(host);
         final ZoneId zoneId = parseZone(timezone);
         final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
@@ -179,6 +225,11 @@ public class TournamentServiceImpl implements TournamentService {
 
         final List<Tournament> filtered =
                 userTournaments.values().stream()
+                        .filter(
+                                tournament ->
+                                        past == null
+                                                || belongsToHostedContext(
+                                                        tournament, past.booleanValue()))
                         .filter(tournament -> matchesQuery(tournament, normalizedQuery))
                         .filter(
                                 tournament ->
@@ -411,6 +462,19 @@ public class TournamentServiceImpl implements TournamentService {
         return (dateRange.start() == null || !startsAt.isBefore(dateRange.start()))
                 && (dateRange.endExclusive() == null
                         || startsAt.isBefore(dateRange.endExclusive()));
+    }
+
+    private static boolean belongsToHostedContext(final Tournament tournament, final boolean past) {
+        if (tournament == null || tournament.getStatus() == null) {
+            return false;
+        }
+        if (past) {
+            return TournamentStatus.COMPLETED == tournament.getStatus()
+                    || TournamentStatus.CANCELLED == tournament.getStatus();
+        }
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                || TournamentStatus.BRACKET_SETUP == tournament.getStatus()
+                || TournamentStatus.IN_PROGRESS == tournament.getStatus();
     }
 
     private static boolean withinPriceRange(
