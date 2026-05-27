@@ -16,6 +16,11 @@
 <%@ attribute name="rightHref" required="false" rtexprvalue="true" %>
 <%@ attribute name="thirdHref" required="false" rtexprvalue="true" %>
 <%@ attribute name="forceLeftOnEmpty" required="false" rtexprvalue="true" type="java.lang.Boolean" %>
+<%@ attribute name="ariaLabel" required="false" rtexprvalue="true" %>
+<%@ attribute name="iconOnly" required="false" rtexprvalue="true" type="java.lang.Boolean" %>
+<%@ attribute name="leftIcon" required="false" rtexprvalue="true" %>
+<%@ attribute name="rightIcon" required="false" rtexprvalue="true" %>
+<%@ attribute name="thirdIcon" required="false" rtexprvalue="true" %>
 <%@ attribute name="upcomingValue" required="false" rtexprvalue="true" %>
 <%@ attribute name="pastValue" required="false" rtexprvalue="true" %>
 
@@ -30,6 +35,7 @@
 <c:set var="resolvedRightLabel" value="${empty rightLabel ? defaultRightLabel : rightLabel}" />
 <c:set var="resolvedThirdLabel" value="${thirdLabel}" />
 <c:set var="resolvedForceLeftOnEmpty" value="${forceLeftOnEmpty == null ? true : forceLeftOnEmpty}" />
+<c:set var="resolvedIconOnly" value="${iconOnly == null ? false : iconOnly}" />
 <c:set var="hasThirdOption" value="${not empty resolvedThirdValue and not empty resolvedThirdLabel}" />
 
 <c:set var="isRightSelected" value="${resolvedCurrentValue eq resolvedRightValue}" />
@@ -53,36 +59,81 @@
     <c:set var="wrapperClasses" value="${wrapperClasses} ${className}" />
 </c:if>
 
-<div class="<c:out value='${wrapperClasses}' />" data-events-toggle="true" data-events-toggle-right-value="<c:out value='${resolvedRightValue}' />"
+<div class="${wrapperClasses}" data-events-toggle="true" data-events-toggle-right-value="${resolvedRightValue}"
     data-events-toggle-options="${hasThirdOption ? '3' : '2'}" style="--events-toggle-index: ${selectedIndex};"
-    <c:if test="${not empty id}">id="<c:out value='${id}' />"</c:if>>
+    <c:if test="${not empty ariaLabel}">aria-label="${ariaLabel}"</c:if>
+    <c:if test="${not empty id}">id="${id}"</c:if>>
     <c:if test="${not empty inputName}">
-        <input type="hidden" name="<c:out value='${inputName}' />" value="<c:out value='${finalInputValue}' />" data-events-toggle-input="true" />
+        <input type="hidden" name="${inputName}" value="${finalInputValue}" data-events-toggle-input="true" />
     </c:if>
     <div class="events-toggle-slider ${isRightSelected ? 'right' : ''}" data-events-toggle-slider="true"></div>
     <c:choose>
         <c:when test="${not empty leftHref}">
             <c:url var="resolvedLeftHref" value="${leftHref}" />
-            <a href="${resolvedLeftHref}" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="<c:out value='${resolvedLeftValue}' />" aria-current="${isLeftSelected ? 'true' : 'false'}">
-                <c:out value="${resolvedLeftLabel}" />
+            <a href="${resolvedLeftHref}" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="${resolvedLeftValue}" aria-current="${isLeftSelected ? 'true' : 'false'}"
+                <c:if test="${resolvedIconOnly}">aria-label="${resolvedLeftLabel}" title="${resolvedLeftLabel}"</c:if>>
+                <c:choose>
+                    <c:when test="${resolvedIconOnly}">
+                        <span class="events-toggle-icon" aria-hidden="true">
+                            <c:set var="resolvedIconName" value="${leftIcon}" />
+                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                        </span>
+                    </c:when>
+                    <c:otherwise>
+                        <c:out value="${resolvedLeftLabel}" />
+                    </c:otherwise>
+                </c:choose>
             </a>
         </c:when>
         <c:otherwise>
-            <button type="button" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="<c:out value='${resolvedLeftValue}' />">
-                <c:out value="${resolvedLeftLabel}" />
+            <button type="button" class="events-toggle-btn ${isLeftSelected ? 'active' : ''}" data-value="${resolvedLeftValue}"
+                <c:if test="${resolvedIconOnly}">aria-label="${resolvedLeftLabel}" title="${resolvedLeftLabel}"</c:if>>
+                <c:choose>
+                    <c:when test="${resolvedIconOnly}">
+                        <span class="events-toggle-icon" aria-hidden="true">
+                            <c:set var="resolvedIconName" value="${leftIcon}" />
+                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                        </span>
+                    </c:when>
+                    <c:otherwise>
+                        <c:out value="${resolvedLeftLabel}" />
+                    </c:otherwise>
+                </c:choose>
             </button>
         </c:otherwise>
     </c:choose>
     <c:choose>
         <c:when test="${not empty rightHref}">
             <c:url var="resolvedRightHref" value="${rightHref}" />
-            <a href="${resolvedRightHref}" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="<c:out value='${resolvedRightValue}' />" aria-current="${isRightSelected ? 'true' : 'false'}">
-                <c:out value="${resolvedRightLabel}" />
+            <a href="${resolvedRightHref}" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="${resolvedRightValue}" aria-current="${isRightSelected ? 'true' : 'false'}"
+                <c:if test="${resolvedIconOnly}">aria-label="${resolvedRightLabel}" title="${resolvedRightLabel}"</c:if>>
+                <c:choose>
+                    <c:when test="${resolvedIconOnly}">
+                        <span class="events-toggle-icon" aria-hidden="true">
+                            <c:set var="resolvedIconName" value="${rightIcon}" />
+                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                        </span>
+                    </c:when>
+                    <c:otherwise>
+                        <c:out value="${resolvedRightLabel}" />
+                    </c:otherwise>
+                </c:choose>
             </a>
         </c:when>
         <c:otherwise>
-            <button type="button" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="<c:out value='${resolvedRightValue}' />">
-                <c:out value="${resolvedRightLabel}" />
+            <button type="button" class="events-toggle-btn ${isRightSelected ? 'active' : ''}" data-value="${resolvedRightValue}"
+                <c:if test="${resolvedIconOnly}">aria-label="${resolvedRightLabel}" title="${resolvedRightLabel}"</c:if>>
+                <c:choose>
+                    <c:when test="${resolvedIconOnly}">
+                        <span class="events-toggle-icon" aria-hidden="true">
+                            <c:set var="resolvedIconName" value="${rightIcon}" />
+                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                        </span>
+                    </c:when>
+                    <c:otherwise>
+                        <c:out value="${resolvedRightLabel}" />
+                    </c:otherwise>
+                </c:choose>
             </button>
         </c:otherwise>
     </c:choose>
@@ -90,13 +141,35 @@
         <c:choose>
             <c:when test="${not empty thirdHref}">
                 <c:url var="resolvedThirdHref" value="${thirdHref}" />
-                <a href="${resolvedThirdHref}" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="<c:out value='${resolvedThirdValue}' />" aria-current="${isThirdSelected ? 'true' : 'false'}">
-                    <c:out value="${resolvedThirdLabel}" />
+                <a href="${resolvedThirdHref}" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="${resolvedThirdValue}" aria-current="${isThirdSelected ? 'true' : 'false'}"
+                    <c:if test="${resolvedIconOnly}">aria-label="${resolvedThirdLabel}" title="${resolvedThirdLabel}"</c:if>>
+                    <c:choose>
+                        <c:when test="${resolvedIconOnly}">
+                            <span class="events-toggle-icon" aria-hidden="true">
+                                <c:set var="resolvedIconName" value="${thirdIcon}" />
+                                <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                            </span>
+                        </c:when>
+                        <c:otherwise>
+                            <c:out value="${resolvedThirdLabel}" />
+                        </c:otherwise>
+                    </c:choose>
                 </a>
             </c:when>
             <c:otherwise>
-                <button type="button" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="<c:out value='${resolvedThirdValue}' />">
-                    <c:out value="${resolvedThirdLabel}" />
+                <button type="button" class="events-toggle-btn ${isThirdSelected ? 'active' : ''}" data-value="${resolvedThirdValue}"
+                    <c:if test="${resolvedIconOnly}">aria-label="${resolvedThirdLabel}" title="${resolvedThirdLabel}"</c:if>>
+                    <c:choose>
+                        <c:when test="${resolvedIconOnly}">
+                            <span class="events-toggle-icon" aria-hidden="true">
+                                <c:set var="resolvedIconName" value="${thirdIcon}" />
+                                <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                            </span>
+                        </c:when>
+                        <c:otherwise>
+                            <c:out value="${resolvedThirdLabel}" />
+                        </c:otherwise>
+                    </c:choose>
                 </button>
             </c:otherwise>
         </c:choose>

@@ -11,6 +11,7 @@ public final class UiViewModels {
     public static final class ShellViewModel {
         private final String brandLabel;
         private final NavItemViewModel hostAction;
+        private final NavItemViewModel tournamentHostAction;
         private final NavItemViewModel hostMatchNav;
         private final List<NavItemViewModel> primaryNav;
         private final List<NavItemViewModel> settingsMenuItems;
@@ -19,7 +20,7 @@ public final class UiViewModels {
                 final String brandLabel,
                 final NavItemViewModel hostAction,
                 final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, null, primaryNav, List.of());
+            this(brandLabel, hostAction, null, null, primaryNav, List.of());
         }
 
         public ShellViewModel(
@@ -27,17 +28,19 @@ public final class UiViewModels {
                 final NavItemViewModel hostAction,
                 final NavItemViewModel hostMatchNav,
                 final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, hostMatchNav, primaryNav, List.of());
+            this(brandLabel, hostAction, null, hostMatchNav, primaryNav, List.of());
         }
 
         public ShellViewModel(
                 final String brandLabel,
                 final NavItemViewModel hostAction,
+                final NavItemViewModel tournamentHostAction,
                 final NavItemViewModel hostMatchNav,
                 final List<NavItemViewModel> primaryNav,
                 final List<NavItemViewModel> settingsMenuItems) {
             this.brandLabel = brandLabel;
             this.hostAction = hostAction;
+            this.tournamentHostAction = tournamentHostAction;
             this.hostMatchNav = hostMatchNav;
             this.primaryNav = primaryNav;
             this.settingsMenuItems = settingsMenuItems;
@@ -49,6 +52,10 @@ public final class UiViewModels {
 
         public NavItemViewModel getHostAction() {
             return hostAction;
+        }
+
+        public NavItemViewModel getTournamentHostAction() {
+            return tournamentHostAction;
         }
 
         public NavItemViewModel getHostMatchNav() {

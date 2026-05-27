@@ -20,6 +20,7 @@
 					<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 					<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 					<spring:message var="priceRangeError" code="filter.price.rangeError" />
+					<spring:message var="eventTypeFilterTitle" code="filter.eventType" />
 					<c:set var="feedPath" value="/" />
 					<c:url var="feedFormAction" value="${feedPath}" />
 				<main class="page-shell page-shell--feed">
@@ -48,6 +49,9 @@
 								<c:forEach var="selectedSport" items="${selectedSports}">
 									<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 								</c:forEach>
+								<c:if test="${selectedType eq 'tournament'}">
+									<input type="hidden" name="type" value="tournament" />
+								</c:if>
 								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
@@ -74,7 +78,37 @@
 					</div>
 						<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
 							<c:forEach var="group" items="${feedPage.filterGroups}">
-								<div class="filter-dropdown" data-filter-name="${group.title}">
+									<c:choose>
+										<c:when test="${group.title eq eventTypeFilterTitle}">
+											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
+												<c:choose>
+													<c:when test="${optionStatus.first}">
+														<c:set var="eventTypeMatchLabel" value="${option.label}" />
+														<c:set var="eventTypeMatchHref" value="${option.href}" />
+													</c:when>
+													<c:otherwise>
+														<c:set var="eventTypeTournamentLabel" value="${option.label}" />
+														<c:set var="eventTypeTournamentHref" value="${option.href}" />
+													</c:otherwise>
+												</c:choose>
+											</c:forEach>
+											<ui:eventsFilterToggle
+												className="feed-event-type-toggle"
+												ariaLabel="${group.title}"
+												currentValue="${selectedType}"
+												leftValue="match"
+												rightValue="tournament"
+												leftLabel="${eventTypeMatchLabel}"
+												rightLabel="${eventTypeTournamentLabel}"
+												leftHref="${eventTypeMatchHref}"
+												rightHref="${eventTypeTournamentHref}"
+												iconOnly="${true}"
+												leftIcon="ball"
+												rightIcon="trophy"
+												forceLeftOnEmpty="${true}" />
+										</c:when>
+										<c:otherwise>
+										<div class="filter-dropdown" data-filter-name="${group.title}">
 									<button type="button" class="filter-dropdown__toggle">
 											<span class="filter-dropdown__icon">
 												<c:choose>
@@ -156,6 +190,8 @@
 											</div>
 										</c:if>
 									</div>
+									</c:otherwise>
+								</c:choose>
 								</c:forEach>
 
 							<div class="filter-dropdown" data-filter-name="Date">
@@ -171,6 +207,9 @@
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
+										<c:if test="${selectedType eq 'tournament'}">
+											<input type="hidden" name="type" value="tournament" />
+										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
@@ -190,6 +229,9 @@
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>
+											<c:if test="${selectedType eq 'tournament'}">
+												<c:param name="type" value="tournament" />
+											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
 											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="minPrice" value="${selectedMinPriceValue}" />
@@ -239,6 +281,9 @@
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
 										</c:forEach>
+										<c:if test="${selectedType eq 'tournament'}">
+											<input type="hidden" name="type" value="tournament" />
+										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
 										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
@@ -264,6 +309,9 @@
 											<c:forEach var="selectedSport" items="${selectedSports}">
 												<c:param name="sport" value="${selectedSport}" />
 											</c:forEach>
+											<c:if test="${selectedType eq 'tournament'}">
+												<c:param name="type" value="tournament" />
+											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
 											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="startDate" value="${selectedStartDateValue}" />
@@ -320,6 +368,9 @@
 									data-explore-location-form="true"
 									data-location-available="${nearMeAvailable}">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<c:if test="${selectedType eq 'tournament'}">
+										<input type="hidden" name="type" value="tournament" />
+									</c:if>
 									<input type="hidden" id="explore-location-latitude" name="latitude" data-explore-location-latitude="true" />
 									<input type="hidden" id="explore-location-longitude" name="longitude" data-explore-location-longitude="true" />
 								</form>

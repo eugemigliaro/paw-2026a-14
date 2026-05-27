@@ -35,6 +35,8 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @Transactional(readOnly = true)
@@ -49,6 +51,7 @@ public class MatchServiceImpl implements MatchService {
     private final MatchParticipantDao matchParticipantDao;
     private final SecurityService securityService;
     private final MatchNotificationService matchNotificationService;
+    private final RecurringMatchAsyncService recurringMatchAsyncService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -58,12 +61,14 @@ public class MatchServiceImpl implements MatchService {
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
             final SecurityService securityService,
+            final RecurringMatchAsyncService recurringMatchAsyncService,
             final MessageSource messageSource,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
         this.securityService = securityService;
+        this.recurringMatchAsyncService = recurringMatchAsyncService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -121,16 +126,44 @@ public class MatchServiceImpl implements MatchService {
                         now,
                         now);
 
-        Match firstOccurrence = null;
-        for (int i = 0; i < occurrences.size(); i++) {
-            final OccurrenceWindow occurrence = occurrences.get(i);
-            final Match created = createSeriesOccurrence(request, occurrence, series, i + 1);
-            if (firstOccurrence == null) {
-                firstOccurrence = created;
-            }
-        }
+        final Match firstOccurrence =
+                createSeriesOccurrence(request, occurrences.get(0), series, 1);
+        final List<RecurringMatchAsyncService.OccurrenceWindowData> remainingOccurrences =
+                occurrences.subList(1, occurrences.size()).stream()
+                        .map(
+                                occurrence ->
+                                        new RecurringMatchAsyncService.OccurrenceWindowData(
+                                                occurrence.startsAt(), occurrence.endsAt()))
+                        .toList();
+        scheduleRemainingSeriesOccurrenceCreation(request, series, remainingOccurrences, 2);
 
         return firstOccurrence;
+    }
+
+    private void scheduleRemainingSeriesOccurrenceCreation(
+            final CreateMatchRequest request,
+            final MatchSeries series,
+            final List<RecurringMatchAsyncService.OccurrenceWindowData> remainingOccurrences,
+            final int startIndex) {
+        if (remainingOccurrences.isEmpty()) {
+            return;
+        }
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()
+                && TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            recurringMatchAsyncService.createSeriesOccurrencesAsync(
+                                    request, series, remainingOccurrences, startIndex);
+                        }
+                    });
+            return;
+        }
+
+        recurringMatchAsyncService.createSeriesOccurrencesAsync(
+                request, series, remainingOccurrences, startIndex);
     }
 
     private Match createSingleMatch(final CreateMatchRequest request) {

@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
@@ -24,6 +25,8 @@ import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
@@ -37,6 +40,7 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
+import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
@@ -1562,6 +1566,51 @@ class UiRouteTest {
                     }
                 };
 
+        final Tournament hostedTournament =
+                new Tournament(
+                        70L,
+                        UserUtils.getUser(9L),
+                        Sport.PADEL,
+                        "Hosted Tournament",
+                        "Tournament description",
+                        "Tournament Club",
+                        null,
+                        null,
+                        null,
+                        null,
+                        BigDecimal.TEN,
+                        null,
+                        TournamentFormat.SINGLE_ELIMINATION,
+                        8,
+                        1,
+                        true,
+                        false,
+                        Instant.parse("2026-04-01T10:00:00Z"),
+                        Instant.parse("2026-04-10T10:00:00Z"),
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW,
+                        FIXED_NOW);
+        final TournamentService tournamentService = Mockito.mock(TournamentService.class);
+        Mockito.when(
+                        tournamentService.findHostedTournaments(
+                                Mockito.any(User.class),
+                                Mockito.anyString(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.anyString(),
+                                Mockito.anyInt(),
+                                Mockito.anyInt(),
+                                Mockito.anyString(),
+                                Mockito.any(),
+                                Mockito.any()))
+                .thenAnswer(
+                        invocation ->
+                                invocation.getArgument(3) == null
+                                                && invocation.getArgument(4) == null
+                                        ? new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12)
+                                        : new PaginatedResult<>(List.of(), 0, 1, 12));
+
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
         final ModerationService moderationService = Mockito.mock(ModerationService.class);
         Mockito.when(moderationService.findActiveBan(Mockito.any(User.class)))
@@ -1577,6 +1626,7 @@ class UiRouteTest {
                                         matchService,
                                         matchParticipationService,
                                         matchReservationService,
+                                        tournamentService,
                                         messageSource),
                                 new EventController(
                                         matchService,
@@ -1608,6 +1658,7 @@ class UiRouteTest {
                                         matchService,
                                         matchParticipationService,
                                         matchReservationService,
+                                        tournamentService,
                                         messageSource),
                                 new ErrorPageController(messageSource),
                                 new VerificationController(accountAuthService, messageSource))
@@ -3259,6 +3310,29 @@ class UiRouteTest {
                 .andExpect(view().name("events/list"))
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attribute("pageTitleCode", "page.title.events"));
+    }
+
+    @Test
+    void getEventsRouteRendersHostedTournamentsWhenTournamentTypeSelected() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/events")
+                                        .param("type", "tournament")
+                                        .param("startDate", "2099-04-10")
+                                        .param("endDate", "2099-04-11"))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("events/list"))
+                        .andExpect(model().attribute("selectedType", "tournament"))
+                        .andExpect(
+                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
+                        .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()))
+                        .andReturn();
+
+        final List<EventCardViewModel> events = getEventsModel(result);
+        Assertions.assertTrue(
+                events.stream().anyMatch(event -> "Hosted Tournament".equals(event.getTitle())));
     }
 
     @Test

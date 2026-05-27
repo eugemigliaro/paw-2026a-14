@@ -151,6 +151,28 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void feedEventTypeFilterRendersAsIconToggle() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String feedCss = read("src/main/webapp/css/feed.css");
+        final String eventsToggleScript = read("src/main/webapp/js/events-toggle-filter.js");
+        final String toggleTag = read("src/main/webapp/WEB-INF/tags/eventsFilterToggle.tag");
+
+        assertTrue(feedIndex.contains("var=\"eventTypeFilterTitle\" code=\"filter.eventType\""));
+        assertTrue(feedIndex.contains("<ui:eventsFilterToggle"));
+        assertTrue(feedIndex.contains("className=\"feed-event-type-toggle\""));
+        assertTrue(feedIndex.contains("leftIcon=\"ball\""));
+        assertTrue(feedIndex.contains("rightIcon=\"trophy\""));
+        assertTrue(feedIndex.contains("iconOnly=\"${true}\""));
+        assertFalse(feedIndex.contains("data-filter-name=\"${eventTypeFilterTitle}\""));
+        assertTrue(feedCss.contains(".feed-event-type-toggle"));
+        assertTrue(feedCss.contains(".feed-event-type-toggle .events-toggle-icon"));
+        assertTrue(eventsToggleScript.contains("optionCount === 2 && selectedIndex === 1"));
+        assertTrue(toggleTag.contains("iconOnly"));
+        assertTrue(toggleTag.contains("leftIcon"));
+        assertTrue(toggleTag.contains("events-toggle-icon.jspf"));
+    }
+
+    @Test
     void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
@@ -214,6 +236,30 @@ class ViewTemplateAssetsTest {
         assertNotNull(english.getProperty("host.form.location.zoomOut"));
         assertNotNull(spanish.getProperty("host.form.location.zoomIn"));
         assertNotNull(spanish.getProperty("host.form.location.zoomOut"));
+    }
+
+    @Test
+    void hostTournamentCreateUsesSharedLocationPickerSection() throws IOException {
+        final String hostTournamentCreate =
+                read("src/main/webapp/WEB-INF/views/host/tournaments/create.jsp");
+
+        assertTrue(hostTournamentCreate.contains("data-location-picker=\"true\""));
+        assertTrue(
+                hostTournamentCreate.contains(
+                        "data-latitude-input=\"#tournament-location-latitude\""));
+        assertTrue(
+                hostTournamentCreate.contains(
+                        "data-longitude-input=\"#tournament-location-longitude\""));
+        assertTrue(hostTournamentCreate.contains("data-location-map=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-zoom-in=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-zoom-out=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-current=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-location-clear=\"true\""));
+        assertTrue(hostTournamentCreate.contains("host.form.location.map"));
+        assertTrue(hostTournamentCreate.contains("host.form.location.map.aria"));
+        assertTrue(hostTournamentCreate.contains("mapDefaultLatitude"));
+        assertTrue(hostTournamentCreate.contains("mapDefaultLongitude"));
+        assertFalse(hostTournamentCreate.contains("${pageContext.request.contextPath}"));
     }
 
     @Test
@@ -337,6 +383,48 @@ class ViewTemplateAssetsTest {
         assertEquals("Cancel series", english.getProperty("event.host.action.cancelSeries"));
         assertEquals("Editar serie", spanish.getProperty("event.host.action.editSeries"));
         assertEquals("Cancelar serie", spanish.getProperty("event.host.action.cancelSeries"));
+    }
+
+    @Test
+    void tournamentDetailIncludesLocalizedHostCancelAction() throws IOException {
+        final String detailView = read("src/main/webapp/WEB-INF/views/tournaments/detail.jsp");
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertTrue(detailView.contains("editTournamentPath"));
+        assertTrue(detailView.contains("tournament.host.edit"));
+        assertTrue(detailView.contains("cancelTournamentPath"));
+        assertTrue(detailView.contains("tournament.host.cancel"));
+        assertTrue(detailView.contains("tournament.host.cancel.loading"));
+        assertTrue(detailView.contains("closeRegistrationPath"));
+        assertTrue(detailView.contains("tournament.host.closeRegistration"));
+        assertTrue(detailView.contains("tournament.detail.registrationWindow.startsAt"));
+        assertTrue(detailView.contains("tournament.detail.registrationWindow.endsAt"));
+        assertTrue(detailView.contains("not tournamentPage.registrationOpen"));
+        assertTrue(
+                detailView.contains(
+                        "variant=\"primary\" disabled=\"${not tournamentPage.registrationOpen}\""));
+        assertTrue(detailView.contains("variant=\"danger\""));
+        assertTrue(
+                detailView.indexOf("closeRegistrationPath")
+                        < detailView.indexOf("editTournamentPath"));
+        assertTrue(
+                detailView.indexOf("editTournamentPath")
+                        < detailView.indexOf("cancelTournamentPath"));
+        assertEquals("Edit tournament", english.getProperty("tournament.host.edit"));
+        assertEquals("Cancel tournament", english.getProperty("tournament.host.cancel"));
+        assertEquals(
+                "Close registration", english.getProperty("tournament.host.closeRegistration"));
+        assertEquals("Tournament updated.", english.getProperty("tournament.host.edit.success"));
+        assertEquals(
+                "Tournament cancelled.", english.getProperty("tournament.host.cancel.success"));
+        assertEquals("Editar torneo", spanish.getProperty("tournament.host.edit"));
+        assertEquals("Cancelar torneo", spanish.getProperty("tournament.host.cancel"));
+        assertEquals(
+                "Cerrar inscripci\u00f3n",
+                spanish.getProperty("tournament.host.closeRegistration"));
+        assertEquals("Torneo actualizado.", spanish.getProperty("tournament.host.edit.success"));
+        assertEquals("Torneo cancelado.", spanish.getProperty("tournament.host.cancel.success"));
     }
 
     @Test
@@ -536,6 +624,7 @@ class ViewTemplateAssetsTest {
         assertTrue(toggleTag.contains("thirdValue"));
         assertTrue(toggleTag.contains("leftHref"));
         assertTrue(toggleTag.contains("data-events-toggle-options"));
+        assertTrue(toggleTag.contains("iconOnly"));
     }
 
     @Test

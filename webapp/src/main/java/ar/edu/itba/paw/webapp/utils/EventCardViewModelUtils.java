@@ -9,11 +9,13 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.sportLabel;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventRelationshipBadgeViewModel;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -91,11 +93,90 @@ public final class EventCardViewModelUtils {
                 bannerUrlFor(match));
     }
 
+    public static EventCardViewModel toCard(
+            final Tournament tournament,
+            final ZoneId zoneId,
+            final Locale locale,
+            final User currentUser,
+            final String badge,
+            final String statusLabel,
+            final String distanceLabel,
+            final MessageSource messageSource) {
+        final Locale resolvedLocale = resolvedLocale(locale);
+        if (tournament.getStartsAt() == null) {
+            return new EventCardViewModel(
+                    String.valueOf(tournament.getId()),
+                    "/tournaments/" + tournament.getId(),
+                    sportLabel(tournament.getSport(), resolvedLocale, messageSource),
+                    tournament.getTitle(),
+                    tournament.getAddress(),
+                    hostLabelFor(tournament),
+                    messageSource.getMessage("tournament.detail.schedule.tbd", null, locale),
+                    "",
+                    "",
+                    priceLabel(tournament.getPricePerPlayer(), locale, messageSource),
+                    badge,
+                    tournamentRelationshipBadges(tournament, currentUser, locale, messageSource),
+                    null,
+                    statusLabel,
+                    distanceLabel,
+                    mediaClassFor(tournament.getSport()),
+                    bannerUrlFor(tournament));
+        }
+
+        final Instant scheduleInstant = tournament.getStartsAt();
+        final ZonedDateTime startsAt = scheduleInstant.atZone(zoneId);
+
+        return new EventCardViewModel(
+                String.valueOf(tournament.getId()),
+                "/tournaments/" + tournament.getId(),
+                sportLabel(tournament.getSport(), resolvedLocale, messageSource),
+                tournament.getTitle(),
+                tournament.getAddress(),
+                hostLabelFor(tournament),
+                scheduleFormatter(resolvedLocale).format(startsAt),
+                DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale).format(startsAt),
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withLocale(resolvedLocale)
+                        .format(startsAt),
+                priceLabel(tournament.getPricePerPlayer(), locale, messageSource),
+                badge,
+                tournamentRelationshipBadges(tournament, currentUser, locale, messageSource),
+                null,
+                statusLabel,
+                distanceLabel,
+                mediaClassFor(tournament.getSport()),
+                bannerUrlFor(tournament));
+    }
+
     public static String hostLabelFor(final Match match) {
         if (match == null || match.getHost().getId() == null) {
             return null;
         }
         return match.getHost().getUsername();
+    }
+
+    public static String hostLabelFor(final Tournament tournament) {
+        if (tournament == null || tournament.getHost().getId() == null) {
+            return null;
+        }
+        return tournament.getHost().getUsername();
+    }
+
+    private static List<EventRelationshipBadgeViewModel> tournamentRelationshipBadges(
+            final Tournament tournament,
+            final User currentUser,
+            final Locale locale,
+            final MessageSource messageSource) {
+        if (currentUser == null
+                || tournament == null
+                || tournament.getHost() == null
+                || tournament.getHost().getId() == null) {
+            return List.of();
+        }
+        return currentUser.getId().equals(tournament.getHost().getId())
+                ? List.of(relationshipBadge("my_event", locale, messageSource))
+                : List.of();
     }
 
     public static List<EventRelationshipBadgeViewModel> relationshipBadgesFor(

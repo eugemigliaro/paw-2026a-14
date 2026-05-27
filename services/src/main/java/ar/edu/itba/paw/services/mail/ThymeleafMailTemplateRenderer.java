@@ -425,6 +425,105 @@ public class ThymeleafMailTemplateRenderer {
                 textMailTemplateEngine.process("match-updated", context));
     }
 
+    public MailContent renderTournamentBracketPublishedEmail(
+            final TournamentLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildTournamentLifecycleContext(templateData, locale);
+        context.setVariable(
+                "mailEyebrow", message("mail.tournament.bracketPublished.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.tournament.bracketPublished.title",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale));
+        context.setVariable("summary", message("mail.tournament.bracketPublished.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.tournament.bracketPublished.subject",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("tournament-email", context),
+                textMailTemplateEngine.process("tournament-email", context));
+    }
+
+    public MailContent renderTournamentMatchResultEmail(
+            final TournamentLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildTournamentLifecycleContext(templateData, locale);
+        context.setVariable("mailEyebrow", message("mail.tournament.result.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.tournament.result.title",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale));
+        context.setVariable(
+                "summary",
+                message(
+                        "mail.tournament.result.summary",
+                        new Object[] {templateData.getWinnerName(), templateData.getLoserName()},
+                        locale));
+
+        return new MailContent(
+                message(
+                        "mail.tournament.result.subject",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("tournament-email", context),
+                textMailTemplateEngine.process("tournament-email", context));
+    }
+
+    public MailContent renderTournamentCompletedEmail(
+            final TournamentLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildTournamentLifecycleContext(templateData, locale);
+        context.setVariable("mailEyebrow", message("mail.tournament.completed.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.tournament.completed.title",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale));
+        context.setVariable(
+                "summary",
+                message(
+                        "mail.tournament.completed.summary",
+                        new Object[] {templateData.getChampionName()},
+                        locale));
+
+        return new MailContent(
+                message(
+                        "mail.tournament.completed.subject",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("tournament-email", context),
+                textMailTemplateEngine.process("tournament-email", context));
+    }
+
+    public MailContent renderTournamentCancelledEmail(
+            final TournamentLifecycleMailTemplateData templateData) {
+        final Locale locale = resolvedLocale(templateData.getLocale());
+        final Context context = buildTournamentLifecycleContext(templateData, locale);
+        context.setVariable("mailEyebrow", message("mail.tournament.cancelled.eyebrow", locale));
+        context.setVariable(
+                "title",
+                message(
+                        "mail.tournament.cancelled.title",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale));
+        context.setVariable("summary", message("mail.tournament.cancelled.summary", locale));
+
+        return new MailContent(
+                message(
+                        "mail.tournament.cancelled.subject",
+                        new Object[] {templateData.getTournamentTitle()},
+                        locale),
+                htmlMailTemplateEngine.process("tournament-email", context),
+                textMailTemplateEngine.process("tournament-email", context));
+    }
+
     public MailContent renderBanNotification(final BanMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
         final Context context = new Context(locale);
@@ -531,6 +630,17 @@ public class ThymeleafMailTemplateRenderer {
         return context;
     }
 
+    private Context buildTournamentLifecycleContext(
+            final TournamentLifecycleMailTemplateData templateData, final Locale locale) {
+        final Context context = new Context(locale);
+        context.setVariable("recipientEmail", templateData.getRecipientEmail());
+        context.setVariable("requestedForLabel", message("mail.tournament.requestedFor", locale));
+        context.setVariable("detailsLabel", message("mail.tournament.details", locale));
+        context.setVariable("details", buildTournamentLifecycleDetails(templateData, locale));
+        context.setVariable("lang", locale.getLanguage());
+        return context;
+    }
+
     private List<VerificationPreviewDetail> buildMatchLifecycleDetails(
             final MatchLifecycleMailTemplateData templateData,
             final Locale locale,
@@ -572,6 +682,57 @@ public class ThymeleafMailTemplateRenderer {
                                     locale)));
         }
         return List.copyOf(details);
+    }
+
+    private List<VerificationPreviewDetail> buildTournamentLifecycleDetails(
+            final TournamentLifecycleMailTemplateData templateData, final Locale locale) {
+        final List<VerificationPreviewDetail> details = new ArrayList<>();
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.tournament.field.tournamentTitle", locale),
+                        templateData.getTournamentTitle()));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.tournament.field.sport", locale),
+                        templateData.getSportLabel()));
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.tournament.field.address", locale),
+                        templateData.getAddress()));
+        if (templateData.getStartsAt() != null) {
+            details.add(
+                    new VerificationPreviewDetail(
+                            message("mail.tournament.field.startsAt", locale),
+                            formatDateTime(templateData.getStartsAt(), locale)));
+        }
+        details.add(
+                new VerificationPreviewDetail(
+                        message("mail.tournament.field.status", locale),
+                        templateData.getStatusLabel()));
+        addOptionalDetail(
+                details,
+                message("mail.tournament.field.match", locale),
+                templateData.getMatchLabel());
+        addOptionalDetail(
+                details,
+                message("mail.tournament.field.winner", locale),
+                templateData.getWinnerName());
+        addOptionalDetail(
+                details,
+                message("mail.tournament.field.loser", locale),
+                templateData.getLoserName());
+        addOptionalDetail(
+                details,
+                message("mail.tournament.field.champion", locale),
+                templateData.getChampionName());
+        return List.copyOf(details);
+    }
+
+    private static void addOptionalDetail(
+            final List<VerificationPreviewDetail> details, final String label, final String value) {
+        if (value != null && !value.isBlank()) {
+            details.add(new VerificationPreviewDetail(label, value));
+        }
     }
 
     private List<VerificationPreviewDetail> buildMatchInvitationDetails(

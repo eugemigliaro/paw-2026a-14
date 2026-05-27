@@ -8,12 +8,14 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
@@ -47,6 +49,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class FeedController {
 
     private static final int PAGE_SIZE = 12;
+    private static final String TYPE_MATCH = "match";
+    private static final String TYPE_TOURNAMENT = "tournament";
     private static final String SESSION_EXPLORE_LATITUDE = "exploreLocationLatitude";
     private static final String SESSION_EXPLORE_LONGITUDE = "exploreLocationLongitude";
     private static final double DEFAULT_MAP_LATITUDE = -34.6037;
@@ -56,6 +60,7 @@ public class FeedController {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
+    private final TournamentService tournamentService;
     private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
@@ -69,6 +74,7 @@ public class FeedController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
+            final TournamentService tournamentService,
             final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
@@ -81,6 +87,7 @@ public class FeedController {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
+        this.tournamentService = tournamentService;
         this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
@@ -94,11 +101,13 @@ public class FeedController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
+            final TournamentService tournamentService,
             final MessageSource messageSource) {
         this(
                 matchService,
                 matchParticipationService,
                 matchReservationService,
+                tournamentService,
                 messageSource,
                 false,
                 "",
@@ -117,6 +126,7 @@ public class FeedController {
             @RequestParam(value = "startDate", required = false) final String startDate,
             @RequestParam(value = "endDate", required = false) final String endDate,
             @RequestParam(value = "sort", defaultValue = "soonest") final String sort,
+            @RequestParam(value = "type", defaultValue = TYPE_MATCH) final String type,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             @RequestParam(value = "minPrice", required = false) final String minPrice,
             @RequestParam(value = "maxPrice", required = false) final String maxPrice,
@@ -127,18 +137,25 @@ public class FeedController {
                 bindingResult.hasFieldErrors("q") || searchForm.getQ() == null
                         ? ""
                         : searchForm.getQ();
-        final boolean nearMeUnavailable =
-                exploreLocation(session) == null && "distance".equals(sort);
-        FeedFilters filters =
-                normalizeFilters(sports, startDate, endDate, sort, timezone, minPrice, maxPrice);
+        final String selectedType = normalizeType(type);
         final ExploreLocation exploreLocation = exploreLocation(session);
+        final boolean nearMeUnavailable = exploreLocation == null && "distance".equals(sort);
+        FeedFilters filters =
+                normalizeFilters(
+                        selectedType,
+                        sports,
+                        startDate,
+                        endDate,
+                        sort,
+                        timezone,
+                        minPrice,
+                        maxPrice);
         if (exploreLocation == null && "distance".equals(filters.selectedSort())) {
             filters = filters.withSort("soonest");
         }
-        final PaginatedResult<Match> result =
-                searchPublicMatches(query, filters, page, exploreLocation);
         final ModelAndView mav = new ModelAndView("feed/index");
         mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/"));
+        mav.addObject("selectedType", filters.selectedType());
         mav.addObject("selectedSort", filters.selectedSort());
         mav.addObject("selectedSports", filters.selectedSports());
         mav.addObject("selectedTimezone", filters.timezone());
@@ -153,9 +170,21 @@ public class FeedController {
         mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
         mav.addObject("sortOptions", buildSortOptions(query, filters, locale, email));
         mav.addObject("nearMeUnavailable", nearMeUnavailable);
-        mav.addObject(
-                "feedPage",
-                buildFeedPageViewModel(query, filters, result, locale, email, exploreLocation));
+        if (TYPE_TOURNAMENT.equals(filters.selectedType())) {
+            final PaginatedResult<Tournament> result =
+                    searchPublicTournaments(query, filters, page, exploreLocation);
+            mav.addObject(
+                    "feedPage",
+                    buildTournamentFeedPageViewModel(
+                            query, filters, result, locale, email, exploreLocation));
+        } else {
+            final PaginatedResult<Match> result =
+                    searchPublicMatches(query, filters, page, exploreLocation);
+            mav.addObject(
+                    "feedPage",
+                    buildMatchFeedPageViewModel(
+                            query, filters, result, locale, email, exploreLocation));
+        }
         mav.addObject("nearMeAvailable", exploreLocation != null);
         mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
         mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
@@ -170,6 +199,7 @@ public class FeedController {
     public ModelAndView storeExploreLocation(
             @RequestParam(value = "latitude", required = false) final String latitude,
             @RequestParam(value = "longitude", required = false) final String longitude,
+            @RequestParam(value = "type", required = false) final String type,
             final HttpSession session) {
         final Double parsedLatitude = parseCoordinate(latitude);
         final Double parsedLongitude = parseCoordinate(longitude);
@@ -182,10 +212,15 @@ public class FeedController {
             session.setAttribute(SESSION_EXPLORE_LATITUDE, parsedLatitude);
             session.setAttribute(SESSION_EXPLORE_LONGITUDE, parsedLongitude);
         }
-        return new ModelAndView("redirect:/?sort=distance");
+        final UriComponentsBuilder redirect =
+                UriComponentsBuilder.fromPath("/").queryParam("sort", "distance");
+        if (TYPE_TOURNAMENT.equals(normalizeType(type))) {
+            redirect.queryParam("type", TYPE_TOURNAMENT);
+        }
+        return new ModelAndView("redirect:" + redirect.build().encode().toUriString());
     }
 
-    private FeedPageViewModel buildFeedPageViewModel(
+    private FeedPageViewModel buildMatchFeedPageViewModel(
             final String query,
             final FeedFilters filters,
             final PaginatedResult<Match> result,
@@ -235,6 +270,53 @@ public class FeedController {
                         : null);
     }
 
+    private FeedPageViewModel buildTournamentFeedPageViewModel(
+            final String query,
+            final FeedFilters filters,
+            final PaginatedResult<Tournament> result,
+            final Locale locale,
+            final String email,
+            final ExploreLocation exploreLocation) {
+
+        final ZoneId zoneId = parseZone(filters.timezone());
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
+
+        return new FeedPageViewModel(
+                "",
+                messageSource.getMessage("feed.hero.title", null, locale),
+                messageSource.getMessage("feed.hero.description", null, locale),
+                messageSource.getMessage("feed.search.placeholder", null, locale),
+                messageSource.getMessage("feed.search.button", null, locale),
+                List.of(),
+                buildFilterGroups(query, filters, locale, email),
+                result.getItems().stream()
+                        .map(
+                                tournament ->
+                                        toCard(
+                                                tournament,
+                                                zoneId,
+                                                locale,
+                                                currentUser,
+                                                messageSource.getMessage(
+                                                        "tournament.card.badge", null, locale),
+                                                tournamentStatusLabel(tournament, locale),
+                                                distanceLabel(tournament, exploreLocation, locale),
+                                                messageSource))
+                        .toList(),
+                result.getPage(),
+                result.getTotalPages(),
+                PaginationUtils.buildPaginationItems(
+                        result.getPage(),
+                        result.getTotalPages(),
+                        page -> buildUrl(query, filters, page, email, locale)),
+                result.hasPrevious()
+                        ? buildUrl(query, filters, result.getPage() - 1, email, locale)
+                        : null,
+                result.hasNext()
+                        ? buildUrl(query, filters, result.getPage() + 1, email, locale)
+                        : null);
+    }
+
     private PaginatedResult<Match> searchPublicMatches(
             final String query,
             final FeedFilters filters,
@@ -258,6 +340,29 @@ public class FeedController {
                 exploreLocation == null ? null : exploreLocation.longitude());
     }
 
+    private PaginatedResult<Tournament> searchPublicTournaments(
+            final String query,
+            final FeedFilters filters,
+            final int page,
+            final ExploreLocation exploreLocation) {
+        final int safePage = page > 0 ? page : 1;
+        final String encodedSports = encodeCsv(filters.selectedSports());
+
+        return tournamentService.searchPublicTournaments(
+                query,
+                encodedSports,
+                filters.startDate(),
+                filters.endDate(),
+                filters.selectedSort(),
+                safePage,
+                PAGE_SIZE,
+                filters.timezone(),
+                filters.minPrice(),
+                filters.maxPrice(),
+                exploreLocation == null ? null : exploreLocation.latitude(),
+                exploreLocation == null ? null : exploreLocation.longitude());
+    }
+
     private List<SelectOptionViewModel> buildSortOptions(
             final String query,
             final FeedFilters filters,
@@ -266,7 +371,9 @@ public class FeedController {
         final List<SelectOptionViewModel> sortOptions = new ArrayList<>();
         sortOptions.add(sortOption(query, filters, locale, email, "soonest", "feed.sort.soonest"));
         sortOptions.add(sortOption(query, filters, locale, email, "price", "feed.sort.price"));
-        sortOptions.add(sortOption(query, filters, locale, email, "spots", "feed.sort.spots"));
+        if (!TYPE_TOURNAMENT.equals(filters.selectedType())) {
+            sortOptions.add(sortOption(query, filters, locale, email, "spots", "feed.sort.spots"));
+        }
         sortOptions.add(
                 sortOption(query, filters, locale, email, "distance", "feed.sort.distance"));
         return List.copyOf(sortOptions);
@@ -292,7 +399,34 @@ public class FeedController {
             final String email) {
         final List<String> selectedSports = filters.selectedSports();
 
-        return List.of(
+        final List<FilterGroupViewModel> groups = new ArrayList<>();
+        groups.add(
+                new FilterGroupViewModel(
+                        messageSource.getMessage("filter.eventType", null, locale),
+                        List.of(
+                                new FilterOptionViewModel(
+                                        messageSource.getMessage(
+                                                "filter.eventType.matches", null, locale),
+                                        buildUrl(
+                                                query,
+                                                filters.withType(TYPE_MATCH),
+                                                1,
+                                                email,
+                                                locale),
+                                        null,
+                                        TYPE_MATCH.equals(filters.selectedType())),
+                                new FilterOptionViewModel(
+                                        messageSource.getMessage(
+                                                "filter.eventType.tournaments", null, locale),
+                                        buildUrl(
+                                                query,
+                                                filters.withType(TYPE_TOURNAMENT),
+                                                1,
+                                                email,
+                                                locale),
+                                        null,
+                                        TYPE_TOURNAMENT.equals(filters.selectedType())))));
+        groups.add(
                 new FilterGroupViewModel(
                         messageSource.getMessage("filter.categories", null, locale),
                         List.of(
@@ -363,6 +497,7 @@ public class FeedController {
                                                 locale),
                                         null,
                                         isSportSelected(selectedSports, Sport.OTHER)))));
+        return List.copyOf(groups);
     }
 
     private static String distanceLabel(
@@ -385,6 +520,38 @@ public class FeedController {
         formatter.setMinimumFractionDigits(distanceKm < 10 ? 1 : 0);
         formatter.setMaximumFractionDigits(distanceKm < 10 ? 1 : 0);
         return formatter.format(distanceKm) + " km";
+    }
+
+    private static String distanceLabel(
+            final Tournament tournament,
+            final ExploreLocation exploreLocation,
+            final Locale locale) {
+        if (tournament == null || exploreLocation == null || !tournament.hasCoordinates()) {
+            return null;
+        }
+        final double distanceKm =
+                distanceInKilometers(
+                        exploreLocation.latitude(),
+                        exploreLocation.longitude(),
+                        tournament.getLatitude(),
+                        tournament.getLongitude());
+        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
+        final NumberFormat formatter = NumberFormat.getNumberInstance(resolvedLocale);
+        if (distanceKm < 1) {
+            formatter.setMaximumFractionDigits(0);
+            return formatter.format(Math.max(1, Math.round(distanceKm * 1000))) + " m";
+        }
+        formatter.setMinimumFractionDigits(distanceKm < 10 ? 1 : 0);
+        formatter.setMaximumFractionDigits(distanceKm < 10 ? 1 : 0);
+        return formatter.format(distanceKm) + " km";
+    }
+
+    private String tournamentStatusLabel(final Tournament tournament, final Locale locale) {
+        if (tournament == null || tournament.getStatus() == null) {
+            return null;
+        }
+        return messageSource.getMessage(
+                "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
     private static double distanceInKilometers(
@@ -433,6 +600,9 @@ public class FeedController {
         if (email != null && !email.isBlank()) {
             builder.queryParam("email", email);
         }
+        if (TYPE_TOURNAMENT.equals(filters.selectedType())) {
+            builder.queryParam("type", filters.selectedType());
+        }
 
         for (final String sport : filters.selectedSports()) {
             builder.queryParam("sport", sport.toLowerCase(Locale.ROOT));
@@ -469,6 +639,7 @@ public class FeedController {
     }
 
     private static FeedFilters normalizeFilters(
+            final String type,
             final List<String> sports,
             final String startDate,
             final String endDate,
@@ -479,15 +650,29 @@ public class FeedController {
         final String normalizedTimezone = normalizeTimezone(timezone);
         final PriceRange priceRange = normalizePriceRange(minPrice, maxPrice);
         final DateRange dateRange = normalizeDateRange(startDate, endDate, normalizedTimezone);
+        final String normalizedType = normalizeType(type);
 
         return new FeedFilters(
+                normalizedType,
                 normalizeSports(sports),
                 dateRange.startDate(),
                 dateRange.endDate(),
-                normalizeSort(sort),
+                normalizeSortForType(normalizedType, sort),
                 normalizedTimezone,
                 priceRange.minPrice(),
                 priceRange.maxPrice());
+    }
+
+    private static String normalizeType(final String type) {
+        return TYPE_TOURNAMENT.equalsIgnoreCase(type) ? TYPE_TOURNAMENT : TYPE_MATCH;
+    }
+
+    private static String normalizeSortForType(final String type, final String sort) {
+        final String normalizedSort = normalizeSort(sort);
+        if (TYPE_TOURNAMENT.equals(type) && "spots".equals(normalizedSort)) {
+            return "soonest";
+        }
+        return normalizedSort;
     }
 
     private static DateRange normalizeDateRange(
@@ -606,6 +791,7 @@ public class FeedController {
     private record ExploreLocation(Double latitude, Double longitude) {}
 
     private record FeedFilters(
+            String selectedType,
             List<String> selectedSports,
             String startDate,
             String endDate,
@@ -616,6 +802,7 @@ public class FeedController {
 
         private FeedFilters withSports(final List<String> sports) {
             return new FeedFilters(
+                    selectedType,
                     normalizeSports(sports),
                     startDate,
                     endDate,
@@ -627,10 +814,24 @@ public class FeedController {
 
         private FeedFilters withSort(final String sort) {
             return new FeedFilters(
+                    selectedType,
                     selectedSports,
                     startDate,
                     endDate,
-                    normalizeSort(sort),
+                    normalizeSortForType(selectedType, sort),
+                    timezone,
+                    minPrice,
+                    maxPrice);
+        }
+
+        private FeedFilters withType(final String type) {
+            final String normalizedType = normalizeType(type);
+            return new FeedFilters(
+                    normalizedType,
+                    selectedSports,
+                    startDate,
+                    endDate,
+                    normalizeSortForType(normalizedType, selectedSort),
                     timezone,
                     minPrice,
                     maxPrice);
