@@ -63,8 +63,9 @@
             return;
         }
 
-        var summaryList = editor.querySelector("[data-validation-summary='true']");
-        var summaryEmpty = editor.querySelector("[data-validation-empty='true']");
+        var validationContainer = document.querySelector(".tournament-schedule-validation");
+        var summaryList = document.querySelector("[data-validation-summary='true']");
+        var summaryEmpty = document.querySelector("[data-validation-empty='true']");
         var summaryTitle = editor.getAttribute("data-summary-title") || "";
         var nowLabel = editor.getAttribute("data-error-before-now") || "";
         var rangeLabel = editor.getAttribute("data-error-invalid-range") || "";
@@ -80,11 +81,17 @@
             if (!messages.length) {
                 summaryEmpty.hidden = false;
                 summaryList.hidden = true;
+                if (validationContainer) {
+                    validationContainer.style.display = "none";
+                }
                 return;
             }
 
             summaryEmpty.hidden = true;
             summaryList.hidden = false;
+            if (validationContainer) {
+                validationContainer.style.display = "grid";
+            }
             messages.forEach(function (message) {
                 var item = document.createElement("li");
                 item.textContent = message;
