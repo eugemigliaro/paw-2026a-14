@@ -160,10 +160,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     @Override
     public List<TournamentTeamMember> listTeamMembers(final long tournamentId) {
-        final Tournament tournament = findTournamentOrThrow(tournamentId);
-        if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
-            return List.of();
-        }
+        findTournamentOrThrow(tournamentId);
         return tournamentTeamDao.findMembersByTournament(tournamentId);
     }
 

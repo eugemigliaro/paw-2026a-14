@@ -457,6 +457,11 @@ class HostTournamentControllerTest {
         final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
         final TournamentTeam firstTeam = team(1L, tournament, "Team One");
         final TournamentTeam secondTeam = team(2L, tournament, "Team Two");
+        final List<TournamentTeamMember> teamMembers =
+                List.of(
+                        member(firstTeam, UserUtils.getUser(11L)),
+                        member(firstTeam, UserUtils.getUser(12L)),
+                        member(secondTeam, UserUtils.getUser(13L)));
         Mockito.when(tournamentService.findTournamentForHost(77L, host))
                 .thenReturn(java.util.Optional.of(tournament));
         Mockito.when(tournamentBracketService.getBracket(77L, host))
@@ -466,6 +471,7 @@ class HostTournamentControllerTest {
                                 "Not generated"));
         Mockito.when(tournamentBracketService.listTeamsForSetup(77L, host))
                 .thenReturn(List.of(firstTeam, secondTeam));
+        Mockito.when(tournamentRegistrationService.listTeamMembers(77L)).thenReturn(teamMembers);
 
         // 2. Exercise + 3. Assert
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
@@ -475,7 +481,10 @@ class HostTournamentControllerTest {
         Assertions.assertNotNull(bracketPage);
         Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
         Assertions.assertEquals("Team One", bracketPage.getTeamRosters().get(0).getTeamName());
+        Assertions.assertEquals(
+                "user11, user12", bracketPage.getTeamRosters().get(0).getMembersLabel());
         Assertions.assertEquals("Team Two", bracketPage.getTeamRosters().get(1).getTeamName());
+        Assertions.assertEquals("user13", bracketPage.getTeamRosters().get(1).getMembersLabel());
     }
 
     @Test

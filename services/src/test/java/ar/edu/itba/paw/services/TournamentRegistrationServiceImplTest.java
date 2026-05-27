@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -210,6 +211,28 @@ public class TournamentRegistrationServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(
                 TournamentJoinFailureReason.REGISTRATION_NOT_OPEN, exception.getReason());
+    }
+
+    @Test
+    public void listTeamMembersAfterRegistrationClosesReturnsAssignedMembers() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, 1, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam team =
+                new TournamentTeam(
+                        20L, tournament, null, TournamentTeamOrigin.SOLO_POOL, null, FIXED_NOW);
+        final List<TournamentTeamMember> members =
+                List.of(
+                        new TournamentTeamMember(
+                                30L, team, UserUtils.getUser(2L), false, FIXED_NOW));
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentTeamDao.findMembersByTournament(10L)).thenReturn(members);
+
+        // 2. Exercise
+        final List<TournamentTeamMember> result = registrationService.listTeamMembers(10L);
+
+        // 3. Assert
+        Assertions.assertEquals(members, result);
     }
 
     @Test

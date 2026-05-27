@@ -1010,6 +1010,8 @@ public class HostTournamentController {
             final Tournament tournament, final User actingUser, final Locale locale) {
         final List<TournamentTeam> teams =
                 tournamentBracketService.listTeamsForSetup(tournament.getId(), actingUser);
+        final List<TournamentTeamMember> teamMembers =
+                tournamentRegistrationService.listTeamMembers(tournament.getId());
         final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(teams);
         return new TournamentBracketViewModel(
                 tournament.getId(),
@@ -1021,7 +1023,8 @@ public class HostTournamentController {
                 false,
                 List.of(),
                 teamRosters(
-                        new TournamentBracketView(tournament, teams, List.of(), null, null),
+                        new TournamentBracketView(
+                                tournament, teams, List.of(), null, null, teamMembers),
                         locale,
                         teamDisplayNumbers));
     }
