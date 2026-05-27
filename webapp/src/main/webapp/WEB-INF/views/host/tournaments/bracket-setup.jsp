@@ -32,38 +32,79 @@
 							<c:out value="${bracketPage.statusLabel}" />
 						</span>
 						<p class="page-heading__description">
-							<spring:message code="tournament.bracket.setup.description" />
+							<c:choose>
+								<c:when test="${bracketPage.generated}">
+									<spring:message code="tournament.bracket.setup.description.generated" />
+								</c:when>
+								<c:otherwise>
+									<spring:message code="tournament.bracket.setup.description" />
+								</c:otherwise>
+							</c:choose>
 						</p>
 					</div>
 				</header>
 
+				<spring:message var="rosterTitle" code="tournament.bracket.roster.title" />
+				<spring:message var="rosterTeamLabel" code="tournament.bracket.roster.team" />
+				<spring:message var="rosterMembersLabel" code="tournament.bracket.roster.members" />
+				<spring:message var="rosterEmptyLabel" code="tournament.bracket.roster.emptyTeam" />
+				<section class="panel tournament-roster-panel" aria-labelledby="tournament-roster-title">
+					<h2 id="tournament-roster-title" class="form-card__title"><c:out value="${rosterTitle}" /></h2>
+					<table class="tournament-roster-table">
+						<thead>
+							<tr>
+								<th scope="col"><c:out value="${rosterTeamLabel}" /></th>
+								<th scope="col"><c:out value="${rosterMembersLabel}" /></th>
+							</tr>
+						</thead>
+						<tbody>
+							<c:forEach var="teamRoster" items="${bracketPage.teamRosters}">
+								<tr>
+									<td><c:out value="${teamRoster.teamName}" /></td>
+									<td>
+										<c:choose>
+											<c:when test="${teamRoster.hasMembers}"><c:out value="${teamRoster.membersLabel}" /></c:when>
+											<c:otherwise><c:out value="${rosterEmptyLabel}" /></c:otherwise>
+										</c:choose>
+									</td>
+								</tr>
+							</c:forEach>
+						</tbody>
+					</table>
+				</section>
+
 				<c:if test="${not bracketPage.generated}">
 					<spring:message var="generateLabel" code="tournament.bracket.generate" />
 					<spring:message var="generatingLabel" code="tournament.bracket.generating" />
-					<div class="tournament-bracket-actions">
-						<form method="post" action="${updateStrategyAction}" class="tournament-schedule-form" data-submit-guard="true">
-							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-							<label class="field" for="pairing-strategy">
-								<span class="field__label"><spring:message code="tournament.host.pairingStrategy.label" /></span>
-								<select id="pairing-strategy" name="pairingStrategy" class="field__control field__control--select" required="required" data-initial-value="${selectedPairingStrategy}">
-									<option value="manual" ${selectedPairingStrategy == 'manual' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.manual" /></option>
-									<option value="random" ${selectedPairingStrategy == 'random' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.random" /></option>
-									<option value="elo" ${selectedPairingStrategy == 'elo' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.elo" /></option>
-								</select>
-							</label>
-							<spring:message var="updateStrategyLabel" code="tournament.bracket.strategy.update" />
-							<ui:button
-								id="update-strategy-button"
-								label="${updateStrategyLabel}"
-								type="submit"
-								variant="secondary"
-								className="tournament-bracket-actions__update-button tournament-bracket-actions__update-button--hidden" />
-						</form>
-						<form method="post" action="${generateAction}" data-submit-guard="true" data-submit-loading-label="${generatingLabel}">
-							<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-							<ui:button id="generate-bracket-button" label="${generateLabel}" type="submit" />
-						</form>
-					</div>
+					<article class="panel form-card tournament-setup-card">
+						<span class="detail-label"><spring:message code="tournament.host.bracket.panel.label" /></span>
+						<h2 class="form-card__title"><spring:message code="tournament.bracket.setup.card.title" /></h2>
+						<p class="body-copy"><spring:message code="tournament.bracket.setup.card.description" /></p>
+						<div class="tournament-bracket-actions">
+							<form method="post" action="${updateStrategyAction}" class="tournament-schedule-form" data-submit-guard="true">
+								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+								<label class="field" for="pairing-strategy">
+									<span class="field__label"><spring:message code="tournament.host.pairingStrategy.label" /></span>
+									<select id="pairing-strategy" name="pairingStrategy" class="field__control field__control--select" required="required" data-initial-value="${selectedPairingStrategy}">
+										<option value="manual" ${selectedPairingStrategy == 'manual' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.manual" /></option>
+										<option value="random" ${selectedPairingStrategy == 'random' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.random" /></option>
+										<option value="elo" ${selectedPairingStrategy == 'elo' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.elo" /></option>
+									</select>
+								</label>
+								<spring:message var="updateStrategyLabel" code="tournament.bracket.strategy.update" />
+								<ui:button
+									id="update-strategy-button"
+									label="${updateStrategyLabel}"
+									type="submit"
+									variant="secondary"
+									className="tournament-bracket-actions__update-button tournament-bracket-actions__update-button--hidden" />
+							</form>
+							<form method="post" action="${generateAction}" data-submit-guard="true" data-submit-loading-label="${generatingLabel}">
+								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+								<ui:button id="generate-bracket-button" label="${generateLabel}" type="submit" />
+							</form>
+						</div>
+					</article>
 				</c:if>
 				<c:if test="${not empty tournamentNoticeCode}">
 					<p class="booking-panel__notice booking-panel__notice--success tournament-notice">
@@ -106,7 +147,7 @@
 												</header>
 												<div class="tournament-round-row__matches">
 													<c:forEach var="match" items="${round.matches}">
-														<div class="tournament-match-row ${match.focused ? 'tournament-match-row--focused' : ''}">
+														<div class="tournament-match-row">
 
 															<article class="tournament-bracket-match">
 																<div class="tournament-bracket-match__header">
@@ -120,7 +161,7 @@
 															</article>
 
 															<article class="tournament-schedule-match" data-match-schedule="true" data-round-number="${round.roundNumber}" data-round-label="${round.label}" data-match-label="${match.label}">
-																<div class="tournament-schedule-match__grid">
+																<div class="tournament-schedule-match__grid tournament-schedule-match__date-time-grid">
 																	<label class="field" for="match-start-date-${match.id}" data-start-field="true">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.startDate" /></span>
 																		<input class="field__control" id="match-start-date-${match.id}" data-start-date="true" name="startDate_${match.id}" type="date" value="<c:out value='${match.startDate}' />" required="required" />
@@ -129,6 +170,7 @@
 																	<label class="field" for="match-start-time-${match.id}">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.startTime" /></span>
 																		<input class="field__control" id="match-start-time-${match.id}" data-start-time="true" name="startTime_${match.id}" type="time" value="<c:out value='${match.startTime}' />" required="required" />
+																		<span class="field__error" data-field-error="true"></span>
 																	</label>
 																	<label class="field" for="match-end-date-${match.id}" data-end-field="true">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.endDate" /></span>
@@ -138,12 +180,10 @@
 																	<label class="field" for="match-end-time-${match.id}">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.endTime" /></span>
 																		<input class="field__control" id="match-end-time-${match.id}" data-end-time="true" name="endTime_${match.id}" type="time" value="<c:out value='${match.endTime}' />" required="required" />
+																		<span class="field__error" data-field-error="true"></span>
 																	</label>
 																</div>
-																<label class="field" for="match-address-${match.id}">
-																	<span class="field__label"><spring:message code="tournament.bracket.schedule.address" /></span>
-																	<input class="field__control" id="match-address-${match.id}" data-address-input="true" name="address_${match.id}" type="text" value="<c:out value='${match.address}' />" required="required" />
-																</label>
+																<input type="hidden" name="address_${match.id}" value="<c:out value='${match.address}' />" />
 																<input type="hidden" name="latitude_${match.id}" value="<c:out value='${match.latitude}' />" />
 																<input type="hidden" name="longitude_${match.id}" value="<c:out value='${match.longitude}' />" />
 															</article>
@@ -169,7 +209,7 @@
 											<h2 class="tournament-bracket-round__title"><c:out value="${round.label}" /></h2>
 											<div class="tournament-bracket-round__matches">
 												<c:forEach var="match" items="${round.matches}">
-													<article class="tournament-bracket-match ${match.focused ? 'tournament-bracket-match--focused' : ''}">
+													<article class="tournament-bracket-match">
 														<div class="tournament-bracket-match__header">
 															<p class="tournament-bracket-match__label"><c:out value="${match.label}" /></p>
 															<span class="tournament-bracket-match__round"><c:out value="${round.label}" /></span>
@@ -208,7 +248,14 @@
 											<select class="field__control field__control--select" id="manual-team-slot-${slotIndex}" name="teamIds" required="required">
 												<c:forEach var="team" items="${manualPairingTeams}" varStatus="teamStatus">
 													<option value="${team.id}" ${teamStatus.index + 1 == slotIndex ? 'selected="selected"' : ''}>
-														<c:out value="${team.name}" />
+														<c:choose>
+															<c:when test="${not empty team.name and not empty fn:trim(team.name) and team.origin.dbValue ne 'solo_pool'}">
+																<c:out value="${team.name}" />
+															</c:when>
+															<c:otherwise>
+																<spring:message code="tournament.team.solo.name" arguments="${teamStatus.index + 1}" />
+															</c:otherwise>
+														</c:choose>
 													</option>
 												</c:forEach>
 											</select>

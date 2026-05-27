@@ -87,10 +87,15 @@
 									<c:url var="closeRegistrationAction" value="${closeRegistrationPath}" />
 									<spring:message var="closeRegistrationLabel" code="tournament.host.closeRegistration" />
 									<spring:message var="closingRegistrationLabel" code="tournament.host.closeRegistration.loading" />
-									<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}" data-submit-confirm-message="${tournamentPage.closeRegistrationConfirmMessage}">
+									<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}">
 										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="primary" disabled="${not tournamentPage.registrationOpen}" />
+										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="primary" disabled="${tournamentPage.closeRegistrationDisabled}" />
 									</form>
+									<c:if test="${not empty tournamentPage.closeRegistrationDisabledMessage}">
+										<p class="booking-panel__notice booking-panel__notice--info">
+											<c:out value="${tournamentPage.closeRegistrationDisabledMessage}" />
+										</p>
+									</c:if>
 								</c:if>
 								<c:if test="${tournamentPage.canEditTournament}">
 									<c:url var="editTournamentHref" value="${editTournamentPath}" />

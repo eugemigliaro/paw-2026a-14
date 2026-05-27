@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -44,7 +45,6 @@ public class TournamentRegistrationServiceImplTest {
     @Mock private TournamentDao tournamentDao;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
-    @Mock private TournamentMailService tournamentMailService;
     @Mock private MessageSource messageSource;
 
     private TournamentRegistrationServiceImpl registrationService;
@@ -56,7 +56,6 @@ public class TournamentRegistrationServiceImplTest {
                         tournamentDao,
                         tournamentSoloEntryDao,
                         tournamentTeamDao,
-                        tournamentMailService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -64,14 +63,6 @@ public class TournamentRegistrationServiceImplTest {
                         messageSource.getMessage(
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.isNull(),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
-        Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.eq("tournament.team.solo.name"),
-                                ArgumentMatchers.any(Object[].class),
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(2));
@@ -223,6 +214,28 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
+    public void listTeamMembersAfterRegistrationClosesReturnsAssignedMembers() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, 1, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam team =
+                new TournamentTeam(
+                        20L, tournament, null, TournamentTeamOrigin.SOLO_POOL, null, FIXED_NOW);
+        final List<TournamentTeamMember> members =
+                List.of(
+                        new TournamentTeamMember(
+                                30L, team, UserUtils.getUser(2L), false, FIXED_NOW));
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentTeamDao.findMembersByTournament(10L)).thenReturn(members);
+
+        // 2. Exercise
+        final List<TournamentTeamMember> result = registrationService.listTeamMembers(10L);
+
+        // 3. Assert
+        Assertions.assertEquals(members, result);
+    }
+
+    @Test
     public void closeRegistrationGroupsExactMultipleIntoTeams() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
@@ -239,6 +252,7 @@ public class TournamentRegistrationServiceImplTest {
         Assertions.assertEquals(TournamentPairingStrategy.RANDOM, result.getPairingStrategy());
         Assertions.assertEquals(FIXED_NOW, result.getRegistrationClosedAt());
         Assertions.assertEquals(2, createdTeams.size());
+        Assertions.assertTrue(createdTeams.stream().allMatch(team -> team.getName() == null));
         Assertions.assertTrue(
                 entries.stream()
                         .allMatch(
@@ -285,29 +299,27 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
-    public void closeRegistrationWithOneTeamCancelsTournament() {
+    public void closeRegistrationWithOneTeamFailsWithoutCancellingTournament() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
         final Tournament tournament = tournament(10L, host, 4, 2);
         final List<TournamentSoloEntry> entries = activeEntries(tournament, 2);
         configureCloseRegistration(tournament, entries);
-        final List<TournamentTeam> createdTeams = new ArrayList<>();
 
         // 2. Exercise
-        final Tournament result = registrationService.closeRegistration(10L, host);
+        final TournamentRegistrationException exception =
+                Assertions.assertThrows(
+                        TournamentRegistrationException.class,
+                        () -> registrationService.closeRegistration(10L, host));
 
         // 3. Assert
-        Assertions.assertEquals(TournamentStatus.CANCELLED, result.getStatus());
-        Assertions.assertEquals(FIXED_NOW, result.getRegistrationClosedAt());
-        Assertions.assertEquals(FIXED_NOW, result.getCancelledAt());
-        Assertions.assertEquals(
-                "tournament.registration.close.underCapacity", result.getCancelReason());
-        Assertions.assertTrue(createdTeams.isEmpty());
+        Assertions.assertEquals(TournamentJoinFailureReason.UNDER_CAPACITY, exception.getReason());
+        Assertions.assertEquals(TournamentStatus.REGISTRATION, tournament.getStatus());
+        Assertions.assertNull(tournament.getRegistrationClosedAt());
+        Assertions.assertNull(tournament.getCancelledAt());
         Assertions.assertTrue(
                 entries.stream()
-                        .allMatch(
-                                entry ->
-                                        TournamentSoloEntryStatus.UNASSIGNED == entry.getStatus()));
+                        .allMatch(entry -> TournamentSoloEntryStatus.IN_POOL == entry.getStatus()));
     }
 
     @Test
@@ -384,11 +396,10 @@ public class TournamentRegistrationServiceImplTest {
         configureCloseRegistration(tournament, activeEntries);
         final List<TournamentTeam> createdTeams = new ArrayList<>();
         final AtomicLong teamIds = new AtomicLong(100L);
-        Mockito.when(tournamentTeamDao.findByTournament(tournament.getId())).thenReturn(List.of());
         Mockito.when(
                         tournamentTeamDao.create(
                                 ArgumentMatchers.eq(tournament),
-                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.isNull(),
                                 ArgumentMatchers.eq(TournamentTeamOrigin.SOLO_POOL),
                                 ArgumentMatchers.isNull()))
                 .thenAnswer(

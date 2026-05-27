@@ -10,5 +10,6 @@ public enum TournamentJoinFailureReason {
     ALREADY_ON_TEAM,
     ALREADY_ASSIGNED,
     NOT_IN_SOLO_POOL,
-    SOLO_POOL_FULL
+    SOLO_POOL_FULL,
+    UNDER_CAPACITY
 }

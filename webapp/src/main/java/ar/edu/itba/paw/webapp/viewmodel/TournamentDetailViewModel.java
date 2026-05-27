@@ -27,7 +27,8 @@ public class TournamentDetailViewModel {
     private final String nextStepLabel;
     private final List<String> aboutParagraphs;
     private final List<ParticipantViewModel> participants;
-    private final String closeRegistrationConfirmMessage;
+    private final String closeRegistrationDisabledMessage;
+    private final boolean closeRegistrationDisabled;
     private final boolean registrationOpen;
     private final boolean allowSoloSignup;
     private final boolean canJoinSolo;
@@ -64,7 +65,8 @@ public class TournamentDetailViewModel {
             final String nextStepLabel,
             final List<String> aboutParagraphs,
             final List<ParticipantViewModel> participants,
-            final String closeRegistrationConfirmMessage,
+            final String closeRegistrationDisabledMessage,
+            final boolean closeRegistrationDisabled,
             final boolean registrationOpen,
             final boolean allowSoloSignup,
             final boolean canJoinSolo,
@@ -99,7 +101,8 @@ public class TournamentDetailViewModel {
         this.nextStepLabel = nextStepLabel;
         this.aboutParagraphs = aboutParagraphs == null ? List.of() : List.copyOf(aboutParagraphs);
         this.participants = participants == null ? List.of() : List.copyOf(participants);
-        this.closeRegistrationConfirmMessage = closeRegistrationConfirmMessage;
+        this.closeRegistrationDisabledMessage = closeRegistrationDisabledMessage;
+        this.closeRegistrationDisabled = closeRegistrationDisabled;
         this.registrationOpen = registrationOpen;
         this.allowSoloSignup = allowSoloSignup;
         this.canJoinSolo = canJoinSolo;
@@ -205,8 +208,12 @@ public class TournamentDetailViewModel {
         return participants;
     }
 
-    public String getCloseRegistrationConfirmMessage() {
-        return closeRegistrationConfirmMessage;
+    public String getCloseRegistrationDisabledMessage() {
+        return closeRegistrationDisabledMessage;
+    }
+
+    public boolean isCloseRegistrationDisabled() {
+        return closeRegistrationDisabled;
     }
 
     public boolean isHasParticipants() {

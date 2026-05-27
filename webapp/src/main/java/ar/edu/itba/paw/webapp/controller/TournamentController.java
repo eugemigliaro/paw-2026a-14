@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
@@ -35,6 +36,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -260,6 +262,12 @@ public class TournamentController {
                         ? tournamentRegistrationService.getRegistrationReadiness(
                                 tournament.getId(), currentUser)
                         : null;
+        final boolean closeRegistrationBlocked =
+                readiness != null && readiness.isCancellationRisk();
+        final boolean closeRegistrationDisabled = !registrationOpen || closeRegistrationBlocked;
+        final List<TournamentTeamMember> teamMembers =
+                tournamentRegistrationService.listTeamMembers(tournament.getId());
+        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbersFromMembers(teamMembers);
 
         return new TournamentDetailViewModel(
                 tournament.getId(),
@@ -288,11 +296,12 @@ public class TournamentController {
                 hostProfileHref(tournament.getHost()),
                 profileUrlFor(tournament.getHost()),
                 bannerUrlFor(tournament),
-                participationLabel(soloEntry, userTeam, locale),
+                participationLabel(soloEntry, userTeam, locale, teamDisplayNumbers),
                 nextStepLabel(tournament, locale),
                 aboutParagraphs(tournament, locale),
-                participantRows(tournament, locale),
-                closeRegistrationConfirmMessage(readiness, locale),
+                participantRows(tournament, locale, teamDisplayNumbers, teamMembers),
+                closeRegistrationDisabledMessage(registrationOpen, readiness, locale),
+                closeRegistrationDisabled,
                 registrationOpen,
                 tournament.isAllowSoloSignup(),
                 canJoinSolo,
@@ -306,30 +315,32 @@ public class TournamentController {
                 canViewBracket);
     }
 
-    private String closeRegistrationConfirmMessage(
-            final TournamentRegistrationReadiness readiness, final Locale locale) {
-        if (readiness == null || !readiness.isCancellationRisk()) {
+    private String closeRegistrationDisabledMessage(
+            final boolean registrationOpen,
+            final TournamentRegistrationReadiness readiness,
+            final Locale locale) {
+        if (!registrationOpen || readiness == null || !readiness.isCancellationRisk()) {
             return null;
         }
         return messageSource.getMessage(
-                "tournament.host.closeRegistration.cancelConfirm",
-                new Object[] {readiness.getFinalTeamCount()},
-                locale);
+                "tournament.host.closeRegistration.unavailable", null, locale);
     }
 
     private List<TournamentDetailViewModel.ParticipantViewModel> participantRows(
-            final Tournament tournament, final Locale locale) {
+            final Tournament tournament,
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers,
+            final List<TournamentTeamMember> teamMembers) {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
             return List.of();
         }
         final List<TournamentDetailViewModel.ParticipantViewModel> rows =
                 new java.util.ArrayList<>();
-        for (final TournamentTeamMember member :
-                tournamentRegistrationService.listTeamMembers(tournament.getId())) {
+        for (final TournamentTeamMember member : teamMembers) {
             rows.add(
                     new TournamentDetailViewModel.ParticipantViewModel(
                             hostLabel(member.getUser(), locale),
-                            member.getTeam() == null ? null : member.getTeam().getName()));
+                            teamName(member.getTeam(), locale, teamDisplayNumbers)));
         }
         for (final TournamentSoloEntry entry :
                 tournamentRegistrationService.listActiveSoloEntries(tournament.getId())) {
@@ -431,11 +442,12 @@ public class TournamentController {
     private String participationLabel(
             final Optional<TournamentSoloEntry> soloEntry,
             final Optional<TournamentTeam> userTeam,
-            final Locale locale) {
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers) {
         if (userTeam.isPresent()) {
             return messageSource.getMessage(
                     "tournament.participation.team",
-                    new Object[] {userTeam.get().getName()},
+                    new Object[] {teamName(userTeam.get(), locale, teamDisplayNumbers)},
                     locale);
         }
         if (soloEntry.isEmpty()) {
@@ -451,7 +463,7 @@ public class TournamentController {
                     ? messageSource.getMessage("tournament.participation.assigned", null, locale)
                     : messageSource.getMessage(
                             "tournament.participation.assignedTeam",
-                            new Object[] {assignedTeam.getName()},
+                            new Object[] {teamName(assignedTeam, locale, teamDisplayNumbers)},
                             locale);
         }
         if (TournamentSoloEntryStatus.UNASSIGNED == entry.getStatus()) {
@@ -548,6 +560,8 @@ public class TournamentController {
                 return "tournament.registration.error.notInSoloPool";
             case SOLO_POOL_FULL:
                 return "tournament.registration.error.soloPoolFull";
+            case UNDER_CAPACITY:
+                return "tournament.registration.error.underCapacity";
             case FORBIDDEN:
                 return "tournament.registration.error.forbidden";
             case TOURNAMENT_NOT_FOUND:
@@ -610,10 +624,6 @@ public class TournamentController {
     private TournamentBracketViewModel buildBracketPage(
             final TournamentBracketView bracketView, final Locale locale) {
         final Tournament tournament = bracketView.getTournament();
-        final Long focusedMatchId =
-                bracketView.getFocusedMatch() == null
-                        ? null
-                        : bracketView.getFocusedMatch().getId();
         final Long viewerTeamId =
                 bracketView.getViewerTeam() == null ? null : bracketView.getViewerTeam().getId();
         final boolean canManageResults =
@@ -630,16 +640,15 @@ public class TournamentController {
                                         TournamentMatch::getRoundNumber,
                                         LinkedHashMap::new,
                                         Collectors.toList()));
+        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(bracketView.getTeams());
+        final int totalRounds = matchesByRound.size();
         final List<TournamentBracketViewModel.RoundViewModel> rounds =
                 matchesByRound.entrySet().stream()
                         .map(
                                 entry ->
                                         new TournamentBracketViewModel.RoundViewModel(
                                                 entry.getKey(),
-                                                roundLabel(
-                                                        entry.getKey(),
-                                                        matchesByRound.size(),
-                                                        locale),
+                                                roundLabel(entry.getKey(), totalRounds, locale),
                                                 entry.getValue().stream()
                                                         .map(
                                                                 match ->
@@ -658,18 +667,21 @@ public class TournamentController {
                                                                                 teamName(
                                                                                         match
                                                                                                 .getTeamA(),
-                                                                                        locale),
+                                                                                        locale,
+                                                                                        teamDisplayNumbers),
                                                                                 teamName(
                                                                                         match
                                                                                                 .getTeamB(),
-                                                                                        locale),
+                                                                                        locale,
+                                                                                        teamDisplayNumbers),
                                                                                 matchStatusLabel(
                                                                                         match,
                                                                                         locale),
-                                                                                Objects.equals(
-                                                                                        focusedMatchId,
-                                                                                        match
-                                                                                                .getId()),
+                                                                                match.getStatus()
+                                                                                        .getDbValue()
+                                                                                        .replace(
+                                                                                                '_',
+                                                                                                '-'),
                                                                                 sameTeam(
                                                                                         match
                                                                                                 .getTeamA(),
@@ -678,6 +690,18 @@ public class TournamentController {
                                                                                         match
                                                                                                 .getTeamB(),
                                                                                         viewerTeamId),
+                                                                                isWinner(
+                                                                                        match
+                                                                                                .getTeamA(),
+                                                                                        match
+                                                                                                .getWinnerTeam()),
+                                                                                isWinner(
+                                                                                        match
+                                                                                                .getTeamB(),
+                                                                                        match
+                                                                                                .getWinnerTeam()),
+                                                                                entry.getKey()
+                                                                                        == totalRounds,
                                                                                 canManageResults
                                                                                         && canRecordResult(
                                                                                                 match),
@@ -688,7 +712,11 @@ public class TournamentController {
                                                                                 "",
                                                                                 "",
                                                                                 "",
-                                                                                "",
+                                                                                match.getAddress()
+                                                                                                == null
+                                                                                        ? ""
+                                                                                        : match
+                                                                                                .getAddress(),
                                                                                 "",
                                                                                 ""))
                                                         .toList()))
@@ -699,16 +727,34 @@ public class TournamentController {
                 tournament.getTitle(),
                 statusLabel(tournament, locale),
                 tournament.getStatus().getDbValue().replace('_', '-'),
-                focusedMatchLabel(bracketView.getFocusedMatch(), locale),
-                focusedMatchTeamsLabel(bracketView.getFocusedMatch(), locale),
-                matchScheduleLabel(bracketView.getFocusedMatch(), locale),
-                bracketView.getFocusedMatch() == null
-                        ? null
-                        : bracketView.getFocusedMatch().getAddress(),
                 true,
                 false,
                 canManageResults,
-                rounds);
+                rounds,
+                teamRosters(bracketView, locale, teamDisplayNumbers));
+    }
+
+    private List<TournamentBracketViewModel.TeamRosterViewModel> teamRosters(
+            final TournamentBracketView bracketView,
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers) {
+        final Map<Long, List<String>> usernamesByTeamId = new LinkedHashMap<>();
+        for (final TournamentTeamMember member : bracketView.getTeamMembers()) {
+            if (member.getTeam() == null || member.getUser() == null) {
+                continue;
+            }
+            usernamesByTeamId
+                    .computeIfAbsent(member.getTeam().getId(), ignored -> new ArrayList<>())
+                    .add(member.getUser().getUsername());
+        }
+
+        return bracketView.getTeams().stream()
+                .map(
+                        team ->
+                                new TournamentBracketViewModel.TeamRosterViewModel(
+                                        teamName(team, locale, teamDisplayNumbers),
+                                        usernamesByTeamId.getOrDefault(team.getId(), List.of())))
+                .toList();
     }
 
     private String roundLabel(final int roundNumber, final int roundCount, final Locale locale) {
@@ -724,10 +770,65 @@ public class TournamentController {
                 "tournament.bracket.match.label", new Object[] {match.getMatchIndex() + 1}, locale);
     }
 
-    private String teamName(final TournamentTeam team, final Locale locale) {
-        return team == null
-                ? messageSource.getMessage("tournament.bracket.team.tbd", null, locale)
-                : team.getName();
+    private String teamName(
+            final TournamentTeam team,
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers) {
+        if (team == null) {
+            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
+        }
+        if (team.getName() != null
+                && !team.getName().isBlank()
+                && !isLegacyGeneratedSoloTeamName(team)) {
+            return team.getName();
+        }
+        if (team.getId() == null) {
+            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
+        }
+        final Integer displayNumber = teamDisplayNumbers.get(team.getId());
+        return messageSource.getMessage(
+                "tournament.team.solo.name",
+                new Object[] {displayNumber == null ? team.getId() : displayNumber},
+                locale);
+    }
+
+    private static Map<Long, Integer> teamDisplayNumbers(final List<TournamentTeam> teams) {
+        if (teams == null || teams.isEmpty()) {
+            return Map.of();
+        }
+        final Map<Long, Integer> displayNumbers = new LinkedHashMap<>();
+        for (int index = 0; index < teams.size(); index++) {
+            final TournamentTeam team = teams.get(index);
+            if (team != null && team.getId() != null) {
+                displayNumbers.put(team.getId(), index + 1);
+            }
+        }
+        return displayNumbers;
+    }
+
+    private static Map<Long, Integer> teamDisplayNumbersFromMembers(
+            final List<TournamentTeamMember> teamMembers) {
+        if (teamMembers == null || teamMembers.isEmpty()) {
+            return Map.of();
+        }
+        final Map<Long, Integer> displayNumbers = new LinkedHashMap<>();
+        for (final TournamentTeamMember member : teamMembers) {
+            if (member == null || member.getTeam() == null || member.getTeam().getId() == null) {
+                continue;
+            }
+            displayNumbers.computeIfAbsent(
+                    member.getTeam().getId(), ignored -> displayNumbers.size() + 1);
+        }
+        return displayNumbers;
+    }
+
+    private static boolean isLegacyGeneratedSoloTeamName(final TournamentTeam team) {
+        if (team.getOrigin() != TournamentTeamOrigin.SOLO_POOL || team.getName() == null) {
+            return false;
+        }
+        final String normalized = team.getName().trim();
+        return normalized.matches("(?i)Solo squad #\\d+")
+                || normalized.matches("Equipo individual #\\d+");
     }
 
     private static Long teamId(final TournamentTeam team) {
@@ -738,6 +839,10 @@ public class TournamentController {
         return match.getTeamA() != null
                 && match.getTeamB() != null
                 && match.getWinnerTeam() == null;
+    }
+
+    private static boolean isWinner(final TournamentTeam team, final TournamentTeam winner) {
+        return team != null && winner != null && Objects.equals(team.getId(), winner.getId());
     }
 
     private String matchStatusLabel(final TournamentMatch match, final Locale locale) {
@@ -757,22 +862,6 @@ public class TournamentController {
                 new Object[] {
                     formatInstant(match.getScheduledStartsAt(), locale),
                     formatInstant(match.getScheduledEndsAt(), locale)
-                },
-                locale);
-    }
-
-    private String focusedMatchLabel(final TournamentMatch match, final Locale locale) {
-        return match == null ? null : matchLabel(match, locale);
-    }
-
-    private String focusedMatchTeamsLabel(final TournamentMatch match, final Locale locale) {
-        if (match == null) {
-            return null;
-        }
-        return messageSource.getMessage(
-                "tournament.bracket.match.teams",
-                new Object[] {
-                    teamName(match.getTeamA(), locale), teamName(match.getTeamB(), locale)
                 },
                 locale);
     }

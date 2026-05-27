@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -24,6 +25,7 @@ import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
+import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
@@ -31,6 +33,7 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
+import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -40,6 +43,7 @@ import java.util.Locale;
 import java.util.Optional;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -128,6 +132,39 @@ class TournamentControllerTest {
                                         "tournamentPage",
                                         Matchers.hasProperty(
                                                 "requiresLoginToJoin", Matchers.is(true))));
+    }
+
+    @Test
+    void publicDetailRelocalizesLegacyGeneratedSoloTeamName() throws Exception {
+        // 1. Arrange
+        final User player = UserUtils.getUser(9L);
+        final Tournament tournament = tournament(77L, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam earlierTeam = team(19L, tournament, null);
+        final TournamentTeam team = team(20L, tournament, "Equipo individual #1");
+        AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(tournament));
+        Mockito.when(
+                        tournamentRegistrationService.findSoloEntry(
+                                Mockito.eq(77L), Mockito.eq(player)))
+                .thenReturn(Optional.empty());
+        Mockito.when(
+                        tournamentRegistrationService.findUserTeam(
+                                Mockito.eq(77L), Mockito.eq(player)))
+                .thenReturn(Optional.of(team));
+        Mockito.when(tournamentRegistrationService.listTeamMembers(77L))
+                .thenReturn(
+                        List.of(member(earlierTeam, UserUtils.getUser(10L)), member(team, player)));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "participationLabel",
+                                                Matchers.is("You are on Solo squad #2."))));
     }
 
     @Test
@@ -222,6 +259,36 @@ class TournamentControllerTest {
     }
 
     @Test
+    void hostPublicDetailDisablesCloseRegistrationWhenUnderCapacity() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(tournament(77L, TournamentStatus.REGISTRATION)));
+        Mockito.when(tournamentRegistrationService.findSoloEntry(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(77L, host))
+                .thenReturn(new TournamentRegistrationReadiness(1, 0, 0, true));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "closeRegistrationDisabled", Matchers.is(true))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "closeRegistrationDisabledMessage",
+                                                Matchers.is(
+                                                        "Not enough players to close registration. Wait for more players or cancel the tournament."))));
+    }
+
+    @Test
     void loggedOutJoinIsDenied() throws Exception {
         // 1. Arrange
 
@@ -290,21 +357,42 @@ class TournamentControllerTest {
         // 1. Arrange
         final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
         final TournamentMatch match = bracketMatch(10L, tournament);
+        final TournamentTeam firstTeam = match.getTeamA();
+        final TournamentTeam secondTeam = match.getTeamB();
+        final List<TournamentTeamMember> teamMembers =
+                List.of(
+                        member(firstTeam, UserUtils.getUser(11L)),
+                        member(firstTeam, UserUtils.getUser(12L)),
+                        member(secondTeam, UserUtils.getUser(13L)));
         Mockito.when(tournamentBracketService.getBracket(77L, null))
                 .thenReturn(
                         new TournamentBracketView(
-                                tournament, List.of(), List.of(match), null, match));
+                                tournament,
+                                List.of(firstTeam, secondTeam),
+                                List.of(match),
+                                null,
+                                match,
+                                teamMembers));
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
-                .andExpect(status().isOk())
-                .andExpect(view().name("tournaments/bracket"))
-                .andExpect(model().attributeExists("bracketPage"))
-                .andExpect(
-                        model().attribute(
-                                        "bracketPage",
-                                        Matchers.hasProperty(
-                                                "title", Matchers.is("City Padel Cup"))));
+        final var result =
+                mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("tournaments/bracket"))
+                        .andExpect(model().attributeExists("bracketPage"))
+                        .andExpect(
+                                model().attribute(
+                                                "bracketPage",
+                                                Matchers.hasProperty(
+                                                        "title", Matchers.is("City Padel Cup"))));
+        final var mvcResult = result.andReturn();
+        final TournamentBracketViewModel bracketPage =
+                (TournamentBracketViewModel)
+                        mvcResult.getModelAndView().getModel().get("bracketPage");
+        Assertions.assertNotNull(bracketPage);
+        Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
+        Assertions.assertEquals(
+                "user11, user12", bracketPage.getTeamRosters().get(0).getMembersLabel());
     }
 
     @Test
@@ -462,6 +550,10 @@ class TournamentControllerTest {
     private static TournamentTeam team(
             final Long id, final Tournament tournament, final String name) {
         return new TournamentTeam(id, tournament, name, TournamentTeamOrigin.SOLO_POOL, null, NOW);
+    }
+
+    private static TournamentTeamMember member(final TournamentTeam team, final User user) {
+        return new TournamentTeamMember(null, team, user, false, NOW);
     }
 
     private static MessageSource messageSource() {

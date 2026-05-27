@@ -38,7 +38,7 @@ public class TournamentTeam {
     @JoinColumn(name = "tournament_id", nullable = false)
     private Tournament tournament;
 
-    @Column(name = "name", length = 150, nullable = false)
+    @Column(name = "name", length = 150)
     private String name;
 
     @Column(name = "origin", length = 40, nullable = false)

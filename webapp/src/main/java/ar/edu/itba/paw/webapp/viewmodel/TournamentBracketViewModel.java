@@ -8,40 +8,52 @@ public class TournamentBracketViewModel {
     private final String title;
     private final String statusLabel;
     private final String statusTone;
-    private final String focusedMatchLabel;
-    private final String focusedMatchTeamsLabel;
-    private final String focusedMatchScheduleLabel;
-    private final String focusedMatchAddress;
     private final boolean generated;
     private final boolean publishable;
     private final boolean canManageResults;
     private final List<RoundViewModel> rounds;
+    private final List<TeamRosterViewModel> teamRosters;
 
     public TournamentBracketViewModel(
             final Long tournamentId,
             final String title,
             final String statusLabel,
             final String statusTone,
-            final String focusedMatchLabel,
-            final String focusedMatchTeamsLabel,
-            final String focusedMatchScheduleLabel,
-            final String focusedMatchAddress,
             final boolean generated,
             final boolean publishable,
             final boolean canManageResults,
             final List<RoundViewModel> rounds) {
+        this(
+                tournamentId,
+                title,
+                statusLabel,
+                statusTone,
+                generated,
+                publishable,
+                canManageResults,
+                rounds,
+                List.of());
+    }
+
+    public TournamentBracketViewModel(
+            final Long tournamentId,
+            final String title,
+            final String statusLabel,
+            final String statusTone,
+            final boolean generated,
+            final boolean publishable,
+            final boolean canManageResults,
+            final List<RoundViewModel> rounds,
+            final List<TeamRosterViewModel> teamRosters) {
         this.tournamentId = tournamentId;
         this.title = title;
         this.statusLabel = statusLabel;
         this.statusTone = statusTone;
-        this.focusedMatchLabel = focusedMatchLabel;
-        this.focusedMatchTeamsLabel = focusedMatchTeamsLabel;
-        this.focusedMatchScheduleLabel = focusedMatchScheduleLabel;
-        this.focusedMatchAddress = focusedMatchAddress;
         this.generated = generated;
         this.publishable = publishable;
         this.canManageResults = canManageResults;
         this.rounds = rounds == null ? List.of() : List.copyOf(rounds);
+        this.teamRosters = teamRosters == null ? List.of() : List.copyOf(teamRosters);
     }
 
     public Long getTournamentId() {
@@ -60,22 +72,6 @@ public class TournamentBracketViewModel {
         return statusTone;
     }
 
-    public String getFocusedMatchLabel() {
-        return focusedMatchLabel;
-    }
-
-    public String getFocusedMatchTeamsLabel() {
-        return focusedMatchTeamsLabel;
-    }
-
-    public String getFocusedMatchScheduleLabel() {
-        return focusedMatchScheduleLabel;
-    }
-
-    public String getFocusedMatchAddress() {
-        return focusedMatchAddress;
-    }
-
     public boolean isGenerated() {
         return generated;
     }
@@ -90,6 +86,14 @@ public class TournamentBracketViewModel {
 
     public List<RoundViewModel> getRounds() {
         return rounds;
+    }
+
+    public List<TeamRosterViewModel> getTeamRosters() {
+        return teamRosters;
+    }
+
+    public boolean isHasTeamRosters() {
+        return !teamRosters.isEmpty();
     }
 
     public static class RoundViewModel {
@@ -127,9 +131,12 @@ public class TournamentBracketViewModel {
         private final String teamA;
         private final String teamB;
         private final String statusLabel;
-        private final boolean focused;
+        private final String statusTone;
         private final boolean teamAViewerTeam;
         private final boolean teamBViewerTeam;
+        private final boolean teamAIsWinner;
+        private final boolean teamBIsWinner;
+        private final boolean isFinalRound;
         private final boolean canRecordResult;
         private final String scheduleLabel;
         private final String startDate;
@@ -148,9 +155,12 @@ public class TournamentBracketViewModel {
                 final String teamA,
                 final String teamB,
                 final String statusLabel,
-                final boolean focused,
+                final String statusTone,
                 final boolean teamAViewerTeam,
                 final boolean teamBViewerTeam,
+                final boolean teamAIsWinner,
+                final boolean teamBIsWinner,
+                final boolean isFinalRound,
                 final boolean canRecordResult,
                 final String scheduleLabel,
                 final String startDate,
@@ -167,9 +177,12 @@ public class TournamentBracketViewModel {
             this.teamA = teamA;
             this.teamB = teamB;
             this.statusLabel = statusLabel;
-            this.focused = focused;
+            this.statusTone = statusTone;
             this.teamAViewerTeam = teamAViewerTeam;
             this.teamBViewerTeam = teamBViewerTeam;
+            this.teamAIsWinner = teamAIsWinner;
+            this.teamBIsWinner = teamBIsWinner;
+            this.isFinalRound = isFinalRound;
             this.canRecordResult = canRecordResult;
             this.scheduleLabel = scheduleLabel;
             this.startDate = startDate;
@@ -209,8 +222,8 @@ public class TournamentBracketViewModel {
             return statusLabel;
         }
 
-        public boolean isFocused() {
-            return focused;
+        public String getStatusTone() {
+            return statusTone;
         }
 
         public boolean isTeamAViewerTeam() {
@@ -219,6 +232,18 @@ public class TournamentBracketViewModel {
 
         public boolean isTeamBViewerTeam() {
             return teamBViewerTeam;
+        }
+
+        public boolean isTeamAIsWinner() {
+            return teamAIsWinner;
+        }
+
+        public boolean isTeamBIsWinner() {
+            return teamBIsWinner;
+        }
+
+        public boolean isFinalRound() {
+            return isFinalRound;
         }
 
         public boolean isCanRecordResult() {
@@ -255,6 +280,30 @@ public class TournamentBracketViewModel {
 
         public String getLongitude() {
             return longitude;
+        }
+    }
+
+    public static class TeamRosterViewModel {
+
+        private final String teamName;
+        private final String membersLabel;
+
+        public TeamRosterViewModel(final String teamName, final List<String> memberUsernames) {
+            this.teamName = teamName;
+            this.membersLabel =
+                    String.join(", ", memberUsernames == null ? List.of() : memberUsernames);
+        }
+
+        public String getTeamName() {
+            return teamName;
+        }
+
+        public String getMembersLabel() {
+            return membersLabel;
+        }
+
+        public boolean isHasMembers() {
+            return !membersLabel.isBlank();
         }
     }
 }
