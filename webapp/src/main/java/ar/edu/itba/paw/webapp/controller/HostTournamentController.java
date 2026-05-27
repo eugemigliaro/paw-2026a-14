@@ -13,6 +13,7 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
@@ -1189,9 +1190,29 @@ public class HostTournamentController {
     }
 
     private String teamName(final ar.edu.itba.paw.models.TournamentTeam team, final Locale locale) {
-        return team == null
-                ? messageSource.getMessage("tournament.bracket.team.tbd", null, locale)
-                : team.getName();
+        if (team == null) {
+            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
+        }
+        if (team.getName() != null
+                && !team.getName().isBlank()
+                && !isLegacyGeneratedSoloTeamName(team)) {
+            return team.getName();
+        }
+        if (team.getId() == null) {
+            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
+        }
+        return messageSource.getMessage(
+                "tournament.team.solo.name", new Object[] {team.getId()}, locale);
+    }
+
+    private static boolean isLegacyGeneratedSoloTeamName(
+            final ar.edu.itba.paw.models.TournamentTeam team) {
+        if (team.getOrigin() != TournamentTeamOrigin.SOLO_POOL || team.getName() == null) {
+            return false;
+        }
+        final String normalized = team.getName().trim();
+        return normalized.matches("(?i)Solo squad #\\d+")
+                || normalized.matches("Equipo individual #\\d+");
     }
 
     private static Long teamId(final ar.edu.itba.paw.models.TournamentTeam team) {

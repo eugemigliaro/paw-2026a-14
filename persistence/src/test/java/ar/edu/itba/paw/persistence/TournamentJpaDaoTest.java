@@ -321,8 +321,9 @@ public class TournamentJpaDaoTest {
     public void shouldCreateTeamsMembersAndFindUserTeam() {
         final Tournament tournament = createTournament(TournamentStatus.BRACKET_SETUP);
         final TournamentTeam team =
-                tournamentTeamDao.create(
-                        tournament, "Solo squad #1", TournamentTeamOrigin.SOLO_POOL, 1);
+                tournamentTeamDao.create(tournament, null, TournamentTeamOrigin.SOLO_POOL, 1);
+        final TournamentTeam secondTeam =
+                tournamentTeamDao.create(tournament, null, TournamentTeamOrigin.SOLO_POOL, 2);
 
         tournamentTeamDao.addMember(team, player, false);
 
@@ -335,10 +336,13 @@ public class TournamentJpaDaoTest {
         final TournamentTeam userTeam =
                 tournamentTeamDao.findUserTeam(tournament.getId(), player.getId()).orElseThrow();
 
-        Assertions.assertEquals(1, tournamentTeamDao.countByTournament(tournament.getId()));
-        Assertions.assertEquals(1, teams.size());
-        Assertions.assertEquals(1, seeded.size());
+        Assertions.assertEquals(2, tournamentTeamDao.countByTournament(tournament.getId()));
+        Assertions.assertEquals(2, teams.size());
+        Assertions.assertEquals(2, seeded.size());
         Assertions.assertEquals(team.getId(), userTeam.getId());
+        Assertions.assertNull(teams.get(0).getName());
+        Assertions.assertNull(teams.get(1).getName());
+        Assertions.assertEquals(secondTeam.getId(), teams.get(1).getId());
     }
 
     @Test

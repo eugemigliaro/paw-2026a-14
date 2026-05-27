@@ -15,12 +15,10 @@ import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
@@ -215,14 +213,10 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         }
 
         final int assignableEntries = soloTeamCount * tournament.getTeamSize();
-        final Set<String> usedTeamNames = existingTeamNames(tournamentId);
         for (int teamIndex = 0; teamIndex < soloTeamCount; teamIndex++) {
             final TournamentTeam team =
                     tournamentTeamDao.create(
-                            tournament,
-                            nextSoloTeamName(usedTeamNames),
-                            TournamentTeamOrigin.SOLO_POOL,
-                            null);
+                            tournament, null, TournamentTeamOrigin.SOLO_POOL, null);
 
             final int firstEntryIndex = teamIndex * tournament.getTeamSize();
             for (int playerOffset = 0; playerOffset < tournament.getTeamSize(); playerOffset++) {
@@ -308,25 +302,6 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         }
     }
 
-    private Set<String> existingTeamNames(final long tournamentId) {
-        final Set<String> names = new HashSet<>();
-        for (final TournamentTeam team : tournamentTeamDao.findByTournament(tournamentId)) {
-            names.add(team.getName());
-        }
-        return names;
-    }
-
-    private String nextSoloTeamName(final Set<String> usedTeamNames) {
-        int index = 1;
-        String name = soloTeamName(index);
-        while (usedTeamNames.contains(name)) {
-            index++;
-            name = soloTeamName(index);
-        }
-        usedTeamNames.add(name);
-        return name;
-    }
-
     private void markUnassigned(final List<TournamentSoloEntry> soloEntries) {
         for (final TournamentSoloEntry soloEntry : soloEntries) {
             soloEntry.setStatus(TournamentSoloEntryStatus.UNASSIGNED);
@@ -352,15 +327,6 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 tournamentSoloEntryDao.countActiveByTournament(tournament.getId());
         final long maxSoloEntries = (long) tournament.getBracketSize() * tournament.getTeamSize();
         return currentSoloEntries >= maxSoloEntries;
-    }
-
-    private String soloTeamName(final int index) {
-        final Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(
-                "tournament.team.solo.name",
-                new Object[] {index},
-                "Solo squad #" + index,
-                Objects.requireNonNull(locale));
     }
 
     private TournamentRegistrationException registrationException(

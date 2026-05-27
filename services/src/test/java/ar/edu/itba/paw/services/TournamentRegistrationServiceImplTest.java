@@ -68,14 +68,6 @@ public class TournamentRegistrationServiceImplTest {
                                 ArgumentMatchers.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(2));
         Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.eq("tournament.team.solo.name"),
-                                ArgumentMatchers.any(Object[].class),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
-        Mockito.lenient()
                 .when(tournamentSoloEntryDao.update(ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         Mockito.lenient()
@@ -239,6 +231,7 @@ public class TournamentRegistrationServiceImplTest {
         Assertions.assertEquals(TournamentPairingStrategy.RANDOM, result.getPairingStrategy());
         Assertions.assertEquals(FIXED_NOW, result.getRegistrationClosedAt());
         Assertions.assertEquals(2, createdTeams.size());
+        Assertions.assertTrue(createdTeams.stream().allMatch(team -> team.getName() == null));
         Assertions.assertTrue(
                 entries.stream()
                         .allMatch(
@@ -384,11 +377,10 @@ public class TournamentRegistrationServiceImplTest {
         configureCloseRegistration(tournament, activeEntries);
         final List<TournamentTeam> createdTeams = new ArrayList<>();
         final AtomicLong teamIds = new AtomicLong(100L);
-        Mockito.when(tournamentTeamDao.findByTournament(tournament.getId())).thenReturn(List.of());
         Mockito.when(
                         tournamentTeamDao.create(
                                 ArgumentMatchers.eq(tournament),
-                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.isNull(),
                                 ArgumentMatchers.eq(TournamentTeamOrigin.SOLO_POOL),
                                 ArgumentMatchers.isNull()))
                 .thenAnswer(

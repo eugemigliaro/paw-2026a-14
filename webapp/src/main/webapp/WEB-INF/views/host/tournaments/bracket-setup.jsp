@@ -248,7 +248,14 @@
 											<select class="field__control field__control--select" id="manual-team-slot-${slotIndex}" name="teamIds" required="required">
 												<c:forEach var="team" items="${manualPairingTeams}" varStatus="teamStatus">
 													<option value="${team.id}" ${teamStatus.index + 1 == slotIndex ? 'selected="selected"' : ''}>
-														<c:out value="${team.name}" />
+														<c:choose>
+															<c:when test="${not empty team.name and not empty fn:trim(team.name) and team.origin.dbValue ne 'solo_pool'}">
+																<c:out value="${team.name}" />
+															</c:when>
+															<c:otherwise>
+																<spring:message code="tournament.team.solo.name" arguments="${team.id}" />
+															</c:otherwise>
+														</c:choose>
 													</option>
 												</c:forEach>
 											</select>

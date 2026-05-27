@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
@@ -330,7 +331,7 @@ public class TournamentController {
             rows.add(
                     new TournamentDetailViewModel.ParticipantViewModel(
                             hostLabel(member.getUser(), locale),
-                            member.getTeam() == null ? null : member.getTeam().getName()));
+                            teamName(member.getTeam(), locale)));
         }
         for (final TournamentSoloEntry entry :
                 tournamentRegistrationService.listActiveSoloEntries(tournament.getId())) {
@@ -436,7 +437,7 @@ public class TournamentController {
         if (userTeam.isPresent()) {
             return messageSource.getMessage(
                     "tournament.participation.team",
-                    new Object[] {userTeam.get().getName()},
+                    new Object[] {teamName(userTeam.get(), locale)},
                     locale);
         }
         if (soloEntry.isEmpty()) {
@@ -452,7 +453,7 @@ public class TournamentController {
                     ? messageSource.getMessage("tournament.participation.assigned", null, locale)
                     : messageSource.getMessage(
                             "tournament.participation.assignedTeam",
-                            new Object[] {assignedTeam.getName()},
+                            new Object[] {teamName(assignedTeam, locale)},
                             locale);
         }
         if (TournamentSoloEntryStatus.UNASSIGNED == entry.getStatus()) {
@@ -753,9 +754,28 @@ public class TournamentController {
     }
 
     private String teamName(final TournamentTeam team, final Locale locale) {
-        return team == null
-                ? messageSource.getMessage("tournament.bracket.team.tbd", null, locale)
-                : team.getName();
+        if (team == null) {
+            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
+        }
+        if (team.getName() != null
+                && !team.getName().isBlank()
+                && !isLegacyGeneratedSoloTeamName(team)) {
+            return team.getName();
+        }
+        if (team.getId() == null) {
+            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
+        }
+        return messageSource.getMessage(
+                "tournament.team.solo.name", new Object[] {team.getId()}, locale);
+    }
+
+    private static boolean isLegacyGeneratedSoloTeamName(final TournamentTeam team) {
+        if (team.getOrigin() != TournamentTeamOrigin.SOLO_POOL || team.getName() == null) {
+            return false;
+        }
+        final String normalized = team.getName().trim();
+        return normalized.matches("(?i)Solo squad #\\d+")
+                || normalized.matches("Equipo individual #\\d+");
     }
 
     private static Long teamId(final TournamentTeam team) {
