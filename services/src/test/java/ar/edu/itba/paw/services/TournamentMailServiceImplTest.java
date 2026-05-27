@@ -83,6 +83,9 @@ public class TournamentMailServiceImplTest {
                                             : "Solo squad #")
                                     + args[0];
                         });
+        Mockito.lenient()
+                .when(tournamentTeamDao.findByTournament(ArgumentMatchers.anyLong()))
+                .thenReturn(List.of());
     }
 
     @Test
@@ -163,6 +166,7 @@ public class TournamentMailServiceImplTest {
                 new AtomicReference<>();
         Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
                 .thenReturn(List.of(member(30L, champion, participant)));
+        Mockito.when(tournamentTeamDao.findByTournament(10L)).thenReturn(List.of(champion));
         Mockito.when(templateRenderer.renderTournamentCompletedEmail(ArgumentMatchers.any()))
                 .thenAnswer(
                         invocation -> {
@@ -197,6 +201,7 @@ public class TournamentMailServiceImplTest {
                 new AtomicReference<>();
         Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
                 .thenReturn(List.of(member(30L, champion, participant)));
+        Mockito.when(tournamentTeamDao.findByTournament(10L)).thenReturn(List.of(champion));
         Mockito.when(templateRenderer.renderTournamentCompletedEmail(ArgumentMatchers.any()))
                 .thenAnswer(
                         invocation -> {
@@ -208,7 +213,7 @@ public class TournamentMailServiceImplTest {
         tournamentMailService.sendTournamentCompletedEmail(tournament, champion);
 
         // 3. Assert
-        Assertions.assertEquals("Equipo individual #20", capturedData.get().getChampionName());
+        Assertions.assertEquals("Equipo individual #1", capturedData.get().getChampionName());
         Assertions.assertEquals(List.of(participant.getEmail()), mailDispatchService.recipients);
     }
 
@@ -217,11 +222,14 @@ public class TournamentMailServiceImplTest {
         // 1. Arrange
         final Tournament tournament = tournament(10L, TournamentStatus.COMPLETED);
         final User participant = UserUtils.getUser(2L);
+        final TournamentTeam earlierTeam = team(19L, tournament, null);
         final TournamentTeam champion = team(20L, tournament, "Equipo individual #1");
         final AtomicReference<TournamentLifecycleMailTemplateData> capturedData =
                 new AtomicReference<>();
         Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
                 .thenReturn(List.of(member(30L, champion, participant)));
+        Mockito.when(tournamentTeamDao.findByTournament(10L))
+                .thenReturn(List.of(earlierTeam, champion));
         Mockito.when(templateRenderer.renderTournamentCompletedEmail(ArgumentMatchers.any()))
                 .thenAnswer(
                         invocation -> {
@@ -233,7 +241,7 @@ public class TournamentMailServiceImplTest {
         tournamentMailService.sendTournamentCompletedEmail(tournament, champion);
 
         // 3. Assert
-        Assertions.assertEquals("Solo squad #20", capturedData.get().getChampionName());
+        Assertions.assertEquals("Solo squad #2", capturedData.get().getChampionName());
         Assertions.assertEquals(List.of(participant.getEmail()), mailDispatchService.recipients);
     }
 

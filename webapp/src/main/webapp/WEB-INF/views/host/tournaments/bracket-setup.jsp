@@ -253,7 +253,7 @@
 																<c:out value="${team.name}" />
 															</c:when>
 															<c:otherwise>
-																<spring:message code="tournament.team.solo.name" arguments="${team.id}" />
+																<spring:message code="tournament.team.solo.name" arguments="${teamStatus.index + 1}" />
 															</c:otherwise>
 														</c:choose>
 													</option>

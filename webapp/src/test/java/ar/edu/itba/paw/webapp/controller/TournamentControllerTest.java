@@ -139,7 +139,8 @@ class TournamentControllerTest {
         // 1. Arrange
         final User player = UserUtils.getUser(9L);
         final Tournament tournament = tournament(77L, TournamentStatus.BRACKET_SETUP);
-        final TournamentTeam team = team(1L, tournament, "Equipo individual #1");
+        final TournamentTeam earlierTeam = team(19L, tournament, null);
+        final TournamentTeam team = team(20L, tournament, "Equipo individual #1");
         AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
         Mockito.when(tournamentService.findPublicTournament(77L))
                 .thenReturn(Optional.of(tournament));
@@ -151,6 +152,9 @@ class TournamentControllerTest {
                         tournamentRegistrationService.findUserTeam(
                                 Mockito.eq(77L), Mockito.eq(player)))
                 .thenReturn(Optional.of(team));
+        Mockito.when(tournamentRegistrationService.listTeamMembers(77L))
+                .thenReturn(
+                        List.of(member(earlierTeam, UserUtils.getUser(10L)), member(team, player)));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
@@ -160,7 +164,7 @@ class TournamentControllerTest {
                                         "tournamentPage",
                                         Matchers.hasProperty(
                                                 "participationLabel",
-                                                Matchers.is("You are on Solo squad #1."))));
+                                                Matchers.is("You are on Solo squad #2."))));
     }
 
     @Test

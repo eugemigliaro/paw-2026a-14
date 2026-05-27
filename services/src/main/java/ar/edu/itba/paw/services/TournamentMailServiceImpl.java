@@ -124,6 +124,7 @@ public class TournamentMailServiceImpl implements TournamentMailService {
                         null,
                         tournament.getStatus().getDbValue(),
                         locale);
+        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(tournament);
 
         return new TournamentLifecycleMailTemplateData(
                 recipient.getEmail(),
@@ -131,9 +132,9 @@ public class TournamentMailServiceImpl implements TournamentMailService {
                 sportLabel,
                 statusLabel,
                 matchLabel(match, locale),
-                teamName(winner, locale),
-                teamName(loser, locale),
-                teamName(champion, locale),
+                teamName(winner, locale, teamDisplayNumbers),
+                teamName(loser, locale, teamDisplayNumbers),
+                teamName(champion, locale, teamDisplayNumbers),
                 tournament.getAddress(),
                 tournament.getStartsAt(),
                 locale);
@@ -150,7 +151,10 @@ public class TournamentMailServiceImpl implements TournamentMailService {
                 locale);
     }
 
-    private String teamName(final TournamentTeam team, final Locale locale) {
+    private String teamName(
+            final TournamentTeam team,
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers) {
         if (team == null) {
             return null;
         }
@@ -162,11 +166,30 @@ public class TournamentMailServiceImpl implements TournamentMailService {
         if (team.getId() == null) {
             return null;
         }
+        final Integer displayNumber = teamDisplayNumbers.get(team.getId());
         return messageSource.getMessage(
                 "tournament.team.solo.name",
-                new Object[] {team.getId()},
-                "Solo squad #" + team.getId(),
+                new Object[] {displayNumber == null ? team.getId() : displayNumber},
+                "Solo squad #" + (displayNumber == null ? team.getId() : displayNumber),
                 locale);
+    }
+
+    private Map<Long, Integer> teamDisplayNumbers(final Tournament tournament) {
+        if (tournament == null || tournament.getId() == null) {
+            return Map.of();
+        }
+        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournament.getId());
+        if (teams == null || teams.isEmpty()) {
+            return Map.of();
+        }
+        final Map<Long, Integer> displayNumbers = new LinkedHashMap<>();
+        for (int index = 0; index < teams.size(); index++) {
+            final TournamentTeam team = teams.get(index);
+            if (team != null && team.getId() != null) {
+                displayNumbers.put(team.getId(), index + 1);
+            }
+        }
+        return displayNumbers;
     }
 
     private static boolean isLegacyGeneratedSoloTeamName(final TournamentTeam team) {

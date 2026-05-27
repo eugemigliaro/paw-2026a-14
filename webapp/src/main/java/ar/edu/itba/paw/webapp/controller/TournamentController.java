@@ -265,6 +265,9 @@ public class TournamentController {
         final boolean closeRegistrationBlocked =
                 readiness != null && readiness.isCancellationRisk();
         final boolean closeRegistrationDisabled = !registrationOpen || closeRegistrationBlocked;
+        final List<TournamentTeamMember> teamMembers =
+                tournamentRegistrationService.listTeamMembers(tournament.getId());
+        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbersFromMembers(teamMembers);
 
         return new TournamentDetailViewModel(
                 tournament.getId(),
@@ -293,10 +296,10 @@ public class TournamentController {
                 hostProfileHref(tournament.getHost()),
                 profileUrlFor(tournament.getHost()),
                 bannerUrlFor(tournament),
-                participationLabel(soloEntry, userTeam, locale),
+                participationLabel(soloEntry, userTeam, locale, teamDisplayNumbers),
                 nextStepLabel(tournament, locale),
                 aboutParagraphs(tournament, locale),
-                participantRows(tournament, locale),
+                participantRows(tournament, locale, teamDisplayNumbers, teamMembers),
                 closeRegistrationDisabledMessage(registrationOpen, readiness, locale),
                 closeRegistrationDisabled,
                 registrationOpen,
@@ -324,18 +327,20 @@ public class TournamentController {
     }
 
     private List<TournamentDetailViewModel.ParticipantViewModel> participantRows(
-            final Tournament tournament, final Locale locale) {
+            final Tournament tournament,
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers,
+            final List<TournamentTeamMember> teamMembers) {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
             return List.of();
         }
         final List<TournamentDetailViewModel.ParticipantViewModel> rows =
                 new java.util.ArrayList<>();
-        for (final TournamentTeamMember member :
-                tournamentRegistrationService.listTeamMembers(tournament.getId())) {
+        for (final TournamentTeamMember member : teamMembers) {
             rows.add(
                     new TournamentDetailViewModel.ParticipantViewModel(
                             hostLabel(member.getUser(), locale),
-                            teamName(member.getTeam(), locale)));
+                            teamName(member.getTeam(), locale, teamDisplayNumbers)));
         }
         for (final TournamentSoloEntry entry :
                 tournamentRegistrationService.listActiveSoloEntries(tournament.getId())) {
@@ -437,11 +442,12 @@ public class TournamentController {
     private String participationLabel(
             final Optional<TournamentSoloEntry> soloEntry,
             final Optional<TournamentTeam> userTeam,
-            final Locale locale) {
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers) {
         if (userTeam.isPresent()) {
             return messageSource.getMessage(
                     "tournament.participation.team",
-                    new Object[] {teamName(userTeam.get(), locale)},
+                    new Object[] {teamName(userTeam.get(), locale, teamDisplayNumbers)},
                     locale);
         }
         if (soloEntry.isEmpty()) {
@@ -457,7 +463,7 @@ public class TournamentController {
                     ? messageSource.getMessage("tournament.participation.assigned", null, locale)
                     : messageSource.getMessage(
                             "tournament.participation.assignedTeam",
-                            new Object[] {teamName(assignedTeam, locale)},
+                            new Object[] {teamName(assignedTeam, locale, teamDisplayNumbers)},
                             locale);
         }
         if (TournamentSoloEntryStatus.UNASSIGNED == entry.getStatus()) {
@@ -634,6 +640,7 @@ public class TournamentController {
                                         TournamentMatch::getRoundNumber,
                                         LinkedHashMap::new,
                                         Collectors.toList()));
+        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(bracketView.getTeams());
         final int totalRounds = matchesByRound.size();
         final List<TournamentBracketViewModel.RoundViewModel> rounds =
                 matchesByRound.entrySet().stream()
@@ -660,11 +667,13 @@ public class TournamentController {
                                                                                 teamName(
                                                                                         match
                                                                                                 .getTeamA(),
-                                                                                        locale),
+                                                                                        locale,
+                                                                                        teamDisplayNumbers),
                                                                                 teamName(
                                                                                         match
                                                                                                 .getTeamB(),
-                                                                                        locale),
+                                                                                        locale,
+                                                                                        teamDisplayNumbers),
                                                                                 matchStatusLabel(
                                                                                         match,
                                                                                         locale),
@@ -722,11 +731,13 @@ public class TournamentController {
                 false,
                 canManageResults,
                 rounds,
-                teamRosters(bracketView, locale));
+                teamRosters(bracketView, locale, teamDisplayNumbers));
     }
 
     private List<TournamentBracketViewModel.TeamRosterViewModel> teamRosters(
-            final TournamentBracketView bracketView, final Locale locale) {
+            final TournamentBracketView bracketView,
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers) {
         final Map<Long, List<String>> usernamesByTeamId = new LinkedHashMap<>();
         for (final TournamentTeamMember member : bracketView.getTeamMembers()) {
             if (member.getTeam() == null || member.getUser() == null) {
@@ -741,7 +752,7 @@ public class TournamentController {
                 .map(
                         team ->
                                 new TournamentBracketViewModel.TeamRosterViewModel(
-                                        teamName(team, locale),
+                                        teamName(team, locale, teamDisplayNumbers),
                                         usernamesByTeamId.getOrDefault(team.getId(), List.of())))
                 .toList();
     }
@@ -759,7 +770,10 @@ public class TournamentController {
                 "tournament.bracket.match.label", new Object[] {match.getMatchIndex() + 1}, locale);
     }
 
-    private String teamName(final TournamentTeam team, final Locale locale) {
+    private String teamName(
+            final TournamentTeam team,
+            final Locale locale,
+            final Map<Long, Integer> teamDisplayNumbers) {
         if (team == null) {
             return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
         }
@@ -771,8 +785,41 @@ public class TournamentController {
         if (team.getId() == null) {
             return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
         }
+        final Integer displayNumber = teamDisplayNumbers.get(team.getId());
         return messageSource.getMessage(
-                "tournament.team.solo.name", new Object[] {team.getId()}, locale);
+                "tournament.team.solo.name",
+                new Object[] {displayNumber == null ? team.getId() : displayNumber},
+                locale);
+    }
+
+    private static Map<Long, Integer> teamDisplayNumbers(final List<TournamentTeam> teams) {
+        if (teams == null || teams.isEmpty()) {
+            return Map.of();
+        }
+        final Map<Long, Integer> displayNumbers = new LinkedHashMap<>();
+        for (int index = 0; index < teams.size(); index++) {
+            final TournamentTeam team = teams.get(index);
+            if (team != null && team.getId() != null) {
+                displayNumbers.put(team.getId(), index + 1);
+            }
+        }
+        return displayNumbers;
+    }
+
+    private static Map<Long, Integer> teamDisplayNumbersFromMembers(
+            final List<TournamentTeamMember> teamMembers) {
+        if (teamMembers == null || teamMembers.isEmpty()) {
+            return Map.of();
+        }
+        final Map<Long, Integer> displayNumbers = new LinkedHashMap<>();
+        for (final TournamentTeamMember member : teamMembers) {
+            if (member == null || member.getTeam() == null || member.getTeam().getId() == null) {
+                continue;
+            }
+            displayNumbers.computeIfAbsent(
+                    member.getTeam().getId(), ignored -> displayNumbers.size() + 1);
+        }
+        return displayNumbers;
     }
 
     private static boolean isLegacyGeneratedSoloTeamName(final TournamentTeam team) {
