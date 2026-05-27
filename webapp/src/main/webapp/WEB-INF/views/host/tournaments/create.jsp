@@ -207,6 +207,10 @@
 										<form:errors path="registrationClosesTime" cssClass="field__error" element="span" />
 									</label>
 								</div>
+								<input type="hidden" name="allowSoloSignup" value="true" />
+								<input type="hidden" name="allowTeamDraft" value="false" />
+								<p class="tournament-mode-notice"><spring:message code="tournament.form.registrationMode.individualOnly" /></p>
+								<%--
 								<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-solo">
 									<form:checkbox path="allowSoloSignup" id="tournament-allow-solo" cssClass="recurrence-toggle__input" />
 									<span class="recurrence-toggle__switch" aria-hidden="true">
@@ -228,6 +232,9 @@
 										<span class="recurrence-toggle__hint"><spring:message code="tournament.form.allowTeamDraft.hint" /></span>
 									</span>
 								</label>
+								<form:errors path="allowTeamDraft" cssClass="field__error" element="span" />
+								--%>
+								<form:errors path="allowSoloSignup" cssClass="field__error" element="span" />
 								<form:errors path="allowTeamDraft" cssClass="field__error" element="span" />
 							</div>
 						</article>
