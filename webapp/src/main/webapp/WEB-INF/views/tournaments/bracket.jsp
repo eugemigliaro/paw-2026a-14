@@ -42,65 +42,103 @@
 					</p>
 				</c:if>
 
-				<section class="tournament-bracket-layout">
-					<spring:message var="bracketGridLabel" code="tournament.bracket.grid.label" />
-					<section class="tournament-bracket-grid" aria-label="${bracketGridLabel}">
-						<c:forEach var="round" items="${bracketPage.rounds}">
-							<section class="tournament-bracket-round">
-								<h2 class="tournament-bracket-round__title"><c:out value="${round.label}" /></h2>
-								<div class="tournament-bracket-round__matches">
-									<c:forEach var="match" items="${round.matches}">
-										<article class="tournament-bracket-match ${match.focused ? 'tournament-bracket-match--focused' : ''}">
-											<p class="tournament-bracket-match__label"><c:out value="${match.label}" /></p>
-											<div class="tournament-bracket-match__teams">
-												<span class="${match.teamAViewerTeam ? 'tournament-bracket-match__team--viewer' : ''}"><c:out value="${match.teamA}" /></span>
-												<span class="${match.teamBViewerTeam ? 'tournament-bracket-match__team--viewer' : ''}"><c:out value="${match.teamB}" /></span>
-											</div>
-											<p class="tournament-bracket-match__status"><c:out value="${match.scheduleLabel}" /></p>
-											<p class="tournament-bracket-match__status"><c:out value="${match.statusLabel}" /></p>
-											<c:if test="${bracketPage.canManageResults && match.canRecordResult}">
-												<div class="tournament-result-actions">
-													<c:url var="winnerAction" value="/host/tournaments/${bracketPage.tournamentId}/matches/${match.id}/winner" />
-													<form method="post" action="${winnerAction}" data-submit-guard="true">
-														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-														<input type="hidden" name="winnerTeamId" value="${match.teamAId}" />
-														<spring:message var="declareTeamALabel" code="tournament.bracket.result.declareWinner" arguments="${match.teamA}" />
-														<ui:button label="${declareTeamALabel}" type="submit" size="sm" fullWidth="${true}" variant="secondary" />
-													</form>
-													<form method="post" action="${winnerAction}" data-submit-guard="true">
-														<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-														<input type="hidden" name="winnerTeamId" value="${match.teamBId}" />
-														<spring:message var="declareTeamBLabel" code="tournament.bracket.result.declareWinner" arguments="${match.teamB}" />
-														<ui:button label="${declareTeamBLabel}" type="submit" size="sm" fullWidth="${true}" variant="secondary" />
-													</form>
-												</div>
-											</c:if>
-										</article>
-									</c:forEach>
-								</div>
-							</section>
-						</c:forEach>
-					</section>
+				<spring:message var="bracketGridLabel" code="tournament.bracket.grid.label" />
+				<section class="tournament-bracket-grid" aria-label="${bracketGridLabel}">
+					<c:forEach var="round" items="${bracketPage.rounds}">
+						<section class="tournament-bracket-round">
+							<h2 class="tournament-bracket-round__title"><c:out value="${round.label}" /></h2>
+							<div class="tournament-bracket-round__matches">
+								<c:forEach var="match" items="${round.matches}">
+									<article class="tournament-bracket-match">
+										<p class="tournament-bracket-match__label"><c:out value="${match.label}" /></p>
+										<div class="tournament-bracket-match__teams">
+											<%-- Team A row --%>
+											<span class="tournament-bracket-match__team
+												${match.teamAViewerTeam ? ' tournament-bracket-match__team--viewer' : ''}
+												${match.teamAIsWinner ? ' tournament-bracket-match__team--winner' : ''}
+												${(not match.teamAIsWinner and match.teamBIsWinner) ? ' tournament-bracket-match__team--loser' : ''}">
+												<c:if test="${match.teamAIsWinner}">
+													<c:choose>
+														<c:when test="${match.finalRound}">
+															<%-- Trophy icon for the champion --%>
+															<svg class="bracket-team-icon bracket-team-icon--trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+																<path d="M6 9H4a2 2 0 0 1-2-2V5h4"/>
+																<path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/>
+																<path d="M6 9a6 6 0 0 0 12 0V3H6z"/>
+																<path d="M12 15v4"/>
+																<path d="M8 19h8"/>
+															</svg>
+														</c:when>
+														<c:otherwise>
+															<%-- Checkmark icon for regular round winner --%>
+															<svg class="bracket-team-icon bracket-team-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+																<polyline points="20 6 9 17 4 12"/>
+															</svg>
+														</c:otherwise>
+													</c:choose>
+												</c:if>
+												<c:out value="${match.teamA}" />
+											</span>
+											<%-- Team B row --%>
+											<span class="tournament-bracket-match__team
+												${match.teamBViewerTeam ? ' tournament-bracket-match__team--viewer' : ''}
+												${match.teamBIsWinner ? ' tournament-bracket-match__team--winner' : ''}
+												${(not match.teamBIsWinner and match.teamAIsWinner) ? ' tournament-bracket-match__team--loser' : ''}">
+												<c:if test="${match.teamBIsWinner}">
+													<c:choose>
+														<c:when test="${match.finalRound}">
+															<svg class="bracket-team-icon bracket-team-icon--trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+																<path d="M6 9H4a2 2 0 0 1-2-2V5h4"/>
+																<path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/>
+																<path d="M6 9a6 6 0 0 0 12 0V3H6z"/>
+																<path d="M12 15v4"/>
+																<path d="M8 19h8"/>
+															</svg>
+														</c:when>
+														<c:otherwise>
+															<svg class="bracket-team-icon bracket-team-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+																<polyline points="20 6 9 17 4 12"/>
+															</svg>
+														</c:otherwise>
+													</c:choose>
+												</c:if>
+												<c:out value="${match.teamB}" />
+											</span>
+										</div>
 
-					<aside class="panel tournament-bracket-focus" aria-labelledby="focused-match-title">
-						<span class="detail-label"><spring:message code="tournament.bracket.focus.label" /></span>
-						<h2 id="focused-match-title" class="detail-section__title">
-							<c:out value="${bracketPage.focusedMatchLabel}" />
-						</h2>
-						<p class="tournament-bracket-focus__teams"><c:out value="${bracketPage.focusedMatchTeamsLabel}" /></p>
-						<dl class="event-info-panel__list">
-							<div class="booking-panel__detail-row event-info-panel__row">
-								<dt><spring:message code="tournament.bracket.focus.schedule" /></dt>
-								<dd><c:out value="${bracketPage.focusedMatchScheduleLabel}" /></dd>
+										<%-- Compact schedule + venue meta row --%>
+										<div class="tournament-bracket-match__meta">
+											<span class="tournament-bracket-match__meta-schedule"><c:out value="${match.scheduleLabel}" /></span>
+											<c:if test="${not empty match.address}">
+												<span class="tournament-bracket-match__meta-address"><c:out value="${match.address}" /></span>
+											</c:if>
+										</div>
+
+										<%-- Status badge --%>
+										<p class="tournament-bracket-match__status tournament-bracket-match__status--${match.statusTone}"><c:out value="${match.statusLabel}" /></p>
+
+										<c:if test="${bracketPage.canManageResults && match.canRecordResult}">
+											<div class="tournament-result-actions">
+												<c:url var="winnerAction" value="/host/tournaments/${bracketPage.tournamentId}/matches/${match.id}/winner" />
+												<form method="post" action="${winnerAction}" data-submit-guard="true">
+													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+													<input type="hidden" name="winnerTeamId" value="${match.teamAId}" />
+													<spring:message var="declareTeamALabel" code="tournament.bracket.result.declareWinner" arguments="${match.teamA}" />
+													<ui:button label="${declareTeamALabel}" type="submit" size="sm" fullWidth="${true}" variant="secondary" />
+												</form>
+												<form method="post" action="${winnerAction}" data-submit-guard="true">
+													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+													<input type="hidden" name="winnerTeamId" value="${match.teamBId}" />
+													<spring:message var="declareTeamBLabel" code="tournament.bracket.result.declareWinner" arguments="${match.teamB}" />
+													<ui:button label="${declareTeamBLabel}" type="submit" size="sm" fullWidth="${true}" variant="secondary" />
+												</form>
+											</div>
+										</c:if>
+									</article>
+								</c:forEach>
 							</div>
-							<c:if test="${not empty bracketPage.focusedMatchAddress}">
-								<div class="booking-panel__detail-row event-info-panel__row">
-									<dt><spring:message code="tournament.bracket.focus.venue" /></dt>
-									<dd><c:out value="${bracketPage.focusedMatchAddress}" /></dd>
-								</div>
-							</c:if>
-						</dl>
-					</aside>
+						</section>
+					</c:forEach>
 				</section>
 			</main>
 		</div>

@@ -30,9 +30,11 @@ import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
+import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -408,6 +410,55 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void getBracketSetupDefaultsUnsheduledMatchTimesByRound() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
+        final TournamentMatch roundOneMatch = bracketMatch(10L, tournament, 1);
+        final TournamentMatch roundTwoMatch = bracketMatch(11L, tournament, 2);
+        Mockito.when(tournamentService.findTournamentForHost(77L, host))
+                .thenReturn(java.util.Optional.of(tournament));
+        Mockito.when(tournamentBracketService.getBracket(77L, host))
+                .thenReturn(
+                        new TournamentBracketView(
+                                tournament,
+                                java.util.List.of(
+                                        roundOneMatch.getTeamA(),
+                                        roundOneMatch.getTeamB(),
+                                        roundTwoMatch.getTeamA(),
+                                        roundTwoMatch.getTeamB()),
+                                java.util.List.of(roundOneMatch, roundTwoMatch),
+                                null,
+                                roundOneMatch));
+        final String expectedDate = LocalDate.now(ZoneId.systemDefault()).toString();
+
+        // 2. Exercise
+        final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
+
+        // 3. Assert
+        final TournamentBracketViewModel bracketPage =
+                (TournamentBracketViewModel) result.getModelAndView().getModel().get("bracketPage");
+        Assertions.assertNotNull(bracketPage);
+        Assertions.assertEquals(
+                expectedDate, bracketPage.getRounds().get(0).getMatches().get(0).getStartDate());
+        Assertions.assertEquals(
+                "18:00", bracketPage.getRounds().get(0).getMatches().get(0).getStartTime());
+        Assertions.assertEquals(
+                expectedDate, bracketPage.getRounds().get(0).getMatches().get(0).getEndDate());
+        Assertions.assertEquals(
+                "", bracketPage.getRounds().get(0).getMatches().get(0).getEndTime());
+        Assertions.assertEquals(
+                expectedDate, bracketPage.getRounds().get(1).getMatches().get(0).getStartDate());
+        Assertions.assertEquals(
+                "19:00", bracketPage.getRounds().get(1).getMatches().get(0).getStartTime());
+        Assertions.assertEquals(
+                expectedDate, bracketPage.getRounds().get(1).getMatches().get(0).getEndDate());
+        Assertions.assertEquals(
+                "", bracketPage.getRounds().get(1).getMatches().get(0).getEndTime());
+    }
+
+    @Test
     void postPublishBracketWithValidRoundOneScheduleRedirectsToDetail() throws Exception {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
@@ -597,10 +648,15 @@ class HostTournamentControllerTest {
     }
 
     private static TournamentMatch bracketMatch(final Long id, final Tournament tournament) {
+        return bracketMatch(id, tournament, 1);
+    }
+
+    private static TournamentMatch bracketMatch(
+            final Long id, final Tournament tournament, final int roundNumber) {
         return new TournamentMatch(
                 id,
                 tournament,
-                1,
+                roundNumber,
                 0,
                 team(1L, tournament, "Team One"),
                 team(2L, tournament, "Team Two"),

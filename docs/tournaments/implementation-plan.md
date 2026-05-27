@@ -19,9 +19,11 @@ manual/random/ELO pairing and admin/mod host-equivalent controls. Walkover has
 been removed; forfeits are represented by declaring the non-forfeiting team as
 the winner.
 
+Bracket setup UX and public bracket polish from the cleanup plan are now
+complete.
+
 The next work should be split into smaller sessions:
 
-- polish the bracket setup and public bracket UI
 - tighten tournament detail panels and entry-state copy
 - expand team drafts after the solo/bracket lifecycle stays stable
 - design result correction/undo and score support separately
