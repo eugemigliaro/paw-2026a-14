@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -238,6 +239,28 @@ class HostTournamentControllerTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/close-registration"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void postCloseRegistrationUnderCapacityRedirectsWithError() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentRegistrationService.closeRegistration(
+                                Mockito.eq(77L), Mockito.any(User.class)))
+                .thenThrow(
+                        new TournamentRegistrationException(
+                                TournamentJoinFailureReason.UNDER_CAPACITY, "Not enough players"));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/host/tournaments/77/close-registration"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/77"))
+                .andExpect(
+                        flash().attribute(
+                                        "tournamentErrorCode",
+                                        "tournament.registration.error.underCapacity"));
     }
 
     @Test

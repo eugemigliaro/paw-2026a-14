@@ -400,10 +400,12 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("tournament.host.closeRegistration"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.startsAt"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.endsAt"));
-        assertTrue(detailView.contains("not tournamentPage.registrationOpen"));
+        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabled"));
+        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabledMessage"));
         assertTrue(
                 detailView.contains(
-                        "variant=\"primary\" disabled=\"${not tournamentPage.registrationOpen}\""));
+                        "variant=\"primary\" disabled=\"${tournamentPage.closeRegistrationDisabled}\""));
+        assertTrue(detailView.contains("booking-panel__notice--info"));
         assertTrue(detailView.contains("variant=\"danger\""));
         assertTrue(
                 detailView.indexOf("closeRegistrationPath")
@@ -415,6 +417,9 @@ class ViewTemplateAssetsTest {
         assertEquals("Cancel tournament", english.getProperty("tournament.host.cancel"));
         assertEquals(
                 "Close registration", english.getProperty("tournament.host.closeRegistration"));
+        assertEquals(
+                "Not enough players to close registration. Wait for more players or cancel the tournament.",
+                english.getProperty("tournament.host.closeRegistration.unavailable"));
         assertEquals("Tournament updated.", english.getProperty("tournament.host.edit.success"));
         assertEquals(
                 "Tournament cancelled.", english.getProperty("tournament.host.cancel.success"));
@@ -423,6 +428,9 @@ class ViewTemplateAssetsTest {
         assertEquals(
                 "Cerrar inscripci\u00f3n",
                 spanish.getProperty("tournament.host.closeRegistration"));
+        assertEquals(
+                "No hay suficientes jugadores para cerrar la inscripci\u00f3n. Esper\u00e1 a que se sumen m\u00e1s jugadores o cancel\u00e1 el torneo.",
+                spanish.getProperty("tournament.host.closeRegistration.unavailable"));
         assertEquals("Torneo actualizado.", spanish.getProperty("tournament.host.edit.success"));
         assertEquals("Torneo cancelado.", spanish.getProperty("tournament.host.cancel.success"));
     }

@@ -36,7 +36,6 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     private final TournamentDao tournamentDao;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
     private final TournamentTeamDao tournamentTeamDao;
-    private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -44,13 +43,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
             final TournamentDao tournamentDao,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
             final TournamentTeamDao tournamentTeamDao,
-            final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
         this.tournamentTeamDao = tournamentTeamDao;
-        this.tournamentMailService = tournamentMailService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -208,8 +205,9 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
         final int finalTeamCount = existingTeamCount + soloTeamCount;
         if (finalTeamCount < 2) {
-            markUnassigned(activeEntries);
-            return cancelUnderCapacity(tournament);
+            throw registrationException(
+                    TournamentJoinFailureReason.UNDER_CAPACITY,
+                    "tournament.registration.error.underCapacity");
         }
 
         final int assignableEntries = soloTeamCount * tournament.getTeamSize();
@@ -308,18 +306,6 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
             soloEntry.setAssignedTeam(null);
             tournamentSoloEntryDao.update(soloEntry);
         }
-    }
-
-    private Tournament cancelUnderCapacity(final Tournament tournament) {
-        final Instant now = Instant.now(clock);
-        tournament.setStatus(TournamentStatus.CANCELLED);
-        tournament.setRegistrationClosedAt(now);
-        tournament.setCancelledAt(now);
-        tournament.setCancelReason(message("tournament.registration.close.underCapacity"));
-        tournament.setUpdatedAt(now);
-        final Tournament updatedTournament = tournamentDao.update(tournament);
-        tournamentMailService.sendTournamentCancelledEmail(updatedTournament);
-        return updatedTournament;
     }
 
     private boolean isSoloPoolFull(final Tournament tournament) {

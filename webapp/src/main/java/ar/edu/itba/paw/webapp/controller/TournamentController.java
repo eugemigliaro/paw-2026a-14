@@ -261,6 +261,9 @@ public class TournamentController {
                         ? tournamentRegistrationService.getRegistrationReadiness(
                                 tournament.getId(), currentUser)
                         : null;
+        final boolean closeRegistrationBlocked =
+                readiness != null && readiness.isCancellationRisk();
+        final boolean closeRegistrationDisabled = !registrationOpen || closeRegistrationBlocked;
 
         return new TournamentDetailViewModel(
                 tournament.getId(),
@@ -293,7 +296,8 @@ public class TournamentController {
                 nextStepLabel(tournament, locale),
                 aboutParagraphs(tournament, locale),
                 participantRows(tournament, locale),
-                closeRegistrationConfirmMessage(readiness, locale),
+                closeRegistrationDisabledMessage(registrationOpen, readiness, locale),
+                closeRegistrationDisabled,
                 registrationOpen,
                 tournament.isAllowSoloSignup(),
                 canJoinSolo,
@@ -307,15 +311,15 @@ public class TournamentController {
                 canViewBracket);
     }
 
-    private String closeRegistrationConfirmMessage(
-            final TournamentRegistrationReadiness readiness, final Locale locale) {
-        if (readiness == null || !readiness.isCancellationRisk()) {
+    private String closeRegistrationDisabledMessage(
+            final boolean registrationOpen,
+            final TournamentRegistrationReadiness readiness,
+            final Locale locale) {
+        if (!registrationOpen || readiness == null || !readiness.isCancellationRisk()) {
             return null;
         }
         return messageSource.getMessage(
-                "tournament.host.closeRegistration.cancelConfirm",
-                new Object[] {readiness.getFinalTeamCount()},
-                locale);
+                "tournament.host.closeRegistration.unavailable", null, locale);
     }
 
     private List<TournamentDetailViewModel.ParticipantViewModel> participantRows(
@@ -549,6 +553,8 @@ public class TournamentController {
                 return "tournament.registration.error.notInSoloPool";
             case SOLO_POOL_FULL:
                 return "tournament.registration.error.soloPoolFull";
+            case UNDER_CAPACITY:
+                return "tournament.registration.error.underCapacity";
             case FORBIDDEN:
                 return "tournament.registration.error.forbidden";
             case TOURNAMENT_NOT_FOUND:

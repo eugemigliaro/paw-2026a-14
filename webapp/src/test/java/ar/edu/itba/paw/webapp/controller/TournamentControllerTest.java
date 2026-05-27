@@ -24,6 +24,7 @@ import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
+import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
@@ -248,6 +249,36 @@ class TournamentControllerTest {
                                         "tournamentPage",
                                         Matchers.hasProperty(
                                                 "registrationNotStarted", Matchers.is(true))));
+    }
+
+    @Test
+    void hostPublicDetailDisablesCloseRegistrationWhenUnderCapacity() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(tournament(77L, TournamentStatus.REGISTRATION)));
+        Mockito.when(tournamentRegistrationService.findSoloEntry(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(77L, host))
+                .thenReturn(new TournamentRegistrationReadiness(1, 0, 0, true));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "closeRegistrationDisabled", Matchers.is(true))))
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "closeRegistrationDisabledMessage",
+                                                Matchers.is(
+                                                        "Not enough players to close registration. Wait for more players or cancel the tournament."))));
     }
 
     @Test

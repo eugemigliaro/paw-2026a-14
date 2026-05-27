@@ -936,6 +936,8 @@ public class HostTournamentController {
                 return "tournament.registration.error.notInSoloPool";
             case ALREADY_IN_SOLO_POOL:
                 return "tournament.registration.error.alreadyInSoloPool";
+            case UNDER_CAPACITY:
+                return "tournament.registration.error.underCapacity";
             case FORBIDDEN:
                 return "tournament.registration.error.forbidden";
             case TOURNAMENT_NOT_FOUND:

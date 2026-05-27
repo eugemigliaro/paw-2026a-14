@@ -44,7 +44,6 @@ public class TournamentRegistrationServiceImplTest {
     @Mock private TournamentDao tournamentDao;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
-    @Mock private TournamentMailService tournamentMailService;
     @Mock private MessageSource messageSource;
 
     private TournamentRegistrationServiceImpl registrationService;
@@ -56,7 +55,6 @@ public class TournamentRegistrationServiceImplTest {
                         tournamentDao,
                         tournamentSoloEntryDao,
                         tournamentTeamDao,
-                        tournamentMailService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -278,29 +276,27 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
-    public void closeRegistrationWithOneTeamCancelsTournament() {
+    public void closeRegistrationWithOneTeamFailsWithoutCancellingTournament() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
         final Tournament tournament = tournament(10L, host, 4, 2);
         final List<TournamentSoloEntry> entries = activeEntries(tournament, 2);
         configureCloseRegistration(tournament, entries);
-        final List<TournamentTeam> createdTeams = new ArrayList<>();
 
         // 2. Exercise
-        final Tournament result = registrationService.closeRegistration(10L, host);
+        final TournamentRegistrationException exception =
+                Assertions.assertThrows(
+                        TournamentRegistrationException.class,
+                        () -> registrationService.closeRegistration(10L, host));
 
         // 3. Assert
-        Assertions.assertEquals(TournamentStatus.CANCELLED, result.getStatus());
-        Assertions.assertEquals(FIXED_NOW, result.getRegistrationClosedAt());
-        Assertions.assertEquals(FIXED_NOW, result.getCancelledAt());
-        Assertions.assertEquals(
-                "tournament.registration.close.underCapacity", result.getCancelReason());
-        Assertions.assertTrue(createdTeams.isEmpty());
+        Assertions.assertEquals(TournamentJoinFailureReason.UNDER_CAPACITY, exception.getReason());
+        Assertions.assertEquals(TournamentStatus.REGISTRATION, tournament.getStatus());
+        Assertions.assertNull(tournament.getRegistrationClosedAt());
+        Assertions.assertNull(tournament.getCancelledAt());
         Assertions.assertTrue(
                 entries.stream()
-                        .allMatch(
-                                entry ->
-                                        TournamentSoloEntryStatus.UNASSIGNED == entry.getStatus()));
+                        .allMatch(entry -> TournamentSoloEntryStatus.IN_POOL == entry.getStatus()));
     }
 
     @Test
