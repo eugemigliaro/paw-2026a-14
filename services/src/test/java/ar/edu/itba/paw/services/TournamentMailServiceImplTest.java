@@ -67,6 +67,22 @@ public class TournamentMailServiceImplTest {
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(2));
+        Mockito.lenient()
+                .when(
+                        messageSource.getMessage(
+                                ArgumentMatchers.eq("tournament.team.solo.name"),
+                                ArgumentMatchers.any(Object[].class),
+                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.any(Locale.class)))
+                .thenAnswer(
+                        invocation -> {
+                            final Object[] args = invocation.getArgument(1);
+                            final Locale locale = invocation.getArgument(3);
+                            return ("es".equals(locale.getLanguage())
+                                            ? "Equipo individual #"
+                                            : "Solo squad #")
+                                    + args[0];
+                        });
     }
 
     @Test
@@ -159,6 +175,65 @@ public class TournamentMailServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals("Champions", capturedData.get().getChampionName());
+        Assertions.assertEquals(List.of(participant.getEmail()), mailDispatchService.recipients);
+    }
+
+    @Test
+    public void sendCompletedEmailLocalizesUnnamedChampion() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, TournamentStatus.COMPLETED);
+        final User participant =
+                new User(
+                        2L,
+                        "player@test.com",
+                        "player",
+                        "Jamie",
+                        "Rivera",
+                        null,
+                        null,
+                        UserLanguages.SPANISH);
+        final TournamentTeam champion = team(20L, tournament, null);
+        final AtomicReference<TournamentLifecycleMailTemplateData> capturedData =
+                new AtomicReference<>();
+        Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
+                .thenReturn(List.of(member(30L, champion, participant)));
+        Mockito.when(templateRenderer.renderTournamentCompletedEmail(ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedData.set(invocation.getArgument(0));
+                            return new MailContent("completed", "<p>completed</p>", "completed");
+                        });
+
+        // 2. Exercise
+        tournamentMailService.sendTournamentCompletedEmail(tournament, champion);
+
+        // 3. Assert
+        Assertions.assertEquals("Equipo individual #20", capturedData.get().getChampionName());
+        Assertions.assertEquals(List.of(participant.getEmail()), mailDispatchService.recipients);
+    }
+
+    @Test
+    public void sendCompletedEmailRelocalizesLegacyPlaceholderChampion() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, TournamentStatus.COMPLETED);
+        final User participant = UserUtils.getUser(2L);
+        final TournamentTeam champion = team(20L, tournament, "Equipo individual #1");
+        final AtomicReference<TournamentLifecycleMailTemplateData> capturedData =
+                new AtomicReference<>();
+        Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
+                .thenReturn(List.of(member(30L, champion, participant)));
+        Mockito.when(templateRenderer.renderTournamentCompletedEmail(ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedData.set(invocation.getArgument(0));
+                            return new MailContent("completed", "<p>completed</p>", "completed");
+                        });
+
+        // 2. Exercise
+        tournamentMailService.sendTournamentCompletedEmail(tournament, champion);
+
+        // 3. Assert
+        Assertions.assertEquals("Solo squad #20", capturedData.get().getChampionName());
         Assertions.assertEquals(List.of(participant.getEmail()), mailDispatchService.recipients);
     }
 

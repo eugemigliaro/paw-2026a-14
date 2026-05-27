@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
@@ -130,9 +131,9 @@ public class TournamentMailServiceImpl implements TournamentMailService {
                 sportLabel,
                 statusLabel,
                 matchLabel(match, locale),
-                teamName(winner),
-                teamName(loser),
-                teamName(champion),
+                teamName(winner, locale),
+                teamName(loser, locale),
+                teamName(champion, locale),
                 tournament.getAddress(),
                 tournament.getStartsAt(),
                 locale);
@@ -149,8 +150,32 @@ public class TournamentMailServiceImpl implements TournamentMailService {
                 locale);
     }
 
-    private static String teamName(final TournamentTeam team) {
-        return team == null ? null : team.getName();
+    private String teamName(final TournamentTeam team, final Locale locale) {
+        if (team == null) {
+            return null;
+        }
+        if (team.getName() != null
+                && !team.getName().isBlank()
+                && !isLegacyGeneratedSoloTeamName(team)) {
+            return team.getName();
+        }
+        if (team.getId() == null) {
+            return null;
+        }
+        return messageSource.getMessage(
+                "tournament.team.solo.name",
+                new Object[] {team.getId()},
+                "Solo squad #" + team.getId(),
+                locale);
+    }
+
+    private static boolean isLegacyGeneratedSoloTeamName(final TournamentTeam team) {
+        if (team.getOrigin() != TournamentTeamOrigin.SOLO_POOL || team.getName() == null) {
+            return false;
+        }
+        final String normalized = team.getName().trim();
+        return normalized.matches("(?i)Solo squad #\\d+")
+                || normalized.matches("Equipo individual #\\d+");
     }
 
     private static String userIdentity(final User user) {

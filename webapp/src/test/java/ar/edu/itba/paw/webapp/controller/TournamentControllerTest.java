@@ -131,6 +131,35 @@ class TournamentControllerTest {
     }
 
     @Test
+    void publicDetailRelocalizesLegacyGeneratedSoloTeamName() throws Exception {
+        // 1. Arrange
+        final User player = UserUtils.getUser(9L);
+        final Tournament tournament = tournament(77L, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam team = team(1L, tournament, "Equipo individual #1");
+        AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(tournament));
+        Mockito.when(
+                        tournamentRegistrationService.findSoloEntry(
+                                Mockito.eq(77L), Mockito.eq(player)))
+                .thenReturn(Optional.empty());
+        Mockito.when(
+                        tournamentRegistrationService.findUserTeam(
+                                Mockito.eq(77L), Mockito.eq(player)))
+                .thenReturn(Optional.of(team));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "tournamentPage",
+                                        Matchers.hasProperty(
+                                                "participationLabel",
+                                                Matchers.is("You are on Solo squad #1."))));
+    }
+
+    @Test
     void publicDetailTurnsOffJoinBeforeRegistrationOpens() throws Exception {
         // 1. Arrange
         Mockito.when(tournamentService.findPublicTournament(77L))
