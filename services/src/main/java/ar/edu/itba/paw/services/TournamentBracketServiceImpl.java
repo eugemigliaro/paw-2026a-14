@@ -221,7 +221,12 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                         : tournamentTeamDao.findUserTeam(tournamentId, viewer.getId()).orElse(null);
 
         return new TournamentBracketView(
-                tournament, teams, matches, viewerTeam, focusedMatch(matches, viewerTeam));
+                tournament,
+                teams,
+                matches,
+                viewerTeam,
+                focusedMatch(matches, viewerTeam),
+                tournamentTeamDao.findMembersByTournament(tournamentId));
     }
 
     @Override

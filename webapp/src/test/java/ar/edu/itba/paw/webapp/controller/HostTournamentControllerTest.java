@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -18,6 +19,7 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
+import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
@@ -26,6 +28,7 @@ import ar.edu.itba.paw.services.TournamentMatchScheduleRequest;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.UpdateTournamentRequest;
+import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
@@ -372,6 +375,11 @@ class HostTournamentControllerTest {
         final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
         final TournamentTeam firstTeam = team(1L, tournament, "Team One");
         final TournamentTeam secondTeam = team(2L, tournament, "Team Two");
+        final List<TournamentTeamMember> teamMembers =
+                List.of(
+                        member(firstTeam, UserUtils.getUser(11L)),
+                        member(firstTeam, UserUtils.getUser(12L)),
+                        member(secondTeam, UserUtils.getUser(13L)));
         final TournamentMatch match =
                 new TournamentMatch(
                         10L,
@@ -400,13 +408,51 @@ class HostTournamentControllerTest {
                                 java.util.List.of(firstTeam, secondTeam),
                                 java.util.List.of(match),
                                 null,
-                                match));
+                                match,
+                                teamMembers));
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/77/bracket/setup"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("host/tournaments/bracket-setup"))
-                .andExpect(model().attributeExists("bracketPage"));
+        final var result =
+                mockMvc.perform(get("/host/tournaments/77/bracket/setup"))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("host/tournaments/bracket-setup"))
+                        .andExpect(model().attributeExists("bracketPage"))
+                        .andReturn();
+        final TournamentBracketViewModel bracketPage =
+                (TournamentBracketViewModel) result.getModelAndView().getModel().get("bracketPage");
+        Assertions.assertNotNull(bracketPage);
+        Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
+        Assertions.assertEquals(
+                "user11, user12", bracketPage.getTeamRosters().get(0).getMembersLabel());
+    }
+
+    @Test
+    void getBracketSetupForHostShowsTeamsWhenBracketIsNotGenerated() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, host, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam firstTeam = team(1L, tournament, "Team One");
+        final TournamentTeam secondTeam = team(2L, tournament, "Team Two");
+        Mockito.when(tournamentService.findTournamentForHost(77L, host))
+                .thenReturn(java.util.Optional.of(tournament));
+        Mockito.when(tournamentBracketService.getBracket(77L, host))
+                .thenThrow(
+                        new TournamentBracketException(
+                                TournamentBracketFailureReason.BRACKET_NOT_GENERATED,
+                                "Not generated"));
+        Mockito.when(tournamentBracketService.listTeamsForSetup(77L, host))
+                .thenReturn(List.of(firstTeam, secondTeam));
+
+        // 2. Exercise + 3. Assert
+        final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
+
+        final TournamentBracketViewModel bracketPage =
+                (TournamentBracketViewModel) result.getModelAndView().getModel().get("bracketPage");
+        Assertions.assertNotNull(bracketPage);
+        Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
+        Assertions.assertEquals("Team One", bracketPage.getTeamRosters().get(0).getTeamName());
+        Assertions.assertEquals("Team Two", bracketPage.getTeamRosters().get(1).getTeamName());
     }
 
     @Test
@@ -645,6 +691,10 @@ class HostTournamentControllerTest {
             final Long id, final Tournament tournament, final String name) {
         return new TournamentTeam(
                 id, tournament, name, TournamentTeamOrigin.SOLO_POOL, null, FIXED_NOW);
+    }
+
+    private static TournamentTeamMember member(final TournamentTeam team, final User user) {
+        return new TournamentTeamMember(null, team, user, false, FIXED_NOW);
     }
 
     private static TournamentMatch bracketMatch(final Long id, final Tournament tournament) {

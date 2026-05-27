@@ -495,6 +495,55 @@
 	gap: 0.5rem;
 }
 
+.tournament-roster-panel {
+	display: grid;
+	gap: 1.25rem;
+	padding: 1.1rem;
+	margin-bottom: 1.5rem;
+}
+
+.tournament-roster-table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 0.9rem;
+}
+
+.tournament-roster-table thead tr {
+	border-bottom: 2px solid rgba(0, 100, 90, 0.14);
+}
+
+.tournament-roster-table th {
+	color: var(--text-secondary);
+	font-size: 0.78rem;
+	font-weight: 700;
+	padding: 0.5rem 0.75rem;
+	text-align: left;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.tournament-roster-table td {
+	color: var(--text-primary);
+	font-weight: 700;
+	overflow-wrap: anywhere;
+	padding: 0.65rem 0.75rem;
+	vertical-align: top;
+}
+
+.tournament-roster-table td:first-child {
+	font-weight: 800;
+	width: 35%;
+}
+
+.tournament-roster-table tbody tr {
+	border-bottom: 1px solid rgba(0, 100, 90, 0.08);
+	transition: background 0.12s ease;
+}
+
+.tournament-roster-table tbody tr:last-child {
+	border-bottom: none;
+}
+
 @media (max-width: 720px) {
 	.tournament-facts__grid {
 		grid-template-columns: 1fr;

@@ -31,6 +31,35 @@
 					</c:if>
 				</header>
 
+				<spring:message var="rosterTitle" code="tournament.bracket.roster.title" />
+				<spring:message var="rosterTeamLabel" code="tournament.bracket.roster.team" />
+				<spring:message var="rosterMembersLabel" code="tournament.bracket.roster.members" />
+				<spring:message var="rosterEmptyLabel" code="tournament.bracket.roster.emptyTeam" />
+				<section class="panel tournament-roster-panel" aria-labelledby="tournament-roster-title">
+					<h2 id="tournament-roster-title" class="form-card__title"><c:out value="${rosterTitle}" /></h2>
+					<table class="tournament-roster-table">
+						<thead>
+							<tr>
+								<th scope="col"><c:out value="${rosterTeamLabel}" /></th>
+								<th scope="col"><c:out value="${rosterMembersLabel}" /></th>
+							</tr>
+						</thead>
+						<tbody>
+							<c:forEach var="teamRoster" items="${bracketPage.teamRosters}">
+								<tr>
+									<td><c:out value="${teamRoster.teamName}" /></td>
+									<td>
+										<c:choose>
+											<c:when test="${teamRoster.hasMembers}"><c:out value="${teamRoster.membersLabel}" /></c:when>
+											<c:otherwise><c:out value="${rosterEmptyLabel}" /></c:otherwise>
+										</c:choose>
+									</td>
+								</tr>
+							</c:forEach>
+						</tbody>
+					</table>
+				</section>
+
 				<c:if test="${not empty tournamentNoticeCode}">
 					<p class="booking-panel__notice booking-panel__notice--success">
 						<spring:message code="${tournamentNoticeCode}" />
