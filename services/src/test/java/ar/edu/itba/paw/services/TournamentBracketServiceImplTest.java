@@ -1,8 +1,10 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.EloUpdatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -26,6 +28,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -103,6 +106,46 @@ public class TournamentBracketServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(3, matches.size());
         Assertions.assertEquals(FIXED_NOW, tournament.getBracketGeneratedAt());
+    }
+
+    @Test
+    public void eloPairingMatchesHighestAgainstLowest() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
+        tournament.setPairingStrategy(TournamentPairingStrategy.ELO);
+        final List<TournamentTeam> teams = teams(tournament, 4);
+        final User topSeedPlayer = createUser(21L);
+        final User secondSeedPlayer = createUser(22L);
+        final User thirdSeedPlayer = createUser(23L);
+        final User fourthSeedPlayer = createUser(24L);
+        configureGenerate(tournament, teams);
+        tournament.setPairingStrategy(TournamentPairingStrategy.ELO);
+        Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
+                .thenReturn(
+                        List.of(
+                                member(teams.get(0), topSeedPlayer),
+                                member(teams.get(1), secondSeedPlayer),
+                                member(teams.get(2), thirdSeedPlayer),
+                                member(teams.get(3), fourthSeedPlayer)));
+        Mockito.when(userSportRatingService.getEffectiveElo(topSeedPlayer, Sport.FOOTBALL))
+                .thenReturn(1600);
+        Mockito.when(userSportRatingService.getEffectiveElo(secondSeedPlayer, Sport.FOOTBALL))
+                .thenReturn(1200);
+        Mockito.when(userSportRatingService.getEffectiveElo(thirdSeedPlayer, Sport.FOOTBALL))
+                .thenReturn(1100);
+        Mockito.when(userSportRatingService.getEffectiveElo(fourthSeedPlayer, Sport.FOOTBALL))
+                .thenReturn(800);
+
+        // 2. Exercise
+        final List<TournamentMatch> matches =
+                bracketService.generateBracket(10L, tournament.getHost());
+
+        // 3. Assert
+        Assertions.assertSame(teams.get(0), matches.get(0).getTeamA());
+        Assertions.assertSame(teams.get(3), matches.get(0).getTeamB());
+        Assertions.assertSame(teams.get(1), matches.get(1).getTeamA());
+        Assertions.assertSame(teams.get(2), matches.get(1).getTeamB());
     }
 
     @Test
@@ -388,6 +431,83 @@ public class TournamentBracketServiceImplTest {
                         firstRoundMatch.getId(),
                         new TournamentWinnerDeclarationRequest(firstRoundMatch.getTeamA().getId()),
                         UserUtils.getUser(99L));
+
+        // 3. Assert
+        Assertions.assertSame(firstRoundMatch.getTeamA(), result.getWinnerTeam());
+        Assertions.assertEquals(TournamentMatchStatus.DONE, result.getStatus());
+    }
+
+    @Test
+    public void declareWinnerUpdatesEloForRatedSports() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        final TournamentMatch firstRoundMatch = matches.get(0);
+        final User winningPlayer = createUser(11L);
+        final User losingPlayer = createUser(12L);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
+                .thenReturn(Optional.of(firstRoundMatch));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+        Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
+                .thenReturn(
+                        List.of(
+                                member(firstRoundMatch.getTeamA(), winningPlayer),
+                                member(firstRoundMatch.getTeamB(), losingPlayer)));
+        final AtomicReference<List<User>> capturedWinners = new AtomicReference<>();
+        final AtomicReference<List<User>> capturedLosers = new AtomicReference<>();
+        Mockito.when(
+                        userSportRatingService.applyMatchResult(
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.eq(Sport.FOOTBALL)))
+                .thenAnswer(
+                        invocation -> {
+                            capturedWinners.set(invocation.getArgument(0));
+                            capturedLosers.set(invocation.getArgument(1));
+                            return new EloUpdatedResult(Sport.FOOTBALL, List.of());
+                        });
+
+        // 2. Exercise
+        bracketService.declareWinner(
+                10L,
+                firstRoundMatch.getId(),
+                new TournamentWinnerDeclarationRequest(firstRoundMatch.getTeamA().getId()),
+                tournament.getHost());
+
+        // 3. Assert
+        Assertions.assertEquals(List.of(winningPlayer), capturedWinners.get());
+        Assertions.assertEquals(List.of(losingPlayer), capturedLosers.get());
+    }
+
+    @Test
+    public void declareWinnerSkipsEloForOtherSports() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
+        tournament.setSport(Sport.OTHER);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        final TournamentMatch firstRoundMatch = matches.get(0);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
+                .thenReturn(Optional.of(firstRoundMatch));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+        Mockito.lenient()
+                .when(
+                        userSportRatingService.applyMatchResult(
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.anyList(),
+                                ArgumentMatchers.eq(Sport.OTHER)))
+                .thenThrow(new AssertionError("ELO should not be updated for OTHER sports"));
+
+        // 2. Exercise
+        final TournamentMatch result =
+                bracketService.declareWinner(
+                        10L,
+                        firstRoundMatch.getId(),
+                        new TournamentWinnerDeclarationRequest(firstRoundMatch.getTeamA().getId()),
+                        tournament.getHost());
 
         // 3. Assert
         Assertions.assertSame(firstRoundMatch.getTeamA(), result.getWinnerTeam());
@@ -1049,6 +1169,14 @@ public class TournamentBracketServiceImplTest {
                 parentMatchB,
                 FIXED_NOW,
                 FIXED_NOW);
+    }
+
+    private static TournamentTeamMember member(final TournamentTeam team, final User user) {
+        return new TournamentTeamMember(null, team, user, false, FIXED_NOW);
+    }
+
+    private static User createUser(final Long id) {
+        return new User(id, "user" + id + "@test.com", "user" + id, null, null, null, null, "en");
     }
 
     private static List<TournamentTeam> teams(final Tournament tournament, final int count) {

@@ -245,6 +245,10 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         match.setUpdatedAt(now);
         final TournamentMatch updatedMatch = tournamentMatchDao.update(match);
 
+        if (tournament.getSport() != Sport.OTHER) {
+            updateRatingsForMatchResult(tournament, updatedMatch);
+        }
+
         final boolean completed = propagateWinner(tournament, updatedMatch, winner, now);
         tournamentMailService.sendMatchResultEmail(
                 tournament, updatedMatch, winner, losingTeam(updatedMatch, winner));
@@ -533,7 +537,24 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                                                 Optional.ofNullable(team.getSeedPosition())
                                                         .orElse(Integer.MAX_VALUE))
                                 .thenComparing(TournamentTeam::getId))
-                .toList();
+                .collect(
+                        Collectors.collectingAndThen(
+                                Collectors.toList(), this::interleaveForBrackets));
+    }
+
+    private List<TournamentTeam> interleaveForBrackets(final List<TournamentTeam> sortedTeams) {
+        final List<TournamentTeam> orderedTeams = new ArrayList<>(sortedTeams.size());
+        int left = 0;
+        int right = sortedTeams.size() - 1;
+        while (left <= right) {
+            orderedTeams.add(sortedTeams.get(left));
+            left++;
+            if (left <= right) {
+                orderedTeams.add(sortedTeams.get(right));
+                right--;
+            }
+        }
+        return orderedTeams;
     }
 
     private double averageElo(final List<User> teamMembers, final Sport sport) {
@@ -788,6 +809,24 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             return match.getTeamB();
         }
         return match.getTeamA();
+    }
+
+    private void updateRatingsForMatchResult(
+            final Tournament tournament, final TournamentMatch match) {
+        final Map<Long, List<User>> membersByTeam = membersByTeam(tournament.getId());
+        userSportRatingService.applyMatchResult(
+                membersByTeam.getOrDefault(match.getTeamA().getId(), List.of()),
+                membersByTeam.getOrDefault(match.getTeamB().getId(), List.of()),
+                tournament.getSport());
+    }
+
+    private Map<Long, List<User>> membersByTeam(final long tournamentId) {
+        return tournamentTeamDao.findMembersByTournament(tournamentId).stream()
+                .collect(
+                        Collectors.groupingBy(
+                                member -> member.getTeam().getId(),
+                                Collectors.mapping(
+                                        TournamentTeamMember::getUser, Collectors.toList())));
     }
 
     private Optional<TournamentMatch> findChildMatch(
