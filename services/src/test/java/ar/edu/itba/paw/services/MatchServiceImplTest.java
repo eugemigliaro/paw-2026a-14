@@ -76,6 +76,7 @@ public class MatchServiceImplTest {
                         matchParticipantDao,
                         matchNotificationService,
                         securityService,
+                        new RecurringMatchAsyncService(matchDao),
                         messageSource,
                         clock);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
