@@ -12,6 +12,7 @@ public class TournamentBracketViewModel {
     private final boolean publishable;
     private final boolean canManageResults;
     private final List<RoundViewModel> rounds;
+    private final List<TeamRosterViewModel> teamRosters;
 
     public TournamentBracketViewModel(
             final Long tournamentId,
@@ -22,6 +23,28 @@ public class TournamentBracketViewModel {
             final boolean publishable,
             final boolean canManageResults,
             final List<RoundViewModel> rounds) {
+        this(
+                tournamentId,
+                title,
+                statusLabel,
+                statusTone,
+                generated,
+                publishable,
+                canManageResults,
+                rounds,
+                List.of());
+    }
+
+    public TournamentBracketViewModel(
+            final Long tournamentId,
+            final String title,
+            final String statusLabel,
+            final String statusTone,
+            final boolean generated,
+            final boolean publishable,
+            final boolean canManageResults,
+            final List<RoundViewModel> rounds,
+            final List<TeamRosterViewModel> teamRosters) {
         this.tournamentId = tournamentId;
         this.title = title;
         this.statusLabel = statusLabel;
@@ -30,6 +53,7 @@ public class TournamentBracketViewModel {
         this.publishable = publishable;
         this.canManageResults = canManageResults;
         this.rounds = rounds == null ? List.of() : List.copyOf(rounds);
+        this.teamRosters = teamRosters == null ? List.of() : List.copyOf(teamRosters);
     }
 
     public Long getTournamentId() {
@@ -62,6 +86,14 @@ public class TournamentBracketViewModel {
 
     public List<RoundViewModel> getRounds() {
         return rounds;
+    }
+
+    public List<TeamRosterViewModel> getTeamRosters() {
+        return teamRosters;
+    }
+
+    public boolean isHasTeamRosters() {
+        return !teamRosters.isEmpty();
     }
 
     public static class RoundViewModel {
@@ -248,6 +280,30 @@ public class TournamentBracketViewModel {
 
         public String getLongitude() {
             return longitude;
+        }
+    }
+
+    public static class TeamRosterViewModel {
+
+        private final String teamName;
+        private final String membersLabel;
+
+        public TeamRosterViewModel(final String teamName, final List<String> memberUsernames) {
+            this.teamName = teamName;
+            this.membersLabel =
+                    String.join(", ", memberUsernames == null ? List.of() : memberUsernames);
+        }
+
+        public String getTeamName() {
+            return teamName;
+        }
+
+        public String getMembersLabel() {
+            return membersLabel;
+        }
+
+        public boolean isHasMembers() {
+            return !membersLabel.isBlank();
         }
     }
 }

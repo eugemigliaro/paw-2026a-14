@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -32,6 +33,7 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
+import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -41,6 +43,7 @@ import java.util.Locale;
 import java.util.Optional;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -350,21 +353,42 @@ class TournamentControllerTest {
         // 1. Arrange
         final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
         final TournamentMatch match = bracketMatch(10L, tournament);
+        final TournamentTeam firstTeam = match.getTeamA();
+        final TournamentTeam secondTeam = match.getTeamB();
+        final List<TournamentTeamMember> teamMembers =
+                List.of(
+                        member(firstTeam, UserUtils.getUser(11L)),
+                        member(firstTeam, UserUtils.getUser(12L)),
+                        member(secondTeam, UserUtils.getUser(13L)));
         Mockito.when(tournamentBracketService.getBracket(77L, null))
                 .thenReturn(
                         new TournamentBracketView(
-                                tournament, List.of(), List.of(match), null, match));
+                                tournament,
+                                List.of(firstTeam, secondTeam),
+                                List.of(match),
+                                null,
+                                match,
+                                teamMembers));
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
-                .andExpect(status().isOk())
-                .andExpect(view().name("tournaments/bracket"))
-                .andExpect(model().attributeExists("bracketPage"))
-                .andExpect(
-                        model().attribute(
-                                        "bracketPage",
-                                        Matchers.hasProperty(
-                                                "title", Matchers.is("City Padel Cup"))));
+        final var result =
+                mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("tournaments/bracket"))
+                        .andExpect(model().attributeExists("bracketPage"))
+                        .andExpect(
+                                model().attribute(
+                                                "bracketPage",
+                                                Matchers.hasProperty(
+                                                        "title", Matchers.is("City Padel Cup"))));
+        final var mvcResult = result.andReturn();
+        final TournamentBracketViewModel bracketPage =
+                (TournamentBracketViewModel)
+                        mvcResult.getModelAndView().getModel().get("bracketPage");
+        Assertions.assertNotNull(bracketPage);
+        Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
+        Assertions.assertEquals(
+                "user11, user12", bracketPage.getTeamRosters().get(0).getMembersLabel());
     }
 
     @Test
@@ -522,6 +546,10 @@ class TournamentControllerTest {
     private static TournamentTeam team(
             final Long id, final Tournament tournament, final String name) {
         return new TournamentTeam(id, tournament, name, TournamentTeamOrigin.SOLO_POOL, null, NOW);
+    }
+
+    private static TournamentTeamMember member(final TournamentTeam team, final User user) {
+        return new TournamentTeamMember(null, team, user, false, NOW);
     }
 
     private static MessageSource messageSource() {

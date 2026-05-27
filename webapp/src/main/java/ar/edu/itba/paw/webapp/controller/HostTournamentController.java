@@ -5,6 +5,8 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
+import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.Sport;
@@ -479,7 +481,7 @@ public class HostTournamentController {
                 handleBracketException(exception, null);
                 throw exception;
             }
-            bracketPage = buildUngeneratedBracketPage(tournament, locale);
+            bracketPage = buildUngeneratedBracketPage(tournament, actingUser, locale);
         }
 
         final ModelAndView mav = new ModelAndView("host/tournaments/bracket-setup");
@@ -1005,7 +1007,9 @@ public class HostTournamentController {
     }
 
     private TournamentBracketViewModel buildUngeneratedBracketPage(
-            final Tournament tournament, final Locale locale) {
+            final Tournament tournament, final User actingUser, final Locale locale) {
+        final List<TournamentTeam> teams =
+                tournamentBracketService.listTeamsForSetup(tournament.getId(), actingUser);
         return new TournamentBracketViewModel(
                 tournament.getId(),
                 tournament.getTitle(),
@@ -1014,7 +1018,10 @@ public class HostTournamentController {
                 false,
                 false,
                 false,
-                List.of());
+                List.of(),
+                teamRosters(
+                        new TournamentBracketView(tournament, teams, List.of(), null, null),
+                        locale));
     }
 
     private TournamentBracketViewModel buildBracketPage(
@@ -1137,7 +1144,29 @@ public class HostTournamentController {
                 true,
                 TournamentStatus.BRACKET_SETUP == tournament.getStatus(),
                 false,
-                rounds);
+                rounds,
+                teamRosters(bracketView, locale));
+    }
+
+    private List<TournamentBracketViewModel.TeamRosterViewModel> teamRosters(
+            final TournamentBracketView bracketView, final Locale locale) {
+        final Map<Long, List<String>> usernamesByTeamId = new LinkedHashMap<>();
+        for (final TournamentTeamMember member : bracketView.getTeamMembers()) {
+            if (member.getTeam() == null || member.getUser() == null) {
+                continue;
+            }
+            usernamesByTeamId
+                    .computeIfAbsent(member.getTeam().getId(), ignored -> new ArrayList<>())
+                    .add(member.getUser().getUsername());
+        }
+
+        return bracketView.getTeams().stream()
+                .map(
+                        team ->
+                                new TournamentBracketViewModel.TeamRosterViewModel(
+                                        teamName(team, locale),
+                                        usernamesByTeamId.getOrDefault(team.getId(), List.of())))
+                .toList();
     }
 
     private String statusLabel(final Tournament tournament, final Locale locale) {

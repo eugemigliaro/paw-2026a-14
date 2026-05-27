@@ -36,6 +36,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -720,7 +721,29 @@ public class TournamentController {
                 true,
                 false,
                 canManageResults,
-                rounds);
+                rounds,
+                teamRosters(bracketView, locale));
+    }
+
+    private List<TournamentBracketViewModel.TeamRosterViewModel> teamRosters(
+            final TournamentBracketView bracketView, final Locale locale) {
+        final Map<Long, List<String>> usernamesByTeamId = new LinkedHashMap<>();
+        for (final TournamentTeamMember member : bracketView.getTeamMembers()) {
+            if (member.getTeam() == null || member.getUser() == null) {
+                continue;
+            }
+            usernamesByTeamId
+                    .computeIfAbsent(member.getTeam().getId(), ignored -> new ArrayList<>())
+                    .add(member.getUser().getUsername());
+        }
+
+        return bracketView.getTeams().stream()
+                .map(
+                        team ->
+                                new TournamentBracketViewModel.TeamRosterViewModel(
+                                        teamName(team, locale),
+                                        usernamesByTeamId.getOrDefault(team.getId(), List.of())))
+                .toList();
     }
 
     private String roundLabel(final int roundNumber, final int roundCount, final Locale locale) {
