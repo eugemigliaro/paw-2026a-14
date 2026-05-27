@@ -118,7 +118,7 @@
 												</header>
 												<div class="tournament-round-row__matches">
 													<c:forEach var="match" items="${round.matches}">
-														<div class="tournament-match-row ${match.focused ? 'tournament-match-row--focused' : ''}">
+														<div class="tournament-match-row">
 
 															<article class="tournament-bracket-match">
 																<div class="tournament-bracket-match__header">
@@ -132,7 +132,7 @@
 															</article>
 
 															<article class="tournament-schedule-match" data-match-schedule="true" data-round-number="${round.roundNumber}" data-round-label="${round.label}" data-match-label="${match.label}">
-																<div class="tournament-schedule-match__grid">
+																<div class="tournament-schedule-match__grid tournament-schedule-match__date-time-grid">
 																	<label class="field" for="match-start-date-${match.id}" data-start-field="true">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.startDate" /></span>
 																		<input class="field__control" id="match-start-date-${match.id}" data-start-date="true" name="startDate_${match.id}" type="date" value="<c:out value='${match.startDate}' />" required="required" />
@@ -141,6 +141,7 @@
 																	<label class="field" for="match-start-time-${match.id}">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.startTime" /></span>
 																		<input class="field__control" id="match-start-time-${match.id}" data-start-time="true" name="startTime_${match.id}" type="time" value="<c:out value='${match.startTime}' />" required="required" />
+																		<span class="field__error" data-field-error="true"></span>
 																	</label>
 																	<label class="field" for="match-end-date-${match.id}" data-end-field="true">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.endDate" /></span>
@@ -150,6 +151,7 @@
 																	<label class="field" for="match-end-time-${match.id}">
 																		<span class="field__label"><spring:message code="tournament.bracket.schedule.endTime" /></span>
 																		<input class="field__control" id="match-end-time-${match.id}" data-end-time="true" name="endTime_${match.id}" type="time" value="<c:out value='${match.endTime}' />" required="required" />
+																		<span class="field__error" data-field-error="true"></span>
 																	</label>
 																</div>
 																<input type="hidden" name="address_${match.id}" value="<c:out value='${match.address}' />" />
@@ -178,7 +180,7 @@
 											<h2 class="tournament-bracket-round__title"><c:out value="${round.label}" /></h2>
 											<div class="tournament-bracket-round__matches">
 												<c:forEach var="match" items="${round.matches}">
-													<article class="tournament-bracket-match ${match.focused ? 'tournament-bracket-match--focused' : ''}">
+													<article class="tournament-bracket-match">
 														<div class="tournament-bracket-match__header">
 															<p class="tournament-bracket-match__label"><c:out value="${match.label}" /></p>
 															<span class="tournament-bracket-match__round"><c:out value="${round.label}" /></span>

@@ -43,6 +43,8 @@ This document tracks the reconciliation between `feat/tournaments` and
 - Fixed My Events tournament filter generation so match-only date/status filters
   do not hide tournaments until another filter is clicked.
 - Updated tournament docs to describe the no-walkover result model.
+- Completed Unit 1 bracket setup UX polish.
+- Completed Unit 2 public bracket polish.
 
 ## Verified Flows
 
@@ -57,22 +59,6 @@ This document tracks the reconciliation between `feat/tournaments` and
   viewing, winner recording, and tournament completion.
 
 ## Remaining Cleanup Units
-
-### Unit 1: Bracket Setup UX
-
-- Make the bracket setup page visually consistent with the rest of the webapp.
-- Reduce the repeated "generate/publish" screen feel after a bracket is already
-  generated.
-- Make validation summary and schedule inputs denser and easier to scan.
-- Keep the existing pairing strategy behavior unless the product decision
-  changes.
-
-### Unit 2: Public Bracket Polish
-
-- Make winners and losers more visually obvious on completed matches.
-- Revisit the match-focus side rail; either make it useful or remove it.
-- Ensure public bracket cards show schedule and venue in a compact,
-  match-card-like layout.
 
 ### Unit 3: Tournament Detail Panels
 

@@ -1008,10 +1008,6 @@ public class HostTournamentController {
                 tournament.getTitle(),
                 statusLabel(tournament, locale),
                 statusTone(tournament),
-                null,
-                null,
-                null,
-                null,
                 false,
                 false,
                 false,
@@ -1021,10 +1017,7 @@ public class HostTournamentController {
     private TournamentBracketViewModel buildBracketPage(
             final TournamentBracketView bracketView, final Locale locale) {
         final Tournament tournament = bracketView.getTournament();
-        final Long focusedMatchId =
-                bracketView.getFocusedMatch() == null
-                        ? null
-                        : bracketView.getFocusedMatch().getId();
+        final String defaultScheduleDate = LocalDate.now(ZoneId.systemDefault()).toString();
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 bracketView.getMatches().stream()
                         .sorted(
@@ -1035,16 +1028,14 @@ public class HostTournamentController {
                                         TournamentMatch::getRoundNumber,
                                         LinkedHashMap::new,
                                         Collectors.toList()));
+        final int totalRounds = matchesByRound.size();
         final List<TournamentBracketViewModel.RoundViewModel> rounds =
                 matchesByRound.entrySet().stream()
                         .map(
                                 entry ->
                                         new TournamentBracketViewModel.RoundViewModel(
                                                 entry.getKey(),
-                                                roundLabel(
-                                                        entry.getKey(),
-                                                        matchesByRound.size(),
-                                                        locale),
+                                                roundLabel(entry.getKey(), totalRounds, locale),
                                                 entry.getValue().stream()
                                                         .map(
                                                                 match ->
@@ -1071,32 +1062,59 @@ public class HostTournamentController {
                                                                                 matchStatusLabel(
                                                                                         match,
                                                                                         locale),
-                                                                                Objects.equals(
-                                                                                        focusedMatchId,
+                                                                                match.getStatus()
+                                                                                        .getDbValue()
+                                                                                        .replace(
+                                                                                                '_',
+                                                                                                '-'),
+                                                                                false,
+                                                                                false,
+                                                                                isWinner(
                                                                                         match
-                                                                                                .getId()),
-                                                                                false,
-                                                                                false,
+                                                                                                .getTeamA(),
+                                                                                        match
+                                                                                                .getWinnerTeam()),
+                                                                                isWinner(
+                                                                                        match
+                                                                                                .getTeamB(),
+                                                                                        match
+                                                                                                .getWinnerTeam()),
+                                                                                entry.getKey()
+                                                                                        == totalRounds,
                                                                                 false,
                                                                                 matchScheduleLabel(
                                                                                         match,
                                                                                         locale),
-                                                                                scheduleDate(
-                                                                                        scheduleStart(
-                                                                                                tournament,
-                                                                                                match)),
-                                                                                scheduleTime(
-                                                                                        scheduleStart(
-                                                                                                tournament,
-                                                                                                match)),
-                                                                                scheduleDate(
-                                                                                        scheduleEnd(
-                                                                                                tournament,
-                                                                                                match)),
-                                                                                scheduleTime(
-                                                                                        scheduleEnd(
-                                                                                                tournament,
-                                                                                                match)),
+                                                                                match
+                                                                                                        .getScheduledStartsAt()
+                                                                                                == null
+                                                                                        ? defaultScheduleDate
+                                                                                        : scheduleDate(
+                                                                                                match
+                                                                                                        .getScheduledStartsAt()),
+                                                                                match
+                                                                                                        .getScheduledStartsAt()
+                                                                                                == null
+                                                                                        ? defaultScheduleStartTime(
+                                                                                                entry
+                                                                                                        .getKey())
+                                                                                        : scheduleTime(
+                                                                                                match
+                                                                                                        .getScheduledStartsAt()),
+                                                                                match
+                                                                                                        .getScheduledEndsAt()
+                                                                                                == null
+                                                                                        ? defaultScheduleDate
+                                                                                        : scheduleDate(
+                                                                                                match
+                                                                                                        .getScheduledEndsAt()),
+                                                                                match
+                                                                                                        .getScheduledEndsAt()
+                                                                                                == null
+                                                                                        ? ""
+                                                                                        : scheduleTime(
+                                                                                                match
+                                                                                                        .getScheduledEndsAt()),
                                                                                 scheduleAddress(
                                                                                         tournament,
                                                                                         match),
@@ -1113,12 +1131,6 @@ public class HostTournamentController {
                 tournament.getTitle(),
                 statusLabel(tournament, locale),
                 statusTone(tournament),
-                focusedMatchLabel(bracketView.getFocusedMatch(), locale),
-                focusedMatchTeamsLabel(bracketView.getFocusedMatch(), locale),
-                matchScheduleLabel(bracketView.getFocusedMatch(), locale),
-                bracketView.getFocusedMatch() == null
-                        ? null
-                        : bracketView.getFocusedMatch().getAddress(),
                 true,
                 TournamentStatus.BRACKET_SETUP == tournament.getStatus(),
                 false,
@@ -1178,20 +1190,10 @@ public class HostTournamentController {
                 locale);
     }
 
-    private String focusedMatchLabel(final TournamentMatch match, final Locale locale) {
-        return match == null ? null : matchLabel(match, locale);
-    }
-
-    private String focusedMatchTeamsLabel(final TournamentMatch match, final Locale locale) {
-        if (match == null) {
-            return null;
-        }
-        return messageSource.getMessage(
-                "tournament.bracket.match.teams",
-                new Object[] {
-                    teamName(match.getTeamA(), locale), teamName(match.getTeamB(), locale)
-                },
-                locale);
+    private static boolean isWinner(
+            final ar.edu.itba.paw.models.TournamentTeam team,
+            final ar.edu.itba.paw.models.TournamentTeam winner) {
+        return team != null && winner != null && Objects.equals(team.getId(), winner.getId());
     }
 
     private List<TournamentMatchScheduleRequest> allMatchSchedules(
@@ -1231,16 +1233,9 @@ public class HostTournamentController {
         return value;
     }
 
-    private static Instant scheduleStart(final Tournament tournament, final TournamentMatch match) {
-        return match.getScheduledStartsAt() == null
-                ? tournament.getStartsAt()
-                : match.getScheduledStartsAt();
-    }
-
-    private static Instant scheduleEnd(final Tournament tournament, final TournamentMatch match) {
-        return match.getScheduledEndsAt() == null
-                ? tournament.getEndsAt()
-                : match.getScheduledEndsAt();
+    private static String defaultScheduleStartTime(final int roundNumber) {
+        return TIME_INPUT_FORMATTER.format(
+                LocalTime.of(18, 0).plusHours(Math.max(0, roundNumber - 1)));
     }
 
     private static String scheduleDate(final Instant instant) {

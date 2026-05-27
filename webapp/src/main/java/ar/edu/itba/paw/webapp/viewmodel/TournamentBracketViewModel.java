@@ -8,10 +8,6 @@ public class TournamentBracketViewModel {
     private final String title;
     private final String statusLabel;
     private final String statusTone;
-    private final String focusedMatchLabel;
-    private final String focusedMatchTeamsLabel;
-    private final String focusedMatchScheduleLabel;
-    private final String focusedMatchAddress;
     private final boolean generated;
     private final boolean publishable;
     private final boolean canManageResults;
@@ -22,10 +18,6 @@ public class TournamentBracketViewModel {
             final String title,
             final String statusLabel,
             final String statusTone,
-            final String focusedMatchLabel,
-            final String focusedMatchTeamsLabel,
-            final String focusedMatchScheduleLabel,
-            final String focusedMatchAddress,
             final boolean generated,
             final boolean publishable,
             final boolean canManageResults,
@@ -34,10 +26,6 @@ public class TournamentBracketViewModel {
         this.title = title;
         this.statusLabel = statusLabel;
         this.statusTone = statusTone;
-        this.focusedMatchLabel = focusedMatchLabel;
-        this.focusedMatchTeamsLabel = focusedMatchTeamsLabel;
-        this.focusedMatchScheduleLabel = focusedMatchScheduleLabel;
-        this.focusedMatchAddress = focusedMatchAddress;
         this.generated = generated;
         this.publishable = publishable;
         this.canManageResults = canManageResults;
@@ -58,22 +46,6 @@ public class TournamentBracketViewModel {
 
     public String getStatusTone() {
         return statusTone;
-    }
-
-    public String getFocusedMatchLabel() {
-        return focusedMatchLabel;
-    }
-
-    public String getFocusedMatchTeamsLabel() {
-        return focusedMatchTeamsLabel;
-    }
-
-    public String getFocusedMatchScheduleLabel() {
-        return focusedMatchScheduleLabel;
-    }
-
-    public String getFocusedMatchAddress() {
-        return focusedMatchAddress;
     }
 
     public boolean isGenerated() {
@@ -127,9 +99,12 @@ public class TournamentBracketViewModel {
         private final String teamA;
         private final String teamB;
         private final String statusLabel;
-        private final boolean focused;
+        private final String statusTone;
         private final boolean teamAViewerTeam;
         private final boolean teamBViewerTeam;
+        private final boolean teamAIsWinner;
+        private final boolean teamBIsWinner;
+        private final boolean isFinalRound;
         private final boolean canRecordResult;
         private final String scheduleLabel;
         private final String startDate;
@@ -148,9 +123,12 @@ public class TournamentBracketViewModel {
                 final String teamA,
                 final String teamB,
                 final String statusLabel,
-                final boolean focused,
+                final String statusTone,
                 final boolean teamAViewerTeam,
                 final boolean teamBViewerTeam,
+                final boolean teamAIsWinner,
+                final boolean teamBIsWinner,
+                final boolean isFinalRound,
                 final boolean canRecordResult,
                 final String scheduleLabel,
                 final String startDate,
@@ -167,9 +145,12 @@ public class TournamentBracketViewModel {
             this.teamA = teamA;
             this.teamB = teamB;
             this.statusLabel = statusLabel;
-            this.focused = focused;
+            this.statusTone = statusTone;
             this.teamAViewerTeam = teamAViewerTeam;
             this.teamBViewerTeam = teamBViewerTeam;
+            this.teamAIsWinner = teamAIsWinner;
+            this.teamBIsWinner = teamBIsWinner;
+            this.isFinalRound = isFinalRound;
             this.canRecordResult = canRecordResult;
             this.scheduleLabel = scheduleLabel;
             this.startDate = startDate;
@@ -209,8 +190,8 @@ public class TournamentBracketViewModel {
             return statusLabel;
         }
 
-        public boolean isFocused() {
-            return focused;
+        public String getStatusTone() {
+            return statusTone;
         }
 
         public boolean isTeamAViewerTeam() {
@@ -219,6 +200,18 @@ public class TournamentBracketViewModel {
 
         public boolean isTeamBViewerTeam() {
             return teamBViewerTeam;
+        }
+
+        public boolean isTeamAIsWinner() {
+            return teamAIsWinner;
+        }
+
+        public boolean isTeamBIsWinner() {
+            return teamBIsWinner;
+        }
+
+        public boolean isFinalRound() {
+            return isFinalRound;
         }
 
         public boolean isCanRecordResult() {
