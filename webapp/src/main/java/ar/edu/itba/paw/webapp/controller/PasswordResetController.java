@@ -91,10 +91,7 @@ public class PasswordResetController {
                     accountAuthService.resetPassword(token, resetPasswordForm.getPassword());
             return new ModelAndView("redirect:" + result.getRedirectUrl());
         } catch (final PasswordResetException exception) {
-            bindingResult.rejectValue(
-                    "password",
-                    Objects.requireNonNull(exception.getCode()),
-                    Objects.requireNonNull(exception.getMessage()));
+            bindingResult.rejectValue("password", exception.getCode(), exception.getMessage());
             try {
                 return passwordResetView(
                         token,
