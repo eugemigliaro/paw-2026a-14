@@ -38,6 +38,19 @@
 		<javax.servlet.version>4.0.1</javax.servlet.version>
 		<javax.el.version>3.0.1-b12</javax.el.version>
 		<hamcrest.version>2.2</hamcrest.version>
+		<spotless.maven.plugin.version>3.4.0</spotless.maven.plugin.version>
+		<maven.clean.plugin.version>3.4.0</maven.clean.plugin.version>
+		<maven.resources.plugin.version>3.3.1</maven.resources.plugin.version>
+		<maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+		<maven.surefire.plugin.version>3.3.0</maven.surefire.plugin.version>
+		<maven.war.plugin.version>3.4.0</maven.war.plugin.version>
+		<maven.jar.plugin.version>3.4.2</maven.jar.plugin.version>
+		<maven.install.plugin.version>3.1.2</maven.install.plugin.version>
+		<maven.deploy.plugin.version>3.1.2</maven.deploy.plugin.version>
+		<maven.site.plugin.version>3.12.1</maven.site.plugin.version>
+		<maven.project.info.reports.plugin.version>3.6.1</maven.project.info.reports.plugin.version>
+		<jetty.maven.plugin.version>9.4.58.v20250814</jetty.maven.plugin.version>
+		<maven.dependency.plugin.version>3.7.0</maven.dependency.plugin.version>
 	</properties>
 
 	<dependencyManagement>
@@ -241,11 +254,70 @@
 	</dependencyManagement>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>com.diffplug.spotless</groupId>
+					<artifactId>spotless-maven-plugin</artifactId>
+					<version>${spotless.maven.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-clean-plugin</artifactId>
+					<version>${maven.clean.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>${maven.resources.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven.compiler.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${maven.surefire.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-war-plugin</artifactId>
+					<version>${maven.war.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>${maven.jar.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-install-plugin</artifactId>
+					<version>${maven.install.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-deploy-plugin</artifactId>
+					<version>${maven.deploy.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-site-plugin</artifactId>
+					<version>${maven.site.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<artifactId>maven-project-info-reports-plugin</artifactId>
+					<version>${maven.project.info.reports.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-maven-plugin</artifactId>
+					<version>${jetty.maven.plugin.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-dependency-plugin</artifactId>
+					<version>${maven.dependency.plugin.version}</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
 		<plugins>
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
 				<artifactId>spotless-maven-plugin</artifactId>
-				<version>3.4.0</version>
 				<configuration>
 				<java>
 					<googleJavaFormat>
