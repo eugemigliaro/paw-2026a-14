@@ -169,7 +169,6 @@ class ViewTemplateAssetsTest {
         assertTrue(eventsToggleScript.contains("optionCount === 2 && selectedIndex === 1"));
         assertTrue(toggleTag.contains("iconOnly"));
         assertTrue(toggleTag.contains("leftIcon"));
-        assertTrue(toggleTag.contains("events-toggle-icon.jspf"));
     }
 
     @Test

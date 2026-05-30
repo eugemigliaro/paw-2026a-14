@@ -1,6 +1,7 @@
 <%@ tag body-content="empty" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <%@ attribute name="currentValue" required="false" rtexprvalue="true" %>
 <%@ attribute name="currentFilter" required="false" rtexprvalue="true" %>
 <%@ attribute name="className" required="false" rtexprvalue="true" %>
@@ -76,7 +77,14 @@
                     <c:when test="${resolvedIconOnly}">
                         <span class="events-toggle-icon" aria-hidden="true">
                             <c:set var="resolvedIconName" value="${leftIcon}" />
-                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                            <c:choose>
+                                <c:when test="${resolvedIconName eq 'trophy'}">
+                                    <icon:trophy />
+                                </c:when>
+                                <c:otherwise>
+                                    <icon:football />
+                                </c:otherwise>
+                            </c:choose>
                         </span>
                     </c:when>
                     <c:otherwise>
@@ -92,7 +100,14 @@
                     <c:when test="${resolvedIconOnly}">
                         <span class="events-toggle-icon" aria-hidden="true">
                             <c:set var="resolvedIconName" value="${leftIcon}" />
-                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                            <c:choose>
+                                <c:when test="${resolvedIconName eq 'trophy'}">
+                                    <icon:trophy />
+                                </c:when>
+                                <c:otherwise>
+                                    <icon:football />
+                                </c:otherwise>
+                            </c:choose>
                         </span>
                     </c:when>
                     <c:otherwise>
@@ -111,7 +126,14 @@
                     <c:when test="${resolvedIconOnly}">
                         <span class="events-toggle-icon" aria-hidden="true">
                             <c:set var="resolvedIconName" value="${rightIcon}" />
-                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                            <c:choose>
+                                <c:when test="${resolvedIconName eq 'trophy'}">
+                                    <icon:trophy />
+                                </c:when>
+                                <c:otherwise>
+                                    <icon:football />
+                                </c:otherwise>
+                            </c:choose>
                         </span>
                     </c:when>
                     <c:otherwise>
@@ -127,7 +149,14 @@
                     <c:when test="${resolvedIconOnly}">
                         <span class="events-toggle-icon" aria-hidden="true">
                             <c:set var="resolvedIconName" value="${rightIcon}" />
-                            <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                            <c:choose>
+                                <c:when test="${resolvedIconName eq 'trophy'}">
+                                    <icon:trophy />
+                                </c:when>
+                                <c:otherwise>
+                                    <icon:football />
+                                </c:otherwise>
+                            </c:choose>
                         </span>
                     </c:when>
                     <c:otherwise>
@@ -147,7 +176,14 @@
                         <c:when test="${resolvedIconOnly}">
                             <span class="events-toggle-icon" aria-hidden="true">
                                 <c:set var="resolvedIconName" value="${thirdIcon}" />
-                                <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                                <c:choose>
+                                <c:when test="${resolvedIconName eq 'trophy'}">
+                                    <icon:trophy />
+                                </c:when>
+                                <c:otherwise>
+                                    <icon:football />
+                                </c:otherwise>
+                            </c:choose>
                             </span>
                         </c:when>
                         <c:otherwise>
@@ -163,7 +199,14 @@
                         <c:when test="${resolvedIconOnly}">
                             <span class="events-toggle-icon" aria-hidden="true">
                                 <c:set var="resolvedIconName" value="${thirdIcon}" />
-                                <%@ include file="/WEB-INF/tags/includes/events-toggle-icon.jspf" %>
+                                <c:choose>
+                                <c:when test="${resolvedIconName eq 'trophy'}">
+                                    <icon:trophy />
+                                </c:when>
+                                <c:otherwise>
+                                    <icon:football />
+                                </c:otherwise>
+                            </c:choose>
                             </span>
                         </c:when>
                         <c:otherwise>

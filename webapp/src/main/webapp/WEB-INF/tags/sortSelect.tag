@@ -1,5 +1,6 @@
 <%@ tag body-content="empty" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <%@ attribute name="id" required="false" rtexprvalue="true" %>
 <%@ attribute name="label" required="true" rtexprvalue="true" %>
 <%@ attribute name="ariaLabel" required="false" rtexprvalue="true" %>
@@ -29,11 +30,7 @@
 					aria-expanded="false"
 						aria-labelledby="<c:out value='${resolvedId}' />-label <c:out value='${resolvedId}' />">
 					<span class="filter-dropdown__icon sort-panel__icon" aria-hidden="true">
-						<svg viewBox="0 0 24 24">
-							<path d="M3 7h18" />
-							<path d="M6 12h12" />
-							<path d="M10 17h4" />
-						</svg>
+						<icon:invertedPyramid />
 					</span>
 					<span class="sort-panel__toggle-label"><c:out value="${selectedLabel}" /></span>
 				</button>
