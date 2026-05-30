@@ -19,7 +19,6 @@ import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
@@ -181,8 +180,7 @@ public class MatchDashboardController {
                 tournamentResult,
                 messageSource.getMessage("events.title", null, locale),
                 messageSource.getMessage("events.description", null, locale),
-                messageSource.getMessage("events.empty", null, locale),
-                ShellViewModelFactory.playerShell(messageSource, locale, "/events"));
+                messageSource.getMessage("events.empty", null, locale));
     }
 
     private ModelAndView buildListPage(
@@ -207,14 +205,12 @@ public class MatchDashboardController {
             final PaginatedResult<Tournament> tournamentResult,
             final String title,
             final String description,
-            final String emptyMessage,
-            final Object shell) {
+            final String emptyMessage) {
         final ModelAndView mav = new ModelAndView(view);
         final ZoneId zoneId = ZoneId.of(timezone);
         final DateRangeBounds dateBounds = dateRangeBounds(path, ZoneId.of(timezone));
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
-        mav.addObject("shell", shell);
         mav.addObject("pageTitleCode", pageTitleCode);
         mav.addObject("listTitle", title);
         mav.addObject("listDescription", description);

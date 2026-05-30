@@ -19,7 +19,6 @@ import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
@@ -154,7 +153,6 @@ public class FeedController {
             filters = filters.withSort("soonest");
         }
         final ModelAndView mav = new ModelAndView("feed/index");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/"));
         mav.addObject("selectedType", filters.selectedType());
         mav.addObject("selectedSort", filters.selectedSort());
         mav.addObject("selectedSports", filters.selectedSports());

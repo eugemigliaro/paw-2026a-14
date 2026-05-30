@@ -1681,7 +1681,6 @@ class UiRouteTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attributeExists("feedPage"))
                 .andExpect(model().attribute("nearMeUnavailable", false));
     }
@@ -1691,10 +1690,6 @@ class UiRouteTest {
         mockMvc.perform(get("/").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(
-                        model().attribute(
-                                        "shell",
-                                        Matchers.hasProperty("hostAction", Matchers.nullValue())))
                 .andExpect(
                         model().attribute(
                                         "feedPage",
@@ -2585,7 +2580,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/404"))
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "404"));
     }
 
@@ -2594,7 +2588,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/400"))
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "400"));
     }
 
@@ -2603,7 +2596,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/403"))
                 .andExpect(status().isForbidden())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "403"));
     }
 
@@ -2612,7 +2604,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/500"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "500"));
     }
 
@@ -3402,8 +3393,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
                 .andExpect(model().attributeExists("accountProfile"))
-                .andExpect(model().attributeExists("accountProfileForm"))
-                .andExpect(model().attributeExists("shell"));
+                .andExpect(model().attributeExists("accountProfileForm"));
     }
 
     @Test

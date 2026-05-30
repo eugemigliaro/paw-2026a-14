@@ -16,12 +16,10 @@ import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ShellViewModel;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -30,7 +28,6 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
@@ -67,38 +64,29 @@ class AuthFlowControllerTest {
 
     @Test
     void getLoginRouteRendersLoginPage() throws Exception {
-        final MvcResult result =
-                mockMvc.perform(get("/login"))
-                        .andExpect(status().isOk())
-                        .andExpect(view().name("auth/login"))
-                        .andExpect(model().attributeExists("shell"))
-                        .andReturn();
-
-        assertExploreIsNotActive(result);
+        mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/login"))
+                .andExpect(model().attributeDoesNotExist("shell"))
+                .andReturn();
     }
 
     @Test
     void getRegisterRouteRendersRegisterPageWithInactiveExploreNav() throws Exception {
-        final MvcResult result =
-                mockMvc.perform(get("/register"))
-                        .andExpect(status().isOk())
-                        .andExpect(view().name("auth/register"))
-                        .andExpect(model().attributeExists("shell"))
-                        .andReturn();
-
-        assertExploreIsNotActive(result);
+        mockMvc.perform(get("/register"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/register"))
+                .andExpect(model().attributeDoesNotExist("shell"))
+                .andReturn();
     }
 
     @Test
     void getForgotPasswordRouteRendersForgotPasswordPageWithInactiveExploreNav() throws Exception {
-        final MvcResult result =
-                mockMvc.perform(get("/forgot-password"))
-                        .andExpect(status().isOk())
-                        .andExpect(view().name("auth/forgot-password"))
-                        .andExpect(model().attributeExists("shell"))
-                        .andReturn();
-
-        assertExploreIsNotActive(result);
+        mockMvc.perform(get("/forgot-password"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/forgot-password"))
+                .andExpect(model().attributeDoesNotExist("shell"))
+                .andReturn();
     }
 
     @Test
@@ -110,23 +98,20 @@ class AuthFlowControllerTest {
                         new VerificationRequestResult(
                                 "new@test.com", Instant.parse("2026-04-11T18:00:00Z")));
 
-        final MvcResult result =
-                mockMvc.perform(
-                                post("/register")
-                                        .param("email", "new@test.com")
-                                        .param("username", "new_user")
-                                        .param("name", "Jamie")
-                                        .param("lastName", "Rivera")
-                                        .param("phone", "+1 555 123 4567")
-                                        .param("password", "Password123!")
-                                        .param("confirmPassword", "Password123!"))
-                        .andExpect(status().isOk())
-                        .andExpect(view().name("verification/check-email"))
-                        .andExpect(model().attributeExists("summary"))
-                        .andExpect(model().attributeExists("expiresAtLabel"))
-                        .andReturn();
-
-        assertExploreIsNotActive(result);
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "+1 555 123 4567")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification/check-email"))
+                .andExpect(model().attributeExists("summary"))
+                .andExpect(model().attributeExists("expiresAtLabel"))
+                .andReturn();
     }
 
     @Test
@@ -226,15 +211,12 @@ class AuthFlowControllerTest {
                         new PasswordResetPreview(
                                 "player@test.com", Instant.parse("2026-04-11T18:00:00Z")));
 
-        final MvcResult result =
-                mockMvc.perform(get("/password-reset/reset-token"))
-                        .andExpect(status().isOk())
-                        .andExpect(view().name("auth/reset-password"))
-                        .andExpect(model().attributeExists("resetPreview"))
-                        .andExpect(model().attributeExists("resetPath"))
-                        .andReturn();
-
-        assertExploreIsNotActive(result);
+        mockMvc.perform(get("/password-reset/reset-token"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/reset-password"))
+                .andExpect(model().attributeExists("resetPreview"))
+                .andExpect(model().attributeExists("resetPath"))
+                .andReturn();
     }
 
     @Test
@@ -265,14 +247,11 @@ class AuthFlowControllerTest {
                                 "/login?verified=1",
                                 List.of()));
 
-        final MvcResult result =
-                mockMvc.perform(get("/verifications/account-token"))
-                        .andExpect(status().isOk())
-                        .andExpect(view().name("verification/confirm"))
-                        .andExpect(model().attributeExists("preview"))
-                        .andReturn();
-
-        assertExploreIsNotActive(result);
+        mockMvc.perform(get("/verifications/account-token"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification/confirm"))
+                .andExpect(model().attributeExists("preview"))
+                .andReturn();
     }
 
     @Test
@@ -282,22 +261,11 @@ class AuthFlowControllerTest {
                         new VerificationFailureException(
                                 VerificationFailureReason.EXPIRED, "Expired token"));
 
-        final MvcResult result =
-                mockMvc.perform(get("/password-reset/expired-token"))
-                        .andExpect(status().isOk())
-                        .andExpect(view().name("verification/error"))
-                        .andExpect(model().attribute("backHref", "/forgot-password"))
-                        .andReturn();
-
-        assertExploreIsNotActive(result);
-    }
-
-    private static void assertExploreIsNotActive(final MvcResult result) {
-        final ShellViewModel shell =
-                (ShellViewModel) result.getModelAndView().getModel().get("shell");
-
-        Assertions.assertFalse(shell.getPrimaryNav().isEmpty());
-        Assertions.assertFalse(shell.getPrimaryNav().get(0).isActive());
+        mockMvc.perform(get("/password-reset/expired-token"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification/error"))
+                .andExpect(model().attribute("backHref", "/forgot-password"))
+                .andReturn();
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

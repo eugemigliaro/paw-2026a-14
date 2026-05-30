@@ -16,7 +16,6 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportReviewViewModel;
@@ -344,7 +343,6 @@ public class ModerationReportController {
             final String reportActionPath,
             final ReportPageViewModel reportPage) {
         final ModelAndView mav = new ModelAndView("reports/create");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("pageTitle", pageTitle);
         mav.addObject("pageTitleLabel", pageTitleLabel);
         mav.addObject("pageDescription", pageDescription);

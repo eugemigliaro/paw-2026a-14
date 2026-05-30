@@ -8,7 +8,6 @@ import ar.edu.itba.paw.webapp.form.ForgotPasswordForm;
 import ar.edu.itba.paw.webapp.form.RegisterForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -65,7 +64,6 @@ public class AuthController {
         }
 
         final ModelAndView mav = new ModelAndView("auth/login");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/login"));
         mav.addObject("loginEmail", email == null ? "" : email);
         mav.addObject("loginError", loginErrorMessage(error, locale));
         mav.addObject("showResendVerification", "verify".equalsIgnoreCase(error));
@@ -188,8 +186,6 @@ public class AuthController {
 
     private ModelAndView registerView(final RegisterForm registerForm, final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/register");
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/register"));
         mav.addObject("registerForm", registerForm);
         return mav;
     }
@@ -197,9 +193,6 @@ public class AuthController {
     private ModelAndView forgotPasswordView(
             final ForgotPasswordForm forgotPasswordForm, final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/forgot-password");
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/forgot-password"));
         mav.addObject("forgotPasswordForm", forgotPasswordForm);
         return mav;
     }
@@ -212,10 +205,6 @@ public class AuthController {
             final String eyebrow,
             final Instant expiresAt) {
         final ModelAndView mav = new ModelAndView("verification/check-email");
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(
-                        messageSource, locale, "/verification/check-email"));
         mav.addObject("title", messageSource.getMessage("verification.checkEmail", null, locale));
         mav.addObject("summary", summary);
         mav.addObject("backHref", backHref);

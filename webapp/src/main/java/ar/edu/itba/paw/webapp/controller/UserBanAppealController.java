@@ -6,7 +6,6 @@ import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -48,8 +47,6 @@ public class UserBanAppealController {
                         .findReportById(activeBan.getModerationReport().getId())
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final ModelAndView mav = new ModelAndView("account/banned");
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/account/ban"));
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.accountBanned", null, locale));
         mav.addObject("banTitle", messageSource.getMessage("account.ban.title", null, locale));

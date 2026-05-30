@@ -7,7 +7,6 @@ import ar.edu.itba.paw.services.exceptions.PasswordResetException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.form.ResetPasswordForm;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Objects;
@@ -112,9 +111,6 @@ public class PasswordResetController {
             final ResetPasswordForm resetPasswordForm,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/reset-password");
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/password-reset"));
         mav.addObject("resetPath", "/password-reset/" + token);
         mav.addObject("resetPreview", preview);
         mav.addObject(

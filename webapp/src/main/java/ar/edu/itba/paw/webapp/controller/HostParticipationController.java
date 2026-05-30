@@ -10,7 +10,6 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
 import java.util.List;
 import java.util.Locale;
@@ -82,8 +81,6 @@ public class HostParticipationController {
                 matchParticipationService.findPendingRequestsForHost(host);
 
         final ModelAndView mav = new ModelAndView("host/participation/aggregate-requests");
-        mav.addObject(
-                "shell", ShellViewModelFactory.hostShell(messageSource, locale, "/host/requests"));
         mav.addObject("aggregateRequests", true);
         mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
         mav.addObject(

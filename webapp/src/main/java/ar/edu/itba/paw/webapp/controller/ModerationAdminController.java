@@ -19,7 +19,6 @@ import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -99,9 +98,6 @@ public class ModerationAdminController {
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
         mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/admin/reports"));
-        mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.adminReports", null, locale));
         mav.addObject(
                 "pageTitleLabel", messageSource.getMessage("admin.reports.title", null, locale));
@@ -168,9 +164,6 @@ public class ModerationAdminController {
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("admin/reports/detail");
 
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/admin/reports"));
         mav.addObject(
                 "pageTitle",
                 messageSource.getMessage("page.title.adminReportDetail", null, locale));

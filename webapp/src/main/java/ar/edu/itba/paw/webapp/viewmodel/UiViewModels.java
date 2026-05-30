@@ -8,69 +8,6 @@ public final class UiViewModels {
         // Utility holder for immutable UI-only view models.
     }
 
-    public static final class ShellViewModel {
-        private final String brandLabel;
-        private final NavItemViewModel hostAction;
-        private final NavItemViewModel tournamentHostAction;
-        private final NavItemViewModel hostMatchNav;
-        private final List<NavItemViewModel> primaryNav;
-        private final List<NavItemViewModel> settingsMenuItems;
-
-        public ShellViewModel(
-                final String brandLabel,
-                final NavItemViewModel hostAction,
-                final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, null, null, primaryNav, List.of());
-        }
-
-        public ShellViewModel(
-                final String brandLabel,
-                final NavItemViewModel hostAction,
-                final NavItemViewModel hostMatchNav,
-                final List<NavItemViewModel> primaryNav) {
-            this(brandLabel, hostAction, null, hostMatchNav, primaryNav, List.of());
-        }
-
-        public ShellViewModel(
-                final String brandLabel,
-                final NavItemViewModel hostAction,
-                final NavItemViewModel tournamentHostAction,
-                final NavItemViewModel hostMatchNav,
-                final List<NavItemViewModel> primaryNav,
-                final List<NavItemViewModel> settingsMenuItems) {
-            this.brandLabel = brandLabel;
-            this.hostAction = hostAction;
-            this.tournamentHostAction = tournamentHostAction;
-            this.hostMatchNav = hostMatchNav;
-            this.primaryNav = primaryNav;
-            this.settingsMenuItems = settingsMenuItems;
-        }
-
-        public String getBrandLabel() {
-            return brandLabel;
-        }
-
-        public NavItemViewModel getHostAction() {
-            return hostAction;
-        }
-
-        public NavItemViewModel getTournamentHostAction() {
-            return tournamentHostAction;
-        }
-
-        public NavItemViewModel getHostMatchNav() {
-            return hostMatchNav;
-        }
-
-        public List<NavItemViewModel> getPrimaryNav() {
-            return primaryNav;
-        }
-
-        public List<NavItemViewModel> getSettingsMenuItems() {
-            return settingsMenuItems;
-        }
-    }
-
     public static final class NavItemViewModel {
         private final String label;
         private final String href;

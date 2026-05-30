@@ -22,7 +22,6 @@ import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventDetailPageViewModel;
@@ -386,7 +385,6 @@ public class EventController {
         mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("isInviteOnly", isInviteOnly);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject(
                 "eventPage",
                 buildRealEventPage(

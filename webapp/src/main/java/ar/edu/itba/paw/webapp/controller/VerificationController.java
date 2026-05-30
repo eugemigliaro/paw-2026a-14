@@ -8,7 +8,6 @@ import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -50,9 +49,6 @@ public class VerificationController {
         try {
             final VerificationPreview preview = accountAuthService.getVerificationPreview(token);
             final ModelAndView mav = new ModelAndView("verification/confirm");
-            mav.addObject(
-                    "shell",
-                    ShellViewModelFactory.playerShell(messageSource, locale, "/verifications"));
             mav.addObject("preview", preview);
             mav.addObject("confirmPath", "/verifications/" + token + "/confirm");
             mav.addObject(

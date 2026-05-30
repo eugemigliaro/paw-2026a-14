@@ -8,7 +8,6 @@ import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
@@ -137,8 +136,6 @@ public class AccountController {
                 "pageTitle",
                 messageSource.getMessage(
                         "page.title.account", null, "Match Point | Account", locale));
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/account"));
         mav.addObject(
                 "accountTitle", messageSource.getMessage("account.title", null, "Account", locale));
         mav.addObject(

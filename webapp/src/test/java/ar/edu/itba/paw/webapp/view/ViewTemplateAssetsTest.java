@@ -211,6 +211,29 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void siteHeaderDecidesNavigationFromRequestAndSecurityContext() throws IOException {
+        final String siteHeader = read("src/main/webapp/WEB-INF/views/includes/site-header.jspf");
+
+        assertTrue(siteHeader.contains("requestScope['javax.servlet.forward.request_uri']"));
+        assertTrue(siteHeader.contains("pageContext.request.requestURI"));
+        assertTrue(siteHeader.contains("sec:authorize access=\"isAnonymous()\""));
+        assertTrue(siteHeader.contains("sec:authorize access=\"isAuthenticated()\""));
+        assertTrue(siteHeader.contains("sec:authorize access=\"hasRole('ADMIN_MOD')\""));
+        assertTrue(siteHeader.contains("nav.explore"));
+        assertTrue(siteHeader.contains("nav.player.events"));
+        assertTrue(siteHeader.contains("nav.hostAMatch"));
+        assertTrue(siteHeader.contains("nav.hostATournament"));
+        assertTrue(siteHeader.contains("nav.profile"));
+        assertTrue(siteHeader.contains("nav.player.reports"));
+        assertTrue(siteHeader.contains("nav.admin.reports"));
+        assertTrue(siteHeader.contains("nav.login"));
+        assertTrue(siteHeader.contains("nav.register"));
+        assertTrue(siteHeader.contains("nav.logout"));
+        assertFalse(siteHeader.contains("${shell."));
+        assertFalse(siteHeader.contains("ShellViewModelFactory"));
+    }
+
+    @Test
     void hostCreateMatchUsesHiddenCoordinateFieldsWithoutVisibleCoordinateCopy()
             throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");

@@ -29,7 +29,6 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
 import java.time.Clock;
@@ -104,7 +103,6 @@ public class TournamentController {
                         "page.title.tournamentDetail",
                         new Object[] {tournament.getTitle()},
                         locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject(
                 "tournamentPage",
                 buildTournamentPage(tournament, currentUser, soloEntry, userTeam, locale));
@@ -164,7 +162,6 @@ public class TournamentController {
                         "page.title.tournamentBracket",
                         new Object[] {bracketView.getTournament().getTitle()},
                         locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("bracketPage", buildBracketPage(bracketView, locale));
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(

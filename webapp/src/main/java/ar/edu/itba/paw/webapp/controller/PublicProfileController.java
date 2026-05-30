@@ -17,7 +17,6 @@ import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
@@ -93,10 +92,6 @@ public class PublicProfileController {
                         new Object[] {user.getUsername()},
                         "Match Point | " + user.getUsername(),
                         resolvedLocale));
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(
-                        messageSource, resolvedLocale, "/users/" + username));
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(

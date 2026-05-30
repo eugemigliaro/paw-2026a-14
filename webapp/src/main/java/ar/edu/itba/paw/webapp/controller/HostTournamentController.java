@@ -31,7 +31,6 @@ import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.io.IOException;
 import java.io.InputStream;
@@ -491,12 +490,6 @@ public class HostTournamentController {
                         "page.title.hostTournamentBracketSetup",
                         new Object[] {tournament.getTitle()},
                         locale));
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(
-                        messageSource,
-                        locale,
-                        "/host/tournaments/" + tournamentId + "/bracket/setup"));
         mav.addObject("bracketPage", bracketPage);
         mav.addObject(
                 "selectedPairingStrategy",
@@ -594,9 +587,6 @@ public class HostTournamentController {
             final TournamentFormConfig formConfig) {
         final ModelAndView mav = new ModelAndView("host/tournaments/create");
         mav.addObject("pageTitle", formConfig.pageTitle());
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/host/tournaments/new"));
         mav.addObject("createTournamentForm", form);
         mav.addObject("formError", formError);
         mav.addObject("formTitle", formConfig.title());

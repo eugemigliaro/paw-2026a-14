@@ -22,7 +22,6 @@ import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Clock;
@@ -469,9 +468,6 @@ public class HostController {
             final HostFormConfig formConfig) {
         final ModelAndView mav = new ModelAndView("host/create-match");
         mav.addObject("pageTitle", formConfig.pageTitle());
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/host/matches/new"));
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         mav.addObject("formEyebrow", formConfig.eyebrow());

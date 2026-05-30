@@ -13,7 +13,6 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
@@ -68,8 +67,6 @@ public class UserModerationReportController {
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
         final ModelAndView mav = new ModelAndView("reports/mine/list");
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/reports/mine"));
         mav.addObject("pageTitle", messageSource.getMessage("page.title.myReports", null, locale));
         mav.addObject(
                 "pageTitleLabel", messageSource.getMessage("reports.mine.title", null, locale));
@@ -127,8 +124,6 @@ public class UserModerationReportController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/reports/mine"));
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.myReportDetail", null, locale));
         mav.addObject(
