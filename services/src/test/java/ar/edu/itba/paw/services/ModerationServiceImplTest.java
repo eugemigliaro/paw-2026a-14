@@ -20,15 +20,12 @@ import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
-import ar.edu.itba.paw.services.mail.MailProperties;
-import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
-import ar.edu.itba.paw.services.mail.UnbanMailTemplateData;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -56,15 +53,14 @@ public class ModerationServiceImplTest {
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private PlayerReviewDao playerReviewDao;
-    @Mock private MailDispatchService mailDispatchService;
-    @Mock private MailProperties mailProperties;
-    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private MatchService matchService;
 
+    private RecordingMailDispatchService mailDispatchService;
     private ModerationService moderationService;
 
     @BeforeEach
     public void setUp() {
+        mailDispatchService = new RecordingMailDispatchService();
         moderationService =
                 new ModerationServiceImpl(
                         userBanDao,
@@ -74,8 +70,6 @@ public class ModerationServiceImplTest {
                         matchParticipantDao,
                         playerReviewDao,
                         mailDispatchService,
-                        mailProperties,
-                        templateRenderer,
                         matchService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
@@ -98,7 +92,6 @@ public class ModerationServiceImplTest {
         final ModerationReport report = sampleUserReport();
         final AtomicReference<Instant> capturedBannedUntil = new AtomicReference<>();
 
-        Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://matchpoint.test");
         Mockito.when(
                         matchService.findJoinedMatches(
                                 Mockito.any(User.class),
@@ -179,7 +172,6 @@ public class ModerationServiceImplTest {
         final ModerationReport report = sampleUserReport();
         final AtomicReference<Instant> capturedBannedUntil = new AtomicReference<>();
 
-        Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://matchpoint.test");
         Mockito.when(
                         matchService.findJoinedMatches(
                                 Mockito.any(User.class),
@@ -255,7 +247,6 @@ public class ModerationServiceImplTest {
         final ModerationReport report = sampleUserReport();
         final AtomicLong capturedLinkedReportId = new AtomicLong(-1L);
 
-        Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://matchpoint.test");
         Mockito.when(
                         matchService.findJoinedMatches(
                                 Mockito.any(User.class),
@@ -605,16 +596,13 @@ public class ModerationServiceImplTest {
     }
 
     @Test
-    public void finalizeReportAppeal_usesStoredUserLocaleForUnbanEmailTemplate() {
+    public void finalizeReportAppeal_sendsUnbanEmailToStoredUser() {
         final Long userId = 88L;
-        final Locale spanishLocale = Locale.of("es");
         User user = new User(userId, null, null, null, null, null, null, UserLanguages.SPANISH);
-        final AtomicReference<Locale> capturedLocale = new AtomicReference<>();
 
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         try {
             Mockito.when(userDao.findById(userId)).thenReturn(Optional.of(user));
-            Mockito.when(mailProperties.getBaseUrl()).thenReturn("https://test.com");
 
             final ModerationReport report =
                     new ModerationReport(
@@ -649,21 +637,11 @@ public class ModerationServiceImplTest {
                                     Mockito.any()))
                     .thenReturn(true);
 
-            Mockito.when(templateRenderer.renderUnbanNotification(Mockito.any()))
-                    .thenAnswer(
-                            invocation -> {
-                                final UnbanMailTemplateData data = invocation.getArgument(0);
-                                capturedLocale.set(data.getLocale());
-                                return Mockito.mock(MailContent.class);
-                            });
-
             moderationService.finalizeReportAppeal(
                     77L, UserUtils.getUser(99L), AppealDecision.LIFTED);
 
-            Assertions.assertEquals(
-                    spanishLocale,
-                    capturedLocale.get(),
-                    "The stored user locale must be used when rendering the unban email");
+            Assertions.assertEquals(List.of("unban"), mailDispatchService.actions);
+            Assertions.assertEquals(List.of(user), mailDispatchService.users);
         } finally {
             org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
         }
@@ -713,5 +691,23 @@ public class ModerationServiceImplTest {
                 null,
                 FIXED_NOW,
                 FIXED_NOW);
+    }
+
+    private static class RecordingMailDispatchService implements MailDispatchService {
+
+        private final List<String> actions = new ArrayList<>();
+        private final List<User> users = new ArrayList<>();
+
+        @Override
+        public void sendBanNotice(final User user, final Instant bannedUntil, final String reason) {
+            actions.add("ban");
+            users.add(user);
+        }
+
+        @Override
+        public void sendUnbanNotice(final User user) {
+            actions.add("unban");
+            users.add(user);
+        }
     }
 }

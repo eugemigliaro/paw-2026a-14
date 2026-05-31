@@ -19,12 +19,7 @@ import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.services.mail.BanMailTemplateData;
-import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
-import ar.edu.itba.paw.services.mail.MailProperties;
-import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
-import ar.edu.itba.paw.services.mail.UnbanMailTemplateData;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -56,8 +51,6 @@ public class ModerationServiceImpl implements ModerationService {
     private final MatchParticipantDao matchParticipantDao;
     private final PlayerReviewDao playerReviewDao;
     private final MailDispatchService mailDispatchService;
-    private final MailProperties mailProperties;
-    private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MatchService matchService;
     private final MessageSource messageSource;
     private final Clock clock;
@@ -71,8 +64,6 @@ public class ModerationServiceImpl implements ModerationService {
             final MatchParticipantDao matchParticipantDao,
             final PlayerReviewDao playerReviewDao,
             final MailDispatchService mailDispatchService,
-            final MailProperties mailProperties,
-            final ThymeleafMailTemplateRenderer templateRenderer,
             final MatchService matchService,
             final MessageSource messageSource,
             final Clock clock) {
@@ -83,8 +74,6 @@ public class ModerationServiceImpl implements ModerationService {
         this.matchParticipantDao = matchParticipantDao;
         this.playerReviewDao = playerReviewDao;
         this.mailDispatchService = mailDispatchService;
-        this.mailProperties = mailProperties;
-        this.templateRenderer = templateRenderer;
         this.matchService = matchService;
         this.messageSource = messageSource;
         this.clock = clock;
@@ -441,29 +430,12 @@ public class ModerationServiceImpl implements ModerationService {
                                 new Object[] {moderationReportId},
                                 locale)
                         : reason;
-        final MailContent content =
-                templateRenderer.renderBanNotification(
-                        new BanMailTemplateData(
-                                user.getEmail(),
-                                user.getUsername(),
-                                bannedUntil,
-                                localizedReason,
-                                stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
-                                locale));
-        mailDispatchService.dispatch(user.getEmail(), content);
+        mailDispatchService.sendBanNotice(user, bannedUntil, localizedReason);
     }
 
     private void sendUnbanEmail(final User user) {
         nonNullUser(user);
-        final Locale locale = UserLanguages.toLocale(user.getPreferredLanguage());
-        final MailContent content =
-                templateRenderer.renderUnbanNotification(
-                        new UnbanMailTemplateData(
-                                user.getEmail(),
-                                user.getUsername(),
-                                stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
-                                locale));
-        mailDispatchService.dispatch(user.getEmail(), content);
+        mailDispatchService.sendUnbanNotice(user);
     }
 
     private static boolean isActiveReport(final ReportStatus status) {
@@ -545,13 +517,6 @@ public class ModerationServiceImpl implements ModerationService {
     private static Locale currentLocale() {
         final Locale locale = LocaleContextHolder.getLocale();
         return locale == null ? Locale.ENGLISH : locale;
-    }
-
-    private static String stripTrailingSlash(final String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
     private void applyResolutionEffect(

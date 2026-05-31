@@ -2,18 +2,13 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
-import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
-import ar.edu.itba.paw.services.mail.MatchLifecycleMailTemplateData;
-import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,19 +16,13 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
     private final MatchParticipantDao matchParticipantDao;
     private final MailDispatchService mailDispatchService;
-    private final ThymeleafMailTemplateRenderer templateRenderer;
-    private final MessageSource messageSource;
 
     @Autowired
     public MatchNotificationServiceImpl(
             final MatchParticipantDao matchParticipantDao,
-            final MailDispatchService mailDispatchService,
-            final ThymeleafMailTemplateRenderer templateRenderer,
-            final MessageSource messageSource) {
+            final MailDispatchService mailDispatchService) {
         this.matchParticipantDao = matchParticipantDao;
         this.mailDispatchService = mailDispatchService;
-        this.templateRenderer = templateRenderer;
-        this.messageSource = messageSource;
     }
 
     @Override
@@ -41,11 +30,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         final List<User> participants =
                 matchParticipantDao.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
-            final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant, match, null);
-            final MailContent content =
-                    templateRenderer.renderMatchUpdatedNotification(templateData);
-            mailDispatchService.dispatch(participant.getEmail(), content);
+            mailDispatchService.sendMatchUpdated(participant, match);
         }
     }
 
@@ -54,11 +39,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         final List<User> participants =
                 matchParticipantDao.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
-            final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant, match, null);
-            final MailContent content =
-                    templateRenderer.renderMatchCancelledNotification(templateData);
-            mailDispatchService.dispatch(participant.getEmail(), content);
+            mailDispatchService.sendMatchCancelled(participant, match);
         }
     }
 
@@ -71,12 +52,10 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
         for (final AffectedRecurringParticipant participant :
                 affectedParticipants(safeMatches).values()) {
-            final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant.user(), participant.firstAffectedMatch(), null);
-            final MailContent content =
-                    templateRenderer.renderRecurringMatchesUpdatedNotification(
-                            templateData, participant.affectedOccurrenceCount());
-            mailDispatchService.dispatch(participant.user().getEmail(), content);
+            mailDispatchService.sendRecurringMatchesUpdated(
+                    participant.user(),
+                    participant.firstAffectedMatch(),
+                    participant.affectedOccurrenceCount());
         }
     }
 
@@ -89,12 +68,10 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
 
         for (final AffectedRecurringParticipant participant :
                 affectedParticipants(safeMatches).values()) {
-            final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(participant.user(), participant.firstAffectedMatch(), null);
-            final MailContent content =
-                    templateRenderer.renderRecurringMatchesCancelledNotification(
-                            templateData, participant.affectedOccurrenceCount());
-            mailDispatchService.dispatch(participant.user().getEmail(), content);
+            mailDispatchService.sendRecurringMatchesCancelled(
+                    participant.user(),
+                    participant.firstAffectedMatch(),
+                    participant.affectedOccurrenceCount());
         }
     }
 
@@ -106,12 +83,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return;
         }
 
-        final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, displayName(player));
-
-        final MailContent content = templateRenderer.renderPlayerJoinedNotification(templateData);
-
-        mailDispatchService.dispatch(host.getEmail(), content);
+        mailDispatchService.sendPlayerJoined(host, match, player);
     }
 
     @Override
@@ -122,50 +94,31 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return;
         }
 
-        final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, displayName(player));
-        final MailContent content =
-                templateRenderer.renderJoinRequestReceivedNotification(templateData);
-        mailDispatchService.dispatch(host.getEmail(), content);
+        mailDispatchService.sendJoinRequestReceived(host, match, player);
     }
 
     @Override
     public void notifyPlayerRequestApproved(final Match match, final User player) {
-        final MatchLifecycleMailTemplateData templateData = buildTemplateData(player, match, null);
-        final MailContent content =
-                templateRenderer.renderJoinRequestApprovedNotification(templateData);
-        mailDispatchService.dispatch(player.getEmail(), content);
+        mailDispatchService.sendJoinRequestApproved(player, match);
     }
 
     @Override
     public void notifyPlayerRequestRejected(final Match match, final User player) {
-        final MatchLifecycleMailTemplateData templateData = buildTemplateData(player, match, null);
-        final MailContent content =
-                templateRenderer.renderJoinRequestRejectedNotification(templateData);
-        mailDispatchService.dispatch(player.getEmail(), content);
+        mailDispatchService.sendJoinRequestRejected(player, match);
     }
 
     @Override
     public void notifyPendingRequestClosedByPrivacyChange(
             final Match match, final List<User> players) {
         for (final User player : safeUsers(players)) {
-            final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(player, match, null);
-            final MailContent content =
-                    templateRenderer.renderPendingRequestClosedByPrivacyChangeNotification(
-                            templateData);
-            mailDispatchService.dispatch(player.getEmail(), content);
+            mailDispatchService.sendPendingRequestClosedByPrivacyChange(player, match);
         }
     }
 
     @Override
     public void notifyInvitationOpenedToPublic(final Match match, final List<User> players) {
         for (final User player : safeUsers(players)) {
-            final MatchLifecycleMailTemplateData templateData =
-                    buildTemplateData(player, match, null);
-            final MailContent content =
-                    templateRenderer.renderInvitationOpenedToPublicNotification(templateData);
-            mailDispatchService.dispatch(player.getEmail(), content);
+            mailDispatchService.sendInvitationOpenedToPublic(player, match);
         }
     }
 
@@ -177,10 +130,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return;
         }
 
-        final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, displayName(player));
-        final MailContent content = templateRenderer.renderInviteAcceptedNotification(templateData);
-        mailDispatchService.dispatch(host.getEmail(), content);
+        mailDispatchService.sendInviteAccepted(host, match, player);
     }
 
     @Override
@@ -191,10 +141,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return;
         }
 
-        final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, displayName(player));
-        final MailContent content = templateRenderer.renderInviteDeclinedNotification(templateData);
-        mailDispatchService.dispatch(host.getEmail(), content);
+        mailDispatchService.sendInviteDeclined(host, match, player);
     }
 
     @Override
@@ -205,18 +152,12 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return;
         }
 
-        final MatchLifecycleMailTemplateData templateData =
-                buildTemplateData(host, match, displayName(player));
-        final MailContent content = templateRenderer.renderPlayerLeftNotification(templateData);
-        mailDispatchService.dispatch(host.getEmail(), content);
+        mailDispatchService.sendPlayerLeft(host, match, player);
     }
 
     @Override
     public void notifyPlayerRemovedByHost(final Match match, final User player) {
-        final MatchLifecycleMailTemplateData templateData = buildTemplateData(player, match, null);
-        final MailContent content =
-                templateRenderer.renderParticipantRemovedNotification(templateData);
-        mailDispatchService.dispatch(player.getEmail(), content);
+        mailDispatchService.sendPlayerRemoved(player, match);
     }
 
     private Map<String, AffectedRecurringParticipant> affectedParticipants(
@@ -259,29 +200,6 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         return users.stream().filter(user -> user != null && user.getEmail() != null).toList();
     }
 
-    private static String displayName(final User user) {
-        final String firstName = clean(user.getName());
-        final String lastName = clean(user.getLastName());
-
-        if (firstName != null && lastName != null) {
-            return firstName + " " + lastName;
-        }
-
-        final String username = clean(user.getUsername());
-        if (username != null) {
-            return username;
-        }
-
-        return user.getEmail();
-    }
-
-    private static String clean(final String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
-    }
-
     private record AffectedRecurringParticipant(
             User user, Match firstAffectedMatch, int affectedOccurrenceCount) {
 
@@ -289,33 +207,5 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
             return new AffectedRecurringParticipant(
                     user, firstAffectedMatch, affectedOccurrenceCount + 1);
         }
-    }
-
-    private MatchLifecycleMailTemplateData buildTemplateData(
-            final User recipient, final Match match, final String actorName) {
-        final Locale locale = UserLanguages.toLocale(recipient.getPreferredLanguage());
-        final String sportLabel =
-                messageSource.getMessage(
-                        "sport." + match.getSport().getDbValue(),
-                        null,
-                        match.getSport().getDisplayName(),
-                        locale);
-        final String statusLabel =
-                messageSource.getMessage(
-                        "match.status." + match.getStatus().getValue(),
-                        null,
-                        match.getStatus().getValue(),
-                        locale);
-
-        return new MatchLifecycleMailTemplateData(
-                recipient.getEmail(),
-                match.getTitle(),
-                match.getAddress(),
-                match.getStartsAt(),
-                match.getEndsAt(),
-                sportLabel,
-                statusLabel,
-                actorName,
-                locale);
     }
 }

@@ -17,9 +17,7 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
-import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
-import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
@@ -51,7 +49,6 @@ public class MatchServiceImplTest {
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
-    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private SecurityService securityService;
 
     private RecordingMailDispatchService mailDispatchService;
@@ -65,11 +62,7 @@ public class MatchServiceImplTest {
         mailDispatchService = new RecordingMailDispatchService();
         matchNotificationService =
                 Mockito.spy(
-                        new MatchNotificationServiceImpl(
-                                matchParticipantDao,
-                                mailDispatchService,
-                                templateRenderer,
-                                messageSource));
+                        new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService));
         matchService =
                 new MatchServiceImpl(
                         matchDao,
@@ -1978,7 +1971,7 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(24L, result.getId());
-        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
     }
 
     @Test
@@ -2052,7 +2045,7 @@ public class MatchServiceImplTest {
                                 null));
 
         Assertions.assertEquals(25L, result.getId());
-        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
     }
 
     @Test
@@ -2091,7 +2084,7 @@ public class MatchServiceImplTest {
         final Match result = matchService.cancelMatch(26L, UserUtils.getUser(1L));
 
         Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
-        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
     }
 
     @Test
@@ -2118,7 +2111,7 @@ public class MatchServiceImplTest {
                                         EventStatus.OPEN,
                                         null)));
 
-        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
     }
 
     @Test
@@ -2129,18 +2122,24 @@ public class MatchServiceImplTest {
                 MatchCancellationException.class,
                 () -> matchService.cancelMatch(28L, UserUtils.getUser(1L)));
 
-        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
     }
 
     private static class RecordingMailDispatchService implements MailDispatchService {
 
         private final List<String> recipients = new ArrayList<>();
-        private final List<MailContent> contents = new ArrayList<>();
+        private final List<String> actions = new ArrayList<>();
 
         @Override
-        public void dispatch(final String recipientEmail, final MailContent content) {
-            recipients.add(recipientEmail);
-            contents.add(content);
+        public void sendMatchUpdated(final User recipient, final Match match) {
+            actions.add("match-updated");
+            recipients.add(recipient.getEmail());
+        }
+
+        @Override
+        public void sendMatchCancelled(final User recipient, final Match match) {
+            actions.add("match-cancelled");
+            recipients.add(recipient.getEmail());
         }
     }
 

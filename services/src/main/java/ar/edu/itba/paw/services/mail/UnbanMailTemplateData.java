@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services.mail;
 
 import java.util.Locale;
 
-public class UnbanMailTemplateData {
+class UnbanMailTemplateData {
 
     private final String recipientEmail;
     private final String username;

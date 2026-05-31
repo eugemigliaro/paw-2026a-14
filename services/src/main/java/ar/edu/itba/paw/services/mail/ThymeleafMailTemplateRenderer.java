@@ -16,7 +16,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 @Component
-public class ThymeleafMailTemplateRenderer {
+class ThymeleafMailTemplateRenderer {
 
     private final TemplateEngine htmlMailTemplateEngine;
     private final TemplateEngine textMailTemplateEngine;

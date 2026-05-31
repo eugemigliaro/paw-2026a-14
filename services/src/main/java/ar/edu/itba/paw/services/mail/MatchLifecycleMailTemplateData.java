@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services.mail;
 import java.time.Instant;
 import java.util.Locale;
 
-public class MatchLifecycleMailTemplateData {
+class MatchLifecycleMailTemplateData {
 
     private final String recipientEmail;
     private final String matchTitle;
