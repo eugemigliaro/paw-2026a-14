@@ -28,6 +28,7 @@ import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.AppTimeZoneResolver;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
@@ -35,7 +36,6 @@ import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -67,6 +68,7 @@ public class TournamentController {
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
     private final Clock clock;
+    private final AppTimeZoneResolver appTimeZoneResolver;
 
     public TournamentController(
             final TournamentService tournamentService,
@@ -74,11 +76,29 @@ public class TournamentController {
             final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource,
             final Clock clock) {
+        this(
+                tournamentService,
+                tournamentRegistrationService,
+                tournamentBracketService,
+                messageSource,
+                clock,
+                AppTimeZoneResolver.argentinaDefault());
+    }
+
+    @Autowired
+    public TournamentController(
+            final TournamentService tournamentService,
+            final TournamentRegistrationService tournamentRegistrationService,
+            final TournamentBracketService tournamentBracketService,
+            final MessageSource messageSource,
+            final Clock clock,
+            final AppTimeZoneResolver appTimeZoneResolver) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
         this.clock = clock;
+        this.appTimeZoneResolver = appTimeZoneResolver;
     }
 
     @GetMapping("/tournaments/{tournamentId:\\d+}")
@@ -376,12 +396,13 @@ public class TournamentController {
             return messageSource.getMessage("tournament.detail.schedule.tbd", null, locale);
         }
         if (tournament.getEndsAt() == null) {
-            return formatInstant(tournament.getStartsAt(), locale);
+            return formatInstant(
+                    tournament.getStartsAt(), locale, appTimeZoneResolver.defaultZone());
         }
 
-        final ZoneId zoneId = ZoneId.systemDefault();
-        final LocalDateTime startsAt = LocalDateTime.ofInstant(tournament.getStartsAt(), zoneId);
-        final LocalDateTime endsAt = LocalDateTime.ofInstant(tournament.getEndsAt(), zoneId);
+        final LocalDateTime startsAt =
+                appTimeZoneResolver.toLocalDateTime(tournament.getStartsAt());
+        final LocalDateTime endsAt = appTimeZoneResolver.toLocalDateTime(tournament.getEndsAt());
         if (startsAt.toLocalDate().equals(endsAt.toLocalDate())) {
             return messageSource.getMessage(
                     "tournament.detail.schedule.sameDay",
@@ -395,18 +416,21 @@ public class TournamentController {
         return messageSource.getMessage(
                 "tournament.detail.schedule.range",
                 new Object[] {
-                    formatInstant(tournament.getStartsAt(), locale),
-                    formatInstant(tournament.getEndsAt(), locale)
+                    formatInstant(
+                            tournament.getStartsAt(), locale, appTimeZoneResolver.defaultZone()),
+                    formatInstant(tournament.getEndsAt(), locale, appTimeZoneResolver.defaultZone())
                 },
                 locale);
     }
 
     private String registrationWindowStartLabel(final Tournament tournament, final Locale locale) {
-        return formatInstant(tournament.getRegistrationOpensAt(), locale);
+        return formatInstant(
+                tournament.getRegistrationOpensAt(), locale, appTimeZoneResolver.defaultZone());
     }
 
     private String registrationWindowEndLabel(final Tournament tournament, final Locale locale) {
-        return formatInstant(tournament.getRegistrationClosesAt(), locale);
+        return formatInstant(
+                tournament.getRegistrationClosesAt(), locale, appTimeZoneResolver.defaultZone());
     }
 
     private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
@@ -855,13 +879,18 @@ public class TournamentController {
             return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
         }
         if (match.getScheduledEndsAt() == null) {
-            return formatInstant(match.getScheduledStartsAt(), locale);
+            return formatInstant(
+                    match.getScheduledStartsAt(), locale, appTimeZoneResolver.defaultZone());
         }
         return messageSource.getMessage(
                 "tournament.bracket.schedule.range",
                 new Object[] {
-                    formatInstant(match.getScheduledStartsAt(), locale),
-                    formatInstant(match.getScheduledEndsAt(), locale)
+                    formatInstant(
+                            match.getScheduledStartsAt(),
+                            locale,
+                            appTimeZoneResolver.defaultZone()),
+                    formatInstant(
+                            match.getScheduledEndsAt(), locale, appTimeZoneResolver.defaultZone())
                 },
                 locale);
     }

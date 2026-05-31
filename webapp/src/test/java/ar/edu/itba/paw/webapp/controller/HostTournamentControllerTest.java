@@ -161,6 +161,35 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void postCreateWithoutTimezoneUsesArgentinaFallback() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentService.createTournament(
+                                Mockito.any(User.class),
+                                Mockito.any(CreateTournamentRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            createdRequest.set(invocation.getArgument(1));
+                            return tournament(99L, host, TournamentStatus.REGISTRATION);
+                        });
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(createPostWithoutTimezone("City Padel Cup"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/99"));
+
+        Assertions.assertNotNull(createdRequest.get());
+        Assertions.assertEquals(
+                Instant.parse("2030-04-01T12:00:00Z"),
+                createdRequest.get().getRegistrationOpensAt());
+        Assertions.assertEquals(
+                Instant.parse("2030-04-09T23:00:00Z"),
+                createdRequest.get().getRegistrationClosesAt());
+    }
+
+    @Test
     void postCreateWithTeamDraftOnlyRedirectsToTournamentDetail() throws Exception {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
@@ -670,6 +699,25 @@ class HostTournamentControllerTest {
             builder.param("_allowTeamDraft", "on");
         }
         return builder;
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            createPostWithoutTimezone(final String title) {
+        return post("/host/tournaments")
+                .locale(Locale.ENGLISH)
+                .param("title", title)
+                .param("sport", "padel")
+                .param("description", "Open city tournament")
+                .param("address", "Downtown Club")
+                .param("registrationOpensDate", "2030-04-01")
+                .param("registrationOpensTime", "09:00")
+                .param("registrationClosesDate", "2030-04-09")
+                .param("registrationClosesTime", "20:00")
+                .param("bracketSize", "8")
+                .param("teamSize", "1")
+                .param("pricePerPlayer", "10.00")
+                .param("allowSoloSignup", "true")
+                .param("allowTeamDraft", "true");
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

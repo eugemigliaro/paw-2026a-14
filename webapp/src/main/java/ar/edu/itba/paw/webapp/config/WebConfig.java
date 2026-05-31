@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.config;
 
 import ar.edu.itba.paw.services.AdminBootstrapService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.utils.AppTimeZoneResolver;
 import java.util.Locale;
 import java.util.Properties;
 import javax.persistence.EntityManagerFactory;
@@ -135,6 +136,13 @@ public class WebConfig implements WebMvcConfigurer {
         final LocaleChangeInterceptor lci = new LocaleChangeInterceptor();
         lci.setParamName("lang");
         return lci;
+    }
+
+    @Bean
+    public AppTimeZoneResolver appTimeZoneResolver(
+            @Value("${app.timezone:" + AppTimeZoneResolver.DEFAULT_TIMEZONE + "}")
+                    final String appTimezone) {
+        return new AppTimeZoneResolver(appTimezone);
     }
 
     @Bean

@@ -29,6 +29,7 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
+import ar.edu.itba.paw.webapp.utils.AppTimeZoneResolver;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -38,9 +39,7 @@ import java.io.InputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -97,6 +96,7 @@ public class HostTournamentController {
     private final ImageService imageService;
     private final MessageSource messageSource;
     private final Clock clock;
+    private final AppTimeZoneResolver appTimeZoneResolver;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -112,6 +112,7 @@ public class HostTournamentController {
             final ImageService imageService,
             final MessageSource messageSource,
             final Clock clock,
+            final AppTimeZoneResolver appTimeZoneResolver,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -126,6 +127,7 @@ public class HostTournamentController {
         this.imageService = imageService;
         this.messageSource = messageSource;
         this.clock = clock;
+        this.appTimeZoneResolver = appTimeZoneResolver;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
@@ -153,6 +155,7 @@ public class HostTournamentController {
                 null,
                 messageSource,
                 clock,
+                AppTimeZoneResolver.argentinaDefault(),
                 mapPickerEnabled,
                 mapTileUrlTemplate,
                 mapAttribution,
@@ -174,6 +177,7 @@ public class HostTournamentController {
                 null,
                 messageSource,
                 clock,
+                AppTimeZoneResolver.argentinaDefault(),
                 false,
                 "",
                 "",
@@ -684,7 +688,6 @@ public class HostTournamentController {
     }
 
     private CreateTournamentForm toForm(final Tournament tournament) {
-        final ZoneId zoneId = ZoneId.systemDefault();
         final CreateTournamentForm form = new CreateTournamentForm();
         form.setTitle(tournament.getTitle());
         form.setDescription(tournament.getDescription());
@@ -700,14 +703,22 @@ public class HostTournamentController {
         form.setAllowTeamDraft(tournament.isAllowTeamDraft());
         form.setPricePerPlayer(tournament.getPricePerPlayer());
         form.setRegistrationOpensDate(
-                LocalDate.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
+                appTimeZoneResolver
+                        .toLocalDateTime(tournament.getRegistrationOpensAt())
+                        .toLocalDate());
         form.setRegistrationOpensTime(
-                LocalTime.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
+                appTimeZoneResolver
+                        .toLocalDateTime(tournament.getRegistrationOpensAt())
+                        .toLocalTime());
         form.setRegistrationClosesDate(
-                LocalDate.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
+                appTimeZoneResolver
+                        .toLocalDateTime(tournament.getRegistrationClosesAt())
+                        .toLocalDate());
         form.setRegistrationClosesTime(
-                LocalTime.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
-        form.setTz(zoneId.getId());
+                appTimeZoneResolver
+                        .toLocalDateTime(tournament.getRegistrationClosesAt())
+                        .toLocalTime());
+        form.setTz(appTimeZoneResolver.defaultZone().getId());
         return form;
     }
 
@@ -1032,7 +1043,8 @@ public class HostTournamentController {
     private TournamentBracketViewModel buildBracketPage(
             final TournamentBracketView bracketView, final Locale locale) {
         final Tournament tournament = bracketView.getTournament();
-        final String defaultScheduleDate = LocalDate.now(ZoneId.systemDefault()).toString();
+        final String defaultScheduleDate =
+                LocalDate.now(appTimeZoneResolver.defaultZone()).toString();
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 bracketView.getMatches().stream()
                         .sorted(
@@ -1262,13 +1274,18 @@ public class HostTournamentController {
             return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
         }
         if (match.getScheduledEndsAt() == null) {
-            return formatInstant(match.getScheduledStartsAt(), locale);
+            return formatInstant(
+                    match.getScheduledStartsAt(), locale, appTimeZoneResolver.defaultZone());
         }
         return messageSource.getMessage(
                 "tournament.bracket.schedule.range",
                 new Object[] {
-                    formatInstant(match.getScheduledStartsAt(), locale),
-                    formatInstant(match.getScheduledEndsAt(), locale)
+                    formatInstant(
+                            match.getScheduledStartsAt(),
+                            locale,
+                            appTimeZoneResolver.defaultZone()),
+                    formatInstant(
+                            match.getScheduledEndsAt(), locale, appTimeZoneResolver.defaultZone())
                 },
                 locale);
     }
@@ -1321,17 +1338,17 @@ public class HostTournamentController {
                 LocalTime.of(18, 0).plusHours(Math.max(0, roundNumber - 1)));
     }
 
-    private static String scheduleDate(final Instant instant) {
+    private String scheduleDate(final Instant instant) {
         return instant == null
                 ? ""
-                : LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalDate().toString();
+                : appTimeZoneResolver.toLocalDateTime(instant).toLocalDate().toString();
     }
 
-    private static String scheduleTime(final Instant instant) {
+    private String scheduleTime(final Instant instant) {
         return instant == null
                 ? ""
                 : TIME_INPUT_FORMATTER.format(
-                        LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalTime());
+                        appTimeZoneResolver.toLocalDateTime(instant).toLocalTime());
     }
 
     private static String scheduleAddress(
@@ -1363,20 +1380,9 @@ public class HostTournamentController {
                 : java.util.Optional.empty();
     }
 
-    private static Instant toInstant(
+    private Instant toInstant(
             final java.time.LocalDate date, final java.time.LocalTime time, final String timezone) {
-        return date.atTime(time).atZone(resolveZoneId(timezone)).toInstant();
-    }
-
-    private static ZoneId resolveZoneId(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+        return appTimeZoneResolver.toInstant(date, time, timezone);
     }
 
     private static Double parseCoordinate(final String value) {
