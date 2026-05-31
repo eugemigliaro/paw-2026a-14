@@ -6,7 +6,6 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
@@ -29,7 +28,6 @@ public class AsyncMailDispatchServiceTest {
 
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private MessageSource messageSource;
-    @Mock private TournamentTeamDao tournamentTeamDao;
 
     @Test
     public void testStandardMailActionSendsRenderedContent() {
@@ -69,7 +67,7 @@ public class AsyncMailDispatchServiceTest {
                         htmlTemplateEngine(), textTemplateEngine(), messages);
         final AsyncMailDispatchService asyncMailDispatchService =
                 new AsyncMailDispatchService(
-                        mailService, realRenderer, messages, mailProperties(), tournamentTeamDao);
+                        new AsyncMailSender(mailService), realRenderer, messages, mailProperties());
         final Match match =
                 MatchUtils.createMatchWithId(
                         40L, 1L, Sport.PADEL, Instant.parse("2026-04-06T18:00:00Z"), 10);
@@ -94,7 +92,7 @@ public class AsyncMailDispatchServiceTest {
                         htmlTemplateEngine(), textTemplateEngine(), messages);
         final AsyncMailDispatchService asyncMailDispatchService =
                 new AsyncMailDispatchService(
-                        mailService, realRenderer, messages, mailProperties(), tournamentTeamDao);
+                        new AsyncMailSender(mailService), realRenderer, messages, mailProperties());
 
         asyncMailDispatchService.sendTournamentBracketPublished(
                 UserUtils.getUser(2L), tournamentWithId(7L));
@@ -114,7 +112,10 @@ public class AsyncMailDispatchServiceTest {
 
     private AsyncMailDispatchService dispatchService(final MailService mailService) {
         return new AsyncMailDispatchService(
-                mailService, templateRenderer, messageSource, mailProperties(), tournamentTeamDao);
+                new AsyncMailSender(mailService),
+                templateRenderer,
+                messageSource,
+                mailProperties());
     }
 
     private static MailProperties mailProperties() {

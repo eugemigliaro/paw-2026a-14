@@ -8,46 +8,34 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AsyncMailDispatchService implements MailDispatchService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AsyncMailDispatchService.class);
-
-    private final MailService mailService;
+    private final AsyncMailSender mailSender;
     private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MessageSource messageSource;
     private final MailProperties mailProperties;
-    private final TournamentTeamDao tournamentTeamDao;
 
     @Autowired
     public AsyncMailDispatchService(
-            final MailService mailService,
+            final AsyncMailSender mailSender,
             final ThymeleafMailTemplateRenderer templateRenderer,
             final MessageSource messageSource,
-            final MailProperties mailProperties,
-            final TournamentTeamDao tournamentTeamDao) {
-        this.mailService = mailService;
+            final MailProperties mailProperties) {
+        this.mailSender = mailSender;
         this.templateRenderer = templateRenderer;
         this.messageSource = messageSource;
         this.mailProperties = mailProperties;
-        this.tournamentTeamDao = tournamentTeamDao;
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendAccountVerification(
             final UserAccount account,
             final String confirmationUrl,
@@ -68,7 +56,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendPasswordReset(
             final UserAccount account,
             final String resetUrl,
@@ -89,7 +76,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendMatchUpdated(final User recipient, final Match match) {
         dispatch(
                 recipient.getEmail(),
@@ -98,7 +84,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendMatchCancelled(final User recipient, final Match match) {
         dispatch(
                 recipient.getEmail(),
@@ -107,7 +92,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendRecurringMatchesUpdated(
             final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
         dispatch(
@@ -118,7 +102,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendRecurringMatchesCancelled(
             final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
         dispatch(
@@ -129,7 +112,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendMatchInvitation(final User recipient, final Match match) {
         dispatch(
                 recipient.getEmail(),
@@ -138,7 +120,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendSeriesInvitation(
             final User recipient, final Match match, final int occurrenceCount) {
         dispatch(
@@ -148,7 +129,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendJoinRequestReceived(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
@@ -157,7 +137,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendJoinRequestApproved(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
@@ -166,7 +145,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendJoinRequestRejected(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
@@ -175,7 +153,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendPendingRequestClosedByPrivacyChange(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
@@ -184,7 +161,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendInvitationOpenedToPublic(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
@@ -193,7 +169,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendInviteAccepted(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
@@ -202,7 +177,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendInviteDeclined(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
@@ -211,7 +185,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendPlayerJoined(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
@@ -220,7 +193,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendPlayerLeft(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
@@ -229,7 +201,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendPlayerRemoved(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
@@ -238,7 +209,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendTournamentBracketPublished(final User recipient, final Tournament tournament) {
         dispatch(
                 recipient.getEmail(),
@@ -248,7 +218,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendTournamentMatchResult(
             final User recipient,
             final Tournament tournament,
@@ -263,7 +232,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendTournamentCompleted(
             final User recipient, final Tournament tournament, final TournamentTeam champion) {
         dispatch(
@@ -274,7 +242,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendTournamentCancelled(final User recipient, final Tournament tournament) {
         dispatch(
                 recipient.getEmail(),
@@ -284,7 +251,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendBanNotice(final User user, final Instant bannedUntil, final String reason) {
         final Locale locale = recipientLocale(user);
         dispatch(
@@ -300,7 +266,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     @Override
-    @Async("mailTaskExecutor")
     public void sendUnbanNotice(final User user) {
         final Locale locale = recipientLocale(user);
         dispatch(
@@ -314,12 +279,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
     }
 
     private void dispatch(final String recipientEmail, final MailContent content) {
-        try {
-            mailService.send(recipientEmail, content);
-            LOGGER.debug("Mail dispatched recipient={}", maskEmail(recipientEmail));
-        } catch (final RuntimeException exception) {
-            LOGGER.error("Mail dispatch failed recipient={}", maskEmail(recipientEmail), exception);
-        }
+        mailSender.send(recipientEmail, content);
     }
 
     private MatchLifecycleMailTemplateData buildMatchTemplateData(
@@ -372,7 +332,6 @@ public class AsyncMailDispatchService implements MailDispatchService {
                         null,
                         tournament.getStatus().getDbValue(),
                         locale);
-        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(tournament);
 
         return new TournamentLifecycleMailTemplateData(
                 recipient.getEmail(),
@@ -380,9 +339,9 @@ public class AsyncMailDispatchService implements MailDispatchService {
                 sportLabel,
                 statusLabel,
                 matchLabel(match, locale),
-                teamName(winner, locale, teamDisplayNumbers),
-                teamName(loser, locale, teamDisplayNumbers),
-                teamName(champion, locale, teamDisplayNumbers),
+                teamName(winner, locale),
+                teamName(loser, locale),
+                teamName(champion, locale),
                 tournament.getAddress(),
                 tournament.getStartsAt(),
                 tournamentUrl(tournament, linkToBracket, locale),
@@ -434,11 +393,12 @@ public class AsyncMailDispatchService implements MailDispatchService {
                 locale);
     }
 
-    private String teamName(
-            final TournamentTeam team,
-            final Locale locale,
-            final Map<Long, Integer> teamDisplayNumbers) {
+    private String teamName(final TournamentTeam team, final Locale locale) {
         if (team == null) {
+            return null;
+        }
+        final Long teamId = team.getId();
+        if (teamId == null) {
             return null;
         }
         if (team.getName() != null
@@ -446,33 +406,13 @@ public class AsyncMailDispatchService implements MailDispatchService {
                 && !isLegacyGeneratedSoloTeamName(team)) {
             return team.getName();
         }
-        if (team.getId() == null) {
-            return null;
-        }
-        final Integer displayNumber = teamDisplayNumbers.get(team.getId());
+        final Integer displayNumber =
+                team.getSeedPosition() == null ? teamId.intValue() : team.getSeedPosition();
         return messageSource.getMessage(
                 "tournament.team.solo.name",
-                new Object[] {displayNumber == null ? team.getId() : displayNumber},
-                "Solo squad #" + (displayNumber == null ? team.getId() : displayNumber),
+                new Object[] {displayNumber},
+                "Solo squad #" + displayNumber,
                 locale);
-    }
-
-    private Map<Long, Integer> teamDisplayNumbers(final Tournament tournament) {
-        if (tournament == null || tournament.getId() == null) {
-            return Map.of();
-        }
-        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournament.getId());
-        if (teams == null || teams.isEmpty()) {
-            return Map.of();
-        }
-        final Map<Long, Integer> displayNumbers = new LinkedHashMap<>();
-        for (int index = 0; index < teams.size(); index++) {
-            final TournamentTeam team = teams.get(index);
-            if (team != null && team.getId() != null) {
-                displayNumbers.put(team.getId(), index + 1);
-            }
-        }
-        return displayNumbers;
     }
 
     private String message(final String code, final Locale locale) {
@@ -521,17 +461,5 @@ public class AsyncMailDispatchService implements MailDispatchService {
 
     private static String stripTrailingSlash(final String value) {
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
-    }
-
-    private static String maskEmail(final String email) {
-        if (email == null || email.isBlank()) {
-            return "unknown";
-        }
-
-        final int atIndex = email.indexOf('@');
-        if (atIndex <= 1 || atIndex == email.length() - 1) {
-            return "***";
-        }
-        return email.charAt(0) + "***@" + email.substring(atIndex + 1);
     }
 }
