@@ -515,6 +515,69 @@ public class TournamentBracketServiceImplTest {
     }
 
     @Test
+    public void declareWinnerSendsMatchResultEmailForNonFinalMatch() {
+        // 1. Arrange
+        final RecordingTournamentMailService recordingMailService =
+                new RecordingTournamentMailService();
+        bracketService = bracketService(recordingMailService);
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
+        tournament.setSport(Sport.OTHER);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        final TournamentMatch firstRoundMatch = matches.get(0);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
+                .thenReturn(Optional.of(firstRoundMatch));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+
+        // 2. Exercise
+        bracketService.declareWinner(
+                10L,
+                firstRoundMatch.getId(),
+                new TournamentWinnerDeclarationRequest(firstRoundMatch.getTeamA().getId()),
+                tournament.getHost());
+
+        // 3. Assert
+        Assertions.assertEquals(List.of("match-result"), recordingMailService.actions);
+    }
+
+    @Test
+    public void declareWinnerSendsOnlyCompletedEmailForFinalMatch() {
+        // 1. Arrange
+        final RecordingTournamentMailService recordingMailService =
+                new RecordingTournamentMailService();
+        bracketService = bracketService(recordingMailService);
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
+        tournament.setSport(Sport.OTHER);
+        final List<TournamentMatch> matches = fourTeamBracket(tournament);
+        final TournamentMatch firstRoundMatch = matches.get(0);
+        final TournamentMatch secondRoundMatch = matches.get(1);
+        final TournamentMatch finalMatch = matches.get(2);
+        firstRoundMatch.setWinnerTeam(firstRoundMatch.getTeamA());
+        firstRoundMatch.setStatus(TournamentMatchStatus.DONE);
+        secondRoundMatch.setWinnerTeam(secondRoundMatch.getTeamA());
+        secondRoundMatch.setStatus(TournamentMatchStatus.DONE);
+        finalMatch.setTeamA(firstRoundMatch.getTeamA());
+        finalMatch.setTeamB(secondRoundMatch.getTeamA());
+        finalMatch.setStatus(TournamentMatchStatus.SCHEDULED);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, finalMatch.getId()))
+                .thenReturn(Optional.of(finalMatch));
+        Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
+
+        // 2. Exercise
+        bracketService.declareWinner(
+                10L,
+                finalMatch.getId(),
+                new TournamentWinnerDeclarationRequest(finalMatch.getTeamA().getId()),
+                tournament.getHost());
+
+        // 3. Assert
+        Assertions.assertEquals(List.of("completed"), recordingMailService.actions);
+    }
+
+    @Test
     public void publicCannotReadBracketBeforePublish() {
         // 1. Arrange
         final Tournament tournament =
@@ -1219,6 +1282,48 @@ public class TournamentBracketServiceImplTest {
                 status,
                 FIXED_NOW,
                 FIXED_NOW);
+    }
+
+    private TournamentBracketServiceImpl bracketService(
+            final TournamentMailService tournamentMailService) {
+        return new TournamentBracketServiceImpl(
+                tournamentDao,
+                tournamentTeamDao,
+                tournamentMatchDao,
+                userSportRatingService,
+                tournamentMailService,
+                messageSource,
+                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+    }
+
+    private static class RecordingTournamentMailService implements TournamentMailService {
+
+        private final List<String> actions = new ArrayList<>();
+
+        @Override
+        public void sendBracketPublishedEmail(final Tournament tournament) {
+            actions.add("bracket-published");
+        }
+
+        @Override
+        public void sendMatchResultEmail(
+                final Tournament tournament,
+                final TournamentMatch match,
+                final TournamentTeam winner,
+                final TournamentTeam loser) {
+            actions.add("match-result");
+        }
+
+        @Override
+        public void sendTournamentCompletedEmail(
+                final Tournament tournament, final TournamentTeam champion) {
+            actions.add("completed");
+        }
+
+        @Override
+        public void sendTournamentCancelledEmail(final Tournament tournament) {
+            actions.add("cancelled");
+        }
     }
 
     private static void authenticateAdminMod() {
