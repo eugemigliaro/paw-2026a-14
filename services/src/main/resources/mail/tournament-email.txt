@@ -11,3 +11,7 @@ Match Point
 [# th:each="detail : ${details}"]
 - [[${detail.label}]]: [[${detail.value}]]
 [/]
+[# th:if="${eventUrl}"]
+[[${viewEventLabel}]]:
+[[${eventUrl}]]
+[/]

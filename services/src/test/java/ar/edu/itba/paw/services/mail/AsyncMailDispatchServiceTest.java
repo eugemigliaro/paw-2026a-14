@@ -1,8 +1,13 @@
 package ar.edu.itba.paw.services.mail;
 
+import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
+import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
+import java.time.Instant;
+import java.util.Locale;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +16,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
+import org.springframework.context.support.StaticMessageSource;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
 @ExtendWith(MockitoExtension.class)
 public class AsyncMailDispatchServiceTest {
@@ -47,23 +55,72 @@ public class AsyncMailDispatchServiceTest {
         Assertions.assertDoesNotThrow(() -> asyncMailDispatchService.sendUnbanNotice(user));
     }
 
+    @Test
+    public void testMatchNotificationEmailContainsDeepLinkToEvent() {
+        final RecordingMailService mailService = new RecordingMailService(false);
+        final StaticMessageSource messages = new StaticMessageSource();
+        messages.addMessage("mail.cta.viewEvent", Locale.ENGLISH, "View event");
+        final ThymeleafMailTemplateRenderer realRenderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messages);
+        final AsyncMailDispatchService asyncMailDispatchService =
+                new AsyncMailDispatchService(
+                        mailService, realRenderer, messages, mailProperties(), tournamentTeamDao);
+        final Match match =
+                MatchUtils.createMatchWithId(
+                        40L, 1L, Sport.PADEL, Instant.parse("2026-04-06T18:00:00Z"), 10);
+
+        asyncMailDispatchService.sendMatchUpdated(UserUtils.getUser(2L), match);
+
+        Assertions.assertTrue(
+                mailService.content.getHtmlBody().contains("https://matchpoint.test/matches/40"));
+        Assertions.assertTrue(
+                mailService.content.getTextBody().contains("https://matchpoint.test/matches/40"));
+    }
+
     private AsyncMailDispatchService dispatchService(final MailService mailService) {
         return new AsyncMailDispatchService(
-                mailService,
-                templateRenderer,
-                messageSource,
-                new MailProperties(
-                        MailMode.LOG,
-                        "https://matchpoint.test",
-                        "no-reply@matchpoint.test",
-                        "",
-                        587,
-                        "",
-                        "",
-                        false,
-                        true,
-                        24),
-                tournamentTeamDao);
+                mailService, templateRenderer, messageSource, mailProperties(), tournamentTeamDao);
+    }
+
+    private static MailProperties mailProperties() {
+        return new MailProperties(
+                MailMode.LOG,
+                "https://matchpoint.test",
+                "no-reply@matchpoint.test",
+                "",
+                587,
+                "",
+                "",
+                false,
+                true,
+                24);
+    }
+
+    private static TemplateEngine htmlTemplateEngine() {
+        final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
+        resolver.setPrefix("mail/");
+        resolver.setSuffix(".html");
+        resolver.setTemplateMode("HTML");
+        resolver.setCharacterEncoding("UTF-8");
+        resolver.setCacheable(false);
+
+        final TemplateEngine templateEngine = new TemplateEngine();
+        templateEngine.setTemplateResolver(resolver);
+        return templateEngine;
+    }
+
+    private static TemplateEngine textTemplateEngine() {
+        final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
+        resolver.setPrefix("mail/");
+        resolver.setSuffix(".txt");
+        resolver.setTemplateMode("TEXT");
+        resolver.setCharacterEncoding("UTF-8");
+        resolver.setCacheable(false);
+
+        final TemplateEngine templateEngine = new TemplateEngine();
+        templateEngine.setTemplateResolver(resolver);
+        return templateEngine;
     }
 
     private static class RecordingMailService implements MailService {

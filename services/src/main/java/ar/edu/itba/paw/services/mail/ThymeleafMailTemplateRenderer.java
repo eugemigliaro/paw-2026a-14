@@ -623,6 +623,8 @@ class ThymeleafMailTemplateRenderer {
         context.setVariable("detailsLabel", message("mail.matchLifecycle.details", locale));
         context.setVariable(
                 "details", buildMatchLifecycleDetails(templateData, locale, occurrenceCount));
+        context.setVariable("eventUrl", templateData.getEventUrl());
+        context.setVariable("viewEventLabel", message("mail.cta.viewEvent", locale));
         context.setVariable("lang", locale.getLanguage());
         return context;
     }
@@ -638,6 +640,8 @@ class ThymeleafMailTemplateRenderer {
         context.setVariable("detailsLabel", message("mail.matchInvitation.details", locale));
         context.setVariable(
                 "details", buildMatchInvitationDetails(templateData, locale, occurrenceCount));
+        context.setVariable("eventUrl", templateData.getEventUrl());
+        context.setVariable("viewEventLabel", message("mail.cta.viewEvent", locale));
         context.setVariable("lang", locale.getLanguage());
         return context;
     }
@@ -649,6 +653,8 @@ class ThymeleafMailTemplateRenderer {
         context.setVariable("requestedForLabel", message("mail.tournament.requestedFor", locale));
         context.setVariable("detailsLabel", message("mail.tournament.details", locale));
         context.setVariable("details", buildTournamentLifecycleDetails(templateData, locale));
+        context.setVariable("eventUrl", templateData.getEventUrl());
+        context.setVariable("viewEventLabel", message("mail.cta.viewEvent", locale));
         context.setVariable("lang", locale.getLanguage());
         return context;
     }

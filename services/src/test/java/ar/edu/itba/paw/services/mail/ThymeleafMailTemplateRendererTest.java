@@ -26,13 +26,17 @@ public class ThymeleafMailTemplateRendererTest {
                                 Instant.parse("2026-04-06T19:30:00Z"),
                                 "Padel",
                                 "Open",
+                                "https://matchpoint.test/matches/40",
                                 Locale.ENGLISH));
 
         Assertions.assertTrue(content.getHtmlBody().contains("Event updated"));
         Assertions.assertTrue(content.getHtmlBody().contains("Padel Night"));
         Assertions.assertTrue(content.getHtmlBody().contains("Downtown Club"));
+        Assertions.assertTrue(content.getHtmlBody().contains("https://matchpoint.test/matches/40"));
+        Assertions.assertTrue(content.getHtmlBody().contains("View event"));
         Assertions.assertTrue(content.getTextBody().contains("Sport"));
         Assertions.assertTrue(content.getTextBody().contains("Status"));
+        Assertions.assertTrue(content.getTextBody().contains("https://matchpoint.test/matches/40"));
         Assertions.assertEquals("Event updated: Padel Night", content.getSubject());
     }
 
@@ -52,13 +56,17 @@ public class ThymeleafMailTemplateRendererTest {
                                 null,
                                 "Padel",
                                 "Cancelado",
+                                "https://matchpoint.test/matches/41",
                                 Locale.of("es")));
 
         Assertions.assertTrue(content.getHtmlBody().contains("Evento cancelado"));
         Assertions.assertTrue(content.getHtmlBody().contains("Tu reserva ya no sigue activa"));
         Assertions.assertTrue(content.getHtmlBody().contains("lang=\"es\""));
+        Assertions.assertTrue(content.getHtmlBody().contains("https://matchpoint.test/matches/41"));
+        Assertions.assertTrue(content.getHtmlBody().contains("Ver evento"));
         Assertions.assertTrue(content.getTextBody().contains("Solicitado para"));
         Assertions.assertTrue(content.getTextBody().contains("Estado"));
+        Assertions.assertTrue(content.getTextBody().contains("https://matchpoint.test/matches/41"));
         Assertions.assertEquals("Evento cancelado: Noche de Padel", content.getSubject());
     }
 
@@ -78,6 +86,7 @@ public class ThymeleafMailTemplateRendererTest {
                                 Instant.parse("2026-04-06T19:30:00Z"),
                                 "Padel",
                                 "Open",
+                                "https://matchpoint.test/matches/42",
                                 Locale.ENGLISH),
                         3);
 
@@ -103,6 +112,7 @@ public class ThymeleafMailTemplateRendererTest {
                                 null,
                                 "Padel",
                                 "Cancelado",
+                                "https://matchpoint.test/matches/43",
                                 Locale.of("es")),
                         2);
 
@@ -130,6 +140,7 @@ public class ThymeleafMailTemplateRendererTest {
                                 Instant.parse("2026-04-06T19:30:00Z"),
                                 "Padel",
                                 "Open",
+                                "https://matchpoint.test/matches/44",
                                 Locale.ENGLISH),
                         3);
 
@@ -164,6 +175,35 @@ public class ThymeleafMailTemplateRendererTest {
                 "Your Match Point account has been temporarily banned", content.getSubject());
     }
 
+    @Test
+    public void testRenderTournamentBracketPublishedEmailIncludesCta() {
+        final ThymeleafMailTemplateRenderer renderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messageSource());
+
+        final MailContent content =
+                renderer.renderTournamentBracketPublishedEmail(
+                        new TournamentLifecycleMailTemplateData(
+                                "player@test.com",
+                                "Saturday Cup",
+                                "Padel",
+                                "In progress",
+                                null,
+                                null,
+                                null,
+                                null,
+                                "Downtown Club",
+                                null,
+                                "https://matchpoint.test/tournaments/7",
+                                Locale.ENGLISH));
+
+        Assertions.assertTrue(
+                content.getHtmlBody().contains("https://matchpoint.test/tournaments/7"));
+        Assertions.assertTrue(content.getHtmlBody().contains("View event"));
+        Assertions.assertTrue(
+                content.getTextBody().contains("https://matchpoint.test/tournaments/7"));
+    }
+
     private static TemplateEngine htmlTemplateEngine() {
         final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("mail/");
@@ -192,6 +232,8 @@ public class ThymeleafMailTemplateRendererTest {
 
     private static StaticMessageSource messageSource() {
         final StaticMessageSource messageSource = new StaticMessageSource();
+        messageSource.addMessage("mail.cta.viewEvent", Locale.ENGLISH, "View event");
+        messageSource.addMessage("mail.cta.viewEvent", Locale.of("es"), "Ver evento");
         messageSource.addMessage(
                 "mail.verification.eyebrow", Locale.ENGLISH, "One-time verification");
         messageSource.addMessage(

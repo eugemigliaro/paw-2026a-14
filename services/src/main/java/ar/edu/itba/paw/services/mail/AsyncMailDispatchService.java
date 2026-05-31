@@ -347,6 +347,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
                 sportLabel,
                 statusLabel,
                 actorName,
+                stripTrailingSlash(mailProperties.getBaseUrl()) + "/matches/" + match.getId(),
                 locale);
     }
 
@@ -383,6 +384,9 @@ public class AsyncMailDispatchService implements MailDispatchService {
                 teamName(champion, locale, teamDisplayNumbers),
                 tournament.getAddress(),
                 tournament.getStartsAt(),
+                stripTrailingSlash(mailProperties.getBaseUrl())
+                        + "/tournaments/"
+                        + tournament.getId(),
                 locale);
     }
 

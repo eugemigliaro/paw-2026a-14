@@ -37,6 +37,14 @@
 						<tr>
 							<td style="padding-top:24px; font-size:14px; line-height:1.7; color:#5d6c68;" th:text="${notice}">Your reservation is no longer active for this event.</td>
 						</tr>
+						<tr th:if="${eventUrl}">
+							<td style="padding-top:28px;">
+								<a
+									th:href="${eventUrl}"
+									style="display:inline-block; background:#00645a; color:#ffffff; text-decoration:none; font-weight:700; padding:16px 24px; border-radius:999px;"
+									th:text="${viewEventLabel}">View event</a>
+							</td>
+						</tr>
 					</table>
 				</td>
 			</tr>

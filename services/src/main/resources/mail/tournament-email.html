@@ -34,6 +34,14 @@
 								</div>
 							</td>
 						</tr>
+						<tr th:if="${eventUrl}">
+							<td style="padding-top:28px;">
+								<a
+									th:href="${eventUrl}"
+									style="display:inline-block; background:#00645a; color:#ffffff; text-decoration:none; font-weight:700; padding:16px 24px; border-radius:999px;"
+									th:text="${viewEventLabel}">View event</a>
+							</td>
+						</tr>
 					</table>
 				</td>
 			</tr>
