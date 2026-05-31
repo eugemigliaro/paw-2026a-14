@@ -14,12 +14,13 @@ public final class ViewFormatUtils {
 
     private ViewFormatUtils() {}
 
-    public static String formatInstant(final Instant instant, final Locale locale) {
+    public static String formatInstant(
+            final Instant instant, final Locale locale, final ZoneId zoneId) {
         return instant == null
                 ? ""
                 : DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                         .withLocale(resolvedLocale(locale))
-                        .withZone(ZoneId.systemDefault())
+                        .withZone(zoneId)
                         .format(instant);
     }
 

@@ -15,6 +15,8 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
@@ -62,6 +64,7 @@ public class MatchDashboardController {
     private final MatchReservationService matchReservationService;
     private final TournamentService tournamentService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public MatchDashboardController(
@@ -69,12 +72,29 @@ public class MatchDashboardController {
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
             final TournamentService tournamentService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
         this.tournamentService = tournamentService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public MatchDashboardController(
+            final MatchService matchService,
+            final MatchParticipationService matchParticipationService,
+            final MatchReservationService matchReservationService,
+            final TournamentService tournamentService,
+            final MessageSource messageSource) {
+        this(
+                matchService,
+                matchParticipationService,
+                matchReservationService,
+                tournamentService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/events")
@@ -1457,16 +1477,8 @@ public class MatchDashboardController {
         }
     }
 
-    private static String normalizeTimezone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault().getId();
-        }
-
-        try {
-            return ZoneId.of(timezone).getId();
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault().getId();
-        }
+    private String normalizeTimezone(final String timezone) {
+        return platformTimeZoneService.normalizeOrDefault(timezone);
     }
 
     private static List<String> normalizeSports(final List<String> rawSports) {

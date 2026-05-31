@@ -10,6 +10,8 @@ import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
@@ -23,7 +25,6 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PublicProfilePageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SportRatingViewModel;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
@@ -55,6 +56,23 @@ public class PublicProfileController {
     private final ModerationService moderationService;
     private final UserSportRatingService userSportRatingService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PublicProfileController(
+            final UserService userService,
+            final PlayerReviewService playerReviewService,
+            final ModerationService moderationService,
+            final UserSportRatingService userSportRatingService,
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
+        this.userService = userService;
+        this.playerReviewService = playerReviewService;
+        this.moderationService = moderationService;
+        this.userSportRatingService = userSportRatingService;
+        this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
 
     public PublicProfileController(
             final UserService userService,
@@ -62,11 +80,13 @@ public class PublicProfileController {
             final ModerationService moderationService,
             final UserSportRatingService userSportRatingService,
             final MessageSource messageSource) {
-        this.userService = userService;
-        this.playerReviewService = playerReviewService;
-        this.moderationService = moderationService;
-        this.userSportRatingService = userSportRatingService;
-        this.messageSource = messageSource;
+        this(
+                userService,
+                playerReviewService,
+                moderationService,
+                userSportRatingService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/users/{username}")
@@ -144,7 +164,11 @@ public class PublicProfileController {
                             "profileBannedUntil",
                             DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                                     .withLocale(resolvedLocale)
-                                    .format(ban.getBannedUntil().atZone(ZoneId.systemDefault())));
+                                    .format(
+                                            ban.getBannedUntil()
+                                                    .atZone(
+                                                            platformTimeZoneService
+                                                                    .defaultZone())));
                 });
         CurrentAuthenticatedUser.get()
                 .filter(principal -> principal.getUser().getId().equals(user.getId()))
@@ -442,13 +466,13 @@ public class PublicProfileController {
         return messageSource.getMessage(count == 1L ? singularCode : pluralCode, null, locale);
     }
 
-    private static String updatedAtLabel(final PlayerReview review, final Locale locale) {
+    private String updatedAtLabel(final PlayerReview review, final Locale locale) {
         if (review.getUpdatedAt() == null) {
             return "";
         }
         return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
                 .withLocale(locale == null ? Locale.ENGLISH : locale)
-                .format(review.getUpdatedAt().atZone(ZoneId.systemDefault()));
+                .format(review.getUpdatedAt().atZone(platformTimeZoneService.defaultZone()));
     }
 
     private static int parseReviewPage(final String reviewPage) {

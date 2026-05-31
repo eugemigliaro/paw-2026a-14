@@ -13,6 +13,8 @@ import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
@@ -54,15 +56,29 @@ public class ModerationAdminController {
     private final ModerationService moderationService;
     private final UserService userService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public ModerationAdminController(
             final ModerationService moderationService,
             final UserService userService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.moderationService = moderationService;
         this.userService = userService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public ModerationAdminController(
+            final ModerationService moderationService,
+            final UserService userService,
+            final MessageSource messageSource) {
+        this(
+                moderationService,
+                userService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @ModelAttribute("resolutionForm")
@@ -405,13 +421,18 @@ public class ModerationAdminController {
                 report.getAppealReason(),
                 report.getResolutionDetails(),
                 report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale),
-                formatInstant(report.getUpdatedAt(), locale),
-                formatInstant(report.getAppealedAt(), locale),
-                formatInstant(report.getReviewedAt(), locale),
+                formatInstant(report.getCreatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(report.getUpdatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getAppealedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getReviewedAt(), locale, platformTimeZoneService.defaultZone()),
                 report.getReviewer(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
-                formatInstant(report.getAppealResolvedAt(), locale),
+                formatInstant(
+                        report.getAppealResolvedAt(),
+                        locale,
+                        platformTimeZoneService.defaultZone()),
                 report.getAppealResolvedBy(),
                 isAppealed(report));
     }
@@ -439,7 +460,9 @@ public class ModerationAdminController {
         }
 
         final UserBan ban = latestBanForUser.get();
-        return new UserBanViewModel(ban.getId(), formatInstant(ban.getBannedUntil(), locale));
+        return new UserBanViewModel(
+                ban.getId(),
+                formatInstant(ban.getBannedUntil(), locale, platformTimeZoneService.defaultZone()));
     }
 
     public static final class UserBanViewModel {

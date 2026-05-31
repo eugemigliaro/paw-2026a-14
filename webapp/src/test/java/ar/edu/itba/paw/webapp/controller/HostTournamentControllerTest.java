@@ -20,6 +20,7 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
@@ -158,6 +159,35 @@ class HostTournamentControllerTest {
         Assertions.assertEquals(1, createdRequest.get().getTeamSize());
         Assertions.assertTrue(createdRequest.get().isAllowSoloSignup());
         Assertions.assertTrue(createdRequest.get().isAllowTeamDraft());
+    }
+
+    @Test
+    void postCreateWithoutTimezoneUsesArgentinaFallback() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentService.createTournament(
+                                Mockito.any(User.class),
+                                Mockito.any(CreateTournamentRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            createdRequest.set(invocation.getArgument(1));
+                            return tournament(99L, host, TournamentStatus.REGISTRATION);
+                        });
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(createPostWithoutTimezone("City Padel Cup"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/99"));
+
+        Assertions.assertNotNull(createdRequest.get());
+        Assertions.assertEquals(
+                Instant.parse("2030-04-01T12:00:00Z"),
+                createdRequest.get().getRegistrationOpensAt());
+        Assertions.assertEquals(
+                Instant.parse("2030-04-09T23:00:00Z"),
+                createdRequest.get().getRegistrationClosesAt());
     }
 
     @Test
@@ -509,7 +539,8 @@ class HostTournamentControllerTest {
                                 java.util.List.of(roundOneMatch, roundTwoMatch),
                                 null,
                                 roundOneMatch));
-        final String expectedDate = LocalDate.now(ZoneId.systemDefault()).toString();
+        final String expectedDate =
+                LocalDate.now(ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)).toString();
 
         // 2. Exercise
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
@@ -670,6 +701,25 @@ class HostTournamentControllerTest {
             builder.param("_allowTeamDraft", "on");
         }
         return builder;
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            createPostWithoutTimezone(final String title) {
+        return post("/host/tournaments")
+                .locale(Locale.ENGLISH)
+                .param("title", title)
+                .param("sport", "padel")
+                .param("description", "Open city tournament")
+                .param("address", "Downtown Club")
+                .param("registrationOpensDate", "2030-04-01")
+                .param("registrationOpensTime", "09:00")
+                .param("registrationClosesDate", "2030-04-09")
+                .param("registrationClosesTime", "20:00")
+                .param("bracketSize", "8")
+                .param("teamSize", "1")
+                .param("pricePerPlayer", "10.00")
+                .param("allowSoloSignup", "true")
+                .param("allowTeamDraft", "true");
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

@@ -1,13 +1,15 @@
 package ar.edu.itba.paw.services.mail;
 
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
@@ -19,14 +21,29 @@ public class ThymeleafMailTemplateRenderer {
     private final TemplateEngine htmlMailTemplateEngine;
     private final TemplateEngine textMailTemplateEngine;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
+
+    @Autowired
+    public ThymeleafMailTemplateRenderer(
+            final TemplateEngine htmlMailTemplateEngine,
+            final TemplateEngine textMailTemplateEngine,
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
+        this.htmlMailTemplateEngine = htmlMailTemplateEngine;
+        this.textMailTemplateEngine = textMailTemplateEngine;
+        this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
 
     public ThymeleafMailTemplateRenderer(
             final TemplateEngine htmlMailTemplateEngine,
             final TemplateEngine textMailTemplateEngine,
             final MessageSource messageSource) {
-        this.htmlMailTemplateEngine = htmlMailTemplateEngine;
-        this.textMailTemplateEngine = textMailTemplateEngine;
-        this.messageSource = messageSource;
+        this(
+                htmlMailTemplateEngine,
+                textMailTemplateEngine,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     public MailContent renderReservationConfirmation(
@@ -587,7 +604,7 @@ public class ThymeleafMailTemplateRenderer {
                                     .format(
                                             templateData
                                                     .getExpiresAt()
-                                                    .atZone(ZoneId.systemDefault()))
+                                                    .atZone(platformTimeZoneService.defaultZone()))
                         },
                         locale));
         context.setVariable("ignoreNotice", message("mail.verification.ignore", locale));
@@ -778,10 +795,10 @@ public class ThymeleafMailTemplateRenderer {
         return List.copyOf(details);
     }
 
-    private static String formatDateTime(final Instant instant, final Locale locale) {
+    private String formatDateTime(final Instant instant, final Locale locale) {
         return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
                 .withLocale(locale)
-                .format(instant.atZone(ZoneId.systemDefault()));
+                .format(instant.atZone(platformTimeZoneService.defaultZone()));
     }
 
     private String message(final String code, final Locale locale) {
