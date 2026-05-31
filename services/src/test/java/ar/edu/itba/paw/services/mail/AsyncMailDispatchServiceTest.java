@@ -1,11 +1,15 @@
 package ar.edu.itba.paw.services.mail;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Locale;
 import org.junit.jupiter.api.Assertions;
@@ -76,6 +80,36 @@ public class AsyncMailDispatchServiceTest {
                 mailService.content.getHtmlBody().contains("https://matchpoint.test/matches/40"));
         Assertions.assertTrue(
                 mailService.content.getTextBody().contains("https://matchpoint.test/matches/40"));
+        Assertions.assertTrue(mailService.content.getHtmlBody().contains("?lang=en"));
+    }
+
+    @Test
+    public void testTournamentBracketEmailContainsDeepLinkToBracket() {
+        final RecordingMailService mailService = new RecordingMailService(false);
+        final StaticMessageSource messages = new StaticMessageSource();
+        messages.addMessage("mail.cta.viewBracket", Locale.ENGLISH, "View bracket");
+        messages.addMessage("mail.cta.viewTournament", Locale.ENGLISH, "View tournament");
+        final ThymeleafMailTemplateRenderer realRenderer =
+                new ThymeleafMailTemplateRenderer(
+                        htmlTemplateEngine(), textTemplateEngine(), messages);
+        final AsyncMailDispatchService asyncMailDispatchService =
+                new AsyncMailDispatchService(
+                        mailService, realRenderer, messages, mailProperties(), tournamentTeamDao);
+
+        asyncMailDispatchService.sendTournamentBracketPublished(
+                UserUtils.getUser(2L), tournamentWithId(7L));
+
+        Assertions.assertTrue(
+                mailService
+                        .content
+                        .getHtmlBody()
+                        .contains("https://matchpoint.test/tournaments/7/bracket?lang=en"));
+        Assertions.assertTrue(mailService.content.getHtmlBody().contains("View bracket"));
+        Assertions.assertTrue(
+                mailService
+                        .content
+                        .getTextBody()
+                        .contains("https://matchpoint.test/tournaments/7/bracket?lang=en"));
     }
 
     private AsyncMailDispatchService dispatchService(final MailService mailService) {
@@ -95,6 +129,32 @@ public class AsyncMailDispatchServiceTest {
                 false,
                 true,
                 24);
+    }
+
+    private static Tournament tournamentWithId(final long id) {
+        return new Tournament(
+                id,
+                UserUtils.getUser(1L),
+                Sport.PADEL,
+                "Saturday Cup",
+                "Tournament description",
+                "Downtown Club",
+                null,
+                null,
+                Instant.parse("2026-04-06T18:00:00Z"),
+                Instant.parse("2026-04-06T21:00:00Z"),
+                BigDecimal.ZERO,
+                null,
+                TournamentFormat.SINGLE_ELIMINATION,
+                8,
+                1,
+                true,
+                false,
+                Instant.parse("2026-04-01T18:00:00Z"),
+                Instant.parse("2026-04-05T18:00:00Z"),
+                TournamentStatus.IN_PROGRESS,
+                Instant.parse("2026-03-20T18:00:00Z"),
+                Instant.parse("2026-03-20T18:00:00Z"));
     }
 
     private static TemplateEngine htmlTemplateEngine() {

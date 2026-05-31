@@ -243,7 +243,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
         dispatch(
                 recipient.getEmail(),
                 templateRenderer.renderTournamentBracketPublishedEmail(
-                        buildTournamentTemplateData(
+                        buildTournamentBracketTemplateData(
                                 recipient, tournament, null, null, null, null)));
     }
 
@@ -258,7 +258,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
         dispatch(
                 recipient.getEmail(),
                 templateRenderer.renderTournamentMatchResultEmail(
-                        buildTournamentTemplateData(
+                        buildTournamentBracketTemplateData(
                                 recipient, tournament, match, winner, loser, null)));
     }
 
@@ -269,7 +269,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
         dispatch(
                 recipient.getEmail(),
                 templateRenderer.renderTournamentCompletedEmail(
-                        buildTournamentTemplateData(
+                        buildTournamentDetailTemplateData(
                                 recipient, tournament, null, null, null, champion)));
     }
 
@@ -279,7 +279,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
         dispatch(
                 recipient.getEmail(),
                 templateRenderer.renderTournamentCancelledEmail(
-                        buildTournamentTemplateData(
+                        buildTournamentDetailTemplateData(
                                 recipient, tournament, null, null, null, null)));
     }
 
@@ -347,7 +347,7 @@ public class AsyncMailDispatchService implements MailDispatchService {
                 sportLabel,
                 statusLabel,
                 actorName,
-                stripTrailingSlash(mailProperties.getBaseUrl()) + "/matches/" + match.getId(),
+                appUrl("/matches/" + match.getId(), locale),
                 locale);
     }
 
@@ -357,7 +357,8 @@ public class AsyncMailDispatchService implements MailDispatchService {
             final TournamentMatch match,
             final TournamentTeam winner,
             final TournamentTeam loser,
-            final TournamentTeam champion) {
+            final TournamentTeam champion,
+            final boolean linkToBracket) {
         final Locale locale = recipientLocale(recipient);
         final String sportLabel =
                 messageSource.getMessage(
@@ -384,10 +385,42 @@ public class AsyncMailDispatchService implements MailDispatchService {
                 teamName(champion, locale, teamDisplayNumbers),
                 tournament.getAddress(),
                 tournament.getStartsAt(),
-                stripTrailingSlash(mailProperties.getBaseUrl())
-                        + "/tournaments/"
-                        + tournament.getId(),
+                tournamentUrl(tournament, linkToBracket, locale),
                 locale);
+    }
+
+    private TournamentLifecycleMailTemplateData buildTournamentBracketTemplateData(
+            final User recipient,
+            final Tournament tournament,
+            final TournamentMatch match,
+            final TournamentTeam winner,
+            final TournamentTeam loser,
+            final TournamentTeam champion) {
+        return buildTournamentTemplateData(
+                recipient, tournament, match, winner, loser, champion, true);
+    }
+
+    private TournamentLifecycleMailTemplateData buildTournamentDetailTemplateData(
+            final User recipient,
+            final Tournament tournament,
+            final TournamentMatch match,
+            final TournamentTeam winner,
+            final TournamentTeam loser,
+            final TournamentTeam champion) {
+        return buildTournamentTemplateData(
+                recipient, tournament, match, winner, loser, champion, false);
+    }
+
+    private String tournamentUrl(
+            final Tournament tournament, final boolean linkToBracket, final Locale locale) {
+        final String detailPath = "/tournaments/" + tournament.getId();
+        return appUrl(linkToBracket ? detailPath + "/bracket" : detailPath, locale);
+    }
+
+    private String appUrl(final String path, final Locale locale) {
+        final String baseUrl = stripTrailingSlash(mailProperties.getBaseUrl());
+        final String languageTag = resolvedLocale(locale).getLanguage();
+        return languageTag.isBlank() ? baseUrl + path : baseUrl + path + "?lang=" + languageTag;
     }
 
     private String matchLabel(final TournamentMatch match, final Locale locale) {

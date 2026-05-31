@@ -199,7 +199,7 @@ public class ThymeleafMailTemplateRendererTest {
 
         Assertions.assertTrue(
                 content.getHtmlBody().contains("https://matchpoint.test/tournaments/7"));
-        Assertions.assertTrue(content.getHtmlBody().contains("View event"));
+        Assertions.assertTrue(content.getHtmlBody().contains("View bracket"));
         Assertions.assertTrue(
                 content.getTextBody().contains("https://matchpoint.test/tournaments/7"));
     }
@@ -234,6 +234,10 @@ public class ThymeleafMailTemplateRendererTest {
         final StaticMessageSource messageSource = new StaticMessageSource();
         messageSource.addMessage("mail.cta.viewEvent", Locale.ENGLISH, "View event");
         messageSource.addMessage("mail.cta.viewEvent", Locale.of("es"), "Ver evento");
+        messageSource.addMessage("mail.cta.viewTournament", Locale.ENGLISH, "View tournament");
+        messageSource.addMessage("mail.cta.viewTournament", Locale.of("es"), "Ver torneo");
+        messageSource.addMessage("mail.cta.viewBracket", Locale.ENGLISH, "View bracket");
+        messageSource.addMessage("mail.cta.viewBracket", Locale.of("es"), "Ver llave");
         messageSource.addMessage(
                 "mail.verification.eyebrow", Locale.ENGLISH, "One-time verification");
         messageSource.addMessage(
