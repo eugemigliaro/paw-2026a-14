@@ -3,13 +3,14 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
@@ -34,14 +35,23 @@ public class VerificationController {
 
     private final AccountAuthService accountAuthService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
     @Autowired
     public VerificationController(
-            final AccountAuthService accountAuthService, final MessageSource messageSource) {
+            final AccountAuthService accountAuthService,
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.accountAuthService = accountAuthService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public VerificationController(
+            final AccountAuthService accountAuthService, final MessageSource messageSource) {
+        this(accountAuthService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/verifications/{token}")
@@ -58,7 +68,9 @@ public class VerificationController {
             mav.addObject(
                     "expiresAtLabel",
                     VerificationViews.expiryFormatter(locale)
-                            .format(preview.getExpiresAt().atZone(ZoneId.systemDefault())));
+                            .format(
+                                    preview.getExpiresAt()
+                                            .atZone(platformTimeZoneService.defaultZone())));
             return mav;
         } catch (final VerificationFailureException exception) {
             return buildErrorView(exception, locale);

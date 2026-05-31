@@ -53,6 +53,7 @@ public class MatchServiceImpl implements MatchService {
     private final MatchNotificationService matchNotificationService;
     private final RecurringMatchAsyncService recurringMatchAsyncService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
     private final Clock clock;
 
     @Autowired
@@ -63,6 +64,7 @@ public class MatchServiceImpl implements MatchService {
             final SecurityService securityService,
             final RecurringMatchAsyncService recurringMatchAsyncService,
             final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService,
             final Clock clock) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
@@ -70,7 +72,27 @@ public class MatchServiceImpl implements MatchService {
         this.securityService = securityService;
         this.recurringMatchAsyncService = recurringMatchAsyncService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
         this.clock = clock;
+    }
+
+    public MatchServiceImpl(
+            final MatchDao matchDao,
+            final MatchParticipantDao matchParticipantDao,
+            final MatchNotificationService matchNotificationService,
+            final SecurityService securityService,
+            final RecurringMatchAsyncService recurringMatchAsyncService,
+            final MessageSource messageSource,
+            final Clock clock) {
+        this(
+                matchDao,
+                matchParticipantDao,
+                matchNotificationService,
+                securityService,
+                recurringMatchAsyncService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault(),
+                clock);
     }
 
     @Override
@@ -1001,16 +1023,8 @@ public class MatchServiceImpl implements MatchService {
         return MatchSort.fromQueryValue(rawSort).orElse(MatchSort.SOONEST);
     }
 
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+    private ZoneId parseZone(final String timezone) {
+        return platformTimeZoneService.resolveOrDefault(timezone);
     }
 
     private List<OccurrenceWindow> buildOccurrenceWindows(
@@ -1106,8 +1120,8 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
-    private static ZoneId resolveZone(final ZoneId zoneId) {
-        return zoneId == null ? ZoneId.systemDefault() : zoneId;
+    private ZoneId resolveZone(final ZoneId zoneId) {
+        return zoneId == null ? platformTimeZoneService.defaultZone() : zoneId;
     }
 
     private String message(final String code) {

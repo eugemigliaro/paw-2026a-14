@@ -2197,7 +2197,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.systemDefault()))
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
                 .thenReturn(1);
         Mockito.when(
                         matchDao.findHostedMatches(
@@ -2213,7 +2213,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 MatchSort.SOONEST,
-                                ZoneId.systemDefault(),
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
                                 0,
                                 12))
                 .thenReturn(List.of(hosted));
@@ -2269,7 +2269,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.systemDefault()))
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
                 .thenReturn(1);
         Mockito.when(
                         matchDao.findHostedMatches(
@@ -2285,7 +2285,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 MatchSort.SOONEST,
-                                ZoneId.systemDefault(),
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
                                 0,
                                 10))
                 .thenReturn(List.of(completed));
@@ -2327,7 +2327,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.systemDefault()))
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
                 .thenReturn(11);
         Mockito.when(
                         matchDao.findJoinedMatches(
@@ -2343,7 +2343,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 MatchSort.SOONEST,
-                                ZoneId.systemDefault(),
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
                                 10,
                                 10))
                 .thenReturn(List.of(first));
@@ -2387,7 +2387,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.systemDefault()))
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
                 .thenReturn(5);
         Mockito.when(
                         matchDao.findJoinedMatches(
@@ -2403,7 +2403,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 MatchSort.SOONEST,
-                                ZoneId.systemDefault(),
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
                                 0,
                                 5))
                 .thenReturn(List.of(first));

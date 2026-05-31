@@ -17,6 +17,8 @@ import ar.edu.itba.paw.services.CreateRecurrenceRequest;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
@@ -29,7 +31,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,7 @@ public class HostController {
     private final ImageService imageService;
     private final Clock clock;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -72,6 +74,7 @@ public class HostController {
             final ImageService imageService,
             final Clock clock,
             final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -84,6 +87,7 @@ public class HostController {
         this.imageService = imageService;
         this.clock = clock;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
@@ -102,6 +106,7 @@ public class HostController {
                 imageService,
                 clock,
                 messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault(),
                 false,
                 "",
                 "",
@@ -594,8 +599,7 @@ public class HostController {
 
     private CreateEventForm toForm(final Match match) {
         final CreateEventForm form = new CreateEventForm();
-        final LocalDateTime startsAt =
-                LocalDateTime.ofInstant(match.getStartsAt(), ZoneId.systemDefault());
+        final LocalDateTime startsAt = platformTimeZoneService.toLocalDateTime(match.getStartsAt());
         form.setTitle(match.getTitle());
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
@@ -606,13 +610,12 @@ public class HostController {
         form.setJoinPolicy(match.getJoinPolicy().getValue());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
-        final LocalDateTime endsAt =
-                LocalDateTime.ofInstant(resolveEndsAt(match), ZoneId.systemDefault());
+        final LocalDateTime endsAt = platformTimeZoneService.toLocalDateTime(resolveEndsAt(match));
         form.setEndDate(endsAt.toLocalDate());
         form.setEndTime(endsAt.toLocalTime());
         form.setMaxPlayers(match.getMaxPlayers());
         form.setPricePerPlayer(match.getPricePerPlayer());
-        form.setTz(ZoneId.systemDefault().getId());
+        form.setTz(platformTimeZoneService.defaultZone().getId());
         return form;
     }
 
@@ -680,26 +683,14 @@ public class HostController {
         return match;
     }
 
-    private static Instant toInstant(
+    private Instant toInstant(
             final java.time.LocalDate eventDate,
             final java.time.LocalTime eventTime,
             final String timezone) {
-        return eventDate.atTime(eventTime).atZone(resolveZoneId(timezone)).toInstant();
+        return platformTimeZoneService.toInstant(eventDate, eventTime, timezone);
     }
 
-    private static ZoneId resolveZoneId(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
-    }
-
-    private static CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {
+    private CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {
         if (!form.isRecurring()) {
             return null;
         }
@@ -718,7 +709,7 @@ public class HostController {
                 endMode == RecurrenceEndMode.OCCURRENCE_COUNT
                         ? form.getRecurrenceOccurrenceCount()
                         : null,
-                resolveZoneId(form.getTz()));
+                platformTimeZoneService.resolveOrDefault(form.getTz()));
     }
 
     private void validateVisibilityAndJoinPolicy(

@@ -10,6 +10,8 @@ import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
@@ -39,11 +41,21 @@ public class UserModerationReportController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public UserModerationReportController(
+            final ModerationService moderationService,
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
+        this.moderationService = moderationService;
+        this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
 
     public UserModerationReportController(
             final ModerationService moderationService, final MessageSource messageSource) {
-        this.moderationService = moderationService;
-        this.messageSource = messageSource;
+        this(moderationService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping
@@ -175,11 +187,16 @@ public class UserModerationReportController {
                 report.getAppealReason(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
                 report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale),
-                formatInstant(report.getUpdatedAt(), locale),
-                formatInstant(report.getReviewedAt(), locale),
-                formatInstant(report.getAppealedAt(), locale),
-                formatInstant(report.getAppealResolvedAt(), locale));
+                formatInstant(report.getCreatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(report.getUpdatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getReviewedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getAppealedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getAppealResolvedAt(),
+                        locale,
+                        platformTimeZoneService.defaultZone()));
     }
 
     public static final class UserReportViewModel {

@@ -15,6 +15,8 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
@@ -62,6 +64,7 @@ public class FeedController {
     private final MatchReservationService matchReservationService;
     private final TournamentService tournamentService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -76,6 +79,7 @@ public class FeedController {
             final MatchReservationService matchReservationService,
             final TournamentService tournamentService,
             final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -89,6 +93,7 @@ public class FeedController {
         this.matchReservationService = matchReservationService;
         this.tournamentService = tournamentService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
@@ -109,6 +114,7 @@ public class FeedController {
                 matchReservationService,
                 tournamentService,
                 messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault(),
                 false,
                 "",
                 "",
@@ -573,16 +579,8 @@ public class FeedController {
         return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+    private ZoneId parseZone(final String timezone) {
+        return platformTimeZoneService.resolveOrDefault(timezone);
     }
 
     private static String buildUrl(
@@ -638,7 +636,7 @@ public class FeedController {
         return List.copyOf(validSports);
     }
 
-    private static FeedFilters normalizeFilters(
+    private FeedFilters normalizeFilters(
             final String type,
             final List<String> sports,
             final String startDate,
@@ -675,7 +673,7 @@ public class FeedController {
         return normalizedSort;
     }
 
-    private static DateRange normalizeDateRange(
+    private DateRange normalizeDateRange(
             final String rawStartDate, final String rawEndDate, final String timezone) {
         final LocalDate today = LocalDate.now(parseZone(timezone));
         LocalDate startDate = parseDate(rawStartDate);
@@ -709,11 +707,8 @@ public class FeedController {
         }
     }
 
-    private static String normalizeTimezone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return null;
-        }
-        return timezone.trim();
+    private String normalizeTimezone(final String timezone) {
+        return platformTimeZoneService.normalizeOrDefault(timezone);
     }
 
     private static PriceRange normalizePriceRange(

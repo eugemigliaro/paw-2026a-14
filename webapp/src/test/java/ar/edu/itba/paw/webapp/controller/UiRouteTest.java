@@ -2658,6 +2658,10 @@ class UiRouteTest {
 
         Assertions.assertNotNull(lastCreateMatchRequest.get());
         Assertions.assertFalse(lastCreateMatchRequest.get().isRecurring());
+        Assertions.assertEquals(
+                Instant.parse("2099-04-10T21:00:00Z"), lastCreateMatchRequest.get().getStartsAt());
+        Assertions.assertEquals(
+                Instant.parse("2099-04-10T22:30:00Z"), lastCreateMatchRequest.get().getEndsAt());
     }
 
     @Test
