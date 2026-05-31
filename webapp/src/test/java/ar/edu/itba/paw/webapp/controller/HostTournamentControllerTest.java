@@ -20,6 +20,7 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
@@ -538,7 +539,8 @@ class HostTournamentControllerTest {
                                 java.util.List.of(roundOneMatch, roundTwoMatch),
                                 null,
                                 roundOneMatch));
-        final String expectedDate = LocalDate.now(ZoneId.systemDefault()).toString();
+        final String expectedDate =
+                LocalDate.now(ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)).toString();
 
         // 2. Exercise
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();

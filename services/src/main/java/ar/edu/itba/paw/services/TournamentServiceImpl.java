@@ -45,7 +45,26 @@ public class TournamentServiceImpl implements TournamentService {
     private final TournamentTeamDao tournamentTeamDao;
     private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
     private final Clock clock;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public TournamentServiceImpl(
+            final TournamentDao tournamentDao,
+            final TournamentSoloEntryDao tournamentSoloEntryDao,
+            final TournamentTeamDao tournamentTeamDao,
+            final TournamentMailService tournamentMailService,
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService,
+            final Clock clock) {
+        this.tournamentDao = tournamentDao;
+        this.tournamentSoloEntryDao = tournamentSoloEntryDao;
+        this.tournamentTeamDao = tournamentTeamDao;
+        this.tournamentMailService = tournamentMailService;
+        this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+        this.clock = clock;
+    }
 
     public TournamentServiceImpl(
             final TournamentDao tournamentDao,
@@ -54,12 +73,14 @@ public class TournamentServiceImpl implements TournamentService {
             final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
-        this.tournamentSoloEntryDao = tournamentSoloEntryDao;
-        this.tournamentTeamDao = tournamentTeamDao;
-        this.tournamentMailService = tournamentMailService;
-        this.messageSource = messageSource;
-        this.clock = clock;
+        this(
+                tournamentDao,
+                tournamentSoloEntryDao,
+                tournamentTeamDao,
+                tournamentMailService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault(),
+                clock);
     }
 
     @Override
@@ -411,16 +432,8 @@ public class TournamentServiceImpl implements TournamentService {
         return TournamentSort.fromQueryValue(rawSort).orElse(TournamentSort.SOONEST);
     }
 
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+    private ZoneId parseZone(final String timezone) {
+        return platformTimeZoneService.resolveOrDefault(timezone);
     }
 
     private static boolean matchesQuery(final Tournament tournament, final String query) {

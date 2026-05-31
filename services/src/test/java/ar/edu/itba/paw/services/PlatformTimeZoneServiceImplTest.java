@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.webapp.utils;
+package ar.edu.itba.paw.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -8,12 +8,12 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 
-class AppTimeZoneResolverTest {
+class PlatformTimeZoneServiceImplTest {
 
     @Test
     void blankTimezoneFallsBackToArgentina() {
         // 1. Arrange
-        final AppTimeZoneResolver resolver = AppTimeZoneResolver.argentinaDefault();
+        final PlatformTimeZoneService resolver = PlatformTimeZoneServiceImpl.argentinaDefault();
 
         // 2. Exercise
         final Instant instant =
@@ -27,7 +27,7 @@ class AppTimeZoneResolverTest {
     @Test
     void explicitValidTimezoneIsHonored() {
         // 1. Arrange
-        final AppTimeZoneResolver resolver = AppTimeZoneResolver.argentinaDefault();
+        final PlatformTimeZoneService resolver = PlatformTimeZoneServiceImpl.argentinaDefault();
 
         // 2. Exercise
         final Instant instant =
@@ -40,7 +40,7 @@ class AppTimeZoneResolverTest {
     @Test
     void invalidTimezoneFallsBackToArgentina() {
         // 1. Arrange
-        final AppTimeZoneResolver resolver = AppTimeZoneResolver.argentinaDefault();
+        final PlatformTimeZoneService resolver = PlatformTimeZoneServiceImpl.argentinaDefault();
 
         // 2. Exercise
         final String normalized = resolver.normalizeOrDefault("not-a-time-zone");

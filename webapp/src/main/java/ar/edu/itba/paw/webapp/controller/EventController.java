@@ -16,11 +16,12 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
-import ar.edu.itba.paw.webapp.utils.AppTimeZoneResolver;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -65,7 +66,7 @@ public class EventController {
     private final PlayerReviewService playerReviewService;
     private final MessageSource messageSource;
     private final Clock clock;
-    private final AppTimeZoneResolver appTimeZoneResolver;
+    private final PlatformTimeZoneService platformTimeZoneService;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -85,7 +86,7 @@ public class EventController {
                 playerReviewService,
                 messageSource,
                 clock,
-                AppTimeZoneResolver.argentinaDefault(),
+                PlatformTimeZoneServiceImpl.argentinaDefault(),
                 false,
                 "",
                 "",
@@ -100,7 +101,7 @@ public class EventController {
             final PlayerReviewService playerReviewService,
             final MessageSource messageSource,
             final Clock clock,
-            final AppTimeZoneResolver appTimeZoneResolver,
+            final PlatformTimeZoneService platformTimeZoneService,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -111,7 +112,7 @@ public class EventController {
         this.playerReviewService = playerReviewService;
         this.messageSource = messageSource;
         this.clock = clock;
-        this.appTimeZoneResolver = appTimeZoneResolver;
+        this.platformTimeZoneService = platformTimeZoneService;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
@@ -136,7 +137,7 @@ public class EventController {
                 playerReviewService,
                 messageSource,
                 clock,
-                AppTimeZoneResolver.argentinaDefault(),
+                PlatformTimeZoneServiceImpl.argentinaDefault(),
                 mapPickerEnabled,
                 mapTileUrlTemplate,
                 mapAttribution,
@@ -559,7 +560,7 @@ public class EventController {
         return new EventDetailPageViewModel(
                 toCard(
                         match,
-                        appTimeZoneResolver.defaultZone(),
+                        platformTimeZoneService.defaultZone(),
                         locale,
                         currentUser,
                         buildAvailabilityLabel(match, locale),
@@ -634,13 +635,15 @@ public class EventController {
                         dateFormatter(locale)
                                 .format(
                                         match.getStartsAt()
-                                                .atZone(appTimeZoneResolver.defaultZone()))),
+                                                .atZone(platformTimeZoneService.defaultZone()))),
                 new BookingDetailViewModel(
                         messageSource.getMessage("event.booking.time", null, locale),
                         timeFormatter(locale)
                                         .format(
                                                 match.getStartsAt()
-                                                        .atZone(appTimeZoneResolver.defaultZone()))
+                                                        .atZone(
+                                                                platformTimeZoneService
+                                                                        .defaultZone()))
                                 + (match.getEndsAt() == null
                                         ? ""
                                         : " - "
@@ -648,7 +651,7 @@ public class EventController {
                                                         .format(
                                                                 match.getEndsAt()
                                                                         .atZone(
-                                                                                appTimeZoneResolver
+                                                                                platformTimeZoneService
                                                                                         .defaultZone())))),
                 new BookingDetailViewModel(
                         messageSource.getMessage("event.booking.venue", null, locale),
@@ -753,7 +756,7 @@ public class EventController {
                         match ->
                                 toCard(
                                         match,
-                                        appTimeZoneResolver.defaultZone(),
+                                        platformTimeZoneService.defaultZone(),
                                         locale,
                                         currentUser,
                                         buildAvailabilityLabel(match, locale),
@@ -787,7 +790,7 @@ public class EventController {
                                                     occurrence
                                                             .getStartsAt()
                                                             .atZone(
-                                                                    appTimeZoneResolver
+                                                                    platformTimeZoneService
                                                                             .defaultZone())),
                                     eventStateLabel(state, locale),
                                     state.tone(),

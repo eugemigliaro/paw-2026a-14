@@ -15,9 +15,10 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
-import ar.edu.itba.paw.webapp.utils.AppTimeZoneResolver;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -63,7 +64,7 @@ public class FeedController {
     private final MatchReservationService matchReservationService;
     private final TournamentService tournamentService;
     private final MessageSource messageSource;
-    private final AppTimeZoneResolver appTimeZoneResolver;
+    private final PlatformTimeZoneService platformTimeZoneService;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -78,7 +79,7 @@ public class FeedController {
             final MatchReservationService matchReservationService,
             final TournamentService tournamentService,
             final MessageSource messageSource,
-            final AppTimeZoneResolver appTimeZoneResolver,
+            final PlatformTimeZoneService platformTimeZoneService,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -92,7 +93,7 @@ public class FeedController {
         this.matchReservationService = matchReservationService;
         this.tournamentService = tournamentService;
         this.messageSource = messageSource;
-        this.appTimeZoneResolver = appTimeZoneResolver;
+        this.platformTimeZoneService = platformTimeZoneService;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
@@ -113,7 +114,7 @@ public class FeedController {
                 matchReservationService,
                 tournamentService,
                 messageSource,
-                AppTimeZoneResolver.argentinaDefault(),
+                PlatformTimeZoneServiceImpl.argentinaDefault(),
                 false,
                 "",
                 "",
@@ -579,7 +580,7 @@ public class FeedController {
     }
 
     private ZoneId parseZone(final String timezone) {
-        return appTimeZoneResolver.resolveOrDefault(timezone);
+        return platformTimeZoneService.resolveOrDefault(timezone);
     }
 
     private static String buildUrl(
@@ -707,7 +708,7 @@ public class FeedController {
     }
 
     private String normalizeTimezone(final String timezone) {
-        return appTimeZoneResolver.normalizeOrDefault(timezone);
+        return platformTimeZoneService.normalizeOrDefault(timezone);
     }
 
     private static PriceRange normalizePriceRange(

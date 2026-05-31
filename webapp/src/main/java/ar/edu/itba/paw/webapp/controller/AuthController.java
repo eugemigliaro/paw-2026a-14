@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.services.AccountAuthService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
@@ -10,7 +12,6 @@ import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Optional;
 import javax.validation.Valid;
@@ -32,12 +33,21 @@ public class AuthController {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
     private final AccountAuthService accountAuthService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public AuthController(
-            final AccountAuthService accountAuthService, final MessageSource messageSource) {
+            final AccountAuthService accountAuthService,
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.accountAuthService = accountAuthService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public AuthController(
+            final AccountAuthService accountAuthService, final MessageSource messageSource) {
+        this(accountAuthService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @ModelAttribute("registerForm")
@@ -225,7 +235,7 @@ public class AuthController {
             mav.addObject(
                     "expiresAtLabel",
                     VerificationViews.expiryFormatter(locale)
-                            .format(expiresAt.atZone(ZoneId.systemDefault())));
+                            .format(expiresAt.atZone(platformTimeZoneService.defaultZone())));
         }
         return mav;
     }

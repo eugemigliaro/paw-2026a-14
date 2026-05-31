@@ -15,9 +15,10 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
-import ar.edu.itba.paw.webapp.utils.AppTimeZoneResolver;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
@@ -63,7 +64,7 @@ public class MatchDashboardController {
     private final MatchReservationService matchReservationService;
     private final TournamentService tournamentService;
     private final MessageSource messageSource;
-    private final AppTimeZoneResolver appTimeZoneResolver;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public MatchDashboardController(
@@ -72,13 +73,13 @@ public class MatchDashboardController {
             final MatchReservationService matchReservationService,
             final TournamentService tournamentService,
             final MessageSource messageSource,
-            final AppTimeZoneResolver appTimeZoneResolver) {
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
         this.tournamentService = tournamentService;
         this.messageSource = messageSource;
-        this.appTimeZoneResolver = appTimeZoneResolver;
+        this.platformTimeZoneService = platformTimeZoneService;
     }
 
     public MatchDashboardController(
@@ -93,7 +94,7 @@ public class MatchDashboardController {
                 matchReservationService,
                 tournamentService,
                 messageSource,
-                AppTimeZoneResolver.argentinaDefault());
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/events")
@@ -1477,7 +1478,7 @@ public class MatchDashboardController {
     }
 
     private String normalizeTimezone(final String timezone) {
-        return appTimeZoneResolver.normalizeOrDefault(timezone);
+        return platformTimeZoneService.normalizeOrDefault(timezone);
     }
 
     private static List<String> normalizeSports(final List<String> rawSports) {

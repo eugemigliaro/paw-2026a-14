@@ -17,6 +17,8 @@ import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
@@ -28,7 +30,6 @@ import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
-import ar.edu.itba.paw.webapp.utils.AppTimeZoneResolver;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
@@ -68,7 +69,7 @@ public class TournamentController {
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
     private final Clock clock;
-    private final AppTimeZoneResolver appTimeZoneResolver;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     public TournamentController(
             final TournamentService tournamentService,
@@ -82,7 +83,7 @@ public class TournamentController {
                 tournamentBracketService,
                 messageSource,
                 clock,
-                AppTimeZoneResolver.argentinaDefault());
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @Autowired
@@ -92,13 +93,13 @@ public class TournamentController {
             final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource,
             final Clock clock,
-            final AppTimeZoneResolver appTimeZoneResolver) {
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
         this.clock = clock;
-        this.appTimeZoneResolver = appTimeZoneResolver;
+        this.platformTimeZoneService = platformTimeZoneService;
     }
 
     @GetMapping("/tournaments/{tournamentId:\\d+}")
@@ -397,12 +398,13 @@ public class TournamentController {
         }
         if (tournament.getEndsAt() == null) {
             return formatInstant(
-                    tournament.getStartsAt(), locale, appTimeZoneResolver.defaultZone());
+                    tournament.getStartsAt(), locale, platformTimeZoneService.defaultZone());
         }
 
         final LocalDateTime startsAt =
-                appTimeZoneResolver.toLocalDateTime(tournament.getStartsAt());
-        final LocalDateTime endsAt = appTimeZoneResolver.toLocalDateTime(tournament.getEndsAt());
+                platformTimeZoneService.toLocalDateTime(tournament.getStartsAt());
+        final LocalDateTime endsAt =
+                platformTimeZoneService.toLocalDateTime(tournament.getEndsAt());
         if (startsAt.toLocalDate().equals(endsAt.toLocalDate())) {
             return messageSource.getMessage(
                     "tournament.detail.schedule.sameDay",
@@ -417,20 +419,25 @@ public class TournamentController {
                 "tournament.detail.schedule.range",
                 new Object[] {
                     formatInstant(
-                            tournament.getStartsAt(), locale, appTimeZoneResolver.defaultZone()),
-                    formatInstant(tournament.getEndsAt(), locale, appTimeZoneResolver.defaultZone())
+                            tournament.getStartsAt(),
+                            locale,
+                            platformTimeZoneService.defaultZone()),
+                    formatInstant(
+                            tournament.getEndsAt(), locale, platformTimeZoneService.defaultZone())
                 },
                 locale);
     }
 
     private String registrationWindowStartLabel(final Tournament tournament, final Locale locale) {
         return formatInstant(
-                tournament.getRegistrationOpensAt(), locale, appTimeZoneResolver.defaultZone());
+                tournament.getRegistrationOpensAt(), locale, platformTimeZoneService.defaultZone());
     }
 
     private String registrationWindowEndLabel(final Tournament tournament, final Locale locale) {
         return formatInstant(
-                tournament.getRegistrationClosesAt(), locale, appTimeZoneResolver.defaultZone());
+                tournament.getRegistrationClosesAt(),
+                locale,
+                platformTimeZoneService.defaultZone());
     }
 
     private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
@@ -880,7 +887,7 @@ public class TournamentController {
         }
         if (match.getScheduledEndsAt() == null) {
             return formatInstant(
-                    match.getScheduledStartsAt(), locale, appTimeZoneResolver.defaultZone());
+                    match.getScheduledStartsAt(), locale, platformTimeZoneService.defaultZone());
         }
         return messageSource.getMessage(
                 "tournament.bracket.schedule.range",
@@ -888,9 +895,11 @@ public class TournamentController {
                     formatInstant(
                             match.getScheduledStartsAt(),
                             locale,
-                            appTimeZoneResolver.defaultZone()),
+                            platformTimeZoneService.defaultZone()),
                     formatInstant(
-                            match.getScheduledEndsAt(), locale, appTimeZoneResolver.defaultZone())
+                            match.getScheduledEndsAt(),
+                            locale,
+                            platformTimeZoneService.defaultZone())
                 },
                 locale);
     }
