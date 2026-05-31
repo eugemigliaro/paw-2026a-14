@@ -46,11 +46,6 @@ class ThymeleafMailTemplateRenderer {
                 PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
-    public MailContent renderReservationConfirmation(
-            final VerificationMailTemplateData templateData) {
-        return renderActionMail(templateData);
-    }
-
     public MailContent renderMatchUpdatedNotification(
             final MatchLifecycleMailTemplateData templateData) {
         final Locale locale = resolvedLocale(templateData.getLocale());
