@@ -3,7 +3,13 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
+import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,65 +36,34 @@ public interface MatchService {
 
     List<Match> cancelSeriesFromOccurrence(Long matchId, User actingUser);
 
-    PaginatedResult<Match> findHostedMatches(
-            User hostUser,
-            Boolean upcoming,
+    PaginatedResult<Match> searchPublicMatches(
             String query,
             String sport,
-            String visibility,
-            String status,
             String startDate,
             String endDate,
+            String sort,
+            int page,
+            int pageSize,
+            String timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            String sort,
-            String timezone,
-            int page,
-            int pageSize);
+            Double latitude,
+            Double longitude);
 
-    PaginatedResult<Match> findJoinedMatches(
+    PaginatedResult<Match> findDashboardMatches(
             User user,
             Boolean upcoming,
+            Boolean includeHosted,
             String query,
-            String sport,
-            String visibility,
-            String status,
-            String startDate,
-            String endDate,
+            List<Sport> sports,
+            List<EventStatus> statuses,
+            Instant startDate,
+            Instant endDate,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            String sort,
-            String timezone,
+            MatchSort sort,
+            ZoneId timezone,
+            List<ParticipantStatus> participantStatuses,
             int page,
             int pageSize);
-
-    PaginatedResult<Match> searchPublicMatches(
-            final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
-            final String sort,
-            final int page,
-            final int pageSize,
-            final String timezone,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final Double latitude,
-            final Double longitude);
-
-    default PaginatedResult<Match> searchPublicMatches(
-            final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
-            final String sort,
-            final int page,
-            final int pageSize,
-            final String timezone,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
-        return searchPublicMatches(
-                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
-                maxPrice, null, null);
-    }
 }

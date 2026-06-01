@@ -153,12 +153,59 @@ public class TournamentServiceImpl implements TournamentService {
     }
 
     @Override
+    public PaginatedResult<Tournament> searchPublicTournaments(
+            String query,
+            List<Sport> sport,
+            Instant startDate,
+            Instant endDate,
+            String sort,
+            int page,
+            int pageSize,
+            String timezone,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Double latitude,
+            Double longitude) {
+        final TournamentSort sortFilter =
+                hasCoordinates(latitude, longitude)
+                        ? parseSort(sort)
+                        : withoutDistance(parseSort(sort));
+        final DateRange dateRange = new DateRange(startDate, endDate);
+
+        return paginate(
+                page,
+                pageSize,
+                DEFAULT_PAGE_SIZE,
+                safePageSize ->
+                        tournamentDao.countPublicTournaments(
+                                query,
+                                sport,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
+                                minPrice,
+                                maxPrice),
+                (offset, safePageSize) ->
+                        tournamentDao.findPublicTournaments(
+                                query,
+                                sport,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
+                                minPrice,
+                                maxPrice,
+                                sortFilter,
+                                latitude,
+                                longitude,
+                                offset,
+                                safePageSize));
+    }
+
+    @Override
     public PaginatedResult<Tournament> findHostedTournaments(
             final User host,
             final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
+            final List<Sport> sport,
+            final Instant startDate,
+            final Instant endDate,
             final String sort,
             final int page,
             final int pageSize,
@@ -174,9 +221,9 @@ public class TournamentServiceImpl implements TournamentService {
             final User host,
             final boolean past,
             final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
+            final List<Sport> sport,
+            final Instant startDate,
+            final Instant endDate,
             final String sort,
             final int page,
             final int pageSize,
@@ -202,9 +249,9 @@ public class TournamentServiceImpl implements TournamentService {
             final User host,
             final Boolean past,
             final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
+            final List<Sport> sports,
+            final Instant startDate,
+            final Instant endDate,
             final String sort,
             final int page,
             final int pageSize,
@@ -212,9 +259,7 @@ public class TournamentServiceImpl implements TournamentService {
             final BigDecimal minPrice,
             final BigDecimal maxPrice) {
         validateHost(host);
-        final ZoneId zoneId = parseZone(timezone);
-        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
-        final List<Sport> sports = parseSports(sport);
+        final DateRange dateRange = new DateRange(startDate, endDate);
         final TournamentSort sortFilter = withoutDistance(parseSort(sort));
         final String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
 
@@ -233,7 +278,9 @@ public class TournamentServiceImpl implements TournamentService {
                         .filter(tournament -> matchesQuery(tournament, normalizedQuery))
                         .filter(
                                 tournament ->
-                                        sports.isEmpty() || sports.contains(tournament.getSport()))
+                                        sports == null
+                                                || sports.isEmpty()
+                                                || sports.contains(tournament.getSport()))
                         .filter(tournament -> withinDateRange(tournament, dateRange))
                         .filter(tournament -> withinPriceRange(tournament, minPrice, maxPrice))
                         .sorted(hostedComparator(sortFilter))

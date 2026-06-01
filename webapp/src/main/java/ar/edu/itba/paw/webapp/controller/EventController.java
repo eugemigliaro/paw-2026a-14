@@ -710,7 +710,8 @@ public class EventController {
             final Long currentMatchId, final User currentUser, final Locale locale) {
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        "", null, null, null, "soonest", 1, 4, null, null, null);
+                        "", null, null, null, "soonest", 1, 4, null, null, null, null,
+                        null); // TODO: load match latitude and longitude
         return result.getItems().stream()
                 .filter(match -> !currentMatchId.equals(match.getId()))
                 .limit(3)

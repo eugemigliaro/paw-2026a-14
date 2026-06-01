@@ -19,10 +19,12 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -55,6 +57,12 @@ import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
+import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -70,6 +78,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -864,54 +873,6 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public PaginatedResult<Match> findHostedMatches(
-                            final User host,
-                            final Boolean upcoming,
-                            final String query,
-                            final String sport,
-                            final String visibility,
-                            final String status,
-                            final String startDate,
-                            final String endDate,
-                            final java.math.BigDecimal minPrice,
-                            final java.math.BigDecimal maxPrice,
-                            final String sort,
-                            final String timezone,
-                            final int page,
-                            final int pageSize) {
-                        final List<Match> items =
-                                status != null
-                                                && status.contains(
-                                                        EventStatus.COMPLETED.getDbValue())
-                                        ? List.of(completedMatch)
-                                        : List.of(realMatch);
-                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
-                    }
-
-                    @Override
-                    public PaginatedResult<Match> findJoinedMatches(
-                            final User user,
-                            final Boolean upcoming,
-                            final String query,
-                            final String sport,
-                            final String visibility,
-                            final String status,
-                            final String startDate,
-                            final String endDate,
-                            final java.math.BigDecimal minPrice,
-                            final java.math.BigDecimal maxPrice,
-                            final String sort,
-                            final String timezone,
-                            final int page,
-                            final int pageSize) {
-                        final List<Match> items =
-                                Boolean.FALSE.equals(upcoming)
-                                        ? List.of(completedMatch)
-                                        : List.of(realMatch, cancelledFutureMatch);
-                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
-                    }
-
-                    @Override
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
                             final String sport,
@@ -930,6 +891,50 @@ class UiRouteTest {
                         lastSearchLongitude.set(longitude);
                         return new PaginatedResult<>(
                                 List.of(realMatch, footballMatch), 2, 1, pageSize);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> findDashboardMatches(
+                            User user,
+                            Boolean upcoming,
+                            Boolean includeHosted,
+                            String query,
+                            List<Sport> sports,
+                            List<EventStatus> statuses,
+                            Instant startDate,
+                            Instant endDate,
+                            BigDecimal minPrice,
+                            BigDecimal maxPrice,
+                            MatchSort sort,
+                            ZoneId timezone,
+                            List<ParticipantStatus> participantStatuses,
+                            int page,
+                            int pageSize) {
+
+                        List<Match> matches = new ArrayList<>();
+
+                        if (includeHosted) {
+                            if (statuses != null && statuses.contains(EventStatus.COMPLETED)) {
+                                matches.add(completedMatch);
+                            } else {
+                                matches.add(realMatch);
+                            }
+                        }
+
+                        if (participantStatuses != null
+                                && participantStatuses.contains(
+                                        ParticipantStatus.PENDING_APPROVAL)) {
+                            matches.add(pendingFutureMatch);
+                        }
+
+                        if (upcoming) {
+                            matches.add(realMatch);
+                            matches.add(cancelledFutureMatch);
+                        } else {
+                            matches.add(completedMatch);
+                        }
+
+                        return new PaginatedResult<>(matches, matches.size(), page, pageSize);
                     }
                 };
 
@@ -1608,8 +1613,13 @@ class UiRouteTest {
                         invocation ->
                                 invocation.getArgument(3) == null
                                                 && invocation.getArgument(4) == null
-                                        ? new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12)
-                                        : new PaginatedResult<>(List.of(), 0, 1, 12));
+                                        ? new PaginatedResult<>(
+                                                List.of(hostedTournament),
+                                                1,
+                                                invocation.getArgument(6),
+                                                12)
+                                        : new PaginatedResult<>(
+                                                List.of(), 0, invocation.getArgument(6), 12));
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
         final ModerationService moderationService = Mockito.mock(ModerationService.class);
@@ -1667,7 +1677,7 @@ class UiRouteTest {
                         .addInterceptors(localeChangeInterceptor())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .setValidator(validator)
-                        .setConversionService(new DefaultFormattingConversionService())
+                        .setConversionService(formattingConversionServiceWithSportConverter())
                         .build();
     }
 
@@ -3304,6 +3314,51 @@ class UiRouteTest {
     }
 
     @Test
+    void getEventsRouteBindsSubmittedPageParameter() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/events").param("page", "2"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("events/list"))
+                .andExpect(model().attribute("pageNumber", 2));
+    }
+
+    @Test
+    void getEventsRouteRejectsInvalidPageParameter() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/events").param("page", "0")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getEventsRouteBindsSportSelectionsAsTypedEnums() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/events")
+                                        .param("sport", "padel")
+                                        .param("sport", "tennis")
+                                        .param("sort", "price")
+                                        .param("status", "open")
+                                        .param("status", "completed")
+                                        .param("visibility", "public")
+                                        .param("visibility", "invite_only"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final SearchForm searchForm =
+                (SearchForm) result.getModelAndView().getModel().get("searchForm");
+        Assertions.assertEquals(List.of(Sport.PADEL, Sport.TENNIS), searchForm.getSport());
+        Assertions.assertEquals(MatchSort.PRICE_LOW, searchForm.getSort());
+        Assertions.assertEquals(
+                List.of(EventStatus.OPEN, EventStatus.COMPLETED), searchForm.getStatus());
+        Assertions.assertEquals(
+                List.of(EventVisibility.PUBLIC, EventVisibility.INVITE_ONLY),
+                searchForm.getVisibility());
+    }
+
+    @Test
     void getEventsRouteRendersHostedTournamentsWhenTournamentTypeSelected() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
@@ -3320,6 +3375,10 @@ class UiRouteTest {
                                 model().attribute("selectedStartDateValue", Matchers.nullValue()))
                         .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()))
                         .andReturn();
+
+        final SearchForm searchForm =
+                (SearchForm) result.getModelAndView().getModel().get("searchForm");
+        Assertions.assertTrue(searchForm.getCategory().isEmpty());
 
         final List<EventCardViewModel> events = getEventsModel(result);
         Assertions.assertTrue(
@@ -3741,6 +3800,18 @@ class UiRouteTest {
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setFallbackToSystemLocale(false);
         return messageSource;
+    }
+
+    private static DefaultFormattingConversionService
+            formattingConversionServiceWithSportConverter() {
+        final DefaultFormattingConversionService conversionService =
+                new DefaultFormattingConversionService();
+        conversionService.addConverter(new StringToSportConverter());
+        conversionService.addConverter(new StringToEventStatusConverter());
+        conversionService.addConverter(new StringToEventVisibilityConverter());
+        conversionService.addConverter(new StringToMatchSortConverter());
+        conversionService.addConverter(new StringToEventTypeConverter());
+        return conversionService;
     }
 
     private static SessionLocaleResolver localeResolver() {

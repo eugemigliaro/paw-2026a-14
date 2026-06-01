@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
@@ -43,6 +44,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class MatchServiceImpl implements MatchService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_PLAYERS_PER_MATCH = 1000;
     private static final int MIN_RECURRING_OCCURRENCES = 2;
     private static final int MAX_RECURRING_OCCURRENCES = 52;
@@ -719,142 +721,6 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public PaginatedResult<Match> findHostedMatches(
-            final User host,
-            final Boolean upcoming,
-            final String query,
-            final String sport,
-            final String visibility,
-            final String status,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String sort,
-            final String timezone,
-            final int page,
-            final int pageSize) {
-        final List<Sport> sportFilters = parseSports(sport);
-        final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
-        final List<EventStatus> statusFilters = parseStatuses(status);
-        final ZoneId zoneId = parseZone(timezone);
-        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
-
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        matchDao.countHostedMatches(
-                                host,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                zoneId),
-                (offset, safePageSize) ->
-                        matchDao.findHostedMatches(
-                                host,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                parseSort(sort),
-                                zoneId,
-                                offset,
-                                safePageSize));
-    }
-
-    @Override
-    public PaginatedResult<Match> findJoinedMatches(
-            final User user,
-            final Boolean upcoming,
-            final String query,
-            final String sport,
-            final String visibility,
-            final String status,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String sort,
-            final String timezone,
-            final int page,
-            final int pageSize) {
-        final List<Sport> sportFilters = parseSports(sport);
-        final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
-        final List<EventStatus> statusFilters = parseStatuses(status);
-        final ZoneId zoneId = parseZone(timezone);
-        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
-        nonNullUser(user);
-
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        matchDao.countJoinedMatches(
-                                user,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                zoneId),
-                (offset, safePageSize) ->
-                        matchDao.findJoinedMatches(
-                                user,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                parseSort(sort),
-                                zoneId,
-                                offset,
-                                safePageSize));
-    }
-
-    @Override
-    public PaginatedResult<Match> searchPublicMatches(
-            final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
-            final String sort,
-            final int page,
-            final int pageSize,
-            final String timezone,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
-        return searchPublicMatches(
-                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
-                maxPrice, null, null);
-    }
-
-    @Override
     public PaginatedResult<Match> searchPublicMatches(
             final String query,
             final String sport,
@@ -907,6 +773,75 @@ public class MatchServiceImpl implements MatchService {
                                 safePageSize));
     }
 
+    @Override
+    public PaginatedResult<Match> findDashboardMatches(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            List<EventStatus> statuses,
+            Instant startDate,
+            Instant endDate,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            MatchSort sort,
+            ZoneId timezone,
+            List<ParticipantStatus> participantStatuses,
+            int page,
+            int pageSize) {
+        nonNullUser(user);
+        validatePageAndSizeOrThrow(page, pageSize, DEFAULT_PAGE_SIZE);
+
+        final int offset = (page - 1) * pageSize;
+        final int limit = pageSize;
+
+        final List<Match> paginatedItems =
+                matchDao.findDashboardMatches(
+                        user,
+                        upcoming,
+                        includeHosted != null && includeHosted,
+                        query,
+                        sports,
+                        statuses,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        sort,
+                        timezone,
+                        participantStatuses,
+                        offset,
+                        limit);
+
+        final int totalCount =
+                matchDao.countDashboardMatches(
+                        user,
+                        upcoming,
+                        includeHosted != null && includeHosted,
+                        query,
+                        sports,
+                        statuses,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        sort,
+                        timezone,
+                        participantStatuses);
+        return new PaginatedResult<>(paginatedItems, totalCount, page, pageSize);
+    }
+
+    private void validatePageAndSizeOrThrow(
+            final int page, final int pageSize, final int defaultPageSize) {
+        if (page < 1) {
+            throw new IllegalArgumentException(message("pagination.error.invalidPage"));
+        }
+        if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException(message("pagination.error.invalidPageSize"));
+        }
+    }
+
     private static MatchSort withoutDistance(final MatchSort sort) {
         return sort == MatchSort.DISTANCE ? MatchSort.SOONEST : sort;
     }
@@ -925,40 +860,6 @@ public class MatchServiceImpl implements MatchService {
         }
 
         return List.copyOf(sports);
-    }
-
-    private static List<EventStatus> parseStatuses(final String rawStatuses) {
-        if (rawStatuses == null || rawStatuses.isBlank()) {
-            return List.of();
-        }
-
-        final LinkedHashSet<EventStatus> statuses = new LinkedHashSet<>();
-        for (final String rawStatus : rawStatuses.split(",")) {
-            if (rawStatus == null || rawStatus.isBlank()) {
-                continue;
-            }
-            PersistableEnum.fromDbValue(EventStatus.class, rawStatus.trim())
-                    .ifPresent(statuses::add);
-        }
-
-        return List.copyOf(statuses);
-    }
-
-    private static List<EventVisibility> parseVisibility(final String rawVisibility) {
-        if (rawVisibility == null || rawVisibility.isBlank()) {
-            return List.of();
-        }
-
-        final LinkedHashSet<EventVisibility> visibility = new LinkedHashSet<>();
-        for (final String rawValue : rawVisibility.split(",")) {
-            if (rawValue == null || rawValue.isBlank()) {
-                continue;
-            }
-            PersistableEnum.fromDbValue(EventVisibility.class, rawValue.trim())
-                    .ifPresent(visibility::add);
-        }
-
-        return List.copyOf(visibility);
     }
 
     private static DateRange parseDateRange(

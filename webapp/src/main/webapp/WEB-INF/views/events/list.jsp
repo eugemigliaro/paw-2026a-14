@@ -41,47 +41,48 @@
 							<!-- Search form-->
 							<c:url var="eventsSearchFormAction" value="${listControls.searchAction}" />
 							<div class="events-search-container">
-								<form:form method="get" action="${eventsSearchFormAction}"
+								<form:form id="eventsSearchForm" method="get" action="${eventsSearchFormAction}"
 									modelAttribute="searchForm" cssClass="filters-bar__search"
 									novalidate="novalidate">
-									<c:forEach var="selectedSport" items="${selectedSports}">
+									<c:forEach var="selectedSport" items="${searchForm.sport}">
 										<input type="hidden" name="sport"
 											value="<c:out value='${selectedSport}' />" />
 									</c:forEach>
-									<c:forEach var="selectedStatus" items="${selectedStatuses}">
+									<c:forEach var="selectedStatus" items="${searchForm.status}">
 										<input type="hidden" name="status"
 											value="<c:out value='${selectedStatus}' />" />
 									</c:forEach>
-									<c:forEach var="selectedCategory" items="${selectedCategories}">
+									<c:forEach var="selectedCategory" items="${searchForm.category}">
 										<input type="hidden" name="category"
 											value="<c:out value='${selectedCategory}' />" />
 									</c:forEach>
-									<c:if test="${selectedType eq 'tournament'}">
+									<c:if test="${searchForm.type.getValue() eq 'tournament'}">
 										<input type="hidden" name="type" value="tournament" />
 									</c:if>
 									<c:forEach var="selectedVisibilityItem"
-										items="${selectedVisibility}">
+										items="${searchForm.visibility}">
 										<input type="hidden" name="visibility"
 											value="<c:out value='${selectedVisibilityItem}' />" />
 									</c:forEach>
-									<c:if test="${selectedType ne 'tournament'}">
+									<c:if test="${searchForm.type.getValue() ne 'tournament'}">
 										<input type="hidden" name="startDate"
-											value="<c:out value='${selectedStartDateValue}' />" />
+											value="<c:out value='${searchForm.startDate}' />" />
 										<input type="hidden" name="endDate"
-											value="<c:out value='${selectedEndDateValue}' />" />
+											value="<c:out value='${searchForm.endDate}' />" />
 									</c:if>
 									<input type="hidden" name="sort"
-										value="<c:out value='${selectedSort}' />" />
+										value="<c:out value='${searchForm.sort}' />" />
 									<input type="hidden" name="tz"
-										value="<c:out value='${selectedTimezone}' />"
+										value="<c:out value='${searchForm.timezone}' />"
 										data-browser-timezone-field="true" />
 									<input type="hidden" name="minPrice"
-										value="<c:out value='${selectedMinPriceValue}' />" />
+										value="<c:out value='${searchForm.minPrice}' />" />
 									<input type="hidden" name="maxPrice"
-										value="<c:out value='${selectedMaxPriceValue}' />" />
-									<c:if test="${param.filter eq 'past'}">
+										value="<c:out value='${searchForm.maxPrice}' />" />
+									<c:if test="${searchForm.filter eq 'past'}">
 										<input type="hidden" name="filter" value="past" />
 									</c:if>
+									<input type="hidden" name="page" id="eventsSearchForm_page" value="${pageNumber}" />
 									<div class="filters-bar__search-row">
 										<form:input path="q" cssClass="filters-bar__search-input" placeholder="${searchPlaceholder}" />
 										<ui:button type="submit" variant="primary" className="filters-bar__search-submit">
@@ -93,7 +94,7 @@
 							</div>
 
 							<!-- Toggle -->
-									<ui:eventsFilterToggle currentFilter="${param.filter}" />
+							<ui:eventsFilterToggle currentFilter="${searchForm.filter}" />
 						</div>
 					</div>
 
@@ -109,11 +110,33 @@
 												<c:choose>
 													<c:when test="${optionStatus.first}">
 														<c:set var="eventTypeMatchLabel" value="${option.label}" />
-														<c:set var="eventTypeMatchHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="eventTypeMatchHref" value="${listControls.searchAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:set var="eventTypeMatchHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 													</c:when>
 													<c:otherwise>
 														<c:set var="eventTypeTournamentLabel" value="${option.label}" />
-														<c:set var="eventTypeTournamentHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="eventTypeTournamentHref" value="${listControls.searchAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:set var="eventTypeTournamentHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 													</c:otherwise>
 												</c:choose>
 											</c:forEach>
@@ -158,10 +181,32 @@
 												<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 													<c:choose>
 														<c:when test="${optionStatus.first}">
-															<c:set var="clearFilterHref" value="${option.href}" />
+															<c:choose>
+																<c:when test="${not empty option.params}">
+																	<c:url var="clearFilterHref" value="${listControls.searchAction}">
+																		<c:forEach var="p" items="${option.params}">
+																			<c:param name="${p.key}" value="${p.value}" />
+																		</c:forEach>
+																	</c:url>
+																</c:when>
+																<c:otherwise>
+																	<c:set var="clearFilterHref" value="${option.href}" />
+																</c:otherwise>
+															</c:choose>
 														</c:when>
 														<c:otherwise>
-															<c:url var="optionHref" value="${option.href}" />
+															<c:choose>
+																<c:when test="${not empty option.params}">
+																	<c:url var="optionHref" value="${listControls.searchAction}">
+																		<c:forEach var="p" items="${option.params}">
+																			<c:param name="${p.key}" value="${p.value}" />
+																		</c:forEach>
+																	</c:url>
+																</c:when>
+																<c:otherwise>
+																	<c:url var="optionHref" value="${option.href}" />
+																</c:otherwise>
+															</c:choose>
 															<a href="${optionHref}"
 																class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
 																<c:out value="${option.label}" />
@@ -216,38 +261,38 @@
 											<input type="hidden" name="q"
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
-												value="<c:out value='${selectedSort}' />" />
+												value="<c:out value='${searchForm.sort}' />" />
 											<input type="hidden" name="tz"
-												value="<c:out value='${selectedTimezone}' />"
+												value="<c:out value='${searchForm.timezone}' />"
 												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
-												items="${selectedSports}">
+												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
 													value="<c:out value='${selectedSport}' />" />
 											</c:forEach>
 											<c:forEach var="selectedStatus"
-												items="${selectedStatuses}">
+												items="${searchForm.status}">
 												<input type="hidden" name="status"
 													value="<c:out value='${selectedStatus}' />" />
 											</c:forEach>
 											<c:forEach var="selectedCategory"
-												items="${selectedCategories}">
+												items="${searchForm.category}">
 												<input type="hidden" name="category"
 													value="<c:out value='${selectedCategory}' />" />
 											</c:forEach>
-											<c:if test="${selectedType eq 'tournament'}">
+											<c:if test="${searchForm.type.getValue() eq 'tournament'}">
 												<input type="hidden" name="type" value="tournament" />
 											</c:if>
 											<c:forEach var="selectedVisibilityItem"
-												items="${selectedVisibility}">
+												items="${searchForm.visibility}">
 												<input type="hidden" name="visibility"
 													value="<c:out value='${selectedVisibilityItem}' />" />
 											</c:forEach>
 											<input type="hidden" name="minPrice"
-												value="<c:out value='${selectedMinPriceValue}' />" />
+												value="<c:out value='${searchForm.minPrice}' />" />
 											<input type="hidden" name="maxPrice"
-												value="<c:out value='${selectedMaxPriceValue}' />" />
-											<c:if test="${param.filter eq 'past'}">
+												value="<c:out value='${searchForm.maxPrice}' />" />
+											<c:if test="${searchForm.filter eq 'past'}">
 												<input type="hidden" name="filter" value="past" />
 											</c:if>
 
@@ -274,26 +319,26 @@
 
 												<c:url var="clearDateHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
-													<c:param name="sort" value="${selectedSort}" />
-													<c:param name="tz" value="${selectedTimezone}" />
-													<c:forEach var="selectedSport" items="${selectedSports}">
+													<c:param name="sort" value="${searchForm.sort}" />
+													<c:param name="tz" value="${searchForm.timezone}" />
+													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>
-													<c:forEach var="selectedStatus" items="${selectedStatuses}">
+													<c:forEach var="selectedStatus" items="${searchForm.status}">
 														<c:param name="status" value="${selectedStatus}" />
 													</c:forEach>
-													<c:forEach var="selectedCategory" items="${selectedCategories}">
+													<c:forEach var="selectedCategory" items="${searchForm.category}">
 														<c:param name="category" value="${selectedCategory}" />
 													</c:forEach>
-													<c:if test="${selectedType eq 'tournament'}">
+													<c:if test="${searchForm.type.getValue() eq 'tournament'}">
 														<c:param name="type" value="tournament" />
 													</c:if>
-													<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
+													<c:forEach var="selectedVisibilityItem" items="${searchForm.visibility}">
 														<c:param name="visibility" value="${selectedVisibilityItem}" />
 													</c:forEach>
-													<c:param name="minPrice" value="${selectedMinPriceValue}" />
-													<c:param name="maxPrice" value="${selectedMaxPriceValue}" />
-													<c:if test="${param.filter eq 'past'}">
+													<c:param name="minPrice" value="${searchForm.minPrice}" />
+													<c:param name="maxPrice" value="${searchForm.maxPrice}" />
+													<c:if test="${searchForm.filter eq 'past'}">
 														<c:param name="filter" value="past" />
 													</c:if>
 												</c:url>
@@ -345,40 +390,40 @@
 											<input type="hidden" name="q"
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
-												value="<c:out value='${selectedSort}' />" />
+												value="<c:out value='${searchForm.sort}' />" />
 											<input type="hidden" name="tz"
-												value="<c:out value='${selectedTimezone}' />"
+												value="<c:out value='${searchForm.timezone}' />"
 												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
-												items="${selectedSports}">
+												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
 													value="<c:out value='${selectedSport}' />" />
 											</c:forEach>
 											<c:forEach var="selectedStatus"
-												items="${selectedStatuses}">
+												items="${searchForm.status}">
 												<input type="hidden" name="status"
 													value="<c:out value='${selectedStatus}' />" />
 											</c:forEach>
 											<c:forEach var="selectedCategory"
-												items="${selectedCategories}">
+												items="${searchForm.category}">
 												<input type="hidden" name="category"
 													value="<c:out value='${selectedCategory}' />" />
 											</c:forEach>
 											<c:forEach var="selectedVisibilityItem"
-												items="${selectedVisibility}">
+												items="${searchForm.visibility}">
 												<input type="hidden" name="visibility"
 													value="<c:out value='${selectedVisibilityItem}' />" />
 											</c:forEach>
-											<c:if test="${selectedType eq 'tournament'}">
+											<c:if test="${searchForm.type.getValue() eq 'tournament'}">
 												<input type="hidden" name="type" value="tournament" />
 											</c:if>
-											<c:if test="${selectedType ne 'tournament'}">
+											<c:if test="${searchForm.type.getValue() ne 'tournament'}">
 												<input type="hidden" name="startDate"
-													value="<c:out value='${selectedStartDateValue}' />" />
+													value="<c:out value='${searchForm.startDate}' />" />
 												<input type="hidden" name="endDate"
-													value="<c:out value='${selectedEndDateValue}' />" />
+													value="<c:out value='${searchForm.endDate}' />" />
 											</c:if>
-											<c:if test="${param.filter eq 'past'}">
+											<c:if test="${searchForm.filter eq 'past'}">
 												<input type="hidden" name="filter" value="past" />
 											</c:if>
 
@@ -395,7 +440,7 @@
 															inputmode="decimal"
 															class="field__control filter-rail__price-input"
 															data-price-from="true"
-															value="<c:out value='${selectedMinPriceValue}' />"
+															value="<c:out value='${searchForm.minPrice}' />"
 															placeholder="0" />
 												</div>
 											</div>
@@ -413,37 +458,37 @@
 															class="field__control filter-rail__price-input"
 															data-price-to="true"
 															data-price-range-error="${priceRangeError}"
-															value="<c:out value='${selectedMaxPriceValue}' />"
+															value="<c:out value='${searchForm.maxPrice}' />"
 															placeholder="12" />
 													</div>
 												</div>
 
 												<c:url var="clearPriceHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
-													<c:param name="sort" value="${selectedSort}" />
-													<c:param name="tz" value="${selectedTimezone}" />
-													<c:forEach var="selectedSport" items="${selectedSports}">
+													<c:param name="sort" value="${searchForm.sort}" />
+													<c:param name="tz" value="${searchForm.timezone}" />
+													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>
-													<c:forEach var="selectedStatus" items="${selectedStatuses}">
+													<c:forEach var="selectedStatus" items="${searchForm.status}">
 														<c:param name="status" value="${selectedStatus}" />
 													</c:forEach>
-													<c:forEach var="selectedCategory" items="${selectedCategories}">
+													<c:forEach var="selectedCategory" items="${searchForm.category}">
 														<c:param name="category" value="${selectedCategory}" />
 													</c:forEach>
-													<c:if test="${selectedType eq 'tournament'}">
+													<c:if test="${searchForm.type.getValue() eq 'tournament'}">
 														<c:param name="type" value="tournament" />
 													</c:if>
-													<c:forEach var="selectedVisibilityItem" items="${selectedVisibility}">
+													<c:forEach var="selectedVisibilityItem" items="${searchForm.visibility}">
 														<c:param name="visibility" value="${selectedVisibilityItem}" />
 													</c:forEach>
-													<c:if test="${selectedType ne 'tournament'}">
-														<c:param name="startDate" value="${selectedStartDateValue}" />
-														<c:param name="endDate" value="${selectedEndDateValue}" />
+													<c:if test="${searchForm.type.getValue() ne 'tournament'}">
+														<c:param name="startDate" value="${searchForm.startDate}" />
+														<c:param name="endDate" value="${searchForm.endDate}" />
 													</c:if>
 													<c:param name="minPrice" value="" />
 													<c:param name="maxPrice" value="" />
-													<c:if test="${param.filter eq 'past'}">
+													<c:if test="${searchForm.filter eq 'past'}">
 														<c:param name="filter" value="past" />
 													</c:if>
 												</c:url>
@@ -478,9 +523,9 @@
 
 								<c:url var="clearSearchHref"
 									value="${listControls.cleanSearchAction}">
-									<c:param name="sort" value="${selectedSort}" />
-									<c:param name="tz" value="${selectedTimezone}" />
-									<c:if test="${param.filter eq 'past'}">
+									<c:param name="sort" value="${searchForm.sort}" />
+									<c:param name="tz" value="${searchForm.timezone}" />
+									<c:if test="${searchForm.filter eq 'past'}">
 										<c:param name="filter" value="past" />
 									</c:if>
 								</c:url>
@@ -615,72 +660,7 @@
 
 							</c:choose>
 
-							<c:if test="${not empty paginationItems}">
-								<spring:message var="previousLabel" code="pagination.previous" />
-								<spring:message var="nextLabel" code="pagination.next" />
-								<section class="feed-pagination" aria-label="${listTitle}">
-									<nav class="feed-pagination__nav" aria-label="${listTitle}">
-
-										<c:choose>
-											<c:when test="${not empty previousPageHref}">
-												<c:url var="prevHref" value="${previousPageHref}" />
-												<a class="feed-pagination__control"
-													href="${prevHref}">
-														<c:out value="${previousLabel}" />
-												</a>
-											</c:when>
-											<c:otherwise>
-												<span
-													class="feed-pagination__control feed-pagination__control--disabled">
-														<c:out value="${previousLabel}" />
-												</span>
-											</c:otherwise>
-										</c:choose>
-
-										<div class="feed-pagination__pages">
-											<c:forEach var="item" items="${paginationItems}">
-												<c:choose>
-													<c:when test="${item.ellipsis}">
-															<span
-																class="feed-pagination__ellipsis"><c:out value="${item.label}" /></span>
-													</c:when>
-													<c:when test="${item.current}">
-														<span
-															class="feed-pagination__page feed-pagination__page--current"
-															aria-current="page">
-																<c:out value="${item.label}" />
-														</span>
-													</c:when>
-													<c:otherwise>
-														<c:url var="pageHref"
-															value="${item.href}" />
-														<a class="feed-pagination__page"
-															href="${pageHref}">
-																<c:out value="${item.label}" />
-														</a>
-													</c:otherwise>
-												</c:choose>
-											</c:forEach>
-										</div>
-
-										<c:choose>
-											<c:when test="${not empty nextPageHref}">
-												<c:url var="nextHref" value="${nextPageHref}" />
-												<a class="feed-pagination__control"
-													href="${nextHref}">
-														<c:out value="${nextLabel}" />
-												</a>
-											</c:when>
-											<c:otherwise>
-												<span
-													class="feed-pagination__control feed-pagination__control--disabled">
-														<c:out value="${nextLabel}" />
-												</span>
-											</c:otherwise>
-										</c:choose>
-									</nav>
-								</section>
-							</c:if>
+							<ui:pagination formId="eventsSearchForm" pageNumber="${pageNumber}" pageHasPrevious="${pageHasPrevious}" pageHasNext="${pageHasNext}" paginationItems="${paginationItems}" listTitle="${listTitle}" />
 						</section>
 					</section>
 					</c:if>

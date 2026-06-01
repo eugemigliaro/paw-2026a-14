@@ -82,11 +82,33 @@
 												<c:choose>
 													<c:when test="${optionStatus.first}">
 														<c:set var="eventTypeMatchLabel" value="${option.label}" />
-														<c:set var="eventTypeMatchHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="eventTypeMatchHref" value="${feedPath}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:set var="eventTypeMatchHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 													</c:when>
 													<c:otherwise>
 														<c:set var="eventTypeTournamentLabel" value="${option.label}" />
-														<c:set var="eventTypeTournamentHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="eventTypeTournamentHref" value="${feedPath}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:set var="eventTypeTournamentHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 													</c:otherwise>
 												</c:choose>
 											</c:forEach>

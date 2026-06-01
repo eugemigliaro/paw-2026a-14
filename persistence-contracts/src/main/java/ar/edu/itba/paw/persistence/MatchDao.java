@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
@@ -490,4 +491,36 @@ public interface MatchDao {
                 maxPrice,
                 zoneId);
     }
+
+    List<Match> findDashboardMatches(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            List<EventStatus> statuses,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            MatchSort sort,
+            ZoneId zoneId,
+            List<ParticipantStatus> participantStatuses,
+            int offset,
+            int limit);
+
+    int countDashboardMatches(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            List<EventStatus> statuses,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            MatchSort sort,
+            ZoneId zoneId,
+            List<ParticipantStatus> participantStatuses);
 }

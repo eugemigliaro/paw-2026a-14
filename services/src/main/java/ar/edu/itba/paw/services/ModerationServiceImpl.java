@@ -378,8 +378,9 @@ public class ModerationServiceImpl implements ModerationService {
     private void cancelFutureContentForUser(final User user) {
         final List<Long> participantMatchIds =
                 matchService
-                        .findJoinedMatches(
+                        .findDashboardMatches(
                                 user,
+                                true,
                                 true,
                                 null,
                                 null,
@@ -403,8 +404,9 @@ public class ModerationServiceImpl implements ModerationService {
 
         final List<Long> hostedMatchIds =
                 matchService
-                        .findHostedMatches(
+                        .findDashboardMatches(
                                 user,
+                                true,
                                 true,
                                 null,
                                 null,

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
 import java.util.List;
+import java.util.Map;
 
 public final class UiViewModels {
 
@@ -53,15 +54,27 @@ public final class UiViewModels {
     public static final class FilterOptionViewModel {
         private final String label;
         private final String href;
+        private final Map<String, String> params;
         private final String meta;
         private final boolean active;
 
         public FilterOptionViewModel(
-                final String label, final String href, final String meta, final boolean active) {
+                final String label,
+                final String href,
+                final Map<String, String> params,
+                final String meta,
+                final boolean active) {
             this.label = label;
             this.href = href;
+            this.params = params;
             this.meta = meta;
             this.active = active;
+        }
+
+        @Deprecated(forRemoval = true)
+        public FilterOptionViewModel(
+                final String label, final String href, final String meta, final boolean active) {
+            this(label, href, null, meta, active);
         }
 
         public String getLabel() {
@@ -70,6 +83,10 @@ public final class UiViewModels {
 
         public String getHref() {
             return href;
+        }
+
+        public Map<String, String> getParams() {
+            return params;
         }
 
         public String getMeta() {
@@ -84,13 +101,24 @@ public final class UiViewModels {
     public static final class SelectOptionViewModel {
         private final String label;
         private final String href;
+        private final Map<String, String> params;
         private final boolean selected;
 
         public SelectOptionViewModel(
-                final String label, final String href, final boolean selected) {
+                final String label,
+                final String href,
+                final Map<String, String> params,
+                final boolean selected) {
             this.label = label;
             this.href = href;
+            this.params = params;
             this.selected = selected;
+        }
+
+        @Deprecated(forRemoval = true)
+        public SelectOptionViewModel(
+                final String label, final String href, final boolean selected) {
+            this(label, href, null, selected);
         }
 
         public String getLabel() {
@@ -99,6 +127,10 @@ public final class UiViewModels {
 
         public String getHref() {
             return href;
+        }
+
+        public Map<String, String> getParams() {
+            return params;
         }
 
         public boolean isSelected() {

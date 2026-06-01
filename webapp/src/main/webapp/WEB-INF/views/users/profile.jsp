@@ -343,21 +343,54 @@
 								<c:choose>
 									<c:when test="${optionStatus.index eq 0}">
 										<c:set var="reviewFilterLeftLabel" value="${option.label}" />
-										<c:set var="reviewFilterLeftHref" value="${option.href}" />
+										<c:choose>
+											<c:when test="${not empty option.params}">
+												<c:url var="reviewFilterLeftHref" value="${pageContext.request.servletPath}">
+													<c:forEach var="p" items="${option.params}">
+														<c:param name="${p.key}" value="${p.value}" />
+													</c:forEach>
+												</c:url>
+											</c:when>
+											<c:otherwise>
+												<c:set var="reviewFilterLeftHref" value="${option.href}" />
+											</c:otherwise>
+										</c:choose>
 										<c:if test="${option.active}">
 											<c:set var="reviewFilterCurrentValue" value="both" />
 										</c:if>
 									</c:when>
 									<c:when test="${optionStatus.index eq 1}">
 										<c:set var="reviewFilterRightLabel" value="${option.label}" />
-										<c:set var="reviewFilterRightHref" value="${option.href}" />
+										<c:choose>
+											<c:when test="${not empty option.params}">
+												<c:url var="reviewFilterRightHref" value="${pageContext.request.servletPath}">
+													<c:forEach var="p" items="${option.params}">
+														<c:param name="${p.key}" value="${p.value}" />
+													</c:forEach>
+												</c:url>
+											</c:when>
+											<c:otherwise>
+												<c:set var="reviewFilterRightHref" value="${option.href}" />
+											</c:otherwise>
+										</c:choose>
 										<c:if test="${option.active}">
 											<c:set var="reviewFilterCurrentValue" value="positive" />
 										</c:if>
 									</c:when>
 									<c:when test="${optionStatus.index eq 2}">
 										<c:set var="reviewFilterThirdLabel" value="${option.label}" />
-										<c:set var="reviewFilterThirdHref" value="${option.href}" />
+										<c:choose>
+											<c:when test="${not empty option.params}">
+												<c:url var="reviewFilterThirdHref" value="${pageContext.request.servletPath}">
+													<c:forEach var="p" items="${option.params}">
+														<c:param name="${p.key}" value="${p.value}" />
+													</c:forEach>
+												</c:url>
+											</c:when>
+											<c:otherwise>
+												<c:set var="reviewFilterThirdHref" value="${option.href}" />
+											</c:otherwise>
+										</c:choose>
 										<c:if test="${option.active}">
 											<c:set var="reviewFilterCurrentValue" value="bad" />
 										</c:if>
