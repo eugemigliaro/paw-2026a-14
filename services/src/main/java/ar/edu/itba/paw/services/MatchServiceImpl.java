@@ -4,13 +4,12 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
-import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
-import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
@@ -26,7 +25,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -723,24 +721,20 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public PaginatedResult<Match> searchPublicMatches(
             final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
-            final String sort,
+            final List<Sport> sport,
+            final Instant startDate,
+            final Instant endDate,
+            final EventSort sort,
             final int page,
             final int pageSize,
-            final String timezone,
+            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,
             final Double longitude) {
-        final List<Sport> sportFilters = parseSports(sport);
-        final MatchSort sortFilter =
-                hasCoordinates(latitude, longitude)
-                        ? parseSort(sort)
-                        : withoutDistance(parseSort(sort));
-        final ZoneId zoneId = parseZone(timezone);
-        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
+        final EventSort sortFilter =
+                hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
+        final DateRange dateRange = new DateRange(startDate, endDate);
 
         return paginate(
                 page,
@@ -749,24 +743,24 @@ public class MatchServiceImpl implements MatchService {
                 safePageSize ->
                         matchDao.countPublicMatches(
                                 query,
-                                sportFilters,
+                                sport,
                                 EventTimeFilter.ALL,
                                 dateRange.start(),
                                 dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
-                                zoneId),
+                                timezone),
                 (offset, safePageSize) ->
                         matchDao.findPublicMatches(
                                 query,
-                                sportFilters,
+                                sport,
                                 EventTimeFilter.ALL,
                                 dateRange.start(),
                                 dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 sortFilter,
-                                zoneId,
+                                timezone,
                                 latitude,
                                 longitude,
                                 offset,
@@ -785,7 +779,7 @@ public class MatchServiceImpl implements MatchService {
             Instant endDate,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            MatchSort sort,
+            EventSort sort,
             ZoneId timezone,
             List<ParticipantStatus> participantStatuses,
             int page,
@@ -842,76 +836,8 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
-    private static MatchSort withoutDistance(final MatchSort sort) {
-        return sort == MatchSort.DISTANCE ? MatchSort.SOONEST : sort;
-    }
-
-    private static List<Sport> parseSports(final String rawSports) {
-        if (rawSports == null || rawSports.isBlank()) {
-            return List.of();
-        }
-
-        final LinkedHashSet<Sport> sports = new LinkedHashSet<>();
-        for (final String rawSport : rawSports.split(",")) {
-            if (rawSport == null || rawSport.isBlank()) {
-                continue;
-            }
-            PersistableEnum.fromDbValue(Sport.class, rawSport.trim()).ifPresent(sports::add);
-        }
-
-        return List.copyOf(sports);
-    }
-
-    private static DateRange parseDateRange(
-            final String rawStartDate, final String rawEndDate, final ZoneId zoneId) {
-        final LocalDate startDate = parseDate(rawStartDate);
-        final LocalDate endDate = parseDate(rawEndDate);
-
-        if (startDate == null && endDate == null) {
-            return new DateRange(null, null);
-        }
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            final Instant start = endDate.atStartOfDay(zoneId).toInstant();
-            final Instant endExclusive = startDate.plusDays(1).atStartOfDay(zoneId).toInstant();
-            return new DateRange(start, endExclusive);
-        }
-
-        final Instant start = startDate == null ? null : startDate.atStartOfDay(zoneId).toInstant();
-        final Instant endExclusive =
-                endDate == null ? null : endDate.plusDays(1).atStartOfDay(zoneId).toInstant();
-        return new DateRange(start, endExclusive);
-    }
-
-    private static LocalDate parseDate(final String rawDate) {
-        if (rawDate == null || rawDate.isBlank()) {
-            return null;
-        }
-
-        try {
-            return LocalDate.parse(rawDate.trim());
-        } catch (final Exception ignored) {
-            return null;
-        }
-    }
-
-    private static MatchSort parseSort(final String rawSort) {
-        if (rawSort == null || rawSort.isBlank()) {
-            return MatchSort.SOONEST;
-        }
-        return MatchSort.fromQueryValue(rawSort).orElse(MatchSort.SOONEST);
-    }
-
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+    private static EventSort withoutDistance(final EventSort sort) {
+        return sort == EventSort.DISTANCE ? EventSort.SOONEST : sort;
     }
 
     private List<OccurrenceWindow> buildOccurrenceWindows(

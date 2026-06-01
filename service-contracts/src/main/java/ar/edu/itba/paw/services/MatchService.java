@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.Sport;
@@ -38,13 +38,13 @@ public interface MatchService {
 
     PaginatedResult<Match> searchPublicMatches(
             String query,
-            String sport,
-            String startDate,
-            String endDate,
-            String sort,
+            List<Sport> sport,
+            Instant startDate,
+            Instant endDate,
+            EventSort sort,
             int page,
             int pageSize,
-            String timezone,
+            ZoneId timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Double latitude,
@@ -61,7 +61,7 @@ public interface MatchService {
             Instant endDate,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            MatchSort sort,
+            EventSort sort,
             ZoneId timezone,
             List<ParticipantStatus> participantStatuses,
             int page,

@@ -5,8 +5,8 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
-import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -330,7 +330,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final Double latitude,
             final Double longitude,
@@ -399,7 +399,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final int offset,
             final int limit) {
@@ -468,7 +468,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final int offset,
             final int limit) {
@@ -520,7 +520,7 @@ public class MatchJpaDao implements MatchDao {
 
     private List<Match> findPage(
             final QueryParts parts,
-            final MatchSort sort,
+            final EventSort sort,
             final Boolean upcoming,
             final Double latitude,
             final Double longitude,
@@ -537,7 +537,7 @@ public class MatchJpaDao implements MatchDao {
                         .setMaxResults(limit);
         setCommonParams(idQuery);
         setParams(idQuery, parts.params);
-        if (sort == MatchSort.DISTANCE) {
+        if (sort == EventSort.DISTANCE) {
             setDistanceParams(idQuery, latitude, longitude);
         }
 
@@ -761,12 +761,12 @@ public class MatchJpaDao implements MatchDao {
     }
 
     private static String orderBy(
-            final MatchSort sort,
+            final EventSort sort,
             final Boolean upcoming,
             final Double latitude,
             final Double longitude) {
-        final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
-        if (safeSort == MatchSort.DISTANCE && latitude != null && longitude != null) {
+        final EventSort safeSort = sort == null ? EventSort.SOONEST : sort;
+        if (safeSort == EventSort.DISTANCE && latitude != null && longitude != null) {
             return " ORDER BY CASE WHEN m.latitude IS NULL OR m.longitude IS NULL THEN 1 ELSE 0 END ASC,"
                     + " ((m.latitude - :latitude) * (m.latitude - :latitude))"
                     + " + ((m.longitude - :longitude) * :cosLatitude * (m.longitude - :longitude) * :cosLatitude) ASC,"
@@ -857,7 +857,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final List<ParticipantStatus> participantStatuses,
             final int offset,
@@ -912,7 +912,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final List<ParticipantStatus> participantStatuses) {
         final QueryParts parts = new QueryParts();

@@ -3,7 +3,7 @@ package ar.edu.itba.paw.models.query;
 import java.util.Arrays;
 import java.util.Optional;
 
-public enum MatchSort {
+public enum EventSort {
     SOONEST("soonest"),
     PRICE_LOW("price"),
     SPOTS_DESC("spots"),
@@ -11,7 +11,7 @@ public enum MatchSort {
 
     private final String queryValue;
 
-    MatchSort(final String queryValue) {
+    EventSort(final String queryValue) {
         this.queryValue = queryValue;
     }
 
@@ -19,7 +19,7 @@ public enum MatchSort {
         return queryValue;
     }
 
-    public static Optional<MatchSort> fromQueryValue(final String value) {
+    public static Optional<EventSort> fromQueryValue(final String value) {
         return Arrays.stream(values())
                 .filter(sort -> sort.queryValue.equalsIgnoreCase(value))
                 .findFirst();
