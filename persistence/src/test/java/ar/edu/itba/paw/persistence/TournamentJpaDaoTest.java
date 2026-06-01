@@ -5,7 +5,7 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.TournamentSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
@@ -120,7 +120,22 @@ public class TournamentJpaDaoTest {
         em.flush();
         em.clear();
 
-        final List<Tournament> hosted = tournamentDao.findHostedByUser(host, 0, 10);
+        final List<Tournament> hosted =
+                tournamentDao.findDashboardTournaments(
+                        host,
+                        Boolean.TRUE,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        null,
+                        null,
+                        0,
+                        10);
         final List<Tournament> publicActive = tournamentDao.findPublicRegistrationOrLive(0, 10);
 
         Assertions.assertEquals(3, hosted.size());
@@ -199,7 +214,7 @@ public class TournamentJpaDaoTest {
                         null,
                         null,
                         null,
-                        TournamentSort.SOONEST,
+                        EventSort.SOONEST,
                         null,
                         null,
                         0,
@@ -262,7 +277,7 @@ public class TournamentJpaDaoTest {
                         now.plusSeconds(259_200),
                         new BigDecimal("10"),
                         new BigDecimal("20"),
-                        TournamentSort.SOONEST,
+                        EventSort.SOONEST,
                         null,
                         null,
                         0,
@@ -322,7 +337,7 @@ public class TournamentJpaDaoTest {
                         null,
                         null,
                         null,
-                        TournamentSort.PRICE,
+                        EventSort.PRICE_LOW,
                         null,
                         null,
                         0,
@@ -335,7 +350,7 @@ public class TournamentJpaDaoTest {
                         null,
                         null,
                         null,
-                        TournamentSort.DISTANCE,
+                        EventSort.DISTANCE,
                         -34.601,
                         -58.381,
                         0,

@@ -3,9 +3,11 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,47 +19,36 @@ public interface TournamentService {
 
     Optional<Tournament> findTournamentForHost(long tournamentId, User host);
 
-    @Deprecated(forRemoval = true)
-    PaginatedResult<Tournament> searchPublicTournaments(
-            String query,
-            String sports,
-            String startDate,
-            String endDate,
-            String sort,
-            int page,
-            int pageSize,
-            String timezone,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            Double latitude,
-            Double longitude);
-
     PaginatedResult<Tournament> searchPublicTournaments(
             String query,
             List<Sport> sport,
             Instant startDate,
             Instant endDate,
-            String sort,
+            EventSort sort,
             int page,
             int pageSize,
-            String timezone,
+            ZoneId timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Double latitude,
             Double longitude);
 
-    PaginatedResult<Tournament> findHostedTournaments(
-            User host,
+    PaginatedResult<Tournament> findDashboardTournaments(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
             String query,
             List<Sport> sport,
             Instant startDate,
             Instant endDate,
-            String sort,
+            EventSort sort,
             int page,
             int pageSize,
-            String timezone,
+            ZoneId timezone,
             BigDecimal minPrice,
-            BigDecimal maxPrice);
+            BigDecimal maxPrice,
+            Double latitude,
+            Double longitude);
 
     Tournament update(long tournamentId, User actingUser, UpdateTournamentRequest request);
 
