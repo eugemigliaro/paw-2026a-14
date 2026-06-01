@@ -255,10 +255,11 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         }
 
         final boolean completed = propagateWinner(tournament, updatedMatch, winner, now);
-        tournamentMailService.sendMatchResultEmail(
-                tournament, updatedMatch, winner, losingTeam(updatedMatch, winner));
         if (completed) {
             tournamentMailService.sendTournamentCompletedEmail(tournament, winner);
+        } else {
+            tournamentMailService.sendMatchResultEmail(
+                    tournament, updatedMatch, winner, losingTeam(updatedMatch, winner));
         }
         return updatedMatch;
     }
