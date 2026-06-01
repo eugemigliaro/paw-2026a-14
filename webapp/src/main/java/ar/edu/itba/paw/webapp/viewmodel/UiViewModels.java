@@ -115,12 +115,6 @@ public final class UiViewModels {
             this.selected = selected;
         }
 
-        @Deprecated(forRemoval = true)
-        public SelectOptionViewModel(
-                final String label, final String href, final boolean selected) {
-            this(label, href, null, selected);
-        }
-
         public String getLabel() {
             return label;
         }

@@ -36,7 +36,18 @@
 				</button>
 					<div class="filter-dropdown__panel sort-panel__panel" aria-labelledby="<c:out value='${resolvedId}' />-label">
 					<c:forEach var="option" items="${options}">
-						<c:url var="optionHref" value="${option.href}" />
+						<c:choose>
+							<c:when test="${not empty option.href}">
+								<c:url var="optionHref" value="${option.href}" />
+							</c:when>
+							<c:otherwise>
+								<c:url var="optionHref" value="/">
+									<c:forEach var="p" items="${option.params}">
+										<c:param name="${p.key}" value="${p.value}" />
+									</c:forEach>
+								</c:url>
+							</c:otherwise>
+						</c:choose>
 						<a
 							href="${optionHref}"
 							class="filter-dropdown__item sort-panel__item ${option.selected ? 'filter-dropdown__item--active sort-panel__item--active' : ''}"
