@@ -80,6 +80,38 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldSaveManualSeedOrderWithoutViolatingUniqueConstraint() {
+        final Tournament tournament = createTournament(TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam firstTeam =
+                tournamentTeamDao.create(tournament, "Team A", TournamentTeamOrigin.SOLO_POOL, 1);
+        final TournamentTeam secondTeam =
+                tournamentTeamDao.create(tournament, "Team B", TournamentTeamOrigin.SOLO_POOL, 2);
+
+        em.flush();
+        em.clear();
+
+        final TournamentTeam persistedFirst =
+                tournamentTeamDao.findById(firstTeam.getId()).orElseThrow();
+        final TournamentTeam persistedSecond =
+                tournamentTeamDao.findById(secondTeam.getId()).orElseThrow();
+
+        tournamentTeamDao.saveSeedOrder(
+                List.of(persistedFirst, persistedSecond),
+                List.of(persistedSecond.getId(), persistedFirst.getId()));
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournament.getId());
+
+        Assertions.assertEquals(
+                List.of(persistedSecond.getId(), persistedFirst.getId()),
+                teams.stream().map(TournamentTeam::getId).toList());
+        Assertions.assertEquals(1, teams.get(0).getSeedPosition());
+        Assertions.assertEquals(2, teams.get(1).getSeedPosition());
+    }
+
+    @Test
     public void shouldFindHostedAndPublicActiveTournaments() {
         final Tournament first = createTournament(TournamentStatus.REGISTRATION);
         final Tournament second = createTournament(TournamentStatus.IN_PROGRESS);

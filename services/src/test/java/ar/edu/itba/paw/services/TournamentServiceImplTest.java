@@ -44,6 +44,7 @@ public class TournamentServiceImplTest {
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMailService tournamentMailService;
+    @Mock private ImageService imageService;
     @Mock private MessageSource messageSource;
 
     private TournamentServiceImpl tournamentService;
@@ -56,6 +57,7 @@ public class TournamentServiceImplTest {
                         tournamentSoloEntryDao,
                         tournamentTeamDao,
                         tournamentMailService,
+                        imageService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -92,7 +94,7 @@ public class TournamentServiceImplTest {
                                 request.getStartsAt(),
                                 request.getEndsAt(),
                                 request.getPricePerPlayer(),
-                                request.getBannerImageMetadata(),
+                                null,
                                 request.getFormat(),
                                 request.getBracketSize(),
                                 request.getTeamSize(),

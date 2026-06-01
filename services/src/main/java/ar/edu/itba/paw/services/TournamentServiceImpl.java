@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
@@ -12,6 +13,7 @@ import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -44,6 +46,7 @@ public class TournamentServiceImpl implements TournamentService {
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
     private final TournamentTeamDao tournamentTeamDao;
     private final TournamentMailService tournamentMailService;
+    private final ImageService imageService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -52,12 +55,14 @@ public class TournamentServiceImpl implements TournamentService {
             final TournamentSoloEntryDao tournamentSoloEntryDao,
             final TournamentTeamDao tournamentTeamDao,
             final TournamentMailService tournamentMailService,
+            final ImageService imageService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
         this.tournamentTeamDao = tournamentTeamDao;
         this.tournamentMailService = tournamentMailService;
+        this.imageService = imageService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -79,7 +84,7 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getStartsAt(),
                 request.getEndsAt(),
                 request.getPricePerPlayer(),
-                request.getBannerImageMetadata(),
+                resolveBannerImageMetadata(request.getBannerImage()),
                 request.getFormat(),
                 request.getBracketSize(),
                 request.getTeamSize(),
@@ -321,7 +326,8 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setStartsAt(request.getStartsAt());
         tournament.setEndsAt(request.getEndsAt());
         tournament.setPricePerPlayer(request.getPricePerPlayer());
-        tournament.setBannerImageMetadata(request.getBannerImageMetadata());
+        tournament.setBannerImageMetadata(
+                resolveBannerImageMetadata(tournament, request.getBannerImage()));
         tournament.setBracketSize(request.getBracketSize());
         tournament.setTeamSize(request.getTeamSize());
         tournament.setRegistrationOpensAt(request.getRegistrationOpensAt());
@@ -690,6 +696,35 @@ public class TournamentServiceImpl implements TournamentService {
             throw lifecycleException(
                     TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
                     "tournament.lifecycle.error.invalidRegistrationWindow");
+        }
+    }
+
+    private ImageMetadata resolveBannerImageMetadata(final ImageUpload bannerImage) {
+        if (bannerImage == null || bannerImage.getContentLength() <= 0) {
+            return null;
+        }
+        return storeBannerImage(bannerImage);
+    }
+
+    private ImageMetadata resolveBannerImageMetadata(
+            final Tournament tournament, final ImageUpload bannerImage) {
+        if (bannerImage == null || bannerImage.getContentLength() <= 0) {
+            return tournament.getBannerImageMetadata();
+        }
+        return storeBannerImage(bannerImage);
+    }
+
+    private ImageMetadata storeBannerImage(final ImageUpload bannerImage) {
+        try {
+            final Long imageId =
+                    imageService.store(
+                            bannerImage.getContentType(),
+                            bannerImage.getContentLength(),
+                            bannerImage.getContentStream());
+            return new ImageMetadata(
+                    imageId, bannerImage.getContentType(), bannerImage.getContentLength());
+        } catch (final IOException exception) {
+            throw new IllegalStateException("Unable to store tournament banner image", exception);
         }
     }
 

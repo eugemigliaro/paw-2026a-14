@@ -32,11 +32,12 @@ import ar.edu.itba.paw.services.UpdateTournamentRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
+import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -82,7 +83,6 @@ class HostTournamentControllerTest {
         publishedSchedules = new AtomicReference<>();
 
         final MessageSource messageSource = messageSource();
-        final Clock clock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostTournamentController(
@@ -90,7 +90,6 @@ class HostTournamentControllerTest {
                                         tournamentRegistrationService,
                                         tournamentBracketService,
                                         messageSource,
-                                        clock,
                                         true,
                                         "/assets/tiles/{z}/{x}/{y}.png",
                                         "Local Buenos Aires map tiles",
@@ -98,7 +97,7 @@ class HostTournamentControllerTest {
                                         -58.3816,
                                         14))
                         .setValidator(validator(messageSource))
-                        .setConversionService(new DefaultFormattingConversionService())
+                        .setConversionService(conversionService())
                         .build();
     }
 
@@ -220,7 +219,9 @@ class HostTournamentControllerTest {
                 UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(createPost("City Football Cup", "football", "2", true, true))
+        mockMvc.perform(
+                        createPost(
+                                "City Football Cup", Sport.FOOTBALL.getDbValue(), "2", true, true))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attributeHasFieldErrors("createTournamentForm", "teamSize"));
@@ -509,7 +510,7 @@ class HostTournamentControllerTest {
                                 java.util.List.of(roundOneMatch, roundTwoMatch),
                                 null,
                                 roundOneMatch));
-        final String expectedDate = LocalDate.now(ZoneId.systemDefault()).toString();
+        final String expectedDate = LocalDate.now(ZoneId.systemDefault()).plusDays(1).toString();
 
         // 2. Exercise
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
@@ -548,14 +549,16 @@ class HostTournamentControllerTest {
                 .thenReturn(
                         new TournamentBracketView(
                                 tournament,
-                                java.util.List.of(
+                                List.of(
                                         match.getTeamA(),
                                         match.getTeamB(),
                                         match2.getTeamA(),
                                         match2.getTeamB()),
-                                java.util.List.of(match, match2),
+                                List.of(match, match2),
                                 null,
                                 match));
+        Mockito.when(tournamentService.findTournamentForHost(77L, host))
+                .thenReturn(Optional.of(tournament));
         Mockito.when(
                         tournamentBracketService.publishBracket(
                                 Mockito.eq(77L), Mockito.eq(host), Mockito.anyList()))
@@ -591,11 +594,13 @@ class HostTournamentControllerTest {
                                 java.util.List.of(match),
                                 null,
                                 match));
+        Mockito.when(tournamentService.findTournamentForHost(77L, host))
+                .thenReturn(java.util.Optional.of(tournament));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/bracket/publish").param("tz", "UTC"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/host/tournaments/77/bracket/setup"));
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/bracket-setup"));
         Assertions.assertNull(publishedSchedules.get());
     }
 
@@ -609,7 +614,7 @@ class HostTournamentControllerTest {
         return post("/host/tournaments/" + tournamentId + "/edit")
                 .locale(Locale.ENGLISH)
                 .param("title", title)
-                .param("sport", "padel")
+                .param("sport", Sport.PADEL.getDbValue())
                 .param("description", "Updated tournament")
                 .param("address", "Updated Club")
                 .param("registrationOpensDate", "2030-04-01")
@@ -634,7 +639,7 @@ class HostTournamentControllerTest {
                     final String title,
                     final boolean allowSoloSignup,
                     final boolean allowTeamDraft) {
-        return createPost(title, "padel", "1", allowSoloSignup, allowTeamDraft);
+        return createPost(title, Sport.PADEL.getDbValue(), "1", allowSoloSignup, allowTeamDraft);
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -675,20 +680,28 @@ class HostTournamentControllerTest {
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             validPublishPost() {
         return post("/host/tournaments/77/bracket/publish")
-                .param("startDate_10", "2030-04-10")
-                .param("startTime_10", "18:00")
-                .param("endDate_10", "2030-04-10")
-                .param("endTime_10", "19:00")
-                .param("address_10", "Downtown Club")
-                .param("latitude_10", "-34.6")
-                .param("longitude_10", "-58.4")
-                .param("startDate_11", "2030-04-10")
-                .param("startTime_11", "18:00")
-                .param("endDate_11", "2030-04-10")
-                .param("endTime_11", "19:00")
-                .param("address_11", "Downtown Club")
-                .param("latitude_11", "-34.6")
-                .param("longitude_11", "-58.4")
+                .param("schedules[0].startDate", "2030-04-10")
+                .param("schedules[0].startTime", "18:00")
+                .param("schedules[0].endDate", "2030-04-10")
+                .param("schedules[0].endTime", "19:00")
+                .param("schedules[0].address", "Downtown Club")
+                .param("schedules[0].latitude", "-34.6")
+                .param("schedules[0].longitude", "-58.4")
+                .param("schedules[0].matchId", "10")
+                .param("schedules[0].roundNumber", "1")
+                .param("schedules[0].roundLabel", "Round 1")
+                .param("schedules[0].matchLabel", "Match 1")
+                .param("schedules[1].startDate", "2030-04-10")
+                .param("schedules[1].startTime", "18:00")
+                .param("schedules[1].endDate", "2030-04-10")
+                .param("schedules[1].endTime", "19:00")
+                .param("schedules[1].address", "Downtown Club")
+                .param("schedules[1].latitude", "-34.6")
+                .param("schedules[1].longitude", "-58.4")
+                .param("schedules[1].matchId", "11")
+                .param("schedules[1].roundNumber", "1")
+                .param("schedules[1].roundLabel", "Round 1")
+                .param("schedules[1].matchLabel", "Match 2")
                 .param("tz", "UTC");
     }
 
@@ -762,6 +775,14 @@ class HostTournamentControllerTest {
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setFallbackToSystemLocale(false);
         return messageSource;
+    }
+
+    private static DefaultFormattingConversionService conversionService() {
+        final DefaultFormattingConversionService conversionService =
+                new DefaultFormattingConversionService();
+        conversionService.addConverter(new StringToSportConverter());
+        conversionService.addConverter(new StringToTournamentPairingStrategyConverter());
+        return conversionService;
     }
 
     private static LocalValidatorFactoryBean validator(final MessageSource messageSource) {

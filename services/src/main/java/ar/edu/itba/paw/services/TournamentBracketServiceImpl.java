@@ -148,13 +148,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final List<TournamentTeam> teams =
                 tournamentTeamDao.findByTournamentUnordered(tournamentId);
         validateManualPairings(teams, orderedTeamIds);
-        final Map<Long, Integer> positionByTeamId = new HashMap<>();
-        for (int index = 0; index < orderedTeamIds.size(); index++) {
-            positionByTeamId.put(orderedTeamIds.get(index), index + 1);
-        }
-        for (final TournamentTeam team : teams) {
-            team.setSeedPosition(positionByTeamId.get(team.getId()));
-        }
+        tournamentTeamDao.saveSeedOrder(teams, orderedTeamIds);
+        tournament.setUpdatedAt(Instant.now(clock));
     }
 
     @Override
