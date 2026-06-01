@@ -99,18 +99,22 @@ public class MatchDashboardController {
                                 PAGE_SIZE);
         final PaginatedResult<Tournament> tournamentResult =
                 selection.tournament()
-                        ? tournamentService.findHostedTournaments(
+                        ? tournamentService.findDashboardTournaments(
                                 user,
+                                selection.upcoming(),
+                                selection.includeHosted(),
                                 viewSearchForm.getQ(),
                                 viewSearchForm.getSport(),
                                 startInstant,
                                 endInstant,
-                                viewSearchForm.getSort().getQueryValue(),
+                                viewSearchForm.getSort(),
                                 viewSearchForm.getPage(),
                                 PAGE_SIZE,
-                                selectedTimezone.getId(),
+                                selectedTimezone,
                                 viewSearchForm.getMinPrice(),
-                                viewSearchForm.getMaxPrice())
+                                viewSearchForm.getMaxPrice(),
+                                viewSearchForm.getLatitude(),
+                                viewSearchForm.getLongitude())
                         : null;
 
         return MatchDashboardPageSupport.buildListPage(

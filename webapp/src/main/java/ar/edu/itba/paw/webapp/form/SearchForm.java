@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.form;
 
-import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -27,7 +27,7 @@ public class SearchForm {
     @Pattern(regexp = "^[\\p{L}\\p{N} ]*$", message = "{SearchForm.q.Pattern}")
     private String q = "";
 
-    private MatchSort sort = MatchSort.SOONEST;
+    private EventSort sort = EventSort.SOONEST;
     private String filter = DEFAULT_FILTER;
     private EventType type = DEFAULT_TYPE;
 
@@ -44,6 +44,8 @@ public class SearchForm {
     private List<EventStatus> status = new ArrayList<>();
     private List<String> category = new ArrayList<>();
     private List<EventVisibility> visibility = new ArrayList<>();
+    private Double latitude;
+    private Double longitude;
 
     @Min(value = 1)
     private int page = 1;
@@ -56,11 +58,11 @@ public class SearchForm {
         this.q = q;
     }
 
-    public MatchSort getSort() {
+    public EventSort getSort() {
         return sort;
     }
 
-    public void setSort(final MatchSort sort) {
+    public void setSort(final EventSort sort) {
         this.sort = sort;
     }
 
@@ -152,6 +154,22 @@ public class SearchForm {
         this.visibility = copyEnumValues(visibility);
     }
 
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(final Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(final Double longitude) {
+        this.longitude = longitude;
+    }
+
     public int getPage() {
         return page;
     }
@@ -162,7 +180,7 @@ public class SearchForm {
 
     public void normalizeDefaults() {
         if (sort == null) {
-            sort = MatchSort.SOONEST;
+            sort = EventSort.SOONEST;
         }
         if (filter == null || filter.isBlank()) {
             filter = DEFAULT_FILTER;

@@ -19,7 +19,7 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -89,6 +89,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
@@ -875,18 +876,23 @@ class UiRouteTest {
                     @Override
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
-                            final String sport,
-                            final String startDate,
-                            final String endDate,
-                            final String sort,
+                            final List<Sport> sport,
+                            final Instant startDate,
+                            final Instant endDate,
+                            final EventSort sort,
                             final int page,
                             final int pageSize,
-                            final String timezone,
+                            final ZoneId timezone,
                             final BigDecimal minPrice,
                             final BigDecimal maxPrice,
                             final Double latitude,
                             final Double longitude) {
-                        lastSportsFilter.set(sport);
+                        lastSportsFilter.set(
+                                sport == null
+                                        ? null
+                                        : sport.stream()
+                                                .map(Sport::getDbValue)
+                                                .collect(java.util.stream.Collectors.joining(",")));
                         lastSearchLatitude.set(latitude);
                         lastSearchLongitude.set(longitude);
                         return new PaginatedResult<>(
@@ -905,7 +911,7 @@ class UiRouteTest {
                             Instant endDate,
                             BigDecimal minPrice,
                             BigDecimal maxPrice,
-                            MatchSort sort,
+                            EventSort sort,
                             ZoneId timezone,
                             List<ParticipantStatus> participantStatuses,
                             int page,
@@ -1597,29 +1603,23 @@ class UiRouteTest {
                         FIXED_NOW);
         final TournamentService tournamentService = Mockito.mock(TournamentService.class);
         Mockito.when(
-                        tournamentService.findHostedTournaments(
-                                Mockito.any(User.class),
-                                Mockito.anyString(),
+                        tournamentService.findDashboardTournaments(
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.anyString(),
+                                ArgumentMatchers.nullable(String.class),
+                                ArgumentMatchers.nullable(List.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(EventSort.class),
                                 Mockito.anyInt(),
                                 Mockito.anyInt(),
-                                Mockito.anyString(),
-                                Mockito.any(),
-                                Mockito.any()))
-                .thenAnswer(
-                        invocation ->
-                                invocation.getArgument(3) == null
-                                                && invocation.getArgument(4) == null
-                                        ? new PaginatedResult<>(
-                                                List.of(hostedTournament),
-                                                1,
-                                                invocation.getArgument(6),
-                                                12)
-                                        : new PaginatedResult<>(
-                                                List.of(), 0, invocation.getArgument(6), 12));
+                                ArgumentMatchers.nullable(ZoneId.class),
+                                ArgumentMatchers.nullable(BigDecimal.class),
+                                ArgumentMatchers.nullable(BigDecimal.class),
+                                ArgumentMatchers.nullable(Double.class),
+                                ArgumentMatchers.nullable(Double.class)))
+                .thenReturn(new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12));
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
         final ModerationService moderationService = Mockito.mock(ModerationService.class);
@@ -1637,7 +1637,13 @@ class UiRouteTest {
                                         matchParticipationService,
                                         matchReservationService,
                                         tournamentService,
-                                        messageSource),
+                                        messageSource,
+                                        false,
+                                        "",
+                                        "",
+                                        0,
+                                        0,
+                                        0),
                                 new EventController(
                                         matchService,
                                         matchReservationService,
@@ -1772,9 +1778,8 @@ class UiRouteTest {
                                         "sortOptions",
                                         Matchers.hasItem(
                                                 Matchers.hasProperty(
-                                                        "href",
-                                                        Matchers.containsString(
-                                                                "sort=distance")))));
+                                                        "params",
+                                                        Matchers.hasEntry("sort", "distance")))));
     }
 
     @Test
@@ -3350,7 +3355,7 @@ class UiRouteTest {
         final SearchForm searchForm =
                 (SearchForm) result.getModelAndView().getModel().get("searchForm");
         Assertions.assertEquals(List.of(Sport.PADEL, Sport.TENNIS), searchForm.getSport());
-        Assertions.assertEquals(MatchSort.PRICE_LOW, searchForm.getSort());
+        Assertions.assertEquals(EventSort.PRICE_LOW, searchForm.getSort());
         Assertions.assertEquals(
                 List.of(EventStatus.OPEN, EventStatus.COMPLETED), searchForm.getStatus());
         Assertions.assertEquals(
@@ -3371,9 +3376,6 @@ class UiRouteTest {
                         .andExpect(status().isOk())
                         .andExpect(view().name("events/list"))
                         .andExpect(model().attribute("selectedType", "tournament"))
-                        .andExpect(
-                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
-                        .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()))
                         .andReturn();
 
         final SearchForm searchForm =

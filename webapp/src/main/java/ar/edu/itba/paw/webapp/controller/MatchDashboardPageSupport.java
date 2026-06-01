@@ -7,7 +7,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.PersistableEnum;
@@ -307,7 +307,7 @@ final class MatchDashboardPageSupport {
                                 selectedSports,
                                 selectedVisibility,
                                 selectedCategories,
-                                MatchSort.SOONEST.getQueryValue(),
+                                EventSort.SOONEST.getQueryValue(),
                                 sort,
                                 messageSource.getMessage("feed.sort.soonest", null, locale)),
                         sortOption(
@@ -325,7 +325,7 @@ final class MatchDashboardPageSupport {
                                 selectedSports,
                                 selectedVisibility,
                                 selectedCategories,
-                                MatchSort.PRICE_LOW.getQueryValue(),
+                                EventSort.PRICE_LOW.getQueryValue(),
                                 sort,
                                 messageSource.getMessage("feed.sort.price", null, locale)),
                         sortOption(
@@ -343,7 +343,7 @@ final class MatchDashboardPageSupport {
                                 selectedSports,
                                 selectedVisibility,
                                 selectedCategories,
-                                MatchSort.SPOTS_DESC.getQueryValue(),
+                                EventSort.SPOTS_DESC.getQueryValue(),
                                 sort,
                                 messageSource.getMessage("feed.sort.spots", null, locale)));
 
