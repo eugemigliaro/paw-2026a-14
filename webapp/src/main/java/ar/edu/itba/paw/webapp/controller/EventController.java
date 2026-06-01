@@ -1,46 +1,20 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
-import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
-
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.types.EventJoinPolicy;
-import ar.edu.itba.paw.models.types.EventStatus;
-import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
-import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventDetailPageViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventOccurrenceViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.InviteParticipantViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ParticipantViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
 import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -48,46 +22,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 public class EventController {
     private static final int DEFAULT_MAP_ZOOM = 14;
-    private static final int SERIES_PAGE_SIZE = 5;
 
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
     private final MatchParticipationService matchParticipationService;
-    private final PlayerReviewService playerReviewService;
-    private final MessageSource messageSource;
-    private final Clock clock;
-    private final boolean mapPickerEnabled;
-    private final String mapTileUrlTemplate;
-    private final String mapAttribution;
-    private final int mapDefaultZoom;
-
-    public EventController(
-            final MatchService matchService,
-            final MatchReservationService matchReservationService,
-            final MatchParticipationService matchParticipationService,
-            final PlayerReviewService playerReviewService,
-            final MessageSource messageSource,
-            final Clock clock) {
-        this(
-                matchService,
-                matchReservationService,
-                matchParticipationService,
-                playerReviewService,
-                messageSource,
-                clock,
-                false,
-                "",
-                "",
-                DEFAULT_MAP_ZOOM);
-    }
+    private final EventPageSupport eventPageSupport;
 
     @Autowired
     public EventController(
@@ -104,18 +49,23 @@ public class EventController {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
-        this.playerReviewService = playerReviewService;
-        this.messageSource = messageSource;
-        this.clock = clock;
-        this.mapPickerEnabled = mapPickerEnabled;
-        this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
-        this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
-        this.mapDefaultZoom = mapDefaultZoom;
+        this.eventPageSupport =
+                new EventPageSupport(
+                        matchService,
+                        matchReservationService,
+                        matchParticipationService,
+                        playerReviewService,
+                        messageSource,
+                        clock,
+                        mapPickerEnabled,
+                        mapTileUrlTemplate,
+                        mapAttribution,
+                        mapDefaultZoom);
     }
 
-    @GetMapping("/matches/{eventId}")
+    @GetMapping("/matches/{eventId:\\d+}")
     public ModelAndView showEventDetails(
-            @PathVariable("eventId") final String eventId,
+            @PathVariable("eventId") final Long eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
             @RequestParam(value = "reservationError", required = false)
                     final String reservationError,
@@ -129,28 +79,21 @@ public class EventController {
             @RequestParam(value = "seriesPage", defaultValue = "1") final int seriesPage,
             final Model model,
             final Locale locale) {
-        final String resolvedReservationStatus =
-                flashString(model, "reservationStatus").orElse(reservationStatus);
-        final String resolvedJoinStatus = flashString(model, "joinStatus").orElse(joinStatus);
-        final String resolvedInviteStatus = flashString(model, "inviteStatus").orElse(inviteStatus);
-        final String resolvedHostAction = flashString(model, "hostAction").orElse(hostAction);
-        return showRealEventDetails(
-                parseEventIdOrThrowNotFound(eventId),
-                resolvedReservationStatus,
-                resolvedHostAction,
+        return eventPageSupport.showEventDetails(
+                eventId,
+                flashString(model, "reservationStatus").orElse(reservationStatus),
+                reservationError,
+                seriesReservationErrorCode,
+                flashString(model, "hostAction").orElse(hostAction),
                 flashString(model, "hostActionError").orElse(null),
                 flashString(model, "hostActionTarget").orElse(null),
                 flashString(model, "hostInviteEmail").orElse(""),
-                reservationError,
-                seriesReservationErrorCode == null
-                        ? null
-                        : reservationErrorMessage(seriesReservationErrorCode, locale),
-                resolvedJoinStatus,
+                flashString(model, "joinStatus").orElse(joinStatus),
+                joinErrorCode,
+                flashString(model, "inviteStatus").orElse(inviteStatus),
+                inviteErrorCode,
                 Boolean.TRUE.equals(model.asMap().get("joinRequested")),
                 Boolean.TRUE.equals(model.asMap().get("seriesJoinRequested")),
-                joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
-                resolvedInviteStatus,
-                inviteErrorCode == null ? null : inviteErrorMessage(inviteErrorCode, locale),
                 seriesPage,
                 locale);
     }
@@ -168,23 +111,7 @@ public class EventController {
             redirectAttributes.addFlashAttribute("reservationStatus", "confirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
-            return showRealEventDetails(
-                    matchId,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    reservationErrorMessage(exception.getCode(), locale),
-                    null,
-                    null,
-                    false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    1,
-                    locale);
+            return reservationErrorDetails(matchId, exception.getCode(), locale);
         }
     }
 
@@ -199,29 +126,14 @@ public class EventController {
 
         try {
             matchParticipationService.removeParticipant(matchId, currentUser, currentUser);
-            if (shouldRedirectToPlayerMatchesAfterCancellation(cancellationContext, currentUser)) {
+            if (eventPageSupport.shouldRedirectToPlayerMatchesAfterCancellation(
+                    cancellationContext, currentUser)) {
                 return new ModelAndView("redirect:/events");
             }
             redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchParticipationException exception) {
-            return showRealEventDetails(
-                    matchId,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    reservationErrorMessage(exception.getCode(), locale),
-                    null,
-                    null,
-                    false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    1,
-                    locale);
+            return reservationErrorDetails(matchId, exception.getCode(), locale);
         }
     }
 
@@ -241,23 +153,7 @@ public class EventController {
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringConfirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
-            return showRealEventDetails(
-                    matchId,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    reservationErrorMessage(exception.getCode(), locale),
-                    null,
-                    false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    1,
-                    locale);
+            return seriesReservationErrorDetails(matchId, exception.getCode(), locale);
         }
     }
 
@@ -265,6 +161,7 @@ public class EventController {
         "/matches/{matchId:\\d+}/recurring-reservations/cancel",
         "/matches/{matchId:\\d+}/series-reservations/cancel"
     })
+    @PreAuthorize("isAuthenticated()")
     public ModelAndView cancelSeriesReservations(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
@@ -276,914 +173,7 @@ public class EventController {
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringCancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
-            return showRealEventDetails(
-                    matchId,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    reservationErrorMessage(exception.getCode(), locale),
-                    null,
-                    false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    1,
-                    locale);
-        }
-    }
-
-    private ModelAndView showRealEventDetails(
-            final Long eventId,
-            final String reservationStatus,
-            final String hostAction,
-            final String hostActionError,
-            final String hostActionTarget,
-            final String hostInviteEmail,
-            final String reservationError,
-            final String seriesReservationError,
-            final String joinStatus,
-            final boolean joinRequestedFlash,
-            final boolean seriesJoinRequestedFlash,
-            final String joinError,
-            final String inviteStatus,
-            final String inviteError,
-            final int seriesPage,
-            final Locale locale) {
-        final Match match =
-                matchService
-                        .findMatchById(eventId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
-
-        if (!isMatchVisibleToUser(match, currentUser)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-
-        final boolean isHostViewer =
-                currentUser != null && currentUser.getId().equals(match.getHost().getId());
-        final boolean hasPendingRequest =
-                !isHostViewer
-                        && currentUser != null
-                        && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
-                        && matchParticipationService.hasPendingRequest(eventId, currentUser);
-        final boolean isInvitedPlayer =
-                !isHostViewer
-                        && currentUser != null
-                        && match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY
-                        && matchParticipationService.hasInvitation(eventId, currentUser);
-        final boolean isConfirmedParticipant =
-                currentUser != null
-                        && matchReservationService.hasActiveReservation(match.getId(), currentUser);
-        final boolean isApprovalRequired =
-                match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
-        final boolean isInviteOnly = match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY;
-        final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
-
-        final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
-        final boolean hostCanManage = isHost(match, currentUser);
-        final boolean hostCanManageParticipants = hostCanManage && canHostManageParticipants(match);
-        final List<User> pendingHostRequests =
-                isHostViewer && isApprovalRequired
-                        ? matchParticipationService.findPendingRequests(eventId, currentUser)
-                        : List.of();
-        final List<User> pendingHostInvites =
-                isHostViewer && isInviteOnly
-                        ? matchParticipationService.findInvitedUsers(eventId, currentUser)
-                        : List.of();
-        final List<User> declinedHostInvites =
-                isHostViewer && isInviteOnly
-                        ? matchParticipationService.findDeclinedInvitees(eventId, currentUser)
-                        : List.of();
-        final PaginatedResult<Match> seriesOccurrencesPage =
-                match.isRecurringOccurrence()
-                        ? matchService.findSeriesOccurrencesPage(
-                                match.getSeries().getId(), seriesPage, SERIES_PAGE_SIZE)
-                        : new PaginatedResult<>(List.of(), 0, 1, SERIES_PAGE_SIZE);
-        final List<Match> seriesOccurrences = seriesOccurrencesPage.getItems();
-        final SeriesReservationUiState seriesReservationState =
-                match.isRecurringOccurrence()
-                        ? buildSeriesReservationUiState(
-                                match.getSeries().getId(),
-                                seriesOccurrences,
-                                currentUser,
-                                isHostViewer)
-                        : buildSeriesReservationUiState(
-                                null, seriesOccurrences, currentUser, isHostViewer);
-        final SeriesJoinRequestUiState seriesJoinRequestState =
-                isHostViewer
-                        ? new SeriesJoinRequestUiState(false, false)
-                        : buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUser);
-        final boolean suppressReservationErrors =
-                hasPendingRequest || seriesJoinRequestState.pending();
-        final ModelAndView mav = new ModelAndView("matches/detail");
-        mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
-        mav.addObject("isApprovalRequired", isApprovalRequired);
-        mav.addObject("isInviteOnly", isInviteOnly);
-        mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
-        mav.addObject(
-                "eventPage",
-                buildRealEventPage(
-                        match,
-                        confirmedParticipants,
-                        seriesOccurrences,
-                        currentUser,
-                        locale,
-                        hostCanManageParticipants));
-        if (match.isRecurringOccurrence()) {
-            mav.addObject("recurrenceHasPreviousPage", seriesOccurrencesPage.hasPrevious());
-            mav.addObject("recurrenceHasNextPage", seriesOccurrencesPage.hasNext());
-            mav.addObject(
-                    "recurrencePreviousPageHref",
-                    buildSeriesScheduleUrl(eventId, seriesOccurrencesPage.getPage() - 1));
-            mav.addObject(
-                    "recurrenceNextPageHref",
-                    buildSeriesScheduleUrl(eventId, seriesOccurrencesPage.getPage() + 1));
-            mav.addObject(
-                    "recurrencePaginationItems",
-                    PaginationUtils.buildPaginationItems(
-                            seriesOccurrencesPage.getPage(),
-                            seriesOccurrencesPage.getTotalPages(),
-                            p -> buildSeriesScheduleUrl(eventId, p)));
-        }
-
-        mav.addObject("reservationEnabled", canReserveMatch(match, isHostViewer));
-        mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
-        mav.addObject("reservationCancelPath", "/matches/" + eventId + "/reservations/cancel");
-        mav.addObject(
-                "reservationCancellationEnabled",
-                isConfirmedParticipant && canCancelReservation(match));
-        mav.addObject("reservationError", suppressReservationErrors ? null : reservationError);
-        mav.addObject(
-                "reservationConfirmed",
-                isConfirmedParticipant && "confirmed".equalsIgnoreCase(reservationStatus));
-        mav.addObject("reservationCancelled", "cancelled".equalsIgnoreCase(reservationStatus));
-        mav.addObject("seriesReservationPath", "/matches/" + eventId + "/recurring-reservations");
-        mav.addObject(
-                "seriesReservationCancelPath",
-                "/matches/" + eventId + "/recurring-reservations/cancel");
-        mav.addObject("seriesReservationEnabled", seriesReservationState.available());
-        mav.addObject("seriesReservationJoined", seriesReservationState.joined());
-        mav.addObject("seriesCancellationEnabled", seriesReservationState.cancellable());
-        mav.addObject("seriesReservationRequiresLogin", currentUser == null);
-        mav.addObject(
-                "seriesReservationConfirmed",
-                seriesReservationState.joined()
-                        && ("recurringConfirmed".equalsIgnoreCase(reservationStatus)
-                                || "seriesConfirmed".equalsIgnoreCase(reservationStatus)));
-        mav.addObject(
-                "seriesReservationCancelled",
-                "recurringCancelled".equalsIgnoreCase(reservationStatus)
-                        || "seriesCancelled".equalsIgnoreCase(reservationStatus));
-        mav.addObject(
-                "seriesReservationError",
-                suppressReservationErrors ? null : seriesReservationError);
-        mav.addObject("eventStateNotice", eventStateNotice(match, locale));
-
-        mav.addObject(
-                "joinRequestEnabled",
-                !isHostViewer && canRequestToJoin(match) && !seriesJoinRequestState.pending());
-        mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
-        mav.addObject("seriesJoinRequestPath", "/matches/" + eventId + "/recurring-join-requests");
-        mav.addObject("seriesJoinRequestEnabled", seriesJoinRequestState.available());
-        mav.addObject("seriesJoinRequestPending", seriesJoinRequestState.pending());
-        mav.addObject("seriesJoinRequestRequiresLogin", currentUser == null);
-        mav.addObject("cancelJoinRequestPath", "/matches/" + eventId + "/join-requests/cancel");
-        mav.addObject(
-                "hasPendingJoinRequest", hasPendingRequest && !seriesJoinRequestState.pending());
-        mav.addObject(
-                "joinRequested", joinRequestedFlash || "requested".equalsIgnoreCase(joinStatus));
-        mav.addObject(
-                "seriesJoinRequested",
-                seriesJoinRequestedFlash || "recurringRequested".equalsIgnoreCase(joinStatus));
-        mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
-        mav.addObject("joinError", joinError);
-
-        mav.addObject("isInvitedPlayer", isInvitedPlayer);
-        mav.addObject("acceptInvitePath", "/matches/" + eventId + "/invites/accept");
-        mav.addObject("declineInvitePath", "/matches/" + eventId + "/invites/decline");
-        mav.addObject("inviteAccepted", "accepted".equalsIgnoreCase(inviteStatus));
-        mav.addObject("inviteError", inviteError);
-
-        mav.addObject("hostViewer", isHostViewer);
-        mav.addObject("isPrivateEvent", isPrivateEvent);
-        mav.addObject("hostCanManage", hostCanManage);
-        mav.addObject("hostCanManageParticipants", hostCanManageParticipants);
-        mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
-        mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
-        mav.addObject(
-                "hostCanEditSeries",
-                hostCanManage && match.isRecurringOccurrence() && canHostEdit(match));
-        mav.addObject(
-                "hostCanCancelSeries",
-                hostCanManage && match.isRecurringOccurrence() && canHostCancel(match));
-        mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
-        mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
-        mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
-        mav.addObject("hostSeriesCancelPath", "/host/matches/" + eventId + "/series/cancel");
-        mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
-        mav.addObject("hostActionErrorNotice", hostActionError);
-        mav.addObject("hostActionTarget", hostActionTarget);
-        mav.addObject(
-                "hostPendingRequests", toPendingRequestViewModels(pendingHostRequests, eventId));
-        mav.addObject("hostPendingRequestCount", pendingHostRequests.size());
-        mav.addObject(
-                "hostPendingRequestsOpen",
-                !pendingHostRequests.isEmpty()
-                        || isRequestHostAction(hostAction)
-                        || "requests".equalsIgnoreCase(hostActionTarget));
-        mav.addObject("hostPendingInvites", toInviteParticipantViewModels(pendingHostInvites));
-        mav.addObject("hostDeclinedInvites", toInviteParticipantViewModels(declinedHostInvites));
-        mav.addObject("hostPendingInviteCount", pendingHostInvites.size());
-        mav.addObject(
-                "hostPendingInvitesOpen",
-                !pendingHostInvites.isEmpty()
-                        || !declinedHostInvites.isEmpty()
-                        || isInviteHostAction(hostAction)
-                        || "invites".equalsIgnoreCase(hostActionTarget));
-        mav.addObject("hostInviteActionPath", "/host/matches/" + eventId + "/invites");
-        mav.addObject("hostInviteEmail", hostInviteEmail);
-        mav.addObject("hostSeriesInviteAvailable", match.isRecurringOccurrence());
-        return mav;
-    }
-
-    private EventDetailPageViewModel buildRealEventPage(
-            final Match match,
-            final List<User> confirmedParticipants,
-            final List<Match> seriesOccurrences,
-            final User currentUser,
-            final Locale locale,
-            final boolean includeHostParticipantActions) {
-        final User host = match.getHost();
-        final Set<Long> reviewableUserIds =
-                currentUser == null
-                        ? Set.of()
-                        : Optional.ofNullable(
-                                        playerReviewService.findReviewableUserIds(currentUser))
-                                .orElseGet(Set::of);
-        return new EventDetailPageViewModel(
-                toCard(
-                        match,
-                        ZoneId.systemDefault(),
-                        locale,
-                        currentUser,
-                        buildAvailabilityLabel(match, locale),
-                        messageSource,
-                        matchParticipationService,
-                        matchReservationService),
-                null,
-                null,
-                host.getUsername() != null
-                        ? host.getUsername()
-                        : messageSource.getMessage(
-                                "event.detail.unknownHost",
-                                new Object[] {match.getHost().getId()},
-                                locale),
-                profileHrefFor(host),
-                profileUrlFor(host),
-                toParticipantViewModels(
-                        confirmedParticipants,
-                        match.getId(),
-                        currentUser,
-                        reviewableUserIds,
-                        includeHostParticipantActions),
-                buildParticipantCountLabel(confirmedParticipants.size(), locale),
-                messageSource.getMessage("event.detail.noPlayersHint", null, locale),
-                buildAboutParagraphs(match, locale),
-                priceLabel(match.getPricePerPlayer(), locale, messageSource),
-                buildBookingDetails(match, locale),
-                buildAvailabilityLabel(match, locale),
-                messageSource.getMessage("event.booking.cta", null, locale),
-                loadNearbyMatches(match.getId(), currentUser, locale),
-                toOccurrenceViewModels(match, seriesOccurrences, currentUser, locale),
-                mapPickerEnabled && !mapTileUrlTemplate.isBlank() && match.hasCoordinates(),
-                match.getLatitude(),
-                match.getLongitude(),
-                mapTileUrlTemplate,
-                mapAttribution,
-                mapDefaultZoom);
-    }
-
-    private static String buildSeriesScheduleUrl(final Long eventId, final int page) {
-        return UriComponentsBuilder.fromPath("/matches/" + eventId)
-                .queryParam("seriesPage", page)
-                .fragment("recurrence-schedule-title")
-                .build()
-                .encode()
-                .toUriString();
-    }
-
-    private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
-        final String description =
-                match.getDescription() == null || match.getDescription().isBlank()
-                        ? messageSource.getMessage("event.detail.defaultDescription", null, locale)
-                        : match.getDescription();
-        return List.of(normalizeDescriptionLineBreaks(description));
-    }
-
-    private static String normalizeDescriptionLineBreaks(final String description) {
-        return description
-                .replace("\\r\\n", "\n")
-                .replace("\\n", "\n")
-                .replace("\r\n", "\n")
-                .replace('\r', '\n')
-                .replaceAll("\\n{3,}", "\n\n")
-                .strip();
-    }
-
-    private List<BookingDetailViewModel> buildBookingDetails(
-            final Match match, final Locale locale) {
-        return List.of(
-                new BookingDetailViewModel(
-                        messageSource.getMessage("event.booking.date", null, locale),
-                        dateFormatter(locale)
-                                .format(match.getStartsAt().atZone(ZoneId.systemDefault()))),
-                new BookingDetailViewModel(
-                        messageSource.getMessage("event.booking.time", null, locale),
-                        timeFormatter(locale)
-                                        .format(match.getStartsAt().atZone(ZoneId.systemDefault()))
-                                + (match.getEndsAt() == null
-                                        ? ""
-                                        : " - "
-                                                + timeFormatter(locale)
-                                                        .format(
-                                                                match.getEndsAt()
-                                                                        .atZone(
-                                                                                ZoneId
-                                                                                        .systemDefault())))),
-                new BookingDetailViewModel(
-                        messageSource.getMessage("event.booking.venue", null, locale),
-                        match.getAddress()));
-    }
-
-    private List<ParticipantViewModel> toParticipantViewModels(
-            final List<User> confirmedParticipants,
-            final long matchId,
-            final User currentUser,
-            final Set<Long> reviewableUserIds,
-            final boolean includeHostParticipantActions) {
-        return confirmedParticipants.stream()
-                .map(
-                        participant ->
-                                new ParticipantViewModel(
-                                        participant.getUsername(),
-                                        avatarLabelForUsername(participant.getUsername()),
-                                        profileHrefFor(participant),
-                                        profileImageUrlForParticipant(participant),
-                                        reviewHrefForParticipant(
-                                                participant, currentUser, reviewableUserIds),
-                                        includeHostParticipantActions && participant.getId() != null
-                                                ? "/host/matches/"
-                                                        + matchId
-                                                        + "/participants/"
-                                                        + participant.getId()
-                                                        + "/remove"
-                                                : null))
-                .toList();
-    }
-
-    private List<PendingRequestViewModel> toPendingRequestViewModels(
-            final List<User> users, final long matchId) {
-        return users.stream()
-                .map(
-                        user ->
-                                new PendingRequestViewModel(
-                                        user.getUsername(),
-                                        avatarLabelForUsername(user.getUsername()),
-                                        "/host/matches/"
-                                                + matchId
-                                                + "/requests/"
-                                                + user.getId()
-                                                + "/approve",
-                                        "/host/matches/"
-                                                + matchId
-                                                + "/requests/"
-                                                + user.getId()
-                                                + "/reject",
-                                        profileHrefFor(user),
-                                        profileImageUrlForParticipant(user),
-                                        null,
-                                        null,
-                                        false))
-                .toList();
-    }
-
-    private List<InviteParticipantViewModel> toInviteParticipantViewModels(final List<User> users) {
-        return users.stream()
-                .map(
-                        user ->
-                                new InviteParticipantViewModel(
-                                        user.getUsername(),
-                                        avatarLabelForUsername(user.getUsername()),
-                                        profileHrefFor(user),
-                                        profileImageUrlForParticipant(user)))
-                .toList();
-    }
-
-    private String reviewHrefForParticipant(
-            final User participant, final User currentUser, final Set<Long> reviewableUserIds) {
-        if (currentUser == null
-                || participant.getId() == null
-                || currentUser.getId().equals(participant.getId())
-                || !reviewableUserIds.contains(participant.getId())) {
-            return null;
-        }
-        return profileHrefFor(participant) + "?reviewForm=open#reviews";
-    }
-
-    private String profileImageUrlForParticipant(final User participant) {
-        return profileUrlFor(participant);
-    }
-
-    private String profileHrefFor(final User user) {
-        if (user.getUsername() == null) {
-            return null;
-        }
-        return "/users/" + user.getUsername();
-    }
-
-    private List<EventCardViewModel> loadNearbyMatches(
-            final Long currentMatchId, final User currentUser, final Locale locale) {
-        final PaginatedResult<Match> result =
-                matchService.searchPublicMatches(
-                        "", null, null, null, "soonest", 1, 4, null, null, null, null,
-                        null); // TODO: load match latitude and longitude
-        return result.getItems().stream()
-                .filter(match -> !currentMatchId.equals(match.getId()))
-                .limit(3)
-                .map(
-                        match ->
-                                toCard(
-                                        match,
-                                        ZoneId.systemDefault(),
-                                        locale,
-                                        currentUser,
-                                        buildAvailabilityLabel(match, locale),
-                                        messageSource,
-                                        matchParticipationService,
-                                        matchReservationService))
-                .toList();
-    }
-
-    private List<EventOccurrenceViewModel> toOccurrenceViewModels(
-            final Match currentMatch,
-            final List<Match> occurrences,
-            final User currentUser,
-            final Locale locale) {
-        if (occurrences == null || occurrences.isEmpty()) {
-            return List.of();
-        }
-
-        return occurrences.stream()
-                .map(
-                        occurrence -> {
-                            final EventDisplayState state = eventDisplayState(occurrence);
-                            final String href =
-                                    isMatchVisibleToUser(occurrence, currentUser)
-                                            ? "/matches/" + occurrence.getId()
-                                            : null;
-                            return new EventOccurrenceViewModel(
-                                    href,
-                                    scheduleFormatter(locale)
-                                            .format(
-                                                    occurrence
-                                                            .getStartsAt()
-                                                            .atZone(ZoneId.systemDefault())),
-                                    eventStateLabel(state, locale),
-                                    state.tone(),
-                                    occurrence.getId().equals(currentMatch.getId()),
-                                    buildSpotsLabel(occurrence, state, locale),
-                                    buildSpotsTone(occurrence, state));
-                        })
-                .toList();
-    }
-
-    private SeriesReservationUiState buildSeriesReservationUiState(
-            final Long seriesId,
-            final List<Match> occurrences,
-            final User currentUser,
-            final boolean isHostViewer) {
-        if (occurrences == null || occurrences.isEmpty()) {
-            return new SeriesReservationUiState(false, false, false);
-        }
-        final Set<Long> activeFutureReservationMatchIds =
-                currentUser == null || seriesId == null
-                        ? Set.of()
-                        : matchReservationService.findActiveFutureReservationMatchIdsForSeries(
-                                seriesId, currentUser);
-        final SeriesReservationEvaluation evaluation =
-                evaluateSeriesReservationTargets(
-                        occurrences, currentUser, activeFutureReservationMatchIds, isHostViewer);
-        return new SeriesReservationUiState(
-                !evaluation.targetMatchIds().isEmpty(),
-                evaluation.joined(),
-                evaluation.activeFutureReservationCount() > 0);
-    }
-
-    private SeriesReservationEvaluation evaluateSeriesReservationTargets(
-            final List<Match> occurrences,
-            final User currentUser,
-            final Set<Long> activeFutureReservationMatchIds,
-            final boolean isHostViewer) {
-        final List<Long> targetMatchIds = new ArrayList<>();
-        int futureOpenOccurrenceCount = 0;
-        int joinedFutureOpenOccurrenceCount = 0;
-        int activeFutureReservationCount = 0;
-        final Instant now = Instant.now(clock);
-
-        for (final Match occurrence : occurrences) {
-            if (!occurrence.getStartsAt().isAfter(now)) {
-                continue;
-            }
-
-            final boolean alreadyJoined =
-                    activeFutureReservationMatchIds.contains(occurrence.getId());
-            if (alreadyJoined) {
-                activeFutureReservationCount++;
-            }
-
-            if (!isSeriesReservationOpenOccurrence(occurrence, isHostViewer)) {
-                continue;
-            }
-
-            futureOpenOccurrenceCount++;
-            if (alreadyJoined) {
-                joinedFutureOpenOccurrenceCount++;
-                continue;
-            }
-
-            if (occurrence.getAvailableSpots() <= 0) {
-                continue;
-            }
-
-            targetMatchIds.add(occurrence.getId());
-        }
-
-        final boolean joined =
-                currentUser != null
-                        && futureOpenOccurrenceCount > 0
-                        && joinedFutureOpenOccurrenceCount == futureOpenOccurrenceCount;
-        return new SeriesReservationEvaluation(
-                List.copyOf(targetMatchIds), joined, activeFutureReservationCount);
-    }
-
-    private static boolean isSeriesReservationOpenOccurrence(
-            final Match occurrence, final boolean isHostViewer) {
-        return EventStatus.OPEN == occurrence.getStatus()
-                && (isHostViewer
-                        || (occurrence.getVisibility() == EventVisibility.PUBLIC
-                                && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));
-    }
-
-    private SeriesJoinRequestUiState buildSeriesJoinRequestUiState(
-            final Match match, final List<Match> occurrences, final User currentUser) {
-        if (currentUser != null
-                && match.isRecurringOccurrence()
-                && matchParticipationService.hasPendingSeriesRequest(match.getId(), currentUser)) {
-            return new SeriesJoinRequestUiState(false, true);
-        }
-
-        final Set<Long> activeFutureReservationMatchIds =
-                currentUser == null || !match.isRecurringOccurrence()
-                        ? Set.of()
-                        : matchReservationService.findActiveFutureReservationMatchIdsForSeries(
-                                match.getSeries().getId(), currentUser);
-        final Set<Long> pendingFutureRequestMatchIds =
-                currentUser == null || !match.isRecurringOccurrence()
-                        ? Set.of()
-                        : matchParticipationService.findPendingFutureRequestMatchIdsForSeries(
-                                match.getSeries().getId(), currentUser);
-        final SeriesJoinRequestEvaluation evaluation =
-                evaluateSeriesJoinRequestTargets(
-                        occurrences,
-                        currentUser,
-                        activeFutureReservationMatchIds,
-                        pendingFutureRequestMatchIds);
-        return new SeriesJoinRequestUiState(
-                !evaluation.targetMatchIds().isEmpty(), evaluation.pending());
-    }
-
-    private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
-            final List<Match> occurrences,
-            final User currentUser,
-            final Set<Long> activeFutureReservationMatchIds,
-            final Set<Long> pendingFutureRequestMatchIds) {
-        final List<Long> targetMatchIds = new ArrayList<>();
-        int futureOpenApprovalOccurrenceCount = 0;
-        int pendingFutureOpenApprovalOccurrenceCount = 0;
-        final Instant now = Instant.now(clock);
-
-        for (final Match occurrence : occurrences) {
-            if (!occurrence.getStartsAt().isAfter(now)
-                    || !isSeriesJoinRequestOpenOccurrence(occurrence)) {
-                continue;
-            }
-
-            futureOpenApprovalOccurrenceCount++;
-            final boolean alreadyJoined =
-                    activeFutureReservationMatchIds.contains(occurrence.getId());
-            if (alreadyJoined) {
-                continue;
-            }
-
-            final boolean alreadyPending =
-                    pendingFutureRequestMatchIds.contains(occurrence.getId());
-            if (alreadyPending) {
-                pendingFutureOpenApprovalOccurrenceCount++;
-                continue;
-            }
-
-            if (occurrence.getAvailableSpots() <= 0) {
-                continue;
-            }
-
-            targetMatchIds.add(occurrence.getId());
-        }
-
-        final boolean pending =
-                currentUser != null
-                        && futureOpenApprovalOccurrenceCount > 0
-                        && pendingFutureOpenApprovalOccurrenceCount
-                                == futureOpenApprovalOccurrenceCount;
-        return new SeriesJoinRequestEvaluation(List.copyOf(targetMatchIds), pending);
-    }
-
-    private static boolean isSeriesJoinRequestOpenOccurrence(final Match occurrence) {
-        return occurrence.getVisibility() == EventVisibility.PUBLIC
-                && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
-                && EventStatus.OPEN == occurrence.getStatus();
-    }
-
-    private EventDisplayState eventDisplayState(final Match match) {
-        final Optional<EventStatus> status = Optional.of(match.getStatus());
-        if (status.filter(EventStatus.CANCELLED::equals).isPresent()) {
-            return new EventDisplayState("cancelled", "cancelled");
-        }
-        if (status.filter(EventStatus.COMPLETED::equals).isPresent() || hasEventEnded(match)) {
-            return new EventDisplayState("completed", "completed");
-        }
-        if (status.filter(EventStatus.DRAFT::equals).isPresent()) {
-            return new EventDisplayState("draft", "draft");
-        }
-        if (isEventInProgress(match)) {
-            return new EventDisplayState("inProgress", "in-progress");
-        }
-        if (match.getAvailableSpots() <= 0) {
-            return new EventDisplayState("full", "full");
-        }
-        return new EventDisplayState("open", "open");
-    }
-
-    private String eventStateLabel(final EventDisplayState state, final Locale locale) {
-        return messageSource.getMessage("match.status." + state.key(), null, locale);
-    }
-
-    private String buildSpotsLabel(
-            final Match occurrence, final EventDisplayState state, final Locale locale) {
-        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
-            return null;
-        }
-        final int spots = occurrence.getAvailableSpots();
-        if (spots <= 0) {
-            return null;
-        }
-        if (spots == 1) {
-            return messageSource.getMessage("event.occurrence.spots.one", null, locale);
-        }
-        return messageSource.getMessage(
-                "event.occurrence.spots.many", new Object[] {spots}, locale);
-    }
-
-    private String buildSpotsTone(final Match occurrence, final EventDisplayState state) {
-        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
-            return null;
-        }
-        final int spots = occurrence.getAvailableSpots();
-        if (spots <= 0) {
-            return null;
-        }
-        if (spots == 1) {
-            return "last";
-        }
-        final int max = occurrence.getMaxPlayers();
-        return (double) spots / max <= 0.33 ? "scarce" : "plenty";
-    }
-
-    private String eventStateNotice(final Match match, final Locale locale) {
-        final EventDisplayState state = eventDisplayState(match);
-        if ("completed".equals(state.key())) {
-            return messageSource.getMessage("event.state.completedNotice", null, locale);
-        }
-        if ("cancelled".equals(state.key())) {
-            return messageSource.getMessage("event.state.cancelledNotice", null, locale);
-        }
-        return null;
-    }
-
-    private boolean hasEventEnded(final Match match) {
-        final Instant endsAt = match.getEndsAt() == null ? match.getStartsAt() : match.getEndsAt();
-        return !endsAt.isAfter(Instant.now(clock));
-    }
-
-    private boolean hasEventStarted(final Match match) {
-        return !match.getStartsAt().isAfter(Instant.now(clock));
-    }
-
-    private boolean isEventInProgress(final Match match) {
-        final Instant now = Instant.now(clock);
-        return match.getEndsAt() != null
-                && !match.getStartsAt().isAfter(now)
-                && match.getEndsAt().isAfter(now);
-    }
-
-    private String buildAvailabilityLabel(final Match match, final Locale locale) {
-        return messageSource.getMessage(
-                "event.availability",
-                new Object[] {match.getAvailableSpots(), match.getMaxPlayers()},
-                locale);
-    }
-
-    private String buildParticipantCountLabel(final int participantCount, final Locale locale) {
-        return participantCount == 1
-                ? messageSource.getMessage("event.participants.one", null, locale)
-                : messageSource.getMessage(
-                        "event.participants.many", new Object[] {participantCount}, locale);
-    }
-
-    private String reservationErrorMessage(final String code, final Locale locale) {
-        switch (code) {
-            case "closed":
-                return messageSource.getMessage("reservation.error.closed", null, locale);
-            case "started":
-                return messageSource.getMessage("reservation.error.started", null, locale);
-            case "already_joined":
-                return messageSource.getMessage("reservation.error.alreadyJoined", null, locale);
-            case "is_host":
-                return messageSource.getMessage("reservation.error.isHost", null, locale);
-            case "not_joined":
-                return messageSource.getMessage("reservation.error.notJoined", null, locale);
-            case "not_cancellable":
-                return messageSource.getMessage("reservation.error.notCancellable", null, locale);
-            case "full":
-                return messageSource.getMessage(
-                        "reservation.error.fullBeforeConfirm", null, locale);
-            case "not_recurring":
-                return messageSource.getMessage("reservation.error.notRecurring", null, locale);
-            case "series_started":
-                return messageSource.getMessage("reservation.error.seriesStarted", null, locale);
-            case "series_closed":
-                return messageSource.getMessage("reservation.error.seriesClosed", null, locale);
-            case "series_already_joined":
-                return messageSource.getMessage(
-                        "reservation.error.seriesAlreadyJoined", null, locale);
-            case "series_full":
-                return messageSource.getMessage("reservation.error.seriesFull", null, locale);
-            case "series_not_joined":
-                return messageSource.getMessage("reservation.error.seriesNotJoined", null, locale);
-            case "not_found":
-            default:
-                return messageSource.getMessage("reservation.error.notFound", null, locale);
-        }
-    }
-
-    private static String avatarLabelForUsername(final String username) {
-        if (username == null || username.isBlank()) {
-            return "?";
-        }
-
-        final String[] segments = username.trim().split("[^A-Za-z0-9]+");
-        if (segments.length >= 2) {
-            return (segments[0].substring(0, 1) + segments[1].substring(0, 1)).toUpperCase();
-        }
-
-        final String compact = username.replaceAll("[^A-Za-z0-9]", "");
-        if (compact.length() >= 2) {
-            return compact.substring(0, 2).toUpperCase();
-        }
-        return compact.substring(0, 1).toUpperCase();
-    }
-
-    private static Long parseEventIdOrThrowNotFound(final String eventId) {
-        if (eventId == null || !eventId.matches("\\d+")) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-
-        try {
-            return Long.valueOf(eventId);
-        } catch (final NumberFormatException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    private boolean isMatchVisibleToUser(final Match match, final User currentUser) {
-        if (EventStatus.DRAFT == match.getStatus()) {
-            return currentUser != null && currentUser.getId().equals(match.getHost().getId());
-        }
-
-        if (match.getVisibility() == EventVisibility.PRIVATE
-                || EventStatus.CANCELLED == match.getStatus()) {
-            if (currentUser != null && currentUser.getId().equals(match.getHost().getId())) {
-                return true;
-            }
-            if (currentUser != null
-                    && matchReservationService.hasActiveReservation(match.getId(), currentUser)) {
-                return true;
-            }
-            if (currentUser != null
-                    && matchParticipationService.hasInvitation(match.getId(), currentUser)) {
-                return true;
-            }
-            return false;
-        }
-
-        return match.getVisibility() == EventVisibility.PUBLIC;
-    }
-
-    private boolean canReserveMatch(final Match match, final boolean isHostViewer) {
-        return EventStatus.OPEN == match.getStatus()
-                && (isHostViewer
-                        || (match.getVisibility() == EventVisibility.PUBLIC
-                                && match.getJoinPolicy() == EventJoinPolicy.DIRECT))
-                && !hasEventStarted(match)
-                && match.getAvailableSpots() > 0;
-    }
-
-    private boolean canRequestToJoin(final Match match) {
-        return match.getVisibility() == EventVisibility.PUBLIC
-                && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
-                && EventStatus.OPEN == match.getStatus()
-                && !hasEventStarted(match)
-                && match.getAvailableSpots() > 0;
-    }
-
-    private boolean canCancelReservation(final Match match) {
-        return EventStatus.OPEN == match.getStatus() && !hasEventStarted(match);
-    }
-
-    private boolean shouldRedirectToPlayerMatchesAfterCancellation(
-            final Match match, final User user) {
-        return match != null
-                && user != null
-                && match.getVisibility() == EventVisibility.PRIVATE
-                && !user.getId().equals(match.getHost().getId());
-    }
-
-    private String joinErrorMessage(final String code, final Locale locale) {
-        switch (code) {
-            case "closed":
-                return messageSource.getMessage("join.error.closed", null, locale);
-            case "started":
-                return messageSource.getMessage("join.error.started", null, locale);
-            case "already_joined":
-                return messageSource.getMessage("join.error.alreadyJoined", null, locale);
-            case "already_pending":
-                return messageSource.getMessage("join.error.alreadyPending", null, locale);
-            case "full":
-                return messageSource.getMessage("join.error.full", null, locale);
-            case "is_host":
-                return messageSource.getMessage("join.error.isHost", null, locale);
-            case "not_invite_only":
-                return messageSource.getMessage("join.error.notInviteOnly", null, locale);
-            case "no_pending_request":
-                return messageSource.getMessage("join.error.noPendingRequest", null, locale);
-            case "not_recurring":
-                return messageSource.getMessage("join.error.notRecurring", null, locale);
-            case "series_started":
-                return messageSource.getMessage("join.error.seriesStarted", null, locale);
-            case "series_closed":
-                return messageSource.getMessage("join.error.seriesClosed", null, locale);
-            case "series_already_joined":
-                return messageSource.getMessage("join.error.seriesAlreadyJoined", null, locale);
-            case "series_already_pending":
-                return messageSource.getMessage("join.error.seriesAlreadyPending", null, locale);
-            case "series_full":
-                return messageSource.getMessage("join.error.seriesFull", null, locale);
-            case "not_found":
-            default:
-                return messageSource.getMessage("join.error.notFound", null, locale);
-        }
-    }
-
-    private String inviteErrorMessage(final String code, final Locale locale) {
-        if (code == null) {
-            return null;
-        }
-        switch (code) {
-            case "closed":
-                return messageSource.getMessage("invite.error.closed", null, locale);
-            case "started":
-                return messageSource.getMessage("invite.error.started", null, locale);
-            case "no_invitation":
-                return messageSource.getMessage("invite.error.noInvitation", null, locale);
-            case "is_host":
-                return messageSource.getMessage("invite.error.isHost", null, locale);
-            case "not_found":
-            default:
-                return messageSource.getMessage("invite.error.notFound", null, locale);
+            return seriesReservationErrorDetails(matchId, exception.getCode(), locale);
         }
     }
 
@@ -1192,80 +182,17 @@ public class EventController {
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
     }
 
-    private String hostActionNotice(final String hostAction, final Locale locale) {
-        if ("updated".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.updated", null, locale);
-        }
-        if ("cancelled".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.cancelled", null, locale);
-        }
-        if ("seriesUpdated".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.seriesUpdated", null, locale);
-        }
-        if ("seriesCancelled".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.seriesCancelled", null, locale);
-        }
-        if ("participantRemoved".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.participants.removed", null, locale);
-        }
-        if ("requestApproved".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.requests.approved", null, locale);
-        }
-        if ("requestRejected".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.requests.rejected", null, locale);
-        }
-        if ("inviteSent".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.invites.sent", null, locale);
-        }
-        if ("seriesInviteSent".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.invites.seriesSent", null, locale);
-        }
-        return null;
+    private ModelAndView reservationErrorDetails(
+            final Long matchId, final String errorCode, final Locale locale) {
+        return eventPageSupport.showEventDetails(
+                matchId, null, errorCode, null, null, null, null, "", null, null, null, null, false,
+                false, 1, locale);
     }
 
-    private static boolean isRequestHostAction(final String hostAction) {
-        return "requestApproved".equalsIgnoreCase(hostAction)
-                || "requestRejected".equalsIgnoreCase(hostAction);
+    private ModelAndView seriesReservationErrorDetails(
+            final Long matchId, final String errorCode, final Locale locale) {
+        return eventPageSupport.showEventDetails(
+                matchId, null, null, errorCode, null, null, null, "", null, null, null, null, false,
+                false, 1, locale);
     }
-
-    private static boolean isInviteHostAction(final String hostAction) {
-        return "inviteSent".equalsIgnoreCase(hostAction)
-                || "seriesInviteSent".equalsIgnoreCase(hostAction);
-    }
-
-    private boolean isHost(final Match match, final User currentUser) {
-        return currentUser != null && currentUser.getId().equals(match.getHost().getId());
-    }
-
-    private boolean canHostEdit(final Match match) {
-        if (hasEventEnded(match)) {
-            return false;
-        }
-        return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
-    }
-
-    private boolean canHostCancel(final Match match) {
-        if (hasEventEnded(match)) {
-            return false;
-        }
-        return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
-    }
-
-    private boolean canHostManageParticipants(final Match match) {
-        return canHostEdit(match);
-    }
-
-    private record SeriesReservationUiState(
-            boolean available, boolean joined, boolean cancellable) {}
-
-    private record SeriesReservationEvaluation(
-            List<Long> targetMatchIds, boolean joined, int activeFutureReservationCount) {}
-
-    private record SeriesJoinRequestUiState(boolean available, boolean pending) {}
-
-    private record SeriesJoinRequestEvaluation(List<Long> targetMatchIds, boolean pending) {}
-
-    private record EventDisplayState(String key, String tone) {}
 }
