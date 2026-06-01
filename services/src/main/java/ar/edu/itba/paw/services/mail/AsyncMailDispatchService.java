@@ -11,12 +11,17 @@ import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AsyncMailDispatchService implements MailDispatchService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AsyncMailDispatchService.class);
 
     private final AsyncMailSender mailSender;
     private final ThymeleafMailTemplateRenderer templateRenderer;
@@ -44,15 +49,20 @@ public class AsyncMailDispatchService implements MailDispatchService {
         final Locale resolvedLocale = resolvedLocale(locale);
         dispatch(
                 account.getEmail(),
-                templateRenderer.renderActionMail(
-                        new VerificationMailTemplateData(
-                                message("verification.preview.account.title", resolvedLocale),
-                                message("verification.preview.account.summary", resolvedLocale),
-                                account.getEmail(),
-                                confirmationUrl,
-                                expiresAt,
-                                List.of(),
-                                resolvedLocale)));
+                () ->
+                        templateRenderer.renderActionMail(
+                                new VerificationMailTemplateData(
+                                        message(
+                                                "verification.preview.account.title",
+                                                resolvedLocale),
+                                        message(
+                                                "verification.preview.account.summary",
+                                                resolvedLocale),
+                                        account.getEmail(),
+                                        confirmationUrl,
+                                        expiresAt,
+                                        List.of(),
+                                        resolvedLocale)));
     }
 
     @Override
@@ -64,31 +74,34 @@ public class AsyncMailDispatchService implements MailDispatchService {
         final Locale resolvedLocale = resolvedLocale(locale);
         dispatch(
                 account.getEmail(),
-                templateRenderer.renderActionMail(
-                        new VerificationMailTemplateData(
-                                message("passwordReset.mail.title", resolvedLocale),
-                                message("passwordReset.mail.summary", resolvedLocale),
-                                account.getEmail(),
-                                resetUrl,
-                                expiresAt,
-                                List.of(),
-                                resolvedLocale)));
+                () ->
+                        templateRenderer.renderActionMail(
+                                new VerificationMailTemplateData(
+                                        message("passwordReset.mail.title", resolvedLocale),
+                                        message("passwordReset.mail.summary", resolvedLocale),
+                                        account.getEmail(),
+                                        resetUrl,
+                                        expiresAt,
+                                        List.of(),
+                                        resolvedLocale)));
     }
 
     @Override
     public void sendMatchUpdated(final User recipient, final Match match) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderMatchUpdatedNotification(
-                        buildMatchTemplateData(recipient, match, null)));
+                () ->
+                        templateRenderer.renderMatchUpdatedNotification(
+                                buildMatchTemplateData(recipient, match, null)));
     }
 
     @Override
     public void sendMatchCancelled(final User recipient, final Match match) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderMatchCancelledNotification(
-                        buildMatchTemplateData(recipient, match, null)));
+                () ->
+                        templateRenderer.renderMatchCancelledNotification(
+                                buildMatchTemplateData(recipient, match, null)));
     }
 
     @Override
@@ -96,9 +109,10 @@ public class AsyncMailDispatchService implements MailDispatchService {
             final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderRecurringMatchesUpdatedNotification(
-                        buildMatchTemplateData(recipient, firstAffectedMatch, null),
-                        occurrenceCount));
+                () ->
+                        templateRenderer.renderRecurringMatchesUpdatedNotification(
+                                buildMatchTemplateData(recipient, firstAffectedMatch, null),
+                                occurrenceCount));
     }
 
     @Override
@@ -106,17 +120,19 @@ public class AsyncMailDispatchService implements MailDispatchService {
             final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderRecurringMatchesCancelledNotification(
-                        buildMatchTemplateData(recipient, firstAffectedMatch, null),
-                        occurrenceCount));
+                () ->
+                        templateRenderer.renderRecurringMatchesCancelledNotification(
+                                buildMatchTemplateData(recipient, firstAffectedMatch, null),
+                                occurrenceCount));
     }
 
     @Override
     public void sendMatchInvitation(final User recipient, final Match match) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderMatchInvitationNotification(
-                        buildMatchTemplateData(recipient, match, null)));
+                () ->
+                        templateRenderer.renderMatchInvitationNotification(
+                                buildMatchTemplateData(recipient, match, null)));
     }
 
     @Override
@@ -124,97 +140,109 @@ public class AsyncMailDispatchService implements MailDispatchService {
             final User recipient, final Match match, final int occurrenceCount) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderSeriesInvitationNotification(
-                        buildMatchTemplateData(recipient, match, null), occurrenceCount));
+                () ->
+                        templateRenderer.renderSeriesInvitationNotification(
+                                buildMatchTemplateData(recipient, match, null), occurrenceCount));
     }
 
     @Override
     public void sendJoinRequestReceived(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
-                templateRenderer.renderJoinRequestReceivedNotification(
-                        buildMatchTemplateData(host, match, displayName(player))));
+                () ->
+                        templateRenderer.renderJoinRequestReceivedNotification(
+                                buildMatchTemplateData(host, match, displayName(player))));
     }
 
     @Override
     public void sendJoinRequestApproved(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
-                templateRenderer.renderJoinRequestApprovedNotification(
-                        buildMatchTemplateData(player, match, null)));
+                () ->
+                        templateRenderer.renderJoinRequestApprovedNotification(
+                                buildMatchTemplateData(player, match, null)));
     }
 
     @Override
     public void sendJoinRequestRejected(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
-                templateRenderer.renderJoinRequestRejectedNotification(
-                        buildMatchTemplateData(player, match, null)));
+                () ->
+                        templateRenderer.renderJoinRequestRejectedNotification(
+                                buildMatchTemplateData(player, match, null)));
     }
 
     @Override
     public void sendPendingRequestClosedByPrivacyChange(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
-                templateRenderer.renderPendingRequestClosedByPrivacyChangeNotification(
-                        buildMatchTemplateData(player, match, null)));
+                () ->
+                        templateRenderer.renderPendingRequestClosedByPrivacyChangeNotification(
+                                buildMatchTemplateData(player, match, null)));
     }
 
     @Override
     public void sendInvitationOpenedToPublic(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
-                templateRenderer.renderInvitationOpenedToPublicNotification(
-                        buildMatchTemplateData(player, match, null)));
+                () ->
+                        templateRenderer.renderInvitationOpenedToPublicNotification(
+                                buildMatchTemplateData(player, match, null)));
     }
 
     @Override
     public void sendInviteAccepted(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
-                templateRenderer.renderInviteAcceptedNotification(
-                        buildMatchTemplateData(host, match, displayName(player))));
+                () ->
+                        templateRenderer.renderInviteAcceptedNotification(
+                                buildMatchTemplateData(host, match, displayName(player))));
     }
 
     @Override
     public void sendInviteDeclined(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
-                templateRenderer.renderInviteDeclinedNotification(
-                        buildMatchTemplateData(host, match, displayName(player))));
+                () ->
+                        templateRenderer.renderInviteDeclinedNotification(
+                                buildMatchTemplateData(host, match, displayName(player))));
     }
 
     @Override
     public void sendPlayerJoined(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
-                templateRenderer.renderPlayerJoinedNotification(
-                        buildMatchTemplateData(host, match, displayName(player))));
+                () ->
+                        templateRenderer.renderPlayerJoinedNotification(
+                                buildMatchTemplateData(host, match, displayName(player))));
     }
 
     @Override
     public void sendPlayerLeft(final User host, final Match match, final User player) {
         dispatch(
                 host.getEmail(),
-                templateRenderer.renderPlayerLeftNotification(
-                        buildMatchTemplateData(host, match, displayName(player))));
+                () ->
+                        templateRenderer.renderPlayerLeftNotification(
+                                buildMatchTemplateData(host, match, displayName(player))));
     }
 
     @Override
     public void sendPlayerRemoved(final User player, final Match match) {
         dispatch(
                 player.getEmail(),
-                templateRenderer.renderParticipantRemovedNotification(
-                        buildMatchTemplateData(player, match, null)));
+                () ->
+                        templateRenderer.renderParticipantRemovedNotification(
+                                buildMatchTemplateData(player, match, null)));
     }
 
     @Override
     public void sendTournamentBracketPublished(final User recipient, final Tournament tournament) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderTournamentBracketPublishedEmail(
-                        buildTournamentBracketTemplateData(
-                                recipient, tournament, null, null, null, null)));
+                () ->
+                        templateRenderer.renderTournamentBracketPublishedEmail(
+                                buildTournamentBracketTemplateData(
+                                        recipient, tournament, null, null, null, null)));
     }
 
     @Override
@@ -226,9 +254,10 @@ public class AsyncMailDispatchService implements MailDispatchService {
             final TournamentTeam loser) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderTournamentMatchResultEmail(
-                        buildTournamentBracketTemplateData(
-                                recipient, tournament, match, winner, loser, null)));
+                () ->
+                        templateRenderer.renderTournamentMatchResultEmail(
+                                buildTournamentBracketTemplateData(
+                                        recipient, tournament, match, winner, loser, null)));
     }
 
     @Override
@@ -236,18 +265,20 @@ public class AsyncMailDispatchService implements MailDispatchService {
             final User recipient, final Tournament tournament, final TournamentTeam champion) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderTournamentCompletedEmail(
-                        buildTournamentDetailTemplateData(
-                                recipient, tournament, null, null, null, champion)));
+                () ->
+                        templateRenderer.renderTournamentCompletedEmail(
+                                buildTournamentDetailTemplateData(
+                                        recipient, tournament, null, null, null, champion)));
     }
 
     @Override
     public void sendTournamentCancelled(final User recipient, final Tournament tournament) {
         dispatch(
                 recipient.getEmail(),
-                templateRenderer.renderTournamentCancelledEmail(
-                        buildTournamentDetailTemplateData(
-                                recipient, tournament, null, null, null, null)));
+                () ->
+                        templateRenderer.renderTournamentCancelledEmail(
+                                buildTournamentDetailTemplateData(
+                                        recipient, tournament, null, null, null, null)));
     }
 
     @Override
@@ -255,14 +286,15 @@ public class AsyncMailDispatchService implements MailDispatchService {
         final Locale locale = recipientLocale(user);
         dispatch(
                 user.getEmail(),
-                templateRenderer.renderBanNotification(
-                        new BanMailTemplateData(
-                                user.getEmail(),
-                                user.getUsername(),
-                                bannedUntil,
-                                reason,
-                                stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
-                                locale)));
+                () ->
+                        templateRenderer.renderBanNotification(
+                                new BanMailTemplateData(
+                                        user.getEmail(),
+                                        user.getUsername(),
+                                        bannedUntil,
+                                        reason,
+                                        stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
+                                        locale)));
     }
 
     @Override
@@ -270,16 +302,26 @@ public class AsyncMailDispatchService implements MailDispatchService {
         final Locale locale = recipientLocale(user);
         dispatch(
                 user.getEmail(),
-                templateRenderer.renderUnbanNotification(
-                        new UnbanMailTemplateData(
-                                user.getEmail(),
-                                user.getUsername(),
-                                stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
-                                locale)));
+                () ->
+                        templateRenderer.renderUnbanNotification(
+                                new UnbanMailTemplateData(
+                                        user.getEmail(),
+                                        user.getUsername(),
+                                        stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
+                                        locale)));
     }
 
-    private void dispatch(final String recipientEmail, final MailContent content) {
-        mailSender.send(recipientEmail, content);
+    private void dispatch(
+            final String recipientEmail, final Supplier<MailContent> contentSupplier) {
+        try {
+            final MailContent content = contentSupplier.get();
+            mailSender.send(recipientEmail, content);
+        } catch (final RuntimeException exception) {
+            LOGGER.error(
+                    "Mail render/dispatch failed recipient={}",
+                    MailLog.maskEmail(recipientEmail),
+                    exception);
+        }
     }
 
     private MatchLifecycleMailTemplateData buildMatchTemplateData(
@@ -397,21 +439,23 @@ public class AsyncMailDispatchService implements MailDispatchService {
         if (team == null) {
             return null;
         }
-        final Long teamId = team.getId();
-        if (teamId == null) {
-            return null;
-        }
-        if (team.getName() != null
-                && !team.getName().isBlank()
-                && !isLegacyGeneratedSoloTeamName(team)) {
+        final boolean hasCustomName =
+                team.getName() != null
+                        && !team.getName().isBlank()
+                        && !isLegacyGeneratedSoloTeamName(team);
+        if (hasCustomName) {
             return team.getName();
         }
-        final Integer displayNumber =
-                team.getSeedPosition() == null ? teamId.intValue() : team.getSeedPosition();
+        final Integer seedPosition = team.getSeedPosition();
+        if (seedPosition == null) {
+            // No usable name and no seed to derive a friendly number; keep whatever name is
+            // stored rather than leaking the raw database id into the email.
+            return team.getName() == null || team.getName().isBlank() ? null : team.getName();
+        }
         return messageSource.getMessage(
                 "tournament.team.solo.name",
-                new Object[] {displayNumber},
-                "Solo squad #" + displayNumber,
+                new Object[] {seedPosition},
+                "Solo squad #" + seedPosition,
                 locale);
     }
 

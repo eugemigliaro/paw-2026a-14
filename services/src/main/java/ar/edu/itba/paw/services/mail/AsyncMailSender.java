@@ -22,21 +22,12 @@ class AsyncMailSender {
     public void send(final String recipientEmail, final MailContent content) {
         try {
             mailService.send(recipientEmail, content);
-            LOGGER.debug("Mail dispatched recipient={}", maskEmail(recipientEmail));
+            LOGGER.debug("Mail dispatched recipient={}", MailLog.maskEmail(recipientEmail));
         } catch (final RuntimeException exception) {
-            LOGGER.error("Mail dispatch failed recipient={}", maskEmail(recipientEmail), exception);
+            LOGGER.error(
+                    "Mail dispatch failed recipient={}",
+                    MailLog.maskEmail(recipientEmail),
+                    exception);
         }
-    }
-
-    private static String maskEmail(final String email) {
-        if (email == null || email.isBlank()) {
-            return "unknown";
-        }
-
-        final int atIndex = email.indexOf('@');
-        if (atIndex <= 1 || atIndex == email.length() - 1) {
-            return "***";
-        }
-        return email.charAt(0) + "***@" + email.substring(atIndex + 1);
     }
 }
