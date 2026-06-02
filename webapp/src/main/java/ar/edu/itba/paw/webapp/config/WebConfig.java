@@ -6,6 +6,8 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
@@ -194,6 +196,8 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToTournamentPairingStrategyConverter());
         registry.addConverter(new StringToReportTargetTypeConverter());
         registry.addConverter(new StringToReportStatusConverter());
+        registry.addConverter(new StringToPlayerReviewFilterConverter());
+        registry.addConverter(new StringToPlayerReviewReactionConverter());
     }
 
     @Override

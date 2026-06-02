@@ -61,6 +61,8 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
@@ -3669,16 +3671,11 @@ class UiRouteTest {
     }
 
     @Test
-    void getPublicProfileRouteFallsBackForInvalidReviewPage() throws Exception {
+    void getPublicProfileRouteThrowsErrorForInvalidReviewPage() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player").param("reviewPage", "bad"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("users/profile"))
-                .andExpect(
-                        model().attribute(
-                                        "reviewNextPageHref",
-                                        "/users/second-player?reviewFilter=both&reviewPage=2#reviews"));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -3813,6 +3810,8 @@ class UiRouteTest {
         conversionService.addConverter(new StringToEventVisibilityConverter());
         conversionService.addConverter(new StringToMatchSortConverter());
         conversionService.addConverter(new StringToEventTypeConverter());
+        conversionService.addConverter(new StringToPlayerReviewFilterConverter());
+        conversionService.addConverter(new StringToPlayerReviewReactionConverter());
         return conversionService;
     }
 

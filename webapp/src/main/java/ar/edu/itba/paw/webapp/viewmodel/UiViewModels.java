@@ -71,12 +71,6 @@ public final class UiViewModels {
             this.active = active;
         }
 
-        @Deprecated(forRemoval = true)
-        public FilterOptionViewModel(
-                final String label, final String href, final String meta, final boolean active) {
-            this(label, href, null, meta, active);
-        }
-
         public String getLabel() {
             return label;
         }
