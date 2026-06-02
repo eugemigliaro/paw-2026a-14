@@ -23,6 +23,8 @@ public interface PlayerReviewDao {
 
     Optional<PlayerReview> findByIdIncludingDeleted(Long reviewId);
 
+    Optional<PlayerReview> findById(Long reviewId);
+
     PlayerReviewSummary getSummaryForUser(User reviewed);
 
     int countReviewsForUser(User reviewed, PlayerReviewFilter filter);
