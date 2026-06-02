@@ -9,7 +9,6 @@ import ar.edu.itba.paw.webapp.form.ResetPasswordForm;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.time.ZoneId;
 import java.util.Locale;
-import java.util.Objects;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -30,8 +29,8 @@ public class PasswordResetController {
     @Autowired
     public PasswordResetController(
             final AccountAuthService accountAuthService, final MessageSource messageSource) {
-        this.accountAuthService = Objects.requireNonNull(accountAuthService);
-        this.messageSource = Objects.requireNonNull(messageSource);
+        this.accountAuthService = accountAuthService;
+        this.messageSource = messageSource;
     }
 
     @ModelAttribute("resetPasswordForm")
@@ -59,19 +58,6 @@ public class PasswordResetController {
             @Valid @ModelAttribute("resetPasswordForm") final ResetPasswordForm resetPasswordForm,
             final BindingResult bindingResult,
             final Locale locale) {
-        if (!bindingResult.hasFieldErrors("password")
-                && !bindingResult.hasFieldErrors("confirmPassword")
-                && !resetPasswordForm
-                        .getPassword()
-                        .equals(resetPasswordForm.getConfirmPassword())) {
-            bindingResult.rejectValue(
-                    "confirmPassword",
-                    "auth.validation.passwordMismatch",
-                    messageSource.getMessage(
-                            "auth.validation.passwordMismatch",
-                            null,
-                            Objects.requireNonNull(locale)));
-        }
 
         if (bindingResult.hasErrors()) {
             try {
