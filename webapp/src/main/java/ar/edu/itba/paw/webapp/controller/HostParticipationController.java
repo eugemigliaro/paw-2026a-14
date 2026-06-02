@@ -53,7 +53,7 @@ public class HostParticipationController {
     public ModelAndView showRoster(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
         SecurityControllerUtils.requireAuthenticatedUser();
-        ensureMatchExists(matchId);
+        findMatchOrThrow(matchId);
         return new ModelAndView("redirect:/matches/" + matchId + "#participants");
     }
 
@@ -62,12 +62,10 @@ public class HostParticipationController {
     public ModelAndView showPendingRequests(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
         SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final Match match = findMatchOrThrow(matchId);
 
-        if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
+        if (match.getJoinPolicy()
+                != EventJoinPolicy.APPROVAL_REQUIRED) { // TODO: remove business logic
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -97,16 +95,11 @@ public class HostParticipationController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final User user =
-                userService
-                        .findById(userId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final User user = findUserOrThrow(userId);
+        final Match match = findMatchOrThrow(matchId);
 
-        if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
+        if (match.getJoinPolicy()
+                != EventJoinPolicy.APPROVAL_REQUIRED) { // TODO: remove business logic
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -130,16 +123,11 @@ public class HostParticipationController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User user =
-                userService
-                        .findById(userId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final Match match = findMatchOrThrow(matchId);
+        final User user = findUserOrThrow(userId);
 
-        if (match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
+        if (match.getJoinPolicy()
+                != EventJoinPolicy.APPROVAL_REQUIRED) { // TODO: remove business logic
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -165,12 +153,9 @@ public class HostParticipationController {
     public ModelAndView showInvitePage(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
         SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final Match match = findMatchOrThrow(matchId);
 
-        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
+        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) { // TODO: remove business logic
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -185,16 +170,6 @@ public class HostParticipationController {
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
@@ -203,9 +178,17 @@ public class HostParticipationController {
             return redirectToMatch(matchId);
         }
 
+        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        final Match match = findMatchOrThrow(matchId);
+
+        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) { // TODO: remove business logic
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
         try {
             final boolean includeSeries =
-                    inviteForm.isInviteSeries() && match.isRecurringOccurrence();
+                    inviteForm.isInviteSeries()
+                            && match.isRecurringOccurrence(); // TODO: remove business logic
             matchParticipationService.inviteUser(
                     matchId, host, inviteForm.getEmail(), includeSeries);
             redirectAttributes.addFlashAttribute(
@@ -263,10 +246,7 @@ public class HostParticipationController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final User user =
-                userService
-                        .findById(userId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final User user = findUserOrThrow(userId);
 
         try {
             matchParticipationService.removeParticipant(matchId, host, user);
@@ -308,9 +288,15 @@ public class HostParticipationController {
                 .toList();
     }
 
-    private void ensureMatchExists(final Long matchId) {
-        matchService
+    private Match findMatchOrThrow(final Long matchId) {
+        return matchService
                 .findMatchById(matchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    private User findUserOrThrow(final Long userId) {
+        return userService
+                .findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
