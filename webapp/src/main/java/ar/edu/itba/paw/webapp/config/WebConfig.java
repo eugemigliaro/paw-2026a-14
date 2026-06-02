@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.config;
 
 import ar.edu.itba.paw.services.AdminBootstrapService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
@@ -200,6 +201,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToPlayerReviewFilterConverter());
         registry.addConverter(new StringToPlayerReviewReactionConverter());
         registry.addConverter(new StringToReportReasonConverter());
+        registry.addConverter(new StringToAppealDecisionConverter());
     }
 
     @Override

@@ -392,7 +392,7 @@ public class ModerationServiceImpl implements ModerationService {
                                 null,
                                 null,
                                 null,
-                                0,
+                                1,
                                 DEFAULT_REPORT_PAGE_SIZE)
                         .getItems()
                         .stream()
@@ -418,7 +418,7 @@ public class ModerationServiceImpl implements ModerationService {
                                 null,
                                 null,
                                 null,
-                                0,
+                                1,
                                 DEFAULT_REPORT_PAGE_SIZE)
                         .getItems()
                         .stream()
