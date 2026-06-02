@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.config;
 
-import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.AccountAuthService;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.webapp.security.AccountAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.BannedAccountAuthorizationFilter;
 import ar.edu.itba.paw.webapp.security.ContinueFlagLoginEntryPoint;
@@ -166,7 +166,7 @@ public class SecurityConfig {
 
     @Bean
     public BannedAccountAuthorizationFilter bannedAccountAuthorizationFilter(
-            final UserBanDao userBanDao) {
-        return new BannedAccountAuthorizationFilter(userBanDao);
+            final ModerationService moderationService) {
+        return new BannedAccountAuthorizationFilter(moderationService);
     }
 }
