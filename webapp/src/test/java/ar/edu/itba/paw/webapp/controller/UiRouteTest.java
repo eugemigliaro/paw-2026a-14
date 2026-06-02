@@ -638,6 +638,40 @@ class UiRouteTest {
                     }
 
                     @Override
+                    public Match findEditableMatchForHost(
+                            final Long matchId, final User actingUser) {
+                        final Match match =
+                                findMatchById(matchId)
+                                        .orElseThrow(
+                                                () ->
+                                                        new MatchUpdateException(
+                                                                MatchUpdateFailureReason
+                                                                        .MATCH_NOT_FOUND,
+                                                                "Missing match"));
+                        if (actingUser.getId() != 7L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.FORBIDDEN, "Forbidden");
+                        }
+                        if (match.getStatus() == EventStatus.COMPLETED
+                                || match.getStatus() == EventStatus.CANCELLED) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.NOT_EDITABLE, "Not editable");
+                        }
+                        return match;
+                    }
+
+                    @Override
+                    public Match findEditableRecurringMatchForHost(
+                            final Long matchId, final User actingUser) {
+                        final Match match = findEditableMatchForHost(matchId, actingUser);
+                        if (!match.isRecurringOccurrence()) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.NOT_RECURRING, "Not recurring");
+                        }
+                        return match;
+                    }
+
+                    @Override
                     public List<Match> findSeriesOccurrences(final Long seriesId) {
                         if (Long.valueOf(600L).equals(seriesId)) {
                             return List.of(

@@ -270,25 +270,7 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public Match updateMatch(
             final Long matchId, final User actingUser, final UpdateMatchRequest request) {
-        final Match match =
-                matchDao.findById(matchId)
-                        .orElseThrow(
-                                () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
-                                                message("match.update.error.notFound")));
-
-        if (!match.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
-        }
-
-        if (EventStatus.CANCELLED.equals(match.getStatus())
-                || EventStatus.COMPLETED.equals(match.getStatus())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_EDITABLE,
-                    message("match.update.error.notEditable"));
-        }
+        final Match match = findEditableMatchForHost(matchId, actingUser);
 
         validateScheduleOrThrow(
                 request.getStartsAt(),
@@ -334,6 +316,30 @@ public class MatchServiceImpl implements MatchService {
         applyParticipationPolicyTransition(updatedMatch, participationPolicyTransition);
         matchNotificationService.notifyMatchUpdated(updatedMatch);
         return updatedMatch;
+    }
+
+    @Override
+    public Match findEditableMatchForHost(final Long matchId, final User actingUser) {
+        final Match match =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
+        validateMatchUpdateAccess(match, actingUser);
+        return match;
+    }
+
+    @Override
+    public Match findEditableRecurringMatchForHost(final Long matchId, final User actingUser) {
+        final Match match = findEditableMatchForHost(matchId, actingUser);
+        if (!match.isRecurringOccurrence()) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_RECURRING,
+                    message("match.update.error.notRecurring"));
+        }
+        return match;
     }
 
     private ParticipationPolicyTransition validateAndPlanParticipationPolicyTransition(
@@ -643,21 +649,32 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void validateSeriesUpdateAccess(final Match pivot, final User actingUser) {
-        if (!pivot.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
-        }
-
+        validateMatchHostAccess(pivot, actingUser);
         if (!pivot.isRecurringOccurrence()) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_RECURRING,
                     message("match.update.error.notRecurring"));
         }
+        validateEditableMatch(pivot);
+    }
 
-        if (!isEditableMatch(pivot)) {
+    private void validateMatchUpdateAccess(final Match match, final User actingUser) {
+        validateMatchHostAccess(match, actingUser);
+        validateEditableMatch(match);
+    }
+
+    private void validateEditableMatch(final Match match) {
+        if (!isEditableMatch(match)) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_EDITABLE,
                     message("match.update.error.notEditable"));
+        }
+    }
+
+    private void validateMatchHostAccess(final Match match, final User actingUser) {
+        if (!match.getHost().getId().equals(actingUser.getId())) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
         }
     }
 

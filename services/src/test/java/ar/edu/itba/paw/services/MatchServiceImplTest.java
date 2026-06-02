@@ -869,6 +869,116 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void findEditableMatchForHostReturnsMatchForOwner() {
+        final Match match = createTestMatch(31L, "Editable Match", "padel");
+        Mockito.when(matchDao.findById(31L)).thenReturn(Optional.of(match));
+
+        final Match result = matchService.findEditableMatchForHost(31L, UserUtils.getUser(1L));
+
+        Assertions.assertEquals(match, result);
+    }
+
+    @Test
+    public void findEditableMatchForHostRejectsNonOwner() {
+        final Match match = createTestMatch(32L, "Editable Match", "padel");
+        Mockito.when(matchDao.findById(32L)).thenReturn(Optional.of(match));
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () -> matchService.findEditableMatchForHost(32L, UserUtils.getUser(99L)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.FORBIDDEN, exception.getReason());
+    }
+
+    @Test
+    public void findEditableMatchForHostRejectsCompletedMatch() {
+        final Match completedMatch =
+                new Match(
+                        33L,
+                        Sport.PADEL,
+                        UserUtils.getUser(1L),
+                        "Test Address",
+                        null,
+                        null,
+                        "Completed Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        10,
+                        BigDecimal.ZERO,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.COMPLETED,
+                        0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null);
+        Mockito.when(matchDao.findById(33L)).thenReturn(Optional.of(completedMatch));
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () -> matchService.findEditableMatchForHost(33L, UserUtils.getUser(1L)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.NOT_EDITABLE, exception.getReason());
+    }
+
+    @Test
+    public void findEditableRecurringMatchForHostRejectsSingleMatch() {
+        final Match match = createTestMatch(34L, "Single Match", "padel");
+        Mockito.when(matchDao.findById(34L)).thenReturn(Optional.of(match));
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.findEditableRecurringMatchForHost(
+                                        34L, UserUtils.getUser(1L)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.NOT_RECURRING, exception.getReason());
+    }
+
+    @Test
+    public void findEditableRecurringMatchForHostReturnsRecurringMatchForOwner() {
+        final User host = UserUtils.getUser(1L);
+        final Match recurring =
+                new Match(
+                        35L,
+                        Sport.PADEL,
+                        host,
+                        "Test Address",
+                        null,
+                        null,
+                        "Recurring Match",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        10,
+                        BigDecimal.ZERO,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        0,
+                        null,
+                        MatchUtils.getMatchSeries(99L, host),
+                        1,
+                        false,
+                        null,
+                        null,
+                        null);
+        Mockito.when(matchDao.findById(35L)).thenReturn(Optional.of(recurring));
+
+        final Match result = matchService.findEditableRecurringMatchForHost(35L, host);
+
+        Assertions.assertEquals(recurring, result);
+    }
+
+    @Test
     public void testUpdateMatchRejectsPastStartTime() {
         final Match existingMatch = createTestMatch(15L, "Test Match", "football");
         Mockito.when(matchDao.findById(15L)).thenReturn(Optional.of(existingMatch));

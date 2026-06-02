@@ -84,6 +84,8 @@ Rules:
 - the elevated admin/mod role can intervene across ownership boundaries, including editing or deleting any event and handling moderation/reporting flows
 - regular users should only manage their own profile, reservations, and hosted content unless an explicit business rule expands access
 - keep authentication and authorization logic centralized in Spring Security configuration or dedicated security/policy helpers; services may defensively enforce domain invariants, but controllers and JSPs must not own access rules
+- do not use `@PreAuthorize` for controller route protection; prefer `SecurityConfig` for route-level authentication and role rules
+- ownership and domain authorization rules, such as whether a user can manage a hosted match, belong in the service method that performs the read or write; controllers may translate service denial outcomes to HTTP status or redirects, but must not implement ownership checks themselves
 - when changing access control, add or update tests for both allowed and denied paths
 
 The existing mail-validation placeholder flow should be treated as legacy MVP infrastructure. Reuse or migrate it only when it helps a requested transition, not as a reason to avoid proper auth.

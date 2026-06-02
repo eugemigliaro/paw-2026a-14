@@ -15,6 +15,10 @@ public interface MatchService {
 
     Optional<Match> findPublicMatchById(Long matchId);
 
+    Match findEditableMatchForHost(Long matchId, User actingUser);
+
+    Match findEditableRecurringMatchForHost(Long matchId, User actingUser);
+
     List<Match> findSeriesOccurrences(Long seriesId);
 
     PaginatedResult<Match> findSeriesOccurrencesPage(Long seriesId, int page, int pageSize);

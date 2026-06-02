@@ -206,16 +206,14 @@ public class HostController {
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditEvent(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match = findOwnedEditableMatchOrThrowNotFound(matchId, actingUser.getId());
+        final Match match = findEditableMatchOrThrowNotFound(matchId, actingUser);
         return hostFormView(toForm(match), null, locale, editFormConfig(match, locale));
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateEvent(
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
@@ -223,8 +221,7 @@ public class HostController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match existingMatch =
-                findOwnedEditableMatchOrThrowNotFound(matchId, actingUser.getId());
+        final Match existingMatch = findEditableMatchOrThrowNotFound(matchId, actingUser);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
@@ -337,17 +334,14 @@ public class HostController {
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditSeries(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match =
-                findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUser.getId());
+        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
         return hostFormView(toForm(match), null, locale, seriesEditFormConfig(match, locale));
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/series/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateSeries(
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
@@ -355,8 +349,7 @@ public class HostController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match existingMatch =
-                findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUser.getId());
+        final Match existingMatch = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
         final HostFormConfig formConfig = seriesEditFormConfig(existingMatch, locale);
         applyScheduleValidation(createEventForm, bindingResult, locale);
         validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
@@ -435,12 +428,10 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/cancel")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView cancelEvent(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        findOwnedMatchOrThrowNotFound(matchId, actingUser.getId());
         try {
             matchService.cancelMatch(matchId, actingUser);
         } catch (final MatchCancellationException exception) {
@@ -451,13 +442,11 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/series/cancel")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView cancelSeries(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
 
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUser.getId());
         try {
             matchService.cancelSeriesFromOccurrence(matchId, actingUser);
         } catch (final MatchCancellationException exception) {
@@ -653,34 +642,21 @@ public class HostController {
         return match.getStartsAt().plus(Duration.ofMinutes(90));
     }
 
-    private Match findOwnedMatchOrThrowNotFound(final Long matchId, final Long actingUserId) {
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!match.getHost().getId().equals(actingUserId)) {
+    private Match findEditableMatchOrThrowNotFound(final Long matchId, final User actingUser) {
+        try {
+            return matchService.findEditableMatchForHost(matchId, actingUser);
+        } catch (final MatchUpdateException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return match;
     }
 
-    private Match findOwnedEditableMatchOrThrowNotFound(
-            final Long matchId, final Long actingUserId) {
-        final Match match = findOwnedMatchOrThrowNotFound(matchId, actingUserId);
-        final EventStatus status = match.getStatus();
-        if (status == EventStatus.COMPLETED || status == EventStatus.CANCELLED) {
+    private Match findEditableRecurringMatchOrThrowNotFound(
+            final Long matchId, final User actingUser) {
+        try {
+            return matchService.findEditableRecurringMatchForHost(matchId, actingUser);
+        } catch (final MatchUpdateException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return match;
-    }
-
-    private Match findOwnedEditableRecurringMatchOrThrowNotFound(
-            final Long matchId, final Long actingUserId) {
-        final Match match = findOwnedEditableMatchOrThrowNotFound(matchId, actingUserId);
-        if (!match.isRecurringOccurrence()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        return match;
     }
 
     private Instant toInstant(
