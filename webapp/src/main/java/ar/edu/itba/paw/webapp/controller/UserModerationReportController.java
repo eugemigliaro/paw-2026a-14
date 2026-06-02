@@ -1,12 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
@@ -47,22 +45,20 @@ public class UserModerationReportController {
 
     @GetMapping
     public ModelAndView showMyReports(
-            @RequestParam(value = "type", required = false) final List<String> typeFilters,
-            @RequestParam(value = "status", required = false) final List<String> statusFilters,
+            @RequestParam(value = "type", required = false)
+                    final List<ReportTargetType> typeFilters,
+            @RequestParam(value = "status", required = false)
+                    final List<ReportStatus> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
         final User user = SecurityControllerUtils.currentUserOrNull();
-        final List<ReportTargetType> selectedTypes =
-                parseEnumFilters(
-                        typeFilters,
-                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
-        final List<ReportStatus> selectedStatuses =
-                parseEnumFilters(
-                        statusFilters,
-                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
+        final List<ReportTargetType> effectiveTypeFilters =
+                typeFilters == null ? List.of() : typeFilters;
+        final List<ReportStatus> effectiveStatusFilters =
+                statusFilters == null ? List.of() : statusFilters;
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
-                        user, selectedTypes, selectedStatuses, page, PAGE_SIZE);
+                        user, effectiveTypeFilters, effectiveStatusFilters, page, PAGE_SIZE);
         final List<UserReportViewModel> reports =
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
@@ -80,21 +76,29 @@ public class UserModerationReportController {
                         "reports.mine.count", new Object[] {result.getTotalCount()}, locale));
         mav.addObject("reports", reports);
         mav.addObject(
-                "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
+                "selectedTypes",
+                effectiveTypeFilters.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
                 "selectedStatuses",
-                selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
+                effectiveStatusFilters.stream().map(ReportStatus::getDbValue).toList());
         mav.addObject("hasPreviousPage", result.hasPrevious());
         mav.addObject("hasNextPage", result.hasNext());
-        mav.addObject("previousPageHref", buildPageUrl(selectedTypes, selectedStatuses, page - 1));
-        mav.addObject("nextPageHref", buildPageUrl(selectedTypes, selectedStatuses, page + 1));
+        mav.addObject(
+                "previousPageHref",
+                buildPageUrl(effectiveTypeFilters, effectiveStatusFilters, page - 1));
+        mav.addObject(
+                "nextPageHref",
+                buildPageUrl(effectiveTypeFilters, effectiveStatusFilters, page + 1));
         mav.addObject(
                 "paginationItems",
                 PaginationUtils.buildPaginationItems(
                         result.getPage(),
                         result.getTotalPages(),
                         paginationPage ->
-                                buildPageUrl(selectedTypes, selectedStatuses, paginationPage)));
+                                buildPageUrl(
+                                        effectiveTypeFilters,
+                                        effectiveStatusFilters,
+                                        paginationPage)));
         return mav;
     }
 
@@ -119,7 +123,7 @@ public class UserModerationReportController {
         final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final ModerationReport report =
                 moderationService
-                        .findReportById(reportId)
+                        .findReportById(reportId) // TODO: move to service/security.
                         .filter(found -> found.getReporter().getId().equals(user.getId()))
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 

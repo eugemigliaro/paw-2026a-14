@@ -6,6 +6,8 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToZoneIdConverter;
@@ -190,6 +192,8 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToZoneIdConverter());
         registry.addConverter(new StringToEventTypeConverter());
         registry.addConverter(new StringToTournamentPairingStrategyConverter());
+        registry.addConverter(new StringToReportTargetTypeConverter());
+        registry.addConverter(new StringToReportStatusConverter());
     }
 
     @Override
