@@ -95,14 +95,7 @@ public class UserServiceImplTest {
 
         final User result =
                 userService.updateProfile(
-                        existingUser,
-                        "new_user",
-                        "Jamie",
-                        "Rivera",
-                        "+1 555 123 4567",
-                        null,
-                        0L,
-                        null);
+                        existingUser, "new_user", "Jamie", "Rivera", "+1 555 123 4567", null);
 
         Assertions.assertEquals("old@test.com", result.getEmail());
         Assertions.assertEquals("new_user", result.getUsername());
@@ -139,31 +132,7 @@ public class UserServiceImplTest {
                 AccountRegistrationException.class,
                 () ->
                         userService.updateProfile(
-                                existingUser, "new_user", "Jamie", "Rivera", "", null, 0L, null));
-    }
-
-    @Test
-    public void testUpdateProfileImageStoresImageAndReturnsUpdatedUser() throws IOException {
-        final User existingUser =
-                new User(
-                        2L,
-                        "old@test.com",
-                        "old_user",
-                        "Old",
-                        "Name",
-                        "+1 111 111 1111",
-                        null,
-                        null);
-        Mockito.when(userDao.findById(2L)).thenReturn(Optional.of(existingUser));
-        Mockito.when(imageService.store(Mockito.eq("image/png"), Mockito.eq(3L), Mockito.any()))
-                .thenReturn(99L);
-
-        final User result =
-                userService.updateProfileImage(
-                        2L, "image/png", 3L, new ByteArrayInputStream(new byte[] {1, 2, 3}));
-
-        Assertions.assertEquals(99L, result.getProfileImageMetadata().getId());
-        Assertions.assertEquals("old_user", result.getUsername());
+                                existingUser, "new_user", "Jamie", "Rivera", "", null));
     }
 
     @Test
@@ -173,9 +142,7 @@ public class UserServiceImplTest {
 
         Assertions.assertThrows(
                 AccountRegistrationException.class,
-                () ->
-                        userService.updateProfile(
-                                existingUser, "a", "Name", "Last", null, null, 0, null));
+                () -> userService.updateProfile(existingUser, "a", "Name", "Last", null, null));
     }
 
     @Test
@@ -185,9 +152,7 @@ public class UserServiceImplTest {
 
         Assertions.assertThrows(
                 AccountRegistrationException.class,
-                () ->
-                        userService.updateProfile(
-                                existingUser, "valid", " ", "Last", null, null, 0, null));
+                () -> userService.updateProfile(existingUser, "valid", " ", "Last", null, null));
     }
 
     @Test
@@ -199,15 +164,15 @@ public class UserServiceImplTest {
                 AccountRegistrationException.class,
                 () ->
                         userService.updateProfile(
-                                existingUser, "valid", "Name", "Last", "abc", null, 0, null));
+                                existingUser, "valid", "Name", "Last", "abc", null));
     }
 
     @Test
     public void testUpdateProfileWithNewImage() throws IOException {
         final User existingUser =
                 new User(1L, "test@test.com", "valid", null, null, null, null, null);
-        Mockito.when(imageService.store(Mockito.any(), Mockito.anyLong(), Mockito.any()))
-                .thenReturn(100L);
+        Mockito.when(imageService.resolveImageMetadata(Mockito.any(ImageUpload.class)))
+                .thenReturn(new ImageMetadata(100L, "image/png", 3L));
 
         final User result =
                 userService.updateProfile(
@@ -216,11 +181,26 @@ public class UserServiceImplTest {
                         "Name",
                         "Last",
                         null,
-                        "image/png",
-                        10,
-                        new ByteArrayInputStream(new byte[10]));
+                        new ImageUpload() {
+                            @Override
+                            public String getContentType() {
+                                return "image/png";
+                            }
+
+                            @Override
+                            public long getContentLength() {
+                                return 3L;
+                            }
+
+                            @Override
+                            public ByteArrayInputStream getContentStream() {
+                                return new ByteArrayInputStream(new byte[] {1, 2, 3});
+                            }
+                        });
 
         Assertions.assertEquals(100L, result.getProfileImageMetadata().getId());
+        Assertions.assertEquals("image/png", result.getProfileImageMetadata().getContentType());
+        Assertions.assertEquals(3L, result.getProfileImageMetadata().getContentLength());
         Assertions.assertEquals(1L, result.getId());
         Assertions.assertEquals("valid", result.getUsername());
         Assertions.assertEquals("Name", result.getName());

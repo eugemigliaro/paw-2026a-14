@@ -1,12 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
@@ -15,7 +13,6 @@ import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
@@ -60,28 +57,20 @@ public class UserModerationReportController {
 
     @GetMapping
     public ModelAndView showMyReports(
-            @RequestParam(value = "type", required = false) final List<String> typeFilters,
-            @RequestParam(value = "status", required = false) final List<String> statusFilters,
+            @RequestParam(value = "type", required = false, defaultValue = "")
+                    final List<ReportTargetType> typeFilters,
+            @RequestParam(value = "status", required = false, defaultValue = "")
+                    final List<ReportStatus> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
         final User user = SecurityControllerUtils.currentUserOrNull();
-        final List<ReportTargetType> selectedTypes =
-                parseEnumFilters(
-                        typeFilters,
-                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
-        final List<ReportStatus> selectedStatuses =
-                parseEnumFilters(
-                        statusFilters,
-                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
-                        user, selectedTypes, selectedStatuses, page, PAGE_SIZE);
+                        user, typeFilters, statusFilters, page, PAGE_SIZE);
         final List<UserReportViewModel> reports =
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
         final ModelAndView mav = new ModelAndView("reports/mine/list");
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/reports/mine"));
         mav.addObject("pageTitle", messageSource.getMessage("page.title.myReports", null, locale));
         mav.addObject(
                 "pageTitleLabel", messageSource.getMessage("reports.mine.title", null, locale));
@@ -95,21 +84,20 @@ public class UserModerationReportController {
                         "reports.mine.count", new Object[] {result.getTotalCount()}, locale));
         mav.addObject("reports", reports);
         mav.addObject(
-                "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
+                "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
-                "selectedStatuses",
-                selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
+                "selectedStatuses", statusFilters.stream().map(ReportStatus::getDbValue).toList());
         mav.addObject("hasPreviousPage", result.hasPrevious());
         mav.addObject("hasNextPage", result.hasNext());
-        mav.addObject("previousPageHref", buildPageUrl(selectedTypes, selectedStatuses, page - 1));
-        mav.addObject("nextPageHref", buildPageUrl(selectedTypes, selectedStatuses, page + 1));
+        mav.addObject("previousPageHref", buildPageUrl(typeFilters, statusFilters, page - 1));
+        mav.addObject("nextPageHref", buildPageUrl(typeFilters, statusFilters, page + 1));
         mav.addObject(
                 "paginationItems",
                 PaginationUtils.buildPaginationItems(
                         result.getPage(),
                         result.getTotalPages(),
                         paginationPage ->
-                                buildPageUrl(selectedTypes, selectedStatuses, paginationPage)));
+                                buildPageUrl(typeFilters, statusFilters, paginationPage)));
         return mav;
     }
 
@@ -134,13 +122,11 @@ public class UserModerationReportController {
         final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final ModerationReport report =
                 moderationService
-                        .findReportById(reportId)
+                        .findReportById(reportId) // TODO: move to service/security.
                         .filter(found -> found.getReporter().getId().equals(user.getId()))
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/reports/mine"));
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.myReportDetail", null, locale));
         mav.addObject(

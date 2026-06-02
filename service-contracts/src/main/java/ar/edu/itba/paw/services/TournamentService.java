@@ -3,7 +3,12 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 public interface TournamentService {
@@ -16,46 +21,34 @@ public interface TournamentService {
 
     PaginatedResult<Tournament> searchPublicTournaments(
             String query,
-            String sport,
-            String startDate,
-            String endDate,
-            String sort,
+            List<Sport> sport,
+            Instant startDate,
+            Instant endDate,
+            EventSort sort,
             int page,
             int pageSize,
-            String timezone,
+            ZoneId timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Double latitude,
             Double longitude);
 
-    PaginatedResult<Tournament> findHostedTournaments(
-            User host,
+    PaginatedResult<Tournament> findDashboardTournaments(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
             String query,
-            String sport,
-            String startDate,
-            String endDate,
-            String sort,
+            List<Sport> sport,
+            Instant startDate,
+            Instant endDate,
+            EventSort sort,
             int page,
             int pageSize,
-            String timezone,
+            ZoneId timezone,
             BigDecimal minPrice,
-            BigDecimal maxPrice);
-
-    default PaginatedResult<Tournament> searchPublicTournaments(
-            final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
-            final String sort,
-            final int page,
-            final int pageSize,
-            final String timezone,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
-        return searchPublicTournaments(
-                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
-                maxPrice, null, null);
-    }
+            BigDecimal maxPrice,
+            Double latitude,
+            Double longitude);
 
     Tournament update(long tournamentId, User actingUser, UpdateTournamentRequest request);
 

@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
@@ -8,7 +7,6 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.AppealDecision;
-import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
@@ -21,7 +19,6 @@ import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -93,30 +90,20 @@ public class ModerationAdminController {
 
     @GetMapping
     public ModelAndView showReports(
-            @RequestParam(value = "type", required = false) final List<String> typeFilters,
-            @RequestParam(value = "status", required = false) final List<String> statusFilters,
+            @RequestParam(value = "type", required = false, defaultValue = "")
+                    final List<ReportTargetType> typeFilters,
+            @RequestParam(value = "status", required = false, defaultValue = "")
+                    final List<ReportStatus> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Model model,
             final Locale locale) {
 
-        final List<ReportTargetType> selectedTypes =
-                parseEnumFilters(
-                        typeFilters,
-                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
-        final List<ReportStatus> selectedStatuses =
-                parseEnumFilters(
-                        statusFilters,
-                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
-
         final PaginatedResult<ModerationReport> result =
-                moderationService.findReports(selectedTypes, selectedStatuses, page, PAGE_SIZE);
+                moderationService.findReports(typeFilters, statusFilters, page, PAGE_SIZE);
         final List<ModerationReportViewModel> reports =
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/admin/reports"));
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.adminReports", null, locale));
         mav.addObject(
@@ -133,21 +120,20 @@ public class ModerationAdminController {
         mav.addObject("reports", reports);
         mav.addObject("action", model.asMap().get("action"));
         mav.addObject(
-                "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
+                "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
-                "selectedStatuses",
-                selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
+                "selectedStatuses", statusFilters.stream().map(ReportStatus::getDbValue).toList());
         mav.addObject("hasPreviousPage", result.hasPrevious());
         mav.addObject("hasNextPage", result.hasNext());
-        mav.addObject("previousPageHref", buildPageUrl(selectedTypes, selectedStatuses, page - 1));
-        mav.addObject("nextPageHref", buildPageUrl(selectedTypes, selectedStatuses, page + 1));
+        mav.addObject("previousPageHref", buildPageUrl(typeFilters, statusFilters, page - 1));
+        mav.addObject("nextPageHref", buildPageUrl(typeFilters, statusFilters, page + 1));
         mav.addObject(
                 "paginationItems",
                 PaginationUtils.buildPaginationItems(
                         result.getPage(),
                         result.getTotalPages(),
                         paginationPage ->
-                                buildPageUrl(selectedTypes, selectedStatuses, paginationPage)));
+                                buildPageUrl(typeFilters, statusFilters, paginationPage)));
         return mav;
     }
 
@@ -178,15 +164,12 @@ public class ModerationAdminController {
         return reportDetailModelAndView(report, reportVm, locale);
     }
 
-    private ModelAndView reportDetailModelAndView(
+    private ModelAndView reportDetailModelAndView( // TODO: remove business logic
             final ModerationReport report,
             final ModerationReportViewModel reportVm,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("admin/reports/detail");
 
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/admin/reports"));
         mav.addObject(
                 "pageTitle",
                 messageSource.getMessage("page.title.adminReportDetail", null, locale));
@@ -232,8 +215,8 @@ public class ModerationAdminController {
             @PathVariable("reportId") final Long reportId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
+        final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
         try {
-            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
             moderationService.markReportUnderReview(reportId, currentAdminUser);
             return redirectToReports("reviewed", redirectAttributes);
         } catch (final ModerationException ex) {
@@ -319,23 +302,15 @@ public class ModerationAdminController {
             return appealDetailWithErrors(reportId, locale, form, errors);
         }
 
-        final AppealDecision parsedAppealDecision =
-                PersistableEnum.fromDbValue(AppealDecision.class, form.getAppealDecision())
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+        final User admin = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
-
-            moderationService.finalizeReportAppeal(
-                    reportId, currentAdminUser, parsedAppealDecision);
-
+            moderationService.finalizeReportAppeal(reportId, admin, form.getAppealDecision());
             final String action =
-                    parsedAppealDecision == AppealDecision.UPHELD
+                    form.getAppealDecision() == AppealDecision.UPHELD
                             ? "appeal_upheld"
                             : "appeal_lifted";
-
             return redirectToReports(action, redirectAttributes);
-
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
         }
@@ -349,9 +324,9 @@ public class ModerationAdminController {
             final int banDurationDays,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        try {
-            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
 
+        try {
             final ModerationReport report =
                     moderationService.resolveReport(
                             reportId,

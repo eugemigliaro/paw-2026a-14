@@ -1,10 +1,12 @@
 package ar.edu.itba.paw.webapp.form;
 
+import ar.edu.itba.paw.webapp.validation.ValidRegisterForm;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
+@ValidRegisterForm
 public class RegisterForm {
 
     @NotBlank(message = "{RegisterForm.email.NotBlank}")

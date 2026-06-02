@@ -3,13 +3,12 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
-
 <head>
 	<%@ include file="/WEB-INF/views/includes/head.jspf" %>
 </head>
-
 <body>
 	<div class="app-shell">
 		<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
@@ -72,12 +71,7 @@
 							<label class="account-profile-media account-profile-media--change" for="account-profile-image">
 								<span class="account-profile-media__change-content">
 									<span class="upload-card__dropzone-icon" aria-hidden="true">
-										<svg viewBox="0 0 24 24" focusable="false">
-											<path d="M4 17.5V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5Z" />
-											<path d="m8 14 2.2-2.2a1.2 1.2 0 0 1 1.7 0L16 16" />
-											<path d="m13.5 13.5 1.1-1.1a1.2 1.2 0 0 1 1.7 0L20 16" />
-											<circle cx="8.5" cy="8.5" r="1.2" />
-										</svg>
+										<icon:photoFrame />
 									</span>
 									<span class="upload-card__dropzone-copy">
 										<span class="upload-card__dropzone-title">
@@ -109,10 +103,7 @@
 										aria-disabled="true" readonly="readonly" aria-readonly="true"
 										autocomplete="email" />
 									<span class="account-locked-field__icon" aria-hidden="true">
-										<svg viewBox="0 0 24 24" focusable="false">
-											<path d="M8.5 10V8.25a3.5 3.5 0 1 1 7 0V10" />
-											<rect x="6.5" y="10" width="11" height="9" rx="2.2" />
-										</svg>
+										<icon:padlock />
 									</span>
 								</div>
 							</label>

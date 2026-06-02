@@ -1,16 +1,14 @@
 package ar.edu.itba.paw.webapp.form;
 
-import javax.validation.constraints.NotBlank;
+import ar.edu.itba.paw.models.types.ReportReason;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 public class ReportForm {
 
-    @NotBlank(message = "{NotBlank.reportForm.reason}")
-    @Pattern(
-            regexp = "^(inappropriate_content|aggressive_language|spam|harassment|cheating|other)$",
-            message = "{Pattern.reportForm.reason}")
-    private String reason;
+    @NotNull(message = "{NotBlank.reportForm.reason}")
+    private ReportReason reason;
 
     @Size(max = 4000, message = "{Size.reportForm.details}")
     @Pattern(
@@ -18,11 +16,11 @@ public class ReportForm {
             message = "{Pattern.reportForm.details}")
     private String details;
 
-    public String getReason() {
+    public ReportReason getReason() {
         return reason;
     }
 
-    public void setReason(String reason) {
+    public void setReason(ReportReason reason) {
         this.reason = reason;
     }
 

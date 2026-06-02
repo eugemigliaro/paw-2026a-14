@@ -1,9 +1,16 @@
 package ar.edu.itba.paw.webapp.form;
 
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.RecurrenceEndMode;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
+import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.webapp.validation.ValidCreateEventForm;
 import ar.edu.itba.paw.webapp.validation.ValidRecurrenceSelection;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.FutureOrPresent;
 import javax.validation.constraints.Max;
@@ -15,6 +22,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
 @ValidRecurrenceSelection
+@ValidCreateEventForm
 public class CreateEventForm {
 
     @NotBlank(message = "{CreateEventForm.title.NotBlank}")
@@ -28,17 +36,16 @@ public class CreateEventForm {
     @Size(max = 255, message = "{CreateEventForm.address.Size}")
     private String address = "";
 
-    private String latitude = "";
+    private Double latitude;
+    private Double longitude;
 
-    private String longitude = "";
+    @NotNull(message = "{CreateEventForm.sport.NotBlank}")
+    private Sport sport = Sport.PADEL;
 
-    @NotBlank(message = "{CreateEventForm.sport.NotBlank}")
-    private String sport = "padel";
+    @NotNull(message = "{host.validation.visibility.required}")
+    private EventVisibility visibility = EventVisibility.PUBLIC;
 
-    @NotBlank(message = "{host.validation.visibility.required}")
-    private String visibility = "";
-
-    private String joinPolicy = "";
+    private EventJoinPolicy joinPolicy = EventJoinPolicy.DIRECT;
 
     @NotNull(message = "{CreateEventForm.eventDate.NotNull}")
     @FutureOrPresent(message = "{CreateEventForm.eventDate.FutureOrPresent}")
@@ -59,9 +66,9 @@ public class CreateEventForm {
 
     private boolean recurring = false;
 
-    private String recurrenceFrequency = "";
+    private RecurrenceFrequency recurrenceFrequency;
 
-    private String recurrenceEndMode = "";
+    private RecurrenceEndMode recurrenceEndMode;
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate recurrenceUntilDate;
@@ -80,8 +87,7 @@ public class CreateEventForm {
             message = "{CreateEventForm.pricePerPlayer.DecimalMin}")
     private BigDecimal pricePerPlayer = BigDecimal.ZERO;
 
-    private String tz = "";
-
+    private ZoneId timezone;
     private MultipartFile bannerImage;
 
     public String getTitle() {
@@ -108,43 +114,43 @@ public class CreateEventForm {
         this.address = address;
     }
 
-    public String getLatitude() {
+    public Double getLatitude() {
         return latitude;
     }
 
-    public void setLatitude(final String latitude) {
+    public void setLatitude(final Double latitude) {
         this.latitude = latitude;
     }
 
-    public String getLongitude() {
+    public Double getLongitude() {
         return longitude;
     }
 
-    public void setLongitude(final String longitude) {
+    public void setLongitude(final Double longitude) {
         this.longitude = longitude;
     }
 
-    public String getSport() {
+    public Sport getSport() {
         return sport;
     }
 
-    public void setSport(final String sport) {
+    public void setSport(final Sport sport) {
         this.sport = sport;
     }
 
-    public String getVisibility() {
+    public EventVisibility getVisibility() {
         return visibility;
     }
 
-    public void setVisibility(final String visibility) {
+    public void setVisibility(final EventVisibility visibility) {
         this.visibility = visibility;
     }
 
-    public String getJoinPolicy() {
+    public EventJoinPolicy getJoinPolicy() {
         return joinPolicy;
     }
 
-    public void setJoinPolicy(final String joinPolicy) {
+    public void setJoinPolicy(final EventJoinPolicy joinPolicy) {
         this.joinPolicy = joinPolicy;
     }
 
@@ -188,19 +194,19 @@ public class CreateEventForm {
         this.recurring = recurring;
     }
 
-    public String getRecurrenceFrequency() {
+    public RecurrenceFrequency getRecurrenceFrequency() {
         return recurrenceFrequency;
     }
 
-    public void setRecurrenceFrequency(final String recurrenceFrequency) {
+    public void setRecurrenceFrequency(final RecurrenceFrequency recurrenceFrequency) {
         this.recurrenceFrequency = recurrenceFrequency;
     }
 
-    public String getRecurrenceEndMode() {
+    public RecurrenceEndMode getRecurrenceEndMode() {
         return recurrenceEndMode;
     }
 
-    public void setRecurrenceEndMode(final String recurrenceEndMode) {
+    public void setRecurrenceEndMode(final RecurrenceEndMode recurrenceEndMode) {
         this.recurrenceEndMode = recurrenceEndMode;
     }
 
@@ -236,12 +242,12 @@ public class CreateEventForm {
         this.pricePerPlayer = pricePerPlayer;
     }
 
-    public String getTz() {
-        return tz;
+    public ZoneId getTimezone() {
+        return timezone;
     }
 
-    public void setTz(final String tz) {
-        this.tz = tz;
+    public void setTimezone(final ZoneId timezone) {
+        this.timezone = timezone;
     }
 
     public MultipartFile getBannerImage() {

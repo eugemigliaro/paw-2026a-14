@@ -93,25 +93,9 @@ public class ModerationServiceImplTest {
         final AtomicReference<Instant> capturedBannedUntil = new AtomicReference<>();
 
         Mockito.when(
-                        matchService.findJoinedMatches(
+                        matchService.findDashboardMatches(
                                 Mockito.any(User.class),
                                 Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
-        Mockito.when(
-                        matchService.findHostedMatches(
-                                Mockito.any(User.class),
                                 Mockito.anyBoolean(),
                                 Mockito.any(),
                                 Mockito.any(),
@@ -173,25 +157,9 @@ public class ModerationServiceImplTest {
         final AtomicReference<Instant> capturedBannedUntil = new AtomicReference<>();
 
         Mockito.when(
-                        matchService.findJoinedMatches(
+                        matchService.findDashboardMatches(
                                 Mockito.any(User.class),
                                 Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
-        Mockito.when(
-                        matchService.findHostedMatches(
-                                Mockito.any(User.class),
                                 Mockito.anyBoolean(),
                                 Mockito.any(),
                                 Mockito.any(),
@@ -248,25 +216,9 @@ public class ModerationServiceImplTest {
         final AtomicLong capturedLinkedReportId = new AtomicLong(-1L);
 
         Mockito.when(
-                        matchService.findJoinedMatches(
+                        matchService.findDashboardMatches(
                                 Mockito.any(User.class),
                                 Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
-        Mockito.when(
-                        matchService.findHostedMatches(
-                                Mockito.any(User.class),
                                 Mockito.anyBoolean(),
                                 Mockito.any(),
                                 Mockito.any(),
