@@ -240,9 +240,7 @@ class AuthFlowControllerTest {
     @Test
     void postPasswordResetSuccessRedirectsToLogin() throws Exception {
         Mockito.when(accountAuthService.resetPassword("reset-token", "NewPassword123!"))
-                .thenReturn(
-                        new VerificationConfirmationResult(
-                                10L, "/login?reset=1", "Password reset"));
+                .thenReturn(new VerificationConfirmationResult(10L, "Password reset"));
 
         mockMvc.perform(
                         post("/password-reset/reset-token")
@@ -262,7 +260,6 @@ class AuthFlowControllerTest {
                                 "player@test.com",
                                 Instant.parse("2026-04-11T18:00:00Z"),
                                 "Verify account",
-                                "/login?verified=1",
                                 List.of()));
 
         final MvcResult result =

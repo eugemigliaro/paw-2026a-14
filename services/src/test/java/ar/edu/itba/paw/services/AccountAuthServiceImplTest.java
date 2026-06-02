@@ -436,7 +436,6 @@ public class AccountAuthServiceImplTest {
                 accountAuthService.confirmVerification("raw-token");
 
         Assertions.assertEquals(5L, result.getUserId());
-        Assertions.assertEquals("/", result.getRedirectUrl());
         Assertions.assertTrue(result.getAccount().isPresent());
         Assertions.assertEquals(5L, result.getAccount().orElseThrow().getId());
         Assertions.assertEquals(EmailActionStatus.COMPLETED, updatedStatus.get());
@@ -615,7 +614,6 @@ public class AccountAuthServiceImplTest {
                 accountAuthService.resetPassword("raw-token", "EvenBetter123!");
 
         Assertions.assertEquals(9L, result.getUserId());
-        Assertions.assertEquals("/login?reset=1", result.getRedirectUrl());
         Assertions.assertEquals(EmailActionStatus.COMPLETED, updatedStatus.get());
         Assertions.assertNotNull(capturedPasswordHash.get());
         Assertions.assertTrue(

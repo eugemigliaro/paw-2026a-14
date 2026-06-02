@@ -102,8 +102,11 @@ Respect the existing layered structure:
 Rules:
 
 - controllers stay thin
+- controllers own presentation decisions such as view names, redirect targets, URL fragments, flash/model attributes, and JSP-facing view data
 - business rules go in services
+- services return domain outcomes and service result data; they must not return or define view names, redirect URLs, JSP paths, or navigation destinations
 - database access, query logic, and entity mapping stay in `persistence`
+- `webapp` code depends on service contracts, not DAOs or persistence contracts
 - models stay simple and framework-light
 - use Spring-managed beans and constructor injection
 - do not instantiate services or DAOs with `new` inside managed classes

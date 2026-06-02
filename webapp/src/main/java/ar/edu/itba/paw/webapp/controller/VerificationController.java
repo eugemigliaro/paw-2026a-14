@@ -88,7 +88,7 @@ public class VerificationController {
                     accountAuthService.confirmVerification(token);
             result.getAccount()
                     .ifPresent(account -> authenticateVerifiedAccount(account, request, response));
-            return new ModelAndView("redirect:" + result.getRedirectUrl());
+            return new ModelAndView("redirect:/");
         } catch (final VerificationFailureException exception) {
             return buildErrorView(exception, locale);
         }

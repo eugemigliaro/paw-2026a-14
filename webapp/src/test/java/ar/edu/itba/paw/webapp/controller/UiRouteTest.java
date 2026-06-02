@@ -1473,7 +1473,6 @@ class UiRouteTest {
                                 "player@test.com",
                                 Instant.parse("2026-04-06T18:00:00Z"),
                                 "Verify account",
-                                "/login?verified=1",
                                 List.of(
                                         new VerificationPreviewDetail(
                                                 "Username", "player-account")));
@@ -1500,7 +1499,6 @@ class UiRouteTest {
                                         UserRole.USER,
                                         FIXED_NOW,
                                         UserLanguages.DEFAULT_LANGUAGE),
-                                "/",
                                 "done");
                     }
 
@@ -1519,8 +1517,7 @@ class UiRouteTest {
                     @Override
                     public VerificationConfirmationResult resetPassword(
                             final String rawToken, final String newPassword) {
-                        return new VerificationConfirmationResult(
-                                9L, "/login?reset=1", "Password reset");
+                        return new VerificationConfirmationResult(9L, "Password reset");
                     }
 
                     @Override
