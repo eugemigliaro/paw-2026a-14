@@ -1350,6 +1350,11 @@ class UiRouteTest {
                     }
 
                     @Override
+                    public Optional<PlayerReview> findReviewById(Long reviewId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
                     public PlayerReview submitReview(
                             final User reviewer,
                             final User reviewed,
