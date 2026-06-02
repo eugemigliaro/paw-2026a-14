@@ -69,7 +69,7 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getStartsAt(),
                 request.getEndsAt(),
                 request.getPricePerPlayer(),
-                imageService.resolveBannerImageMetadata(request.getBannerImage()),
+                imageService.resolveImageMetadata(request.getBannerImage()),
                 request.getFormat(),
                 request.getBracketSize(),
                 request.getTeamSize(),
@@ -215,7 +215,7 @@ public class TournamentServiceImpl implements TournamentService {
         if (!(request.getBannerImage() == null
                 || request.getBannerImage().getContentLength() <= 0)) {
             tournament.setBannerImageMetadata(
-                    imageService.resolveBannerImageMetadata(request.getBannerImage()));
+                    imageService.resolveImageMetadata(request.getBannerImage()));
         }
         tournament.setBracketSize(request.getBracketSize());
         tournament.setTeamSize(request.getTeamSize());

@@ -51,18 +51,17 @@ public class ImageServiceImpl implements ImageService {
     }
 
     @Override
-    public ImageMetadata resolveBannerImageMetadata(final ImageUpload bannerImage) {
-        if (bannerImage == null || bannerImage.getContentLength() <= 0) {
+    public ImageMetadata resolveImageMetadata(final ImageUpload image) {
+        if (image == null || image.getContentLength() <= 0) {
             return null;
         }
         try {
             final Long imageId =
                     store(
-                            bannerImage.getContentType(),
-                            bannerImage.getContentLength(),
-                            bannerImage.getContentStream());
-            return new ImageMetadata(
-                    imageId, bannerImage.getContentType(), bannerImage.getContentLength());
+                            image.getContentType(),
+                            image.getContentLength(),
+                            image.getContentStream());
+            return new ImageMetadata(imageId, image.getContentType(), image.getContentLength());
         } catch (final IOException exception) {
             throw new IllegalStateException("Unable to store tournament banner image", exception);
         }

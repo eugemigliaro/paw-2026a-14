@@ -131,10 +131,8 @@ public class MatchServiceImpl implements MatchService {
                         now,
                         now);
 
-        ImageMetadata bannerImageMetadata = null;
-        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
-            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
-        }
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
         final Match firstOccurrence =
                 createSeriesOccurrence(request, occurrences.get(0), series, bannerImageMetadata, 1);
         final List<RecurringMatchAsyncService.OccurrenceWindowData> remainingOccurrences =
@@ -182,10 +180,8 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private Match createSingleMatch(final CreateMatchRequest request) {
-        ImageMetadata bannerImageMetadata = null;
-        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
-            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
-        }
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
         return matchDao.createMatch(
                 request.getHost(),
                 request.getAddress(),
@@ -315,9 +311,10 @@ public class MatchServiceImpl implements MatchService {
                         ? EventJoinPolicy.INVITE_ONLY
                         : request.getJoinPolicy();
 
-        ImageMetadata bannerImageMetadata = null;
-        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
-            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
+        if (bannerImageMetadata == null) {
+            bannerImageMetadata = match.getBannerImageMetadata();
         }
         final boolean updated =
                 updateStoredMatch(
@@ -504,9 +501,10 @@ public class MatchServiceImpl implements MatchService {
                         : Duration.between(request.getStartsAt(), request.getEndsAt());
         final List<Match> updatedMatches = new ArrayList<>();
 
-        ImageMetadata bannerImageMetadata = null;
-        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
-            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
+        if (bannerImageMetadata == null) {
+            bannerImageMetadata = pivot.getBannerImageMetadata();
         }
 
         for (final Match target : targets) {
