@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -31,6 +32,7 @@ public class RecurringMatchAsyncService {
     public void createSeriesOccurrencesAsync(
             final CreateMatchRequest request,
             final MatchSeries series,
+            final ImageMetadata bannerImageMetadata,
             final List<OccurrenceWindowData> occurrences,
             final int startIndex) {
         try {
@@ -49,7 +51,7 @@ public class RecurringMatchAsyncService {
                         request.getVisibility(),
                         resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                         request.getStatus(),
-                        request.getBannerImageMetadata(),
+                        bannerImageMetadata,
                         request.getLatitude(),
                         request.getLongitude(),
                         series,

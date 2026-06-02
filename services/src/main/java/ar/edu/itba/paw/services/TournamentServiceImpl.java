@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
@@ -10,7 +9,6 @@ import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -71,7 +69,7 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getStartsAt(),
                 request.getEndsAt(),
                 request.getPricePerPlayer(),
-                resolveBannerImageMetadata(request.getBannerImage()),
+                imageService.resolveBannerImageMetadata(request.getBannerImage()),
                 request.getFormat(),
                 request.getBracketSize(),
                 request.getTeamSize(),
@@ -214,8 +212,11 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setStartsAt(request.getStartsAt());
         tournament.setEndsAt(request.getEndsAt());
         tournament.setPricePerPlayer(request.getPricePerPlayer());
-        tournament.setBannerImageMetadata(
-                resolveBannerImageMetadata(tournament, request.getBannerImage()));
+        if (!(request.getBannerImage() == null
+                || request.getBannerImage().getContentLength() <= 0)) {
+            tournament.setBannerImageMetadata(
+                    imageService.resolveBannerImageMetadata(request.getBannerImage()));
+        }
         tournament.setBracketSize(request.getBracketSize());
         tournament.setTeamSize(request.getTeamSize());
         tournament.setRegistrationOpensAt(request.getRegistrationOpensAt());
@@ -434,35 +435,6 @@ public class TournamentServiceImpl implements TournamentService {
             throw lifecycleException(
                     TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
                     "tournament.lifecycle.error.invalidRegistrationWindow");
-        }
-    }
-
-    private ImageMetadata resolveBannerImageMetadata(final ImageUpload bannerImage) {
-        if (bannerImage == null || bannerImage.getContentLength() <= 0) {
-            return null;
-        }
-        return storeBannerImage(bannerImage);
-    }
-
-    private ImageMetadata resolveBannerImageMetadata(
-            final Tournament tournament, final ImageUpload bannerImage) {
-        if (bannerImage == null || bannerImage.getContentLength() <= 0) {
-            return tournament.getBannerImageMetadata();
-        }
-        return storeBannerImage(bannerImage);
-    }
-
-    private ImageMetadata storeBannerImage(final ImageUpload bannerImage) {
-        try {
-            final Long imageId =
-                    imageService.store(
-                            bannerImage.getContentType(),
-                            bannerImage.getContentLength(),
-                            bannerImage.getContentStream());
-            return new ImageMetadata(
-                    imageId, bannerImage.getContentType(), bannerImage.getContentLength());
-        } catch (final IOException exception) {
-            throw new IllegalStateException("Unable to store tournament banner image", exception);
         }
     }
 

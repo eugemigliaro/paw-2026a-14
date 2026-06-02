@@ -54,6 +54,7 @@ public class MatchServiceImplTest {
     @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private SecurityService securityService;
     @Mock private MatchParticipationService matchParticipationService;
+    @Mock private ImageService imageService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchNotificationService matchNotificationService;
@@ -74,6 +75,7 @@ public class MatchServiceImplTest {
         matchService =
                 new MatchServiceImpl(
                         matchDao,
+                        imageService,
                         matchParticipantDao,
                         matchNotificationService,
                         securityService,

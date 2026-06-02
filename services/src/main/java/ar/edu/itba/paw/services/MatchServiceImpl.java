@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -48,6 +50,7 @@ public class MatchServiceImpl implements MatchService {
     private static final int MAX_RECURRING_OCCURRENCES = 52;
 
     private final MatchDao matchDao;
+    private final ImageService imageService;
     private final MatchParticipantDao matchParticipantDao;
     private final SecurityService securityService;
     private final MatchNotificationService matchNotificationService;
@@ -58,6 +61,7 @@ public class MatchServiceImpl implements MatchService {
     @Autowired
     public MatchServiceImpl(
             final MatchDao matchDao,
+            final ImageService imageService,
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
             final SecurityService securityService,
@@ -65,6 +69,7 @@ public class MatchServiceImpl implements MatchService {
             final MessageSource messageSource,
             final Clock clock) {
         this.matchDao = matchDao;
+        this.imageService = imageService;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
         this.securityService = securityService;
@@ -126,8 +131,12 @@ public class MatchServiceImpl implements MatchService {
                         now,
                         now);
 
+        ImageMetadata bannerImageMetadata = null;
+        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
+            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
+        }
         final Match firstOccurrence =
-                createSeriesOccurrence(request, occurrences.get(0), series, 1);
+                createSeriesOccurrence(request, occurrences.get(0), series, bannerImageMetadata, 1);
         final List<RecurringMatchAsyncService.OccurrenceWindowData> remainingOccurrences =
                 occurrences.subList(1, occurrences.size()).stream()
                         .map(
@@ -135,7 +144,8 @@ public class MatchServiceImpl implements MatchService {
                                         new RecurringMatchAsyncService.OccurrenceWindowData(
                                                 occurrence.startsAt(), occurrence.endsAt()))
                         .toList();
-        scheduleRemainingSeriesOccurrenceCreation(request, series, remainingOccurrences, 2);
+        scheduleRemainingSeriesOccurrenceCreation(
+                request, series, bannerImageMetadata, remainingOccurrences, 2);
 
         return firstOccurrence;
     }
@@ -143,6 +153,7 @@ public class MatchServiceImpl implements MatchService {
     private void scheduleRemainingSeriesOccurrenceCreation(
             final CreateMatchRequest request,
             final MatchSeries series,
+            final ImageMetadata bannerImageMetadata,
             final List<RecurringMatchAsyncService.OccurrenceWindowData> remainingOccurrences,
             final int startIndex) {
         if (remainingOccurrences.isEmpty()) {
@@ -156,17 +167,25 @@ public class MatchServiceImpl implements MatchService {
                         @Override
                         public void afterCommit() {
                             recurringMatchAsyncService.createSeriesOccurrencesAsync(
-                                    request, series, remainingOccurrences, startIndex);
+                                    request,
+                                    series,
+                                    bannerImageMetadata,
+                                    remainingOccurrences,
+                                    startIndex);
                         }
                     });
             return;
         }
 
         recurringMatchAsyncService.createSeriesOccurrencesAsync(
-                request, series, remainingOccurrences, startIndex);
+                request, series, bannerImageMetadata, remainingOccurrences, startIndex);
     }
 
     private Match createSingleMatch(final CreateMatchRequest request) {
+        ImageMetadata bannerImageMetadata = null;
+        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
+            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
+        }
         return matchDao.createMatch(
                 request.getHost(),
                 request.getAddress(),
@@ -180,7 +199,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                 request.getStatus(),
-                request.getBannerImageMetadata(),
+                bannerImageMetadata,
                 request.getLatitude(),
                 request.getLongitude());
     }
@@ -189,6 +208,7 @@ public class MatchServiceImpl implements MatchService {
             final CreateMatchRequest request,
             final OccurrenceWindow occurrence,
             final MatchSeries series,
+            final ImageMetadata bannerImageMetadata,
             final int seriesOccurrenceIndex) {
         return matchDao.createMatch(
                 request.getHost(),
@@ -203,7 +223,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                 request.getStatus(),
-                request.getBannerImageMetadata(),
+                bannerImageMetadata,
                 request.getLatitude(),
                 request.getLongitude(),
                 series,
@@ -214,6 +234,7 @@ public class MatchServiceImpl implements MatchService {
             final Long matchId,
             final User actingUser,
             final UpdateMatchRequest request,
+            final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
         return matchDao.updateMatch(
@@ -230,7 +251,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 joinPolicy,
                 status,
-                request.getBannerImageMetadata(),
+                bannerImageMetadata,
                 request.getLatitude(),
                 request.getLongitude());
     }
@@ -294,8 +315,18 @@ public class MatchServiceImpl implements MatchService {
                         ? EventJoinPolicy.INVITE_ONLY
                         : request.getJoinPolicy();
 
+        ImageMetadata bannerImageMetadata = null;
+        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
+            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
+        }
         final boolean updated =
-                updateStoredMatch(matchId, actingUser, request, joinPolicy, request.getStatus());
+                updateStoredMatch(
+                        matchId,
+                        actingUser,
+                        request,
+                        bannerImageMetadata,
+                        joinPolicy,
+                        request.getStatus());
 
         if (!updated) {
             throw new MatchUpdateException(
@@ -473,6 +504,11 @@ public class MatchServiceImpl implements MatchService {
                         : Duration.between(request.getStartsAt(), request.getEndsAt());
         final List<Match> updatedMatches = new ArrayList<>();
 
+        ImageMetadata bannerImageMetadata = null;
+        if (request.getBannerImage() != null && request.getBannerImage().getContentLength() > 0) {
+            bannerImageMetadata = imageService.resolveBannerImageMetadata(request.getBannerImage());
+        }
+
         for (final Match target : targets) {
             final Instant targetStartsAt = target.getStartsAt().plus(startOffset);
             final Instant targetEndsAt =
@@ -499,7 +535,7 @@ public class MatchServiceImpl implements MatchService {
                             request.getVisibility(),
                             request.getJoinPolicy(),
                             target.getStatus(),
-                            request.getBannerImageMetadata(),
+                            request.getBannerImage(),
                             request.getLatitude(),
                             request.getLongitude());
             final boolean updated =
@@ -507,6 +543,7 @@ public class MatchServiceImpl implements MatchService {
                             target.getId(),
                             actingUser,
                             targetRequest,
+                            bannerImageMetadata,
                             resolveJoinPolicy(
                                     targetRequest.getVisibility(), targetRequest.getJoinPolicy()),
                             target.getStatus());
@@ -857,7 +894,7 @@ public class MatchServiceImpl implements MatchService {
                         : Duration.between(request.getStartsAt(), request.getEndsAt());
         final int occurrenceCount = resolveOccurrenceCount(firstLocalStart, recurrence);
 
-        return java.util.stream.IntStream.range(0, occurrenceCount)
+        return IntStream.range(0, occurrenceCount)
                 .mapToObj(
                         index -> {
                             final LocalDateTime occurrenceLocalStart =
