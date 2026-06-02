@@ -88,15 +88,6 @@ public class AuthController {
             @Valid @ModelAttribute("registerForm") final RegisterForm registerForm,
             final BindingResult bindingResult,
             final Locale locale) {
-        if (!bindingResult.hasFieldErrors("password")
-                && !bindingResult.hasFieldErrors("confirmPassword")
-                && !registerForm.getPassword().equals(registerForm.getConfirmPassword())) {
-            bindingResult.rejectValue(
-                    "confirmPassword",
-                    "auth.validation.passwordMismatch",
-                    messageSource.getMessage("auth.validation.passwordMismatch", null, locale));
-        }
-
         if (bindingResult.hasErrors()) {
             return registerView(registerForm, locale);
         }
@@ -124,7 +115,7 @@ public class AuthController {
                     result.getExpiresAt());
         } catch (final AccountRegistrationException exception) {
             LOGGER.warn("Registration rejected code={}", exception.getCode());
-            applyRegistrationError(bindingResult, exception);
+            applyRegistrationError(bindingResult, exception); // TODO: fix error handling
             return registerView(registerForm, locale);
         }
     }
