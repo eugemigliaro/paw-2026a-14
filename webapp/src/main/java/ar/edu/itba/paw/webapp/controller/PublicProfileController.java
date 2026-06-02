@@ -70,15 +70,13 @@ public class PublicProfileController {
     public ModelAndView showPublicProfile(
             @PathVariable("username") final String username,
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
-            @RequestParam(value = "reviewFilter", required = false)
+            @RequestParam(value = "reviewFilter", required = false, defaultValue = "both")
                     final PlayerReviewFilter reviewFilter,
             @RequestParam(value = "reviewPage", defaultValue = "1") final int reviewPage,
             final Model model,
             final Locale locale) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final User user = findUserByUsernameOrThrow(username);
-        final PlayerReviewFilter effectiveReviewFilter =
-                reviewFilter == null ? PlayerReviewFilter.BOTH : reviewFilter;
 
         final ModelAndView mav = new ModelAndView("users/profile");
         mav.addObject("reviewStatus", model.asMap().get("reviewStatus"));
@@ -99,7 +97,7 @@ public class PublicProfileController {
                         user.getEmail(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, reviewForm, effectiveReviewFilter, reviewPage, resolvedLocale);
+        addReviewModel(mav, user, reviewForm, reviewFilter, reviewPage, resolvedLocale);
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(

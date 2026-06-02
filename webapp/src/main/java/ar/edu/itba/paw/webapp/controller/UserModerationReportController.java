@@ -45,20 +45,16 @@ public class UserModerationReportController {
 
     @GetMapping
     public ModelAndView showMyReports(
-            @RequestParam(value = "type", required = false)
+            @RequestParam(value = "type", required = false, defaultValue = "")
                     final List<ReportTargetType> typeFilters,
-            @RequestParam(value = "status", required = false)
+            @RequestParam(value = "status", required = false, defaultValue = "")
                     final List<ReportStatus> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
         final User user = SecurityControllerUtils.currentUserOrNull();
-        final List<ReportTargetType> effectiveTypeFilters =
-                typeFilters == null ? List.of() : typeFilters;
-        final List<ReportStatus> effectiveStatusFilters =
-                statusFilters == null ? List.of() : statusFilters;
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
-                        user, effectiveTypeFilters, effectiveStatusFilters, page, PAGE_SIZE);
+                        user, typeFilters, statusFilters, page, PAGE_SIZE);
         final List<UserReportViewModel> reports =
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
@@ -76,29 +72,20 @@ public class UserModerationReportController {
                         "reports.mine.count", new Object[] {result.getTotalCount()}, locale));
         mav.addObject("reports", reports);
         mav.addObject(
-                "selectedTypes",
-                effectiveTypeFilters.stream().map(ReportTargetType::getDbValue).toList());
+                "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
-                "selectedStatuses",
-                effectiveStatusFilters.stream().map(ReportStatus::getDbValue).toList());
+                "selectedStatuses", statusFilters.stream().map(ReportStatus::getDbValue).toList());
         mav.addObject("hasPreviousPage", result.hasPrevious());
         mav.addObject("hasNextPage", result.hasNext());
-        mav.addObject(
-                "previousPageHref",
-                buildPageUrl(effectiveTypeFilters, effectiveStatusFilters, page - 1));
-        mav.addObject(
-                "nextPageHref",
-                buildPageUrl(effectiveTypeFilters, effectiveStatusFilters, page + 1));
+        mav.addObject("previousPageHref", buildPageUrl(typeFilters, statusFilters, page - 1));
+        mav.addObject("nextPageHref", buildPageUrl(typeFilters, statusFilters, page + 1));
         mav.addObject(
                 "paginationItems",
                 PaginationUtils.buildPaginationItems(
                         result.getPage(),
                         result.getTotalPages(),
                         paginationPage ->
-                                buildPageUrl(
-                                        effectiveTypeFilters,
-                                        effectiveStatusFilters,
-                                        paginationPage)));
+                                buildPageUrl(typeFilters, statusFilters, paginationPage)));
         return mav;
     }
 
