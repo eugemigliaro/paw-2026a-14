@@ -33,6 +33,7 @@ import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchCancellationFailureReason;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -57,12 +58,15 @@ import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceEndModeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
@@ -730,7 +734,7 @@ class UiRouteTest {
                                         joinPolicy,
                                         request.getStatus(),
                                         0,
-                                        request.getBannerImageMetadata(),
+                                        null,
                                         null,
                                         null,
                                         false,
@@ -784,7 +788,7 @@ class UiRouteTest {
                                         joinPolicy,
                                         request.getStatus(),
                                         0,
-                                        request.getBannerImageMetadata(),
+                                        null,
                                         MatchUtils.getMatchSeries(600L, actingUser),
                                         matchId == 46L ? 1 : 2,
                                         false,
@@ -1571,8 +1575,7 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public Optional<ar.edu.itba.paw.models.ImageMetadata> findMetadataById(
-                            final Long imageId) {
+                    public Optional<ImageMetadata> findMetadataById(final Long imageId) {
                         return Optional.empty();
                     }
 
@@ -1581,6 +1584,12 @@ class UiRouteTest {
                             final Long imageId, final OutputStream outputStream)
                             throws IOException {
                         return false;
+                    }
+
+                    @Override
+                    public ImageMetadata resolveBannerImageMetadata(final ImageUpload bannerImage) {
+                        return new ImageMetadata(
+                                500L, bannerImage.getContentType(), bannerImage.getContentLength());
                     }
                 };
 
@@ -1671,7 +1680,7 @@ class UiRouteTest {
                                 new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
-                                        matchService, imageService, fixedClock, messageSource),
+                                        matchService, messageSource, false, "", "", 0, 0, 0),
                                 new HostParticipationController(
                                         matchService,
                                         matchParticipationService,
@@ -2984,9 +2993,11 @@ class UiRouteTest {
                                         "createEventForm",
                                         Matchers.allOf(
                                                 Matchers.hasProperty(
-                                                        "visibility", Matchers.is("public")),
+                                                        "visibility",
+                                                        Matchers.is(EventVisibility.PUBLIC)),
                                                 Matchers.hasProperty(
-                                                        "joinPolicy", Matchers.is("direct")),
+                                                        "joinPolicy",
+                                                        Matchers.is(EventJoinPolicy.DIRECT)),
                                                 Matchers.hasProperty(
                                                         "endDate",
                                                         Matchers.is(LocalDate.of(2026, 4, 6))),
@@ -3817,6 +3828,9 @@ class UiRouteTest {
         conversionService.addConverter(new StringToEventTypeConverter());
         conversionService.addConverter(new StringToPlayerReviewFilterConverter());
         conversionService.addConverter(new StringToPlayerReviewReactionConverter());
+        conversionService.addConverter(new StringToRecurrenceEndModeConverter());
+        conversionService.addConverter(new StringToRecurrenceFrequencyConverter());
+        conversionService.addConverter(new StringToEventJoinPolicyConverter());
         return conversionService;
     }
 

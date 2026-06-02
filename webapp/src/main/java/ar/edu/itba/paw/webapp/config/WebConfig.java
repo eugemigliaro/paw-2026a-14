@@ -3,12 +3,15 @@ package ar.edu.itba.paw.webapp.config;
 import ar.edu.itba.paw.services.AdminBootstrapService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceEndModeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
@@ -202,6 +205,9 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToPlayerReviewReactionConverter());
         registry.addConverter(new StringToReportReasonConverter());
         registry.addConverter(new StringToAppealDecisionConverter());
+        registry.addConverter(new StringToEventJoinPolicyConverter());
+        registry.addConverter(new StringToRecurrenceFrequencyConverter());
+        registry.addConverter(new StringToRecurrenceEndModeConverter());
     }
 
     @Override

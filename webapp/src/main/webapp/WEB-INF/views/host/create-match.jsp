@@ -98,7 +98,7 @@
 						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<input type="hidden" name="tz" id="match-timezone"
-							value="<c:out value='${createEventForm.tz}' />"
+							value="<c:out value='${createEventForm.timezone}' />"
 							data-browser-timezone-field="true" />
 						<c:if test="${not empty formError}">
 							<p class="field__error">
@@ -431,7 +431,7 @@
 													code="host.form.recurrence.frequency" />
 											</span>
 											<c:set var="selectedRecurrenceFrequency"
-												value="${empty createEventForm.recurrenceFrequency ? 'daily' : createEventForm.recurrenceFrequency}" />
+												value="${empty createEventForm.recurrenceFrequency ? 'DAILY' : createEventForm.recurrenceFrequency}" />
 											<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--three"
 												id="match-recurrence-frequency-toggle"
 												data-events-toggle="true"
@@ -443,21 +443,21 @@
 												<div class="events-toggle-slider"
 													data-events-toggle-slider="true"></div>
 												<button type="button"
-													class="events-toggle-btn ${selectedRecurrenceFrequency eq 'daily' ? 'active' : ''}"
-													data-value="daily"
-													aria-pressed="${selectedRecurrenceFrequency eq 'daily' ? 'true' : 'false'}">
+													class="events-toggle-btn ${selectedRecurrenceFrequency eq 'DAILY' ? 'active' : ''}"
+													data-value="DAILY"
+													aria-pressed="${selectedRecurrenceFrequency eq 'DAILY' ? 'true' : 'false'}">
 													<c:out value="${recurrenceDaily}" />
 												</button>
 												<button type="button"
-													class="events-toggle-btn ${selectedRecurrenceFrequency eq 'weekly' ? 'active' : ''}"
-													data-value="weekly"
-													aria-pressed="${selectedRecurrenceFrequency eq 'weekly' ? 'true' : 'false'}">
+													class="events-toggle-btn ${selectedRecurrenceFrequency eq 'WEEKLY' ? 'active' : ''}"
+													data-value="WEEKLY"
+													aria-pressed="${selectedRecurrenceFrequency eq 'WEEKLY' ? 'true' : 'false'}">
 													<c:out value="${recurrenceWeekly}" />
 												</button>
 												<button type="button"
-													class="events-toggle-btn ${selectedRecurrenceFrequency eq 'monthly' ? 'active' : ''}"
-													data-value="monthly"
-													aria-pressed="${selectedRecurrenceFrequency eq 'monthly' ? 'true' : 'false'}">
+													class="events-toggle-btn ${selectedRecurrenceFrequency eq 'MONTHLY' ? 'active' : ''}"
+													data-value="MONTHLY"
+													aria-pressed="${selectedRecurrenceFrequency eq 'MONTHLY' ? 'true' : 'false'}">
 													<c:out value="${recurrenceMonthly}" />
 												</button>
 											</div>
@@ -471,28 +471,28 @@
 													code="host.form.recurrence.endMode" />
 											</span>
 											<c:set var="selectedRecurrenceEndMode"
-												value="${empty createEventForm.recurrenceEndMode ? 'until_date' : createEventForm.recurrenceEndMode}" />
+												value="${empty createEventForm.recurrenceEndMode ? 'UNTIL_DATE' : createEventForm.recurrenceEndMode}" />
 											<div class="events-toggle-wrapper recurrence-segmented-toggle recurrence-segmented-toggle--two recurrence-segmented-full-width"
 												id="match-recurrence-end-mode-toggle"
 												data-events-toggle="true"
-												data-events-toggle-right-value="occurrence_count"
+												data-events-toggle-right-value="OCCURRENCE_COUNT"
 												aria-labelledby="match-recurrence-end-mode-label">
 												<input type="hidden" name="recurrenceEndMode"
 													id="match-recurrence-end-mode"
 													value="${selectedRecurrenceEndMode}"
 													data-events-toggle-input="true" />
-												<div class="events-toggle-slider ${selectedRecurrenceEndMode eq 'occurrence_count' ? 'right' : ''}"
+												<div class="events-toggle-slider ${selectedRecurrenceEndMode eq 'OCCURRENCE_COUNT' ? 'right' : ''}"
 													data-events-toggle-slider="true"></div>
 												<button type="button"
-													class="events-toggle-btn ${selectedRecurrenceEndMode eq 'until_date' ? 'active' : ''}"
-													data-value="until_date"
-													aria-pressed="${selectedRecurrenceEndMode eq 'until_date' ? 'true' : 'false'}">
+													class="events-toggle-btn ${selectedRecurrenceEndMode eq 'UNTIL_DATE' ? 'active' : ''}"
+													data-value="UNTIL_DATE"
+													aria-pressed="${selectedRecurrenceEndMode eq 'UNTIL_DATE' ? 'true' : 'false'}">
 													<c:out value="${recurrenceEndUntilDate}" />
 												</button>
 												<button type="button"
-													class="events-toggle-btn ${selectedRecurrenceEndMode eq 'occurrence_count' ? 'active' : ''}"
-													data-value="occurrence_count"
-													aria-pressed="${selectedRecurrenceEndMode eq 'occurrence_count' ? 'true' : 'false'}">
+													class="events-toggle-btn ${selectedRecurrenceEndMode eq 'OCCURRENCE_COUNT' ? 'active' : ''}"
+													data-value="OCCURRENCE_COUNT"
+													aria-pressed="${selectedRecurrenceEndMode eq 'OCCURRENCE_COUNT' ? 'true' : 'false'}">
 													<c:out value="${recurrenceEndOccurrenceCount}" />
 												</button>
 											</div>
