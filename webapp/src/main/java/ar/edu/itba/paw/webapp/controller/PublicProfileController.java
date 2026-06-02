@@ -173,7 +173,6 @@ public class PublicProfileController {
     }
 
     @PostMapping("/users/{username}/reviews")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView submitReview(
             @PathVariable("username") final String username,
             @RequestParam("reaction") final PlayerReviewReaction reaction,

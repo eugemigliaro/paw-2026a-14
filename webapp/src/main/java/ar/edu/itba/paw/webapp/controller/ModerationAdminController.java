@@ -27,7 +27,6 @@ import javax.validation.groups.Default;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -45,7 +44,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 @RequestMapping("/admin/reports")
-@PreAuthorize("hasRole('ADMIN_MOD')")
 public class ModerationAdminController {
     private static final int PAGE_SIZE = 4;
     private static final int DEFAULT_BAN_DURATION_DAYS = 7;

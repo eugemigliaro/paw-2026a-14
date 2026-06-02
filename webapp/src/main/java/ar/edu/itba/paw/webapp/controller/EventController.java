@@ -15,7 +15,6 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -99,7 +98,6 @@ public class EventController {
     }
 
     @PostMapping("/matches/{matchId:\\d+}/reservations")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView requestReservation(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
@@ -116,7 +114,6 @@ public class EventController {
     }
 
     @PostMapping("/matches/{matchId:\\d+}/reservations/cancel")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView cancelReservation(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
@@ -141,7 +138,6 @@ public class EventController {
         "/matches/{matchId:\\d+}/recurring-reservations",
         "/matches/{matchId:\\d+}/series-reservations"
     })
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView requestSeriesReservation(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
@@ -161,7 +157,6 @@ public class EventController {
         "/matches/{matchId:\\d+}/recurring-reservations/cancel",
         "/matches/{matchId:\\d+}/series-reservations/cancel"
     })
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView cancelSeriesReservations(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,

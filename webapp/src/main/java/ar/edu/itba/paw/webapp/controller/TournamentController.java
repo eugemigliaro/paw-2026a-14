@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -141,7 +140,6 @@ public class TournamentController {
     }
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView joinSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
@@ -197,7 +195,6 @@ public class TournamentController {
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/matches/{matchId:\\d+}/winner")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView declareWinner(
             @PathVariable("tournamentId") final Long tournamentId,
             @PathVariable("matchId") final Long matchId,
@@ -219,7 +216,6 @@ public class TournamentController {
     }
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry/leave")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView leaveSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
