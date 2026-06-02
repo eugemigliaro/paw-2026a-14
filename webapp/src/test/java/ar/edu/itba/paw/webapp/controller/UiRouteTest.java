@@ -1248,11 +1248,10 @@ class UiRouteTest {
                             final String name,
                             final String lastName,
                             final String phone,
-                            final String profileImageContentType,
-                            final long profileImageContentLength,
-                            final InputStream profileImageContentStream) {
-                        if (profileImageContentType != null
-                                && !profileImageContentType.startsWith("image/")) {
+                            final ImageUpload profileImage) {
+                        if (profileImage != null
+                                && profileImage.getContentType() != null
+                                && !profileImage.getContentType().startsWith("image/")) {
                             throw new ImageUploadException(ImageUploadException.UNSUPPORTED_FORMAT);
                         }
                         currentUser =
@@ -1263,31 +1262,12 @@ class UiRouteTest {
                                         name.trim(),
                                         lastName.trim(),
                                         phone == null || phone.isBlank() ? null : phone.trim(),
-                                        profileImageContentLength > 0
+                                        profileImage != null && profileImage.getContentLength() > 0
                                                 ? new ImageMetadata(
                                                         500L,
-                                                        profileImageContentType,
-                                                        profileImageContentLength)
+                                                        profileImage.getContentType(),
+                                                        profileImage.getContentLength())
                                                 : currentUser.getProfileImageMetadata(),
-                                        null);
-                        return currentUser;
-                    }
-
-                    @Override
-                    public User updateProfileImage(
-                            final Long id,
-                            final String contentType,
-                            final long contentLength,
-                            final InputStream contentStream) {
-                        currentUser =
-                                new User(
-                                        id,
-                                        currentUser.getEmail(),
-                                        currentUser.getUsername(),
-                                        currentUser.getName(),
-                                        currentUser.getLastName(),
-                                        currentUser.getPhone(),
-                                        new ImageMetadata(500L, contentType, contentLength),
                                         null);
                         return currentUser;
                     }
@@ -1587,9 +1567,9 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public ImageMetadata resolveBannerImageMetadata(final ImageUpload bannerImage) {
+                    public ImageMetadata resolveImageMetadata(final ImageUpload image) {
                         return new ImageMetadata(
-                                500L, bannerImage.getContentType(), bannerImage.getContentLength());
+                                500L, image.getContentType(), image.getContentLength());
                     }
                 };
 
