@@ -111,7 +111,7 @@ public class ModerationServiceImpl implements ModerationService {
             throw new ModerationException("report_limit", "Report limit reached.");
         }
 
-        if (moderationReportDao.existsActiveReportForTarget(reporter, targetType, targetId)) {
+        if (moderationReportDao.existsReportForTarget(reporter, targetType, targetId)) {
             LOGGER.warn(
                     "Duplicate report attempt by userId={} targetType={} targetId={}",
                     reporter.getId(),

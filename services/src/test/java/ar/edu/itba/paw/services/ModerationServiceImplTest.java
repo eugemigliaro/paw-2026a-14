@@ -342,11 +342,11 @@ public class ModerationServiceImplTest {
     }
 
     @Test
-    public void reportContent_throwsModerationException_whenDuplicateActiveReportExists() {
+    public void reportContent_throwsModerationException_whenReportAlreadyExistsForTarget() {
         Mockito.when(moderationReportDao.countActiveReportsByReporter(UserUtils.getUser(50L)))
                 .thenReturn(0);
         Mockito.when(
-                        moderationReportDao.existsActiveReportForTarget(
+                        moderationReportDao.existsReportForTarget(
                                 UserUtils.getUser(50L), ReportTargetType.USER, 88L))
                 .thenReturn(true);
 
