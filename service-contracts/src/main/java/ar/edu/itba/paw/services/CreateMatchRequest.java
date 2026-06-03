@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -25,7 +24,7 @@ public class CreateMatchRequest {
     private final EventVisibility visibility;
     private final EventJoinPolicy joinPolicy;
     private final EventStatus status;
-    private final ImageMetadata bannerImageMetadata;
+    private final ImageUpload bannerImage;
     private final CreateRecurrenceRequest recurrence;
 
     public CreateMatchRequest(
@@ -40,7 +39,7 @@ public class CreateMatchRequest {
             final Sport sport,
             final EventVisibility visibility,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata) {
+            final ImageUpload bannerImage) {
         this(
                 host,
                 address,
@@ -56,7 +55,7 @@ public class CreateMatchRequest {
                         ? EventJoinPolicy.DIRECT
                         : EventJoinPolicy.INVITE_ONLY,
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 null);
     }
 
@@ -73,7 +72,7 @@ public class CreateMatchRequest {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata) {
+            final ImageUpload bannerImage) {
         this(
                 host,
                 address,
@@ -87,7 +86,7 @@ public class CreateMatchRequest {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 null);
     }
 
@@ -104,7 +103,7 @@ public class CreateMatchRequest {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata,
+            final ImageUpload bannerImage,
             final CreateRecurrenceRequest recurrence) {
         this(
                 host,
@@ -121,7 +120,7 @@ public class CreateMatchRequest {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 recurrence);
     }
 
@@ -140,7 +139,7 @@ public class CreateMatchRequest {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata,
+            final ImageUpload bannerImage,
             final CreateRecurrenceRequest recurrence) {
         this.host = host;
         this.address = address;
@@ -156,7 +155,7 @@ public class CreateMatchRequest {
         this.visibility = visibility;
         this.joinPolicy = joinPolicy;
         this.status = status;
-        this.bannerImageMetadata = bannerImageMetadata;
+        this.bannerImage = bannerImage;
         this.recurrence = recurrence;
     }
 
@@ -216,8 +215,8 @@ public class CreateMatchRequest {
         return status;
     }
 
-    public ImageMetadata getBannerImageMetadata() {
-        return bannerImageMetadata;
+    public ImageUpload getBannerImage() {
+        return bannerImage;
     }
 
     public CreateRecurrenceRequest getRecurrence() {

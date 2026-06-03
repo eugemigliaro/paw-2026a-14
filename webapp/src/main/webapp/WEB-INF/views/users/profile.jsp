@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -195,9 +196,7 @@
 										aria-label="${quickLikeLabel}">
 										<span class="public-profile-review-stat__value">
 											<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
-												<svg viewBox="0 0 24 24" focusable="false">
-													<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
-												</svg>
+												<icon:thumbsUp />
 											</span>
 											<c:out value="${reviewSummary.likeCount}" />
 										</span>
@@ -210,9 +209,7 @@
 									class="public-profile-review-stat public-profile-review-stat--like public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
-											<svg viewBox="0 0 24 24" focusable="false">
-												<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
-											</svg>
+											<icon:thumbsUp />
 										</span>
 										<c:out value="${reviewSummary.likeCount}" />
 									</span>
@@ -234,9 +231,7 @@
 										aria-label="${quickDislikeLabel}">
 										<span class="public-profile-review-stat__value">
 											<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
-												<svg viewBox="0 0 24 24" focusable="false">
-													<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
-												</svg>
+												<icon:thumbsDown />
 											</span>
 											<c:out value="${reviewSummary.dislikeCount}" />
 										</span>
@@ -249,9 +244,7 @@
 									class="public-profile-review-stat public-profile-review-stat--dislike public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
-											<svg viewBox="0 0 24 24" focusable="false">
-												<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
-											</svg>
+											<icon:thumbsDown />
 										</span>
 										<c:out value="${reviewSummary.dislikeCount}" />
 									</span>
@@ -264,10 +257,7 @@
 					<c:if test="${not empty reviewLockedMessage}">
 						<p id="reviewLockedNote" class="public-profile-review-locked">
 							<span class="public-profile-review-locked__icon" aria-hidden="true">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-									<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-									<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-								</svg>
+								<icon:padlock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false" />
 							</span>
 							<span class="public-profile-review-locked__text"><c:out value="${reviewLockedMessage}" /></span>
 						</p>
@@ -288,10 +278,7 @@
 									class="btn btn--ghost btn--md public-profile-review-mine__edit"
 									aria-label="${empty viewerReview.comment ? addCommentLabel : editCommentLabel}">
 									<span class="public-profile-review-mine__icon" aria-hidden="true">
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-											<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-											<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-										</svg>
+										<icon:notepad />
 									</span>
 									<c:out value="${empty viewerReview.comment ? addCommentLabel : editCommentLabel}" />
 								</a>
@@ -302,13 +289,7 @@
 										class="btn btn--secondary btn--md public-profile-review-mine__delete"
 										aria-label="${deleteReviewLabel}">
 										<span class="public-profile-review-mine__icon" aria-hidden="true">
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-												<polyline points="3 6 5 6 21 6"/>
-												<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-												<path d="M10 11v6"/>
-												<path d="M14 11v6"/>
-												<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-											</svg>
+											<icon:bin />
 										</span>
 									</button>
 								</form>
@@ -362,21 +343,54 @@
 								<c:choose>
 									<c:when test="${optionStatus.index eq 0}">
 										<c:set var="reviewFilterLeftLabel" value="${option.label}" />
-										<c:set var="reviewFilterLeftHref" value="${option.href}" />
+										<c:choose>
+											<c:when test="${not empty option.params}">
+												<c:url var="reviewFilterLeftHref" value="${pageContext.request.servletPath}">
+													<c:forEach var="p" items="${option.params}">
+														<c:param name="${p.key}" value="${p.value}" />
+													</c:forEach>
+												</c:url>
+											</c:when>
+											<c:otherwise>
+												<c:set var="reviewFilterLeftHref" value="${option.href}" />
+											</c:otherwise>
+										</c:choose>
 										<c:if test="${option.active}">
 											<c:set var="reviewFilterCurrentValue" value="both" />
 										</c:if>
 									</c:when>
 									<c:when test="${optionStatus.index eq 1}">
 										<c:set var="reviewFilterRightLabel" value="${option.label}" />
-										<c:set var="reviewFilterRightHref" value="${option.href}" />
+										<c:choose>
+											<c:when test="${not empty option.params}">
+												<c:url var="reviewFilterRightHref" value="${pageContext.request.servletPath}">
+													<c:forEach var="p" items="${option.params}">
+														<c:param name="${p.key}" value="${p.value}" />
+													</c:forEach>
+												</c:url>
+											</c:when>
+											<c:otherwise>
+												<c:set var="reviewFilterRightHref" value="${option.href}" />
+											</c:otherwise>
+										</c:choose>
 										<c:if test="${option.active}">
 											<c:set var="reviewFilterCurrentValue" value="positive" />
 										</c:if>
 									</c:when>
 									<c:when test="${optionStatus.index eq 2}">
 										<c:set var="reviewFilterThirdLabel" value="${option.label}" />
-										<c:set var="reviewFilterThirdHref" value="${option.href}" />
+										<c:choose>
+											<c:when test="${not empty option.params}">
+												<c:url var="reviewFilterThirdHref" value="${pageContext.request.servletPath}">
+													<c:forEach var="p" items="${option.params}">
+														<c:param name="${p.key}" value="${p.value}" />
+													</c:forEach>
+												</c:url>
+											</c:when>
+											<c:otherwise>
+												<c:set var="reviewFilterThirdHref" value="${option.href}" />
+											</c:otherwise>
+										</c:choose>
 										<c:if test="${option.active}">
 											<c:set var="reviewFilterCurrentValue" value="bad" />
 										</c:if>
@@ -426,14 +440,10 @@
 												<span class="public-profile-review-icon public-profile-review-icon--${review.reaction}" aria-hidden="true">
 													<c:choose>
 														<c:when test="${review.reaction eq 'like'}">
-															<svg viewBox="0 0 24 24" focusable="false">
-																<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3v11Zm2 0V10.8l4.2-8.2a1.7 1.7 0 0 1 3.1 1.3L15.4 9H20a2 2 0 0 1 2 2.3l-1.1 7A4.4 4.4 0 0 1 16.5 22H9Z" />
-															</svg>
+															<icon:thumbsUp />
 														</c:when>
 														<c:otherwise>
-															<svg viewBox="0 0 24 24" focusable="false">
-																<path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3V2Zm-2 0v11.2l-4.2 8.2a1.7 1.7 0 0 1-3.1-1.3L8.6 15H4a2 2 0 0 1-2-2.3l1.1-7A4.4 4.4 0 0 1 7.5 2H15Z" />
-															</svg>
+															<icon:thumbsDown />
 														</c:otherwise>
 													</c:choose>
 												</span>

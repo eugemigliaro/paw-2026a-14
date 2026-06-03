@@ -19,10 +19,12 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -31,6 +33,7 @@ import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchCancellationFailureReason;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -55,6 +58,17 @@ import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceEndModeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
+import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -70,6 +84,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -80,6 +95,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
@@ -638,6 +654,40 @@ class UiRouteTest {
                     }
 
                     @Override
+                    public Match findEditableMatchForHost(
+                            final Long matchId, final User actingUser) {
+                        final Match match =
+                                findMatchById(matchId)
+                                        .orElseThrow(
+                                                () ->
+                                                        new MatchUpdateException(
+                                                                MatchUpdateFailureReason
+                                                                        .MATCH_NOT_FOUND,
+                                                                "Missing match"));
+                        if (actingUser.getId() != 7L) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.FORBIDDEN, "Forbidden");
+                        }
+                        if (match.getStatus() == EventStatus.COMPLETED
+                                || match.getStatus() == EventStatus.CANCELLED) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.NOT_EDITABLE, "Not editable");
+                        }
+                        return match;
+                    }
+
+                    @Override
+                    public Match findEditableRecurringMatchForHost(
+                            final Long matchId, final User actingUser) {
+                        final Match match = findEditableMatchForHost(matchId, actingUser);
+                        if (!match.isRecurringOccurrence()) {
+                            throw new MatchUpdateException(
+                                    MatchUpdateFailureReason.NOT_RECURRING, "Not recurring");
+                        }
+                        return match;
+                    }
+
+                    @Override
                     public List<Match> findSeriesOccurrences(final Long seriesId) {
                         if (Long.valueOf(600L).equals(seriesId)) {
                             return List.of(
@@ -718,7 +768,7 @@ class UiRouteTest {
                                         joinPolicy,
                                         request.getStatus(),
                                         0,
-                                        request.getBannerImageMetadata(),
+                                        null,
                                         null,
                                         null,
                                         false,
@@ -772,7 +822,7 @@ class UiRouteTest {
                                         joinPolicy,
                                         request.getStatus(),
                                         0,
-                                        request.getBannerImageMetadata(),
+                                        null,
                                         MatchUtils.getMatchSeries(600L, actingUser),
                                         matchId == 46L ? 1 : 2,
                                         false,
@@ -864,72 +914,73 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public PaginatedResult<Match> findHostedMatches(
-                            final User host,
-                            final Boolean upcoming,
-                            final String query,
-                            final String sport,
-                            final String visibility,
-                            final String status,
-                            final String startDate,
-                            final String endDate,
-                            final java.math.BigDecimal minPrice,
-                            final java.math.BigDecimal maxPrice,
-                            final String sort,
-                            final String timezone,
-                            final int page,
-                            final int pageSize) {
-                        final List<Match> items =
-                                status != null
-                                                && status.contains(
-                                                        EventStatus.COMPLETED.getDbValue())
-                                        ? List.of(completedMatch)
-                                        : List.of(realMatch);
-                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
-                    }
-
-                    @Override
-                    public PaginatedResult<Match> findJoinedMatches(
-                            final User user,
-                            final Boolean upcoming,
-                            final String query,
-                            final String sport,
-                            final String visibility,
-                            final String status,
-                            final String startDate,
-                            final String endDate,
-                            final java.math.BigDecimal minPrice,
-                            final java.math.BigDecimal maxPrice,
-                            final String sort,
-                            final String timezone,
-                            final int page,
-                            final int pageSize) {
-                        final List<Match> items =
-                                Boolean.FALSE.equals(upcoming)
-                                        ? List.of(completedMatch)
-                                        : List.of(realMatch, cancelledFutureMatch);
-                        return new PaginatedResult<>(items, items.size(), 1, pageSize);
-                    }
-
-                    @Override
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
-                            final String sport,
-                            final String startDate,
-                            final String endDate,
-                            final String sort,
+                            final List<Sport> sport,
+                            final Instant startDate,
+                            final Instant endDate,
+                            final EventSort sort,
                             final int page,
                             final int pageSize,
-                            final String timezone,
+                            final ZoneId timezone,
                             final BigDecimal minPrice,
                             final BigDecimal maxPrice,
                             final Double latitude,
                             final Double longitude) {
-                        lastSportsFilter.set(sport);
+                        lastSportsFilter.set(
+                                sport == null
+                                        ? null
+                                        : sport.stream()
+                                                .map(Sport::getDbValue)
+                                                .collect(java.util.stream.Collectors.joining(",")));
                         lastSearchLatitude.set(latitude);
                         lastSearchLongitude.set(longitude);
                         return new PaginatedResult<>(
                                 List.of(realMatch, footballMatch), 2, 1, pageSize);
+                    }
+
+                    @Override
+                    public PaginatedResult<Match> findDashboardMatches(
+                            User user,
+                            Boolean upcoming,
+                            Boolean includeHosted,
+                            String query,
+                            List<Sport> sports,
+                            List<EventStatus> statuses,
+                            Instant startDate,
+                            Instant endDate,
+                            BigDecimal minPrice,
+                            BigDecimal maxPrice,
+                            EventSort sort,
+                            ZoneId timezone,
+                            List<ParticipantStatus> participantStatuses,
+                            int page,
+                            int pageSize) {
+
+                        List<Match> matches = new ArrayList<>();
+
+                        if (includeHosted) {
+                            if (statuses != null && statuses.contains(EventStatus.COMPLETED)) {
+                                matches.add(completedMatch);
+                            } else {
+                                matches.add(realMatch);
+                            }
+                        }
+
+                        if (participantStatuses != null
+                                && participantStatuses.contains(
+                                        ParticipantStatus.PENDING_APPROVAL)) {
+                            matches.add(pendingFutureMatch);
+                        }
+
+                        if (upcoming) {
+                            matches.add(realMatch);
+                            matches.add(cancelledFutureMatch);
+                        } else {
+                            matches.add(completedMatch);
+                        }
+
+                        return new PaginatedResult<>(matches, matches.size(), page, pageSize);
                     }
                 };
 
@@ -1231,11 +1282,10 @@ class UiRouteTest {
                             final String name,
                             final String lastName,
                             final String phone,
-                            final String profileImageContentType,
-                            final long profileImageContentLength,
-                            final InputStream profileImageContentStream) {
-                        if (profileImageContentType != null
-                                && !profileImageContentType.startsWith("image/")) {
+                            final ImageUpload profileImage) {
+                        if (profileImage != null
+                                && profileImage.getContentType() != null
+                                && !profileImage.getContentType().startsWith("image/")) {
                             throw new ImageUploadException(ImageUploadException.UNSUPPORTED_FORMAT);
                         }
                         currentUser =
@@ -1246,31 +1296,12 @@ class UiRouteTest {
                                         name.trim(),
                                         lastName.trim(),
                                         phone == null || phone.isBlank() ? null : phone.trim(),
-                                        profileImageContentLength > 0
+                                        profileImage != null && profileImage.getContentLength() > 0
                                                 ? new ImageMetadata(
                                                         500L,
-                                                        profileImageContentType,
-                                                        profileImageContentLength)
+                                                        profileImage.getContentType(),
+                                                        profileImage.getContentLength())
                                                 : currentUser.getProfileImageMetadata(),
-                                        null);
-                        return currentUser;
-                    }
-
-                    @Override
-                    public User updateProfileImage(
-                            final Long id,
-                            final String contentType,
-                            final long contentLength,
-                            final InputStream contentStream) {
-                        currentUser =
-                                new User(
-                                        id,
-                                        currentUser.getEmail(),
-                                        currentUser.getUsername(),
-                                        currentUser.getName(),
-                                        currentUser.getLastName(),
-                                        currentUser.getPhone(),
-                                        new ImageMetadata(500L, contentType, contentLength),
                                         null);
                         return currentUser;
                     }
@@ -1333,6 +1364,11 @@ class UiRouteTest {
 
                     @Override
                     public Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public Optional<PlayerReview> findReviewById(Long reviewId) {
                         return Optional.empty();
                     }
 
@@ -1473,7 +1509,6 @@ class UiRouteTest {
                                 "player@test.com",
                                 Instant.parse("2026-04-06T18:00:00Z"),
                                 "Verify account",
-                                "/login?verified=1",
                                 List.of(
                                         new VerificationPreviewDetail(
                                                 "Username", "player-account")));
@@ -1500,7 +1535,6 @@ class UiRouteTest {
                                         UserRole.USER,
                                         FIXED_NOW,
                                         UserLanguages.DEFAULT_LANGUAGE),
-                                "/",
                                 "done");
                     }
 
@@ -1519,8 +1553,7 @@ class UiRouteTest {
                     @Override
                     public VerificationConfirmationResult resetPassword(
                             final String rawToken, final String newPassword) {
-                        return new VerificationConfirmationResult(
-                                9L, "/login?reset=1", "Password reset");
+                        return new VerificationConfirmationResult(9L, "Password reset");
                     }
 
                     @Override
@@ -1553,8 +1586,7 @@ class UiRouteTest {
                     }
 
                     @Override
-                    public Optional<ar.edu.itba.paw.models.ImageMetadata> findMetadataById(
-                            final Long imageId) {
+                    public Optional<ImageMetadata> findMetadataById(final Long imageId) {
                         return Optional.empty();
                     }
 
@@ -1563,6 +1595,12 @@ class UiRouteTest {
                             final Long imageId, final OutputStream outputStream)
                             throws IOException {
                         return false;
+                    }
+
+                    @Override
+                    public ImageMetadata resolveImageMetadata(final ImageUpload image) {
+                        return new ImageMetadata(
+                                500L, image.getContentType(), image.getContentLength());
                     }
                 };
 
@@ -1592,24 +1630,23 @@ class UiRouteTest {
                         FIXED_NOW);
         final TournamentService tournamentService = Mockito.mock(TournamentService.class);
         Mockito.when(
-                        tournamentService.findHostedTournaments(
-                                Mockito.any(User.class),
-                                Mockito.anyString(),
+                        tournamentService.findDashboardTournaments(
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.anyString(),
+                                ArgumentMatchers.nullable(String.class),
+                                ArgumentMatchers.nullable(List.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(EventSort.class),
                                 Mockito.anyInt(),
                                 Mockito.anyInt(),
-                                Mockito.anyString(),
-                                Mockito.any(),
-                                Mockito.any()))
-                .thenAnswer(
-                        invocation ->
-                                invocation.getArgument(3) == null
-                                                && invocation.getArgument(4) == null
-                                        ? new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12)
-                                        : new PaginatedResult<>(List.of(), 0, 1, 12));
+                                ArgumentMatchers.nullable(ZoneId.class),
+                                ArgumentMatchers.nullable(BigDecimal.class),
+                                ArgumentMatchers.nullable(BigDecimal.class),
+                                ArgumentMatchers.nullable(Double.class),
+                                ArgumentMatchers.nullable(Double.class)))
+                .thenReturn(new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12));
 
         final Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
         final ModerationService moderationService = Mockito.mock(ModerationService.class);
@@ -1627,7 +1664,13 @@ class UiRouteTest {
                                         matchParticipationService,
                                         matchReservationService,
                                         tournamentService,
-                                        messageSource),
+                                        messageSource,
+                                        false,
+                                        "",
+                                        "",
+                                        0,
+                                        0,
+                                        0),
                                 new EventController(
                                         matchService,
                                         matchReservationService,
@@ -1648,7 +1691,7 @@ class UiRouteTest {
                                 new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
-                                        matchService, imageService, fixedClock, messageSource),
+                                        matchService, messageSource, false, "", "", 0, 0, 0),
                                 new HostParticipationController(
                                         matchService,
                                         matchParticipationService,
@@ -1667,7 +1710,7 @@ class UiRouteTest {
                         .addInterceptors(localeChangeInterceptor())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .setValidator(validator)
-                        .setConversionService(new DefaultFormattingConversionService())
+                        .setConversionService(formattingConversionServiceWithSportConverter())
                         .build();
     }
 
@@ -1681,7 +1724,6 @@ class UiRouteTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attributeExists("feedPage"))
                 .andExpect(model().attribute("nearMeUnavailable", false));
     }
@@ -1691,10 +1733,6 @@ class UiRouteTest {
         mockMvc.perform(get("/").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(
-                        model().attribute(
-                                        "shell",
-                                        Matchers.hasProperty("hostAction", Matchers.nullValue())))
                 .andExpect(
                         model().attribute(
                                         "feedPage",
@@ -1767,9 +1805,8 @@ class UiRouteTest {
                                         "sortOptions",
                                         Matchers.hasItem(
                                                 Matchers.hasProperty(
-                                                        "href",
-                                                        Matchers.containsString(
-                                                                "sort=distance")))));
+                                                        "params",
+                                                        Matchers.hasEntry("sort", "distance")))));
     }
 
     @Test
@@ -2585,7 +2622,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/404"))
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "404"));
     }
 
@@ -2594,7 +2630,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/400"))
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "400"));
     }
 
@@ -2603,7 +2638,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/403"))
                 .andExpect(status().isForbidden())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "403"));
     }
 
@@ -2612,7 +2646,6 @@ class UiRouteTest {
         mockMvc.perform(get("/errors/500"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attributeExists("shell"))
                 .andExpect(model().attribute("number", "500"));
     }
 
@@ -2975,9 +3008,11 @@ class UiRouteTest {
                                         "createEventForm",
                                         Matchers.allOf(
                                                 Matchers.hasProperty(
-                                                        "visibility", Matchers.is("public")),
+                                                        "visibility",
+                                                        Matchers.is(EventVisibility.PUBLIC)),
                                                 Matchers.hasProperty(
-                                                        "joinPolicy", Matchers.is("direct")),
+                                                        "joinPolicy",
+                                                        Matchers.is(EventJoinPolicy.DIRECT)),
                                                 Matchers.hasProperty(
                                                         "endDate",
                                                         Matchers.is(LocalDate.of(2026, 4, 6))),
@@ -3317,6 +3352,51 @@ class UiRouteTest {
     }
 
     @Test
+    void getEventsRouteBindsSubmittedPageParameter() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/events").param("page", "2"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("events/list"))
+                .andExpect(model().attribute("pageNumber", 2));
+    }
+
+    @Test
+    void getEventsRouteRejectsInvalidPageParameter() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/events").param("page", "0")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getEventsRouteBindsSportSelectionsAsTypedEnums() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/events")
+                                        .param("sport", "padel")
+                                        .param("sport", "tennis")
+                                        .param("sort", "price")
+                                        .param("status", "open")
+                                        .param("status", "completed")
+                                        .param("visibility", "public")
+                                        .param("visibility", "invite_only"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final SearchForm searchForm =
+                (SearchForm) result.getModelAndView().getModel().get("searchForm");
+        Assertions.assertEquals(List.of(Sport.PADEL, Sport.TENNIS), searchForm.getSport());
+        Assertions.assertEquals(EventSort.PRICE_LOW, searchForm.getSort());
+        Assertions.assertEquals(
+                List.of(EventStatus.OPEN, EventStatus.COMPLETED), searchForm.getStatus());
+        Assertions.assertEquals(
+                List.of(EventVisibility.PUBLIC, EventVisibility.INVITE_ONLY),
+                searchForm.getVisibility());
+    }
+
+    @Test
     void getEventsRouteRendersHostedTournamentsWhenTournamentTypeSelected() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
@@ -3329,10 +3409,11 @@ class UiRouteTest {
                         .andExpect(status().isOk())
                         .andExpect(view().name("events/list"))
                         .andExpect(model().attribute("selectedType", "tournament"))
-                        .andExpect(
-                                model().attribute("selectedStartDateValue", Matchers.nullValue()))
-                        .andExpect(model().attribute("selectedEndDateValue", Matchers.nullValue()))
                         .andReturn();
+
+        final SearchForm searchForm =
+                (SearchForm) result.getModelAndView().getModel().get("searchForm");
+        Assertions.assertTrue(searchForm.getCategory().isEmpty());
 
         final List<EventCardViewModel> events = getEventsModel(result);
         Assertions.assertTrue(
@@ -3406,8 +3487,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
                 .andExpect(model().attributeExists("accountProfile"))
-                .andExpect(model().attributeExists("accountProfileForm"))
-                .andExpect(model().attributeExists("shell"));
+                .andExpect(model().attributeExists("accountProfileForm"));
     }
 
     @Test
@@ -3622,16 +3702,11 @@ class UiRouteTest {
     }
 
     @Test
-    void getPublicProfileRouteFallsBackForInvalidReviewPage() throws Exception {
+    void getPublicProfileRouteThrowsErrorForInvalidReviewPage() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/users/second-player").param("reviewPage", "bad"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("users/profile"))
-                .andExpect(
-                        model().attribute(
-                                        "reviewNextPageHref",
-                                        "/users/second-player?reviewFilter=both&reviewPage=2#reviews"));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -3755,6 +3830,23 @@ class UiRouteTest {
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setFallbackToSystemLocale(false);
         return messageSource;
+    }
+
+    private static DefaultFormattingConversionService
+            formattingConversionServiceWithSportConverter() {
+        final DefaultFormattingConversionService conversionService =
+                new DefaultFormattingConversionService();
+        conversionService.addConverter(new StringToSportConverter());
+        conversionService.addConverter(new StringToEventStatusConverter());
+        conversionService.addConverter(new StringToEventVisibilityConverter());
+        conversionService.addConverter(new StringToMatchSortConverter());
+        conversionService.addConverter(new StringToEventTypeConverter());
+        conversionService.addConverter(new StringToPlayerReviewFilterConverter());
+        conversionService.addConverter(new StringToPlayerReviewReactionConverter());
+        conversionService.addConverter(new StringToRecurrenceEndModeConverter());
+        conversionService.addConverter(new StringToRecurrenceFrequencyConverter());
+        conversionService.addConverter(new StringToEventJoinPolicyConverter());
+        return conversionService;
     }
 
     private static SessionLocaleResolver localeResolver() {

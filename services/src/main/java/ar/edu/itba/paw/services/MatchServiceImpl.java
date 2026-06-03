@@ -1,15 +1,16 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
-import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
@@ -25,11 +26,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -43,56 +44,38 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class MatchServiceImpl implements MatchService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_PLAYERS_PER_MATCH = 1000;
     private static final int MIN_RECURRING_OCCURRENCES = 2;
     private static final int MAX_RECURRING_OCCURRENCES = 52;
 
     private final MatchDao matchDao;
+    private final ImageService imageService;
     private final MatchParticipantDao matchParticipantDao;
     private final SecurityService securityService;
     private final MatchNotificationService matchNotificationService;
     private final RecurringMatchAsyncService recurringMatchAsyncService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
     private final Clock clock;
 
     @Autowired
     public MatchServiceImpl(
             final MatchDao matchDao,
+            final ImageService imageService,
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
             final SecurityService securityService,
             final RecurringMatchAsyncService recurringMatchAsyncService,
             final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService,
             final Clock clock) {
         this.matchDao = matchDao;
+        this.imageService = imageService;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
         this.securityService = securityService;
         this.recurringMatchAsyncService = recurringMatchAsyncService;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
         this.clock = clock;
-    }
-
-    public MatchServiceImpl(
-            final MatchDao matchDao,
-            final MatchParticipantDao matchParticipantDao,
-            final MatchNotificationService matchNotificationService,
-            final SecurityService securityService,
-            final RecurringMatchAsyncService recurringMatchAsyncService,
-            final MessageSource messageSource,
-            final Clock clock) {
-        this(
-                matchDao,
-                matchParticipantDao,
-                matchNotificationService,
-                securityService,
-                recurringMatchAsyncService,
-                messageSource,
-                PlatformTimeZoneServiceImpl.argentinaDefault(),
-                clock);
     }
 
     @Override
@@ -148,8 +131,10 @@ public class MatchServiceImpl implements MatchService {
                         now,
                         now);
 
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
         final Match firstOccurrence =
-                createSeriesOccurrence(request, occurrences.get(0), series, 1);
+                createSeriesOccurrence(request, occurrences.get(0), series, bannerImageMetadata, 1);
         final List<RecurringMatchAsyncService.OccurrenceWindowData> remainingOccurrences =
                 occurrences.subList(1, occurrences.size()).stream()
                         .map(
@@ -157,7 +142,8 @@ public class MatchServiceImpl implements MatchService {
                                         new RecurringMatchAsyncService.OccurrenceWindowData(
                                                 occurrence.startsAt(), occurrence.endsAt()))
                         .toList();
-        scheduleRemainingSeriesOccurrenceCreation(request, series, remainingOccurrences, 2);
+        scheduleRemainingSeriesOccurrenceCreation(
+                request, series, bannerImageMetadata, remainingOccurrences, 2);
 
         return firstOccurrence;
     }
@@ -165,6 +151,7 @@ public class MatchServiceImpl implements MatchService {
     private void scheduleRemainingSeriesOccurrenceCreation(
             final CreateMatchRequest request,
             final MatchSeries series,
+            final ImageMetadata bannerImageMetadata,
             final List<RecurringMatchAsyncService.OccurrenceWindowData> remainingOccurrences,
             final int startIndex) {
         if (remainingOccurrences.isEmpty()) {
@@ -178,17 +165,23 @@ public class MatchServiceImpl implements MatchService {
                         @Override
                         public void afterCommit() {
                             recurringMatchAsyncService.createSeriesOccurrencesAsync(
-                                    request, series, remainingOccurrences, startIndex);
+                                    request,
+                                    series,
+                                    bannerImageMetadata,
+                                    remainingOccurrences,
+                                    startIndex);
                         }
                     });
             return;
         }
 
         recurringMatchAsyncService.createSeriesOccurrencesAsync(
-                request, series, remainingOccurrences, startIndex);
+                request, series, bannerImageMetadata, remainingOccurrences, startIndex);
     }
 
     private Match createSingleMatch(final CreateMatchRequest request) {
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
         return matchDao.createMatch(
                 request.getHost(),
                 request.getAddress(),
@@ -202,7 +195,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                 request.getStatus(),
-                request.getBannerImageMetadata(),
+                bannerImageMetadata,
                 request.getLatitude(),
                 request.getLongitude());
     }
@@ -211,6 +204,7 @@ public class MatchServiceImpl implements MatchService {
             final CreateMatchRequest request,
             final OccurrenceWindow occurrence,
             final MatchSeries series,
+            final ImageMetadata bannerImageMetadata,
             final int seriesOccurrenceIndex) {
         return matchDao.createMatch(
                 request.getHost(),
@@ -225,7 +219,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                 request.getStatus(),
-                request.getBannerImageMetadata(),
+                bannerImageMetadata,
                 request.getLatitude(),
                 request.getLongitude(),
                 series,
@@ -236,6 +230,7 @@ public class MatchServiceImpl implements MatchService {
             final Long matchId,
             final User actingUser,
             final UpdateMatchRequest request,
+            final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
         return matchDao.updateMatch(
@@ -252,7 +247,7 @@ public class MatchServiceImpl implements MatchService {
                 request.getVisibility(),
                 joinPolicy,
                 status,
-                request.getBannerImageMetadata(),
+                bannerImageMetadata,
                 request.getLatitude(),
                 request.getLongitude());
     }
@@ -270,25 +265,7 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public Match updateMatch(
             final Long matchId, final User actingUser, final UpdateMatchRequest request) {
-        final Match match =
-                matchDao.findById(matchId)
-                        .orElseThrow(
-                                () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
-                                                message("match.update.error.notFound")));
-
-        if (!match.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
-        }
-
-        if (EventStatus.CANCELLED.equals(match.getStatus())
-                || EventStatus.COMPLETED.equals(match.getStatus())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_EDITABLE,
-                    message("match.update.error.notEditable"));
-        }
+        final Match match = findEditableMatchForHost(matchId, actingUser);
 
         validateScheduleOrThrow(
                 request.getStartsAt(),
@@ -316,8 +293,19 @@ public class MatchServiceImpl implements MatchService {
                         ? EventJoinPolicy.INVITE_ONLY
                         : request.getJoinPolicy();
 
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
+        if (bannerImageMetadata == null) {
+            bannerImageMetadata = match.getBannerImageMetadata();
+        }
         final boolean updated =
-                updateStoredMatch(matchId, actingUser, request, joinPolicy, request.getStatus());
+                updateStoredMatch(
+                        matchId,
+                        actingUser,
+                        request,
+                        bannerImageMetadata,
+                        joinPolicy,
+                        request.getStatus());
 
         if (!updated) {
             throw new MatchUpdateException(
@@ -334,6 +322,30 @@ public class MatchServiceImpl implements MatchService {
         applyParticipationPolicyTransition(updatedMatch, participationPolicyTransition);
         matchNotificationService.notifyMatchUpdated(updatedMatch);
         return updatedMatch;
+    }
+
+    @Override
+    public Match findEditableMatchForHost(final Long matchId, final User actingUser) {
+        final Match match =
+                matchDao.findById(matchId)
+                        .orElseThrow(
+                                () ->
+                                        new MatchUpdateException(
+                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                                message("match.update.error.notFound")));
+        validateMatchUpdateAccess(match, actingUser);
+        return match;
+    }
+
+    @Override
+    public Match findEditableRecurringMatchForHost(final Long matchId, final User actingUser) {
+        final Match match = findEditableMatchForHost(matchId, actingUser);
+        if (!match.isRecurringOccurrence()) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.NOT_RECURRING,
+                    message("match.update.error.notRecurring"));
+        }
+        return match;
     }
 
     private ParticipationPolicyTransition validateAndPlanParticipationPolicyTransition(
@@ -495,6 +507,12 @@ public class MatchServiceImpl implements MatchService {
                         : Duration.between(request.getStartsAt(), request.getEndsAt());
         final List<Match> updatedMatches = new ArrayList<>();
 
+        ImageMetadata bannerImageMetadata =
+                imageService.resolveImageMetadata(request.getBannerImage());
+        if (bannerImageMetadata == null) {
+            bannerImageMetadata = pivot.getBannerImageMetadata();
+        }
+
         for (final Match target : targets) {
             final Instant targetStartsAt = target.getStartsAt().plus(startOffset);
             final Instant targetEndsAt =
@@ -521,7 +539,7 @@ public class MatchServiceImpl implements MatchService {
                             request.getVisibility(),
                             request.getJoinPolicy(),
                             target.getStatus(),
-                            request.getBannerImageMetadata(),
+                            request.getBannerImage(),
                             request.getLatitude(),
                             request.getLongitude());
             final boolean updated =
@@ -529,6 +547,7 @@ public class MatchServiceImpl implements MatchService {
                             target.getId(),
                             actingUser,
                             targetRequest,
+                            bannerImageMetadata,
                             resolveJoinPolicy(
                                     targetRequest.getVisibility(), targetRequest.getJoinPolicy()),
                             target.getStatus());
@@ -643,21 +662,32 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void validateSeriesUpdateAccess(final Match pivot, final User actingUser) {
-        if (!pivot.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
-        }
-
+        validateMatchHostAccess(pivot, actingUser);
         if (!pivot.isRecurringOccurrence()) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_RECURRING,
                     message("match.update.error.notRecurring"));
         }
+        validateEditableMatch(pivot);
+    }
 
-        if (!isEditableMatch(pivot)) {
+    private void validateMatchUpdateAccess(final Match match, final User actingUser) {
+        validateMatchHostAccess(match, actingUser);
+        validateEditableMatch(match);
+    }
+
+    private void validateEditableMatch(final Match match) {
+        if (!isEditableMatch(match)) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_EDITABLE,
                     message("match.update.error.notEditable"));
+        }
+    }
+
+    private void validateMatchHostAccess(final Match match, final User actingUser) {
+        if (!match.getHost().getId().equals(actingUser.getId())) {
+            throw new MatchUpdateException(
+                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
         }
     }
 
@@ -741,162 +771,22 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public PaginatedResult<Match> findHostedMatches(
-            final User host,
-            final Boolean upcoming,
-            final String query,
-            final String sport,
-            final String visibility,
-            final String status,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String sort,
-            final String timezone,
-            final int page,
-            final int pageSize) {
-        final List<Sport> sportFilters = parseSports(sport);
-        final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
-        final List<EventStatus> statusFilters = parseStatuses(status);
-        final ZoneId zoneId = parseZone(timezone);
-        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
-
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        matchDao.countHostedMatches(
-                                host,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                zoneId),
-                (offset, safePageSize) ->
-                        matchDao.findHostedMatches(
-                                host,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                parseSort(sort),
-                                zoneId,
-                                offset,
-                                safePageSize));
-    }
-
-    @Override
-    public PaginatedResult<Match> findJoinedMatches(
-            final User user,
-            final Boolean upcoming,
-            final String query,
-            final String sport,
-            final String visibility,
-            final String status,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final String sort,
-            final String timezone,
-            final int page,
-            final int pageSize) {
-        final List<Sport> sportFilters = parseSports(sport);
-        final List<EventVisibility> visibilityFilters = parseVisibility(visibility);
-        final List<EventStatus> statusFilters = parseStatuses(status);
-        final ZoneId zoneId = parseZone(timezone);
-        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
-        nonNullUser(user);
-
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        matchDao.countJoinedMatches(
-                                user,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                zoneId),
-                (offset, safePageSize) ->
-                        matchDao.findJoinedMatches(
-                                user,
-                                upcoming,
-                                query,
-                                sportFilters,
-                                visibilityFilters,
-                                statusFilters,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                parseSort(sort),
-                                zoneId,
-                                offset,
-                                safePageSize));
-    }
-
-    @Override
     public PaginatedResult<Match> searchPublicMatches(
             final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
-            final String sort,
+            final List<Sport> sport,
+            final Instant startDate,
+            final Instant endDate,
+            final EventSort sort,
             final int page,
             final int pageSize,
-            final String timezone,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
-        return searchPublicMatches(
-                query, sport, startDate, endDate, sort, page, pageSize, timezone, minPrice,
-                maxPrice, null, null);
-    }
-
-    @Override
-    public PaginatedResult<Match> searchPublicMatches(
-            final String query,
-            final String sport,
-            final String startDate,
-            final String endDate,
-            final String sort,
-            final int page,
-            final int pageSize,
-            final String timezone,
+            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,
             final Double longitude) {
-        final List<Sport> sportFilters = parseSports(sport);
-        final MatchSort sortFilter =
-                hasCoordinates(latitude, longitude)
-                        ? parseSort(sort)
-                        : withoutDistance(parseSort(sort));
-        final ZoneId zoneId = parseZone(timezone);
-        final DateRange dateRange = parseDateRange(startDate, endDate, zoneId);
+        final EventSort sortFilter =
+                hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
+        final DateRange dateRange = new DateRange(startDate, endDate);
 
         return paginate(
                 page,
@@ -905,126 +795,101 @@ public class MatchServiceImpl implements MatchService {
                 safePageSize ->
                         matchDao.countPublicMatches(
                                 query,
-                                sportFilters,
+                                sport,
                                 EventTimeFilter.ALL,
                                 dateRange.start(),
                                 dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
-                                zoneId),
+                                timezone),
                 (offset, safePageSize) ->
                         matchDao.findPublicMatches(
                                 query,
-                                sportFilters,
+                                sport,
                                 EventTimeFilter.ALL,
                                 dateRange.start(),
                                 dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 sortFilter,
-                                zoneId,
+                                timezone,
                                 latitude,
                                 longitude,
                                 offset,
                                 safePageSize));
     }
 
-    private static MatchSort withoutDistance(final MatchSort sort) {
-        return sort == MatchSort.DISTANCE ? MatchSort.SOONEST : sort;
+    @Override
+    public PaginatedResult<Match> findDashboardMatches(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            List<EventStatus> statuses,
+            Instant startDate,
+            Instant endDate,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            EventSort sort,
+            ZoneId timezone,
+            List<ParticipantStatus> participantStatuses,
+            int page,
+            int pageSize) {
+        nonNullUser(user);
+        validatePageAndSizeOrThrow(page, pageSize, DEFAULT_PAGE_SIZE);
+
+        final int offset = (page - 1) * pageSize;
+        final int limit = pageSize;
+
+        final List<Match> paginatedItems =
+                matchDao.findDashboardMatches(
+                        user,
+                        upcoming,
+                        includeHosted != null && includeHosted,
+                        query,
+                        sports,
+                        statuses,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        sort,
+                        timezone,
+                        participantStatuses,
+                        offset,
+                        limit);
+
+        final int totalCount =
+                matchDao.countDashboardMatches(
+                        user,
+                        upcoming,
+                        includeHosted != null && includeHosted,
+                        query,
+                        sports,
+                        statuses,
+                        startDate,
+                        endDate,
+                        minPrice,
+                        maxPrice,
+                        sort,
+                        timezone,
+                        participantStatuses);
+        return new PaginatedResult<>(paginatedItems, totalCount, page, pageSize);
     }
 
-    private static List<Sport> parseSports(final String rawSports) {
-        if (rawSports == null || rawSports.isBlank()) {
-            return List.of();
+    private void validatePageAndSizeOrThrow(
+            final int page, final int pageSize, final int defaultPageSize) {
+        if (page < 1) {
+            throw new IllegalArgumentException(message("pagination.error.invalidPage"));
         }
-
-        final LinkedHashSet<Sport> sports = new LinkedHashSet<>();
-        for (final String rawSport : rawSports.split(",")) {
-            if (rawSport == null || rawSport.isBlank()) {
-                continue;
-            }
-            PersistableEnum.fromDbValue(Sport.class, rawSport.trim()).ifPresent(sports::add);
-        }
-
-        return List.copyOf(sports);
-    }
-
-    private static List<EventStatus> parseStatuses(final String rawStatuses) {
-        if (rawStatuses == null || rawStatuses.isBlank()) {
-            return List.of();
-        }
-
-        final LinkedHashSet<EventStatus> statuses = new LinkedHashSet<>();
-        for (final String rawStatus : rawStatuses.split(",")) {
-            if (rawStatus == null || rawStatus.isBlank()) {
-                continue;
-            }
-            PersistableEnum.fromDbValue(EventStatus.class, rawStatus.trim())
-                    .ifPresent(statuses::add);
-        }
-
-        return List.copyOf(statuses);
-    }
-
-    private static List<EventVisibility> parseVisibility(final String rawVisibility) {
-        if (rawVisibility == null || rawVisibility.isBlank()) {
-            return List.of();
-        }
-
-        final LinkedHashSet<EventVisibility> visibility = new LinkedHashSet<>();
-        for (final String rawValue : rawVisibility.split(",")) {
-            if (rawValue == null || rawValue.isBlank()) {
-                continue;
-            }
-            PersistableEnum.fromDbValue(EventVisibility.class, rawValue.trim())
-                    .ifPresent(visibility::add);
-        }
-
-        return List.copyOf(visibility);
-    }
-
-    private static DateRange parseDateRange(
-            final String rawStartDate, final String rawEndDate, final ZoneId zoneId) {
-        final LocalDate startDate = parseDate(rawStartDate);
-        final LocalDate endDate = parseDate(rawEndDate);
-
-        if (startDate == null && endDate == null) {
-            return new DateRange(null, null);
-        }
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            final Instant start = endDate.atStartOfDay(zoneId).toInstant();
-            final Instant endExclusive = startDate.plusDays(1).atStartOfDay(zoneId).toInstant();
-            return new DateRange(start, endExclusive);
-        }
-
-        final Instant start = startDate == null ? null : startDate.atStartOfDay(zoneId).toInstant();
-        final Instant endExclusive =
-                endDate == null ? null : endDate.plusDays(1).atStartOfDay(zoneId).toInstant();
-        return new DateRange(start, endExclusive);
-    }
-
-    private static LocalDate parseDate(final String rawDate) {
-        if (rawDate == null || rawDate.isBlank()) {
-            return null;
-        }
-
-        try {
-            return LocalDate.parse(rawDate.trim());
-        } catch (final Exception ignored) {
-            return null;
+        if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException(message("pagination.error.invalidPageSize"));
         }
     }
 
-    private static MatchSort parseSort(final String rawSort) {
-        if (rawSort == null || rawSort.isBlank()) {
-            return MatchSort.SOONEST;
-        }
-        return MatchSort.fromQueryValue(rawSort).orElse(MatchSort.SOONEST);
-    }
-
-    private ZoneId parseZone(final String timezone) {
-        return platformTimeZoneService.resolveOrDefault(timezone);
+    private static EventSort withoutDistance(final EventSort sort) {
+        return sort == EventSort.DISTANCE ? EventSort.SOONEST : sort;
     }
 
     private List<OccurrenceWindow> buildOccurrenceWindows(
@@ -1044,7 +909,7 @@ public class MatchServiceImpl implements MatchService {
                         : Duration.between(request.getStartsAt(), request.getEndsAt());
         final int occurrenceCount = resolveOccurrenceCount(firstLocalStart, recurrence);
 
-        return java.util.stream.IntStream.range(0, occurrenceCount)
+        return IntStream.range(0, occurrenceCount)
                 .mapToObj(
                         index -> {
                             final LocalDateTime occurrenceLocalStart =
@@ -1120,8 +985,8 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
-    private ZoneId resolveZone(final ZoneId zoneId) {
-        return zoneId == null ? platformTimeZoneService.defaultZone() : zoneId;
+    private static ZoneId resolveZone(final ZoneId zoneId) {
+        return zoneId == null ? ZoneId.systemDefault() : zoneId;
     }
 
     private String message(final String code) {

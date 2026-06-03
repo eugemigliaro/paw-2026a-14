@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import java.math.BigDecimal;
@@ -17,7 +16,7 @@ public class CreateTournamentRequest {
     private final Instant startsAt;
     private final Instant endsAt;
     private final BigDecimal pricePerPlayer;
-    private final ImageMetadata bannerImageMetadata;
+    private final ImageUpload bannerImage;
     private final TournamentFormat format;
     private final int bracketSize;
     private final int teamSize;
@@ -36,7 +35,7 @@ public class CreateTournamentRequest {
             final Instant startsAt,
             final Instant endsAt,
             final BigDecimal pricePerPlayer,
-            final ImageMetadata bannerImageMetadata,
+            final ImageUpload bannerImage,
             final TournamentFormat format,
             final int bracketSize,
             final int teamSize,
@@ -53,7 +52,7 @@ public class CreateTournamentRequest {
         this.startsAt = startsAt;
         this.endsAt = endsAt;
         this.pricePerPlayer = pricePerPlayer;
-        this.bannerImageMetadata = bannerImageMetadata;
+        this.bannerImage = bannerImage;
         this.format = format;
         this.bracketSize = bracketSize;
         this.teamSize = teamSize;
@@ -99,8 +98,8 @@ public class CreateTournamentRequest {
         return pricePerPlayer;
     }
 
-    public ImageMetadata getBannerImageMetadata() {
-        return bannerImageMetadata;
+    public ImageUpload getBannerImage() {
+        return bannerImage;
     }
 
     public TournamentFormat getFormat() {

@@ -3,7 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.TournamentSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -48,7 +48,7 @@ public interface TournamentDao {
             Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            TournamentSort sort,
+            EventSort sort,
             Double latitude,
             Double longitude,
             int offset,
@@ -62,7 +62,32 @@ public interface TournamentDao {
             BigDecimal minPrice,
             BigDecimal maxPrice);
 
-    List<Tournament> findHostedByUser(User host, int offset, int limit);
+    List<Tournament> findDashboardTournaments(
+            User host,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            EventSort sort,
+            Double latitude,
+            Double longitude,
+            int offset,
+            int limit);
+
+    int countDashboardTournaments(
+            User host,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice);
 
     Optional<Tournament> refreshScheduleWindow(long tournamentId);
 

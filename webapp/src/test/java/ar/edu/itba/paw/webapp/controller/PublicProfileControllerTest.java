@@ -17,6 +17,9 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
+import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
+import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -62,6 +66,7 @@ class PublicProfileControllerTest {
                                         moderationService,
                                         userSportRatingService,
                                         messageSource))
+                        .setConversionService(conversionService())
                         .build();
     }
 
@@ -150,5 +155,29 @@ class PublicProfileControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/target#reviews"))
                 .andExpect(flash().attribute("reviewStatus", "deleted"));
+    }
+
+    @Test
+    void deleteReviewWhenNoReviewRedirectsWithError() throws Exception {
+        AuthenticationUtils.authenticateUser(1L);
+        final User user = UserUtils.getUser(42L);
+        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
+        Mockito.doThrow(
+                        new PlayerReviewException(
+                                PlayerReviewException.NOT_FOUND, "Player review not found."))
+                .when(playerReviewService)
+                .deleteReview(Mockito.any(), Mockito.eq(user));
+
+        mockMvc.perform(post("/users/target/reviews/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/users/target?reviewError=not_found#reviews"));
+    }
+
+    private static DefaultFormattingConversionService conversionService() {
+        final DefaultFormattingConversionService conversionService =
+                new DefaultFormattingConversionService();
+        conversionService.addConverter(new StringToPlayerReviewFilterConverter());
+        conversionService.addConverter(new StringToPlayerReviewReactionConverter());
+        return conversionService;
     }
 }

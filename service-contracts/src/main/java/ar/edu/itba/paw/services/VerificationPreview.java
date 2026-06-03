@@ -10,7 +10,6 @@ public class VerificationPreview {
     private final String email;
     private final Instant expiresAt;
     private final String confirmLabel;
-    private final String successRedirectUrl;
     private final List<VerificationPreviewDetail> details;
 
     public VerificationPreview(
@@ -19,14 +18,12 @@ public class VerificationPreview {
             final String email,
             final Instant expiresAt,
             final String confirmLabel,
-            final String successRedirectUrl,
             final List<VerificationPreviewDetail> details) {
         this.title = title;
         this.summary = summary;
         this.email = email;
         this.expiresAt = expiresAt;
         this.confirmLabel = confirmLabel;
-        this.successRedirectUrl = successRedirectUrl;
         this.details = details;
     }
 
@@ -48,10 +45,6 @@ public class VerificationPreview {
 
     public String getConfirmLabel() {
         return confirmLabel;
-    }
-
-    public String getSuccessRedirectUrl() {
-        return successRedirectUrl;
     }
 
     public List<VerificationPreviewDetail> getDetails() {

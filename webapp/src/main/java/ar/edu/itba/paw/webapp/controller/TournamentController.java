@@ -15,7 +15,6 @@ import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
@@ -31,7 +30,6 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
 import java.time.Clock;
@@ -50,7 +48,6 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -125,7 +122,6 @@ public class TournamentController {
                         "page.title.tournamentDetail",
                         new Object[] {tournament.getTitle()},
                         locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject(
                 "tournamentPage",
                 buildTournamentPage(tournament, currentUser, soloEntry, userTeam, locale));
@@ -144,7 +140,6 @@ public class TournamentController {
     }
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView joinSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
@@ -185,7 +180,6 @@ public class TournamentController {
                         "page.title.tournamentBracket",
                         new Object[] {bracketView.getTournament().getTitle()},
                         locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("bracketPage", buildBracketPage(bracketView, locale));
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
@@ -201,7 +195,6 @@ public class TournamentController {
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/matches/{matchId:\\d+}/winner")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView declareWinner(
             @PathVariable("tournamentId") final Long tournamentId,
             @PathVariable("matchId") final Long matchId,
@@ -223,7 +216,6 @@ public class TournamentController {
     }
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry/leave")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView leaveSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
@@ -241,7 +233,7 @@ public class TournamentController {
             final User currentUser,
             final Optional<TournamentSoloEntry> soloEntry,
             final Optional<TournamentTeam> userTeam,
-            final Locale locale) {
+            final Locale locale) { // TODO: remove business logic
         final Instant now = Instant.now(clock);
         final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
         final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
@@ -355,8 +347,7 @@ public class TournamentController {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
             return List.of();
         }
-        final List<TournamentDetailViewModel.ParticipantViewModel> rows =
-                new java.util.ArrayList<>();
+        final List<TournamentDetailViewModel.ParticipantViewModel> rows = new ArrayList<>();
         for (final TournamentTeamMember member : teamMembers) {
             rows.add(
                     new TournamentDetailViewModel.ParticipantViewModel(
@@ -808,9 +799,7 @@ public class TournamentController {
         if (team == null) {
             return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
         }
-        if (team.getName() != null
-                && !team.getName().isBlank()
-                && !isLegacyGeneratedSoloTeamName(team)) {
+        if (team.getName() != null && !team.getName().isBlank()) {
             return team.getName();
         }
         if (team.getId() == null) {
@@ -851,15 +840,6 @@ public class TournamentController {
                     member.getTeam().getId(), ignored -> displayNumbers.size() + 1);
         }
         return displayNumbers;
-    }
-
-    private static boolean isLegacyGeneratedSoloTeamName(final TournamentTeam team) {
-        if (team.getOrigin() != TournamentTeamOrigin.SOLO_POOL || team.getName() == null) {
-            return false;
-        }
-        final String normalized = team.getName().trim();
-        return normalized.matches("(?i)Solo squad #\\d+")
-                || normalized.matches("Equipo individual #\\d+");
     }
 
     private static Long teamId(final TournamentTeam team) {

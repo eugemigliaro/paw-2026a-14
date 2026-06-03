@@ -308,7 +308,6 @@
 	display: inline-flex;
 	flex: 0 0 auto;
 	height: 1rem;
-	margin-right: 0.3rem;
 	width: 1rem;
 }
 
@@ -355,6 +354,7 @@
 .public-profile-review-form__actions,
 .public-profile-review-delete-form {
 	display: flex;
+	gap: 0.75rem;
 	justify-content: flex-end;
 }
 

@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.validation;
 
-import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
@@ -23,35 +22,23 @@ public class RecurrenceSelectionValidator
         boolean valid = true;
         context.disableDefaultConstraintViolation();
 
-        final RecurrenceFrequency frequency =
-                PersistableEnum.fromDbValue(
-                                RecurrenceFrequency.class, form.getRecurrenceFrequency())
-                        .orElse(null);
+        final RecurrenceFrequency frequency = form.getRecurrenceFrequency();
         if (frequency == null) {
             reject(
                     context,
                     "recurrenceFrequency",
-                    isBlank(form.getRecurrenceFrequency())
-                            ? "{CreateEventForm.recurrenceFrequency.NotBlank}"
-                            : "{CreateEventForm.recurrenceFrequency.Valid}");
+                    "{CreateEventForm.recurrenceFrequency.NotBlank}");
             valid = false;
         }
 
-        final RecurrenceEndMode endMode =
-                PersistableEnum.fromDbValue(RecurrenceEndMode.class, form.getRecurrenceEndMode())
-                        .orElse(null);
+        final RecurrenceEndMode endMode = form.getRecurrenceEndMode();
         if (endMode == null) {
-            reject(
-                    context,
-                    "recurrenceEndMode",
-                    isBlank(form.getRecurrenceEndMode())
-                            ? "{CreateEventForm.recurrenceEndMode.NotBlank}"
-                            : "{CreateEventForm.recurrenceEndMode.Valid}");
+            reject(context, "recurrenceEndMode", "{CreateEventForm.recurrenceEndMode.NotBlank}");
             return false;
         }
 
         switch (endMode) {
-            case UNTIL_DATE:
+            case RecurrenceEndMode.UNTIL_DATE:
                 if (form.getRecurrenceOccurrenceCount() != null) {
                     reject(
                             context,
@@ -61,7 +48,7 @@ public class RecurrenceSelectionValidator
                 }
                 valid = validateUntilDate(form, context, frequency) && valid;
                 break;
-            case OCCURRENCE_COUNT:
+            case RecurrenceEndMode.OCCURRENCE_COUNT:
                 if (form.getRecurrenceUntilDate() != null) {
                     reject(
                             context,
@@ -157,11 +144,11 @@ public class RecurrenceSelectionValidator
     private static LocalDate dateAtIndex(
             final LocalDate eventDate, final RecurrenceFrequency frequency, final int index) {
         switch (frequency) {
-            case DAILY:
+            case RecurrenceFrequency.DAILY:
                 return eventDate.plusDays(index);
-            case MONTHLY:
+            case RecurrenceFrequency.MONTHLY:
                 return eventDate.plusMonths(index);
-            case WEEKLY:
+            case RecurrenceFrequency.WEEKLY:
             default:
                 return eventDate.plusWeeks(index);
         }
@@ -174,9 +161,5 @@ public class RecurrenceSelectionValidator
         context.buildConstraintViolationWithTemplate(messageTemplate)
                 .addPropertyNode(property)
                 .addConstraintViolation();
-    }
-
-    private static boolean isBlank(final String value) {
-        return value == null || value.isBlank();
     }
 }
