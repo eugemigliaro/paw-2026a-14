@@ -10,7 +10,9 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.util.List;
@@ -148,14 +150,20 @@ public class UserModerationReportController {
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
+        String exceptionReason;
+
         try {
             moderationService.appealReport(reportId, appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
-        } catch (final ModerationException exception) {
-            return new ModelAndView(
-                    "redirect:/reports/mine/" + reportId + "?error=" + exception.getCode());
+        } catch (final ModerationReportNotFoundException exception) {
+            exceptionReason = "report_not_found";
+        } catch (final ModerationAppealLimitException exception) {
+            exceptionReason = "appeal_limit";
+        } catch (final ModerationAppealRejectedException exception) {
+            exceptionReason = "appeal_rejected";
         }
+        return new ModelAndView("redirect:/reports/mine/" + reportId + "?error=" + exceptionReason);
     }
 
     private UserReportViewModel toViewModel(final ModerationReport report, final Locale locale) {
