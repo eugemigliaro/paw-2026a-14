@@ -5,10 +5,18 @@ import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import ar.edu.itba.paw.services.exceptions.registration.EmailPendingVerificationException;
+import ar.edu.itba.paw.services.exceptions.registration.EmailTakenException;
+import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.PasswordInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordForm;
 import ar.edu.itba.paw.webapp.form.RegisterForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.time.Instant;
 import java.util.Locale;
@@ -68,7 +76,7 @@ public class AuthController {
             @RequestParam(value = "logout", required = false) final String logout,
             @RequestParam(value = "continue", required = false) final String continueFlag,
             final Locale locale) {
-        if (CurrentAuthenticatedUser.get().isPresent()) {
+        if (SecurityControllerUtils.currentUserOrNull() != null) {
             LOGGER.debug("Authenticated user redirected from /login");
             return new ModelAndView("redirect:/");
         }
@@ -86,7 +94,7 @@ public class AuthController {
 
     @GetMapping("/register")
     public ModelAndView showRegister(final Locale locale) {
-        if (CurrentAuthenticatedUser.get().isPresent()) {
+        if (SecurityControllerUtils.currentUserOrNull() != null) {
             LOGGER.debug("Authenticated user redirected from /register");
             return new ModelAndView("redirect:/");
         }
@@ -123,11 +131,32 @@ public class AuthController {
                     messageSource.getMessage("auth.backToLogin", null, locale),
                     messageSource.getMessage("auth.registration.requested", null, locale),
                     result.getExpiresAt());
-        } catch (final AccountRegistrationException exception) {
-            LOGGER.warn("Registration rejected code={}", exception.getCode());
-            applyRegistrationError(bindingResult, exception); // TODO: fix error handling
-            return registerView(registerForm, locale);
+        } catch (final EmailTakenException exception) {
+            LOGGER.debug("Registration rejected: email already taken");
+            bindingResult.rejectValue("email", "auth.registration.error.emailTaken");
+        } catch (final EmailPendingVerificationException exception) {
+            LOGGER.debug("Registration rejected: email pending verification");
+            bindingResult.rejectValue("email", "auth.registration.error.emailPending");
+        } catch (final UsernameTakenException exception) {
+            LOGGER.debug("Registration rejected: username already taken");
+            bindingResult.rejectValue("username", "auth.registration.error.usernameTaken");
+        } catch (final UsernameInvalidException exception) {
+            LOGGER.debug("Registration rejected: username invalid");
+            bindingResult.rejectValue("username", "auth.registration.error.usernameInvalid");
+        } catch (final PasswordInvalidException exception) {
+            LOGGER.debug("Registration rejected: password invalid");
+            bindingResult.rejectValue("password", "auth.registration.error.passwordInvalid");
+        } catch (final NameInvalidException exception) {
+            LOGGER.debug("Registration rejected: name invalid");
+            bindingResult.rejectValue("name", "auth.registration.error.nameInvalid");
+        } catch (final LastNameInvalidException exception) {
+            LOGGER.debug("Registration rejected: lastName invalid");
+            bindingResult.rejectValue("lastName", "auth.registration.error.lastNameInvalid");
+        } catch (final PhoneInvalidException exception) {
+            LOGGER.debug("Registration rejected: phone invalid");
+            bindingResult.rejectValue("phone", "auth.registration.error.phoneInvalid");
         }
+        return registerView(registerForm, locale);
     }
 
     @PostMapping("/register/resend-verification")
@@ -141,7 +170,7 @@ public class AuthController {
                 LOGGER.info("Resend verification requested locale={}", locale);
             }
         } catch (final IllegalArgumentException ignored) {
-            LOGGER.warn("Resend verification rejected due to invalid email format");
+            LOGGER.debug("Resend verification rejected due to invalid email format");
             result = Optional.empty();
         }
 
@@ -231,33 +260,5 @@ public class AuthController {
             return messageSource.getMessage("auth.login.error.invalid", null, locale);
         }
         return null;
-    }
-
-    private void applyRegistrationError(
-            final BindingResult bindingResult, final AccountRegistrationException exception) {
-        final String code = exception.getCode();
-        if ("email_taken".equals(code) || "email_pending_verification".equals(code)) {
-            bindingResult.rejectValue("email", code, exception.getMessage());
-            return;
-        }
-        if ("username_taken".equals(code) || "username_invalid".equals(code)) {
-            bindingResult.rejectValue("username", code, exception.getMessage());
-            return;
-        }
-        if ("password_invalid".equals(code)) {
-            bindingResult.rejectValue("password", code, exception.getMessage());
-            return;
-        }
-        if ("name_invalid".equals(code)) {
-            bindingResult.rejectValue("name", code, exception.getMessage());
-            return;
-        }
-        if ("lastName_invalid".equals(code)) {
-            bindingResult.rejectValue("lastName", code, exception.getMessage());
-            return;
-        }
-        if ("phone_invalid".equals(code)) {
-            bindingResult.rejectValue("phone", code, exception.getMessage());
-        }
     }
 }
