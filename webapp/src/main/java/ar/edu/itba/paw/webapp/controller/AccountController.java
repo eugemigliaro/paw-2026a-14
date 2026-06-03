@@ -3,8 +3,14 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
-import ar.edu.itba.paw.services.exceptions.ImageUploadException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
+import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
@@ -57,9 +63,10 @@ public class AccountController {
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        String imageError = null;
 
         if (bindingResult.hasErrors()) {
-            return accountView(currentUser, locale, false, accountProfileForm, null);
+            return accountView(currentUser, locale, false, accountProfileForm, imageError);
         }
 
         try {
@@ -74,30 +81,45 @@ public class AccountController {
             SecurityControllerUtils.refreshAuthentication(updatedUser);
             redirectAttributes.addFlashAttribute("accountUpdated", true);
             return new ModelAndView("redirect:/account");
-        } catch (final AccountRegistrationException exception) {
-            applyProfileUpdateError(bindingResult, exception);
-            return accountView(currentUser, locale, false, accountProfileForm, null);
-        } catch (final ImageUploadException exception) {
-            return accountView(
-                    currentUser,
-                    locale,
-                    false,
-                    accountProfileForm,
-                    profileImageError(exception, locale));
-        } catch (final IllegalArgumentException exception) {
-            return accountView(
-                    currentUser, locale, false, accountProfileForm, profileImageError(locale));
-        } catch (final IOException exception) {
-            return accountView(
-                    currentUser,
-                    locale,
-                    false,
-                    accountProfileForm,
-                    profileImageError(
+        } catch (final UsernameTakenException exception) {
+            bindingResult.rejectValue("username", "auth.registration.error.usernameTaken");
+            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+        } catch (final UsernameInvalidException exception) {
+            bindingResult.rejectValue("username", "auth.registration.error.usernameInvalid");
+            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+        } catch (final NameInvalidException exception) {
+            bindingResult.rejectValue("name", "auth.registration.error.nameInvalid");
+            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+        } catch (final LastNameInvalidException exception) {
+            bindingResult.rejectValue("lastName", "auth.registration.error.lastNameInvalid");
+            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+        } catch (final PhoneInvalidException exception) {
+            bindingResult.rejectValue("phone", "auth.registration.error.phoneInvalid");
+            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+        } catch (final UnsupportedImageFormatException e) {
+            imageError =
+                    msg(
+                            "account.profileImage.error.invalidFormat",
+                            "Please upload a JPG, PNG, WEBP, or GIF image.",
+                            locale);
+        } catch (final EmptyImageFileException e) {
+            imageError =
+                    msg("account.profileImage.error.empty", "The uploaded image is empty.", locale);
+        } catch (final ImageTooLargeException e) {
+            imageError =
+                    msg(
+                            "account.profileImage.error.tooLarge",
+                            "The uploaded image must be 5 MB or smaller.",
+                            locale);
+        } catch (final IOException | IllegalArgumentException e) {
+            imageError =
+                    msg(
                             "account.profileImage.error.unavailable",
                             "We could not process the uploaded image. Please try again.",
-                            locale));
+                            locale);
         }
+
+        return accountView(currentUser, locale, false, accountProfileForm, imageError);
     }
 
     private ModelAndView accountView(
@@ -146,7 +168,14 @@ public class AccountController {
                         ? messageSource.getMessage(
                                 "account.updated", null, "Your profile was updated.", locale)
                         : null);
-        addProfileImageObjects(mav, user, locale);
+        mav.addObject("accountProfileImageUrl", ImageUrlHelper.profileUrlFor(user));
+        mav.addObject(
+                "accountProfileImageAlt",
+                messageSource.getMessage(
+                        "account.profileImage.alt",
+                        new Object[] {user.getUsername()},
+                        user.getUsername() + " profile picture",
+                        locale));
         mav.addObject("accountProfile", user);
         mav.addObject("accountProfileForm", accountProfileForm);
         mav.addObject("accountEmail", user.getEmail());
@@ -189,78 +218,7 @@ public class AccountController {
         };
     }
 
-    private void applyProfileUpdateError(
-            final BindingResult bindingResult, final AccountRegistrationException exception) {
-        final String code = exception.getCode();
-        if ("username_taken".equals(code) || "username_invalid".equals(code)) {
-            bindingResult.rejectValue("username", code, exception.getMessage());
-            return;
-        }
-        if ("name_invalid".equals(code)) {
-            bindingResult.rejectValue("name", code, exception.getMessage());
-            return;
-        }
-        if ("lastName_invalid".equals(code)) {
-            bindingResult.rejectValue("lastName", code, exception.getMessage());
-            return;
-        }
-        if ("phone_invalid".equals(code)) {
-            bindingResult.rejectValue("phone", code, exception.getMessage());
-        }
-    }
-
-    private void addProfileImageObjects(
-            final ModelAndView mav, final User user, final Locale locale) {
-        mav.addObject("accountProfileImageUrl", ImageUrlHelper.profileUrlFor(user));
-        mav.addObject(
-                "accountProfileImageAlt",
-                messageSource.getMessage(
-                        "account.profileImage.alt",
-                        new Object[] {user.getUsername()},
-                        user.getUsername() + " profile picture",
-                        locale));
-    }
-
-    private String profileImageError(
-            final String code, final String defaultMessage, final Locale locale) {
-        return messageSource.getMessage(code, null, defaultMessage, locale);
-    }
-
-    private String profileImageError(final ImageUploadException exception, final Locale locale) {
-        if (ImageUploadException.UNSUPPORTED_FORMAT.equals(exception.getCode())) {
-            return messageSource.getMessage(
-                    "account.profileImage.error.invalidFormat",
-                    null,
-                    "Please upload a JPG, PNG, WEBP, or GIF image.",
-                    locale);
-        }
-        if (ImageUploadException.EMPTY_FILE.equals(exception.getCode())) {
-            return messageSource.getMessage(
-                    "account.profileImage.error.empty",
-                    null,
-                    "The uploaded image is empty.",
-                    locale);
-        }
-        if (ImageUploadException.TOO_LARGE.equals(exception.getCode())) {
-            return messageSource.getMessage(
-                    "account.profileImage.error.tooLarge",
-                    null,
-                    "The uploaded image must be 5 MB or smaller.",
-                    locale);
-        }
-
-        return messageSource.getMessage(
-                "account.update.error.unavailable",
-                null,
-                "We could not update your profile. Please try again.",
-                locale);
-    }
-
-    private String profileImageError(final Locale locale) {
-        return messageSource.getMessage(
-                "account.update.error.unavailable",
-                null,
-                "We could not update your profile. Please try again.",
-                locale);
+    private String msg(final String code, final String fallback, final Locale locale) {
+        return messageSource.getMessage(code, null, fallback, locale);
     }
 }
