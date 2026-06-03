@@ -65,20 +65,18 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    public boolean existsActiveReportForTarget(
+    public boolean existsReportForTarget(
             final User reporter, final ReportTargetType targetType, final Long targetId) {
         final TypedQuery<Long> query =
                 em.createQuery(
                         "SELECT COUNT(mr) FROM ModerationReport mr "
                                 + "WHERE mr.reporter.id = :reporterUserId "
                                 + "AND mr.targetType = :targetType "
-                                + "AND mr.targetId = :targetId "
-                                + "AND mr.status IN (:statuses)",
+                                + "AND mr.targetId = :targetId",
                         Long.class);
         query.setParameter("reporterUserId", reporter.getId());
         query.setParameter("targetType", targetType);
         query.setParameter("targetId", targetId);
-        query.setParameter("statuses", ACTIVE_STATUSES);
 
         return query.getSingleResult() > 0;
     }
