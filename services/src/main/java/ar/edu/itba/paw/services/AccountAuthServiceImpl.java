@@ -94,16 +94,14 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Optional<UserAccount> existingAccount = userDao.findAccountByEmail(normalizedEmail);
         if (existingAccount.isPresent()) {
             if (existingAccount.get().isEmailVerified()) {
-                throw new EmailTakenException(
-                        message("auth.registration.error.emailTaken", locale));
+                throw new EmailTakenException("An account with that email already exists");
             }
             throw new EmailPendingVerificationException(
-                    message("auth.registration.error.emailPending", locale));
+                    "That email is already registered but still pending verification");
         }
 
         if (userDao.findByUsername(normalizedUsername).isPresent()) {
-            throw new UsernameTakenException(
-                    message("auth.registration.error.usernameTaken", locale));
+            throw new UsernameTakenException("That username is already in use");
         }
 
         try {
@@ -121,12 +119,10 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             return createAccountVerificationRequest(createdAccount, locale);
         } catch (final DataIntegrityViolationException exception) {
             if (userDao.findAccountByEmail(normalizedEmail).isPresent()) {
-                throw new EmailTakenException(
-                        message("auth.registration.error.emailTaken", locale));
+                throw new EmailTakenException("An account with that email already exists");
             }
             if (userDao.findByUsername(normalizedUsername).isPresent()) {
-                throw new UsernameTakenException(
-                        message("auth.registration.error.usernameTaken", locale));
+                throw new UsernameTakenException("That username is already in use");
             }
             throw exception;
         }
@@ -151,11 +147,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
                 getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.ACCOUNT_VERIFICATION,
-                        false,
-                        locale,
-                        "verification.message.accountUnavailable");
+                        rawToken, EmailActionType.ACCOUNT_VERIFICATION, false, locale);
         return new VerificationPreview(
                 message("verification.preview.account.title", locale),
                 message("verification.preview.account.summary", locale),
@@ -171,14 +163,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
                 getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.ACCOUNT_VERIFICATION,
-                        true,
-                        locale,
-                        "verification.message.accountUnavailable");
-        final UserAccount account =
-                getRequiredAccount(
-                        request, locale, "verification.message.accountUnavailable", false);
+                        rawToken, EmailActionType.ACCOUNT_VERIFICATION, true, locale);
+        final UserAccount account = getRequiredAccount(request, locale, false);
         final Instant now = Instant.now(clock);
 
         if (!account.isEmailVerified()) {
@@ -213,13 +199,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     public PasswordResetPreview getPasswordResetPreview(final String rawToken) {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
-                getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.PASSWORD_RESET,
-                        false,
-                        locale,
-                        "passwordReset.message.unavailable");
-        getRequiredAccount(request, locale, "passwordReset.message.unavailable", true);
+                getRequiredPendingRequest(rawToken, EmailActionType.PASSWORD_RESET, false, locale);
+        getRequiredAccount(request, locale, true);
         return new PasswordResetPreview(request.getEmail(), request.getExpiresAt());
     }
 
@@ -231,14 +212,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         validateResetPassword(newPassword, locale);
 
         final EmailActionRequest request =
-                getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.PASSWORD_RESET,
-                        true,
-                        locale,
-                        "passwordReset.message.unavailable");
-        final UserAccount account =
-                getRequiredAccount(request, locale, "passwordReset.message.unavailable", true);
+                getRequiredPendingRequest(rawToken, EmailActionType.PASSWORD_RESET, true, locale);
+        final UserAccount account = getRequiredAccount(request, locale, true);
         final Instant now = Instant.now(clock);
 
         userDao.updatePasswordHash(account.getId(), passwordEncoder.encode(newPassword));
@@ -310,8 +285,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final String rawToken,
             final EmailActionType expectedActionType,
             final boolean forUpdate,
-            final Locale locale,
-            final String invalidActionCode) {
+            final Locale locale) {
         final String tokenHash = hashToken(rawToken);
         final EmailActionRequest request =
                 (forUpdate
@@ -320,24 +294,24 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                         .orElseThrow(
                                 () ->
                                         new VerificationFailureNotFoundException(
-                                                message("verification.message.notFound", locale)));
+                                                "That verification link is invalid or no longer exists"));
 
         if (request.getStatus() == EmailActionStatus.COMPLETED
                 || request.getStatus() == EmailActionStatus.FAILED) {
             throw new VerificationFailureAlreadyUsedException(
-                    message("verification.message.alreadyUsed", locale));
+                    "This account verification can no longer be completed");
         }
 
         final Instant now = Instant.now(clock);
         if (request.getStatus() == EmailActionStatus.EXPIRED || request.isExpired(now)) {
             emailActionRequestDao.updateStatus(
                     request.getId(), EmailActionStatus.EXPIRED, request.getUser(), now);
-            throw new VerificationFailureExpiredException(
-                    message("verification.message.expired", locale));
+            throw new VerificationFailureExpiredException("That verification link has expired");
         }
 
         if (request.getActionType() != expectedActionType) {
-            throw new VerificationFailureInvalidActionException(message(invalidActionCode, locale));
+            throw new VerificationFailureInvalidActionException(
+                    "This password reset link can no longer be used");
         }
 
         return request;
@@ -346,7 +320,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private UserAccount getRequiredAccount(
             final EmailActionRequest request,
             final Locale locale,
-            final String invalidActionCode,
             final boolean requireVerifiedAccount) {
         final Optional<UserAccount> account =
                 request.getUser().getId() == null
@@ -354,11 +327,13 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                         : userDao.findAccountById(request.getUser().getId());
 
         if (account.isEmpty()) {
-            throw invalidateRequest(request, message(invalidActionCode, locale));
+            throw invalidateRequest(
+                    request, "This account verification can no longer be completed");
         }
 
         if (requireVerifiedAccount && !account.get().isEmailVerified()) {
-            throw invalidateRequest(request, message(invalidActionCode, locale));
+            throw invalidateRequest(
+                    request, "This account verification can no longer be completed");
         }
 
         return account.get();
@@ -399,28 +374,26 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private String normalizeUsername(final String username, final Locale locale) {
         if (username == null) {
             throw new UsernameInvalidException(
-                    message("auth.registration.error.usernameInvalid", locale));
+                    "Use 3 to 50 lowercase letters, numbers, or underscores for your username");
         }
 
         final String normalized = username.trim().toLowerCase(Locale.ROOT);
         if (!USERNAME_PATTERN.matcher(normalized).matches()) {
             throw new UsernameInvalidException(
-                    message("auth.registration.error.usernameInvalid", locale));
+                    "Use 3 to 50 lowercase letters, numbers, or underscores for your username");
         }
         return normalized;
     }
 
     private void validatePassword(final String password, final Locale locale) {
         if (isPasswordLengthInvalid(password)) {
-            throw new PasswordInvalidException(
-                    message("auth.registration.error.passwordInvalid", locale));
+            throw new PasswordInvalidException("Use 8 to 72 characters");
         }
     }
 
     private void validateResetPassword(final String password, final Locale locale) {
         if (isPasswordLengthInvalid(password)) {
-            throw new PasswordResetInvalidException(
-                    message("auth.registration.error.passwordInvalid", locale));
+            throw new PasswordResetInvalidException("Use 8 to 72 characters");
         }
     }
 
@@ -428,27 +401,21 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final String value, final int maxLength, final String fieldCode, final Locale locale) {
         if (value == null) {
             if ("name".equals(fieldCode)) {
-                throw new NameInvalidException(
-                        message("auth.registration.error.nameInvalid", locale));
+                throw new NameInvalidException("Enter a valid first name");
             } else if ("lastName".equals(fieldCode)) {
-                throw new LastNameInvalidException(
-                        message("auth.registration.error.lastNameInvalid", locale));
+                throw new LastNameInvalidException("Enter a valid last name");
             }
-            throw new AccountRegistrationException(
-                    message("auth.registration.error." + fieldCode + "Invalid", locale));
+            throw new AccountRegistrationException("Invalid field found");
         }
 
         final String normalized = value.trim();
         if (normalized.isBlank() || normalized.length() > maxLength) {
             if ("name".equals(fieldCode)) {
-                throw new NameInvalidException(
-                        message("auth.registration.error.nameInvalid", locale));
+                throw new NameInvalidException("Enter a valid first name");
             } else if ("lastName".equals(fieldCode)) {
-                throw new LastNameInvalidException(
-                        message("auth.registration.error.lastNameInvalid", locale));
+                throw new LastNameInvalidException("Enter a valid last name");
             }
-            throw new AccountRegistrationException(
-                    message("auth.registration.error." + fieldCode + "Invalid", locale));
+            throw new AccountRegistrationException("Invalid field found");
         }
         return normalized;
     }
@@ -464,13 +431,11 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         }
 
         if (normalized.length() > 50) {
-            throw new PhoneInvalidException(
-                    message("auth.registration.error.phoneInvalid", locale));
+            throw new PhoneInvalidException("Enter a valid phone number");
         }
 
         if (!normalized.matches("^[0-9+()\\-\\s]{6,50}$")) {
-            throw new PhoneInvalidException(
-                    message("auth.registration.error.phoneInvalid", locale));
+            throw new PhoneInvalidException("Enter a valid phone number");
         }
         return normalized;
     }
@@ -483,12 +448,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     }
 
     private String message(final String code, final Locale locale) {
-        return message(code, null, locale);
-    }
-
-    private String message(final String code, final Object[] args, final Locale locale) {
         return messageSource.getMessage(
-                Objects.requireNonNull(code), args, code, Objects.requireNonNull(locale));
+                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
 
     private static Locale currentLocale() {
