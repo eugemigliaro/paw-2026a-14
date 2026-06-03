@@ -119,7 +119,6 @@ public class HostTournamentController {
 
     @GetMapping("/host/tournaments/new")
     public ModelAndView showCreateTournament(final Locale locale) {
-        SecurityControllerUtils.requireAuthenticatedUser();
         return createFormView(createTournamentForm(), null, locale);
     }
 

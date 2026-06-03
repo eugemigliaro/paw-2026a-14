@@ -107,20 +107,8 @@ class HostTournamentControllerTest {
     }
 
     @Test
-    void getCreateRequiresAuthenticatedUser() throws Exception {
-        // 1. Arrange
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/new")).andExpect(status().isUnauthorized());
-    }
-
-    @Test
     void getCreateTournamentIncludesMapPickerConfig() throws Exception {
-        // 1. Arrange
-        AuthenticationUtils.authenticateUser(
-                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
-
-        // 2. Exercise + 3. Assert
+        // Arrange + exercise + test
         mockMvc.perform(get("/host/tournaments/new").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
