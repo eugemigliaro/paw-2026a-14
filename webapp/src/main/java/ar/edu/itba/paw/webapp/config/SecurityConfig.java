@@ -103,6 +103,12 @@ public class SecurityConfig {
                                                         "/matches/*/join-requests/cancel",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
+                                                        "/matches/*/invites/accept",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/*/invites/decline",
+                                                        HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
                                                         "/users/*/reviews", HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
                                                         "/users/*/reviews/delete",
