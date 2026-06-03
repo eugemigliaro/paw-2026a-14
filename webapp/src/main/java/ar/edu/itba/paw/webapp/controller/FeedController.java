@@ -304,7 +304,6 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
@@ -332,7 +331,7 @@ public class FeedController {
                                 match ->
                                         toCard(
                                                 match,
-                                                zoneId,
+                                                selectedTimezone,
                                                 locale,
                                                 currentUser,
                                                 messageSource.getMessage(
@@ -402,7 +401,6 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
@@ -430,7 +428,7 @@ public class FeedController {
                                 tournament ->
                                         toCard(
                                                 tournament,
-                                                zoneId,
+                                                selectedTimezone,
                                                 locale,
                                                 currentUser,
                                                 messageSource.getMessage(
@@ -795,18 +793,6 @@ public class FeedController {
                                 * Math.sin(deltaLonRad / 2)
                                 * Math.sin(deltaLonRad / 2);
         return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
     }
 
     private static ExploreLocation exploreLocation(final HttpSession session) {
