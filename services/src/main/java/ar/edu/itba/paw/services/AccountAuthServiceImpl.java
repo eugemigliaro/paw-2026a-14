@@ -8,9 +8,20 @@ import ar.edu.itba.paw.models.types.EmailActionType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
-import ar.edu.itba.paw.services.exceptions.PasswordResetException;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.services.exceptions.passwordReset.PasswordResetInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.AccountRegistrationException;
+import ar.edu.itba.paw.services.exceptions.registration.EmailPendingVerificationException;
+import ar.edu.itba.paw.services.exceptions.registration.EmailTakenException;
+import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.PasswordInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureAlreadyUsedException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureExpiredException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureInvalidActionException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureNotFoundException;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import java.nio.charset.StandardCharsets;
@@ -83,17 +94,16 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Optional<UserAccount> existingAccount = userDao.findAccountByEmail(normalizedEmail);
         if (existingAccount.isPresent()) {
             if (existingAccount.get().isEmailVerified()) {
-                throw new AccountRegistrationException(
-                        "email_taken", message("auth.registration.error.emailTaken", locale));
+                throw new EmailTakenException(
+                        message("auth.registration.error.emailTaken", locale));
             }
-            throw new AccountRegistrationException(
-                    "email_pending_verification",
+            throw new EmailPendingVerificationException(
                     message("auth.registration.error.emailPending", locale));
         }
 
         if (userDao.findByUsername(normalizedUsername).isPresent()) {
-            throw new AccountRegistrationException(
-                    "username_taken", message("auth.registration.error.usernameTaken", locale));
+            throw new UsernameTakenException(
+                    message("auth.registration.error.usernameTaken", locale));
         }
 
         try {
@@ -111,12 +121,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             return createAccountVerificationRequest(createdAccount, locale);
         } catch (final DataIntegrityViolationException exception) {
             if (userDao.findAccountByEmail(normalizedEmail).isPresent()) {
-                throw new AccountRegistrationException(
-                        "email_taken", message("auth.registration.error.emailTaken", locale));
+                throw new EmailTakenException(
+                        message("auth.registration.error.emailTaken", locale));
             }
             if (userDao.findByUsername(normalizedUsername).isPresent()) {
-                throw new AccountRegistrationException(
-                        "username_taken", message("auth.registration.error.usernameTaken", locale));
+                throw new UsernameTakenException(
+                        message("auth.registration.error.usernameTaken", locale));
             }
             throw exception;
         }
@@ -309,14 +319,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                                 : emailActionRequestDao.findByTokenHash(tokenHash))
                         .orElseThrow(
                                 () ->
-                                        new VerificationFailureException(
-                                                VerificationFailureReason.NOT_FOUND,
+                                        new VerificationFailureNotFoundException(
                                                 message("verification.message.notFound", locale)));
 
         if (request.getStatus() == EmailActionStatus.COMPLETED
                 || request.getStatus() == EmailActionStatus.FAILED) {
-            throw new VerificationFailureException(
-                    VerificationFailureReason.ALREADY_USED,
+            throw new VerificationFailureAlreadyUsedException(
                     message("verification.message.alreadyUsed", locale));
         }
 
@@ -324,14 +332,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         if (request.getStatus() == EmailActionStatus.EXPIRED || request.isExpired(now)) {
             emailActionRequestDao.updateStatus(
                     request.getId(), EmailActionStatus.EXPIRED, request.getUser(), now);
-            throw new VerificationFailureException(
-                    VerificationFailureReason.EXPIRED,
+            throw new VerificationFailureExpiredException(
                     message("verification.message.expired", locale));
         }
 
         if (request.getActionType() != expectedActionType) {
-            throw new VerificationFailureException(
-                    VerificationFailureReason.INVALID_ACTION, message(invalidActionCode, locale));
+            throw new VerificationFailureInvalidActionException(message(invalidActionCode, locale));
         }
 
         return request;
@@ -358,11 +364,11 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         return account.get();
     }
 
-    private VerificationFailureException invalidateRequest(
+    private VerificationFailureInvalidActionException invalidateRequest(
             final EmailActionRequest request, final String message) {
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.FAILED, null, Instant.now(clock));
-        return new VerificationFailureException(VerificationFailureReason.INVALID_ACTION, message);
+        return new VerificationFailureInvalidActionException(message);
     }
 
     private String buildVerificationUrl(final String rawToken, final Locale locale) {
@@ -392,44 +398,56 @@ public class AccountAuthServiceImpl implements AccountAuthService {
 
     private String normalizeUsername(final String username, final Locale locale) {
         if (username == null) {
-            throw new AccountRegistrationException(
-                    "username_invalid", message("auth.registration.error.usernameInvalid", locale));
+            throw new UsernameInvalidException(
+                    message("auth.registration.error.usernameInvalid", locale));
         }
 
         final String normalized = username.trim().toLowerCase(Locale.ROOT);
         if (!USERNAME_PATTERN.matcher(normalized).matches()) {
-            throw new AccountRegistrationException(
-                    "username_invalid", message("auth.registration.error.usernameInvalid", locale));
+            throw new UsernameInvalidException(
+                    message("auth.registration.error.usernameInvalid", locale));
         }
         return normalized;
     }
 
     private void validatePassword(final String password, final Locale locale) {
         if (isPasswordLengthInvalid(password)) {
-            throw new AccountRegistrationException(
-                    "password_invalid", message("auth.registration.error.passwordInvalid", locale));
+            throw new PasswordInvalidException(
+                    message("auth.registration.error.passwordInvalid", locale));
         }
     }
 
     private void validateResetPassword(final String password, final Locale locale) {
         if (isPasswordLengthInvalid(password)) {
-            throw new PasswordResetException(
-                    "password_invalid", message("auth.registration.error.passwordInvalid", locale));
+            throw new PasswordResetInvalidException(
+                    message("auth.registration.error.passwordInvalid", locale));
         }
     }
 
     private String normalizeRequiredText(
             final String value, final int maxLength, final String fieldCode, final Locale locale) {
         if (value == null) {
+            if ("name".equals(fieldCode)) {
+                throw new NameInvalidException(
+                        message("auth.registration.error.nameInvalid", locale));
+            } else if ("lastName".equals(fieldCode)) {
+                throw new LastNameInvalidException(
+                        message("auth.registration.error.lastNameInvalid", locale));
+            }
             throw new AccountRegistrationException(
-                    fieldCode + "_invalid",
                     message("auth.registration.error." + fieldCode + "Invalid", locale));
         }
 
         final String normalized = value.trim();
         if (normalized.isBlank() || normalized.length() > maxLength) {
+            if ("name".equals(fieldCode)) {
+                throw new NameInvalidException(
+                        message("auth.registration.error.nameInvalid", locale));
+            } else if ("lastName".equals(fieldCode)) {
+                throw new LastNameInvalidException(
+                        message("auth.registration.error.lastNameInvalid", locale));
+            }
             throw new AccountRegistrationException(
-                    fieldCode + "_invalid",
                     message("auth.registration.error." + fieldCode + "Invalid", locale));
         }
         return normalized;
@@ -446,13 +464,13 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         }
 
         if (normalized.length() > 50) {
-            throw new AccountRegistrationException(
-                    "phone_invalid", message("auth.registration.error.phoneInvalid", locale));
+            throw new PhoneInvalidException(
+                    message("auth.registration.error.phoneInvalid", locale));
         }
 
         if (!normalized.matches("^[0-9+()\\-\\s]{6,50}$")) {
-            throw new AccountRegistrationException(
-                    "phone_invalid", message("auth.registration.error.phoneInvalid", locale));
+            throw new PhoneInvalidException(
+                    message("auth.registration.error.phoneInvalid", locale));
         }
         return normalized;
     }

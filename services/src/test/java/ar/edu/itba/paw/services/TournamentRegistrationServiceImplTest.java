@@ -14,7 +14,7 @@ import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
@@ -34,7 +33,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,7 +43,6 @@ public class TournamentRegistrationServiceImplTest {
     @Mock private TournamentDao tournamentDao;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
-    @Mock private MessageSource messageSource;
 
     private TournamentRegistrationServiceImpl registrationService;
 
@@ -56,16 +53,7 @@ public class TournamentRegistrationServiceImplTest {
                         tournamentDao,
                         tournamentSoloEntryDao,
                         tournamentTeamDao,
-                        messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
-        Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.isNull(),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
         Mockito.lenient()
                 .when(tournamentSoloEntryDao.update(ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -120,15 +108,10 @@ public class TournamentRegistrationServiceImplTest {
         final User user = UserUtils.getUser(2L);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentRegistrationException exception =
-                Assertions.assertThrows(
-                        TournamentRegistrationException.class,
-                        () -> registrationService.joinSolo(10L, user));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentJoinFailureReason.REGISTRATION_NOT_OPEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationNotOpenException.class,
+                () -> registrationService.joinSolo(10L, user));
     }
 
     @Test
@@ -164,14 +147,10 @@ public class TournamentRegistrationServiceImplTest {
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentSoloEntryDao.countActiveByTournament(10L)).thenReturn(4L);
 
-        // 2. Exercise
-        final TournamentRegistrationException exception =
-                Assertions.assertThrows(
-                        TournamentRegistrationException.class,
-                        () -> registrationService.joinSolo(10L, user));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentJoinFailureReason.SOLO_POOL_FULL, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationSoloPoolFullException.class,
+                () -> registrationService.joinSolo(10L, user));
     }
 
     @Test
@@ -202,15 +181,10 @@ public class TournamentRegistrationServiceImplTest {
         final User user = UserUtils.getUser(2L);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentRegistrationException exception =
-                Assertions.assertThrows(
-                        TournamentRegistrationException.class,
-                        () -> registrationService.leaveSolo(10L, user));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentJoinFailureReason.REGISTRATION_NOT_OPEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationNotOpenException.class,
+                () -> registrationService.leaveSolo(10L, user));
     }
 
     @Test
@@ -306,14 +280,10 @@ public class TournamentRegistrationServiceImplTest {
         final List<TournamentSoloEntry> entries = activeEntries(tournament, 2);
         configureCloseRegistration(tournament, entries);
 
-        // 2. Exercise
-        final TournamentRegistrationException exception =
-                Assertions.assertThrows(
-                        TournamentRegistrationException.class,
-                        () -> registrationService.closeRegistration(10L, host));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentJoinFailureReason.UNDER_CAPACITY, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationUnderCapacityException.class,
+                () -> registrationService.closeRegistration(10L, host));
         Assertions.assertEquals(TournamentStatus.REGISTRATION, tournament.getStatus());
         Assertions.assertNull(tournament.getRegistrationClosedAt());
         Assertions.assertNull(tournament.getCancelledAt());
@@ -337,15 +307,10 @@ public class TournamentRegistrationServiceImplTest {
                         FIXED_NOW.plusSeconds(7200));
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentRegistrationException exception =
-                Assertions.assertThrows(
-                        TournamentRegistrationException.class,
-                        () -> registrationService.closeRegistration(10L, host));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentJoinFailureReason.REGISTRATION_NOT_OPEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationNotOpenException.class,
+                () -> registrationService.closeRegistration(10L, host));
     }
 
     @Test
@@ -365,14 +330,10 @@ public class TournamentRegistrationServiceImplTest {
         Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
                 .thenReturn(Optional.of(team));
 
-        // 2. Exercise
-        final TournamentRegistrationException exception =
-                Assertions.assertThrows(
-                        TournamentRegistrationException.class,
-                        () -> registrationService.joinSolo(10L, user));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentJoinFailureReason.ALREADY_ON_TEAM, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationAlreadyOnTeamException.class,
+                () -> registrationService.joinSolo(10L, user));
     }
 
     @Test
@@ -381,14 +342,10 @@ public class TournamentRegistrationServiceImplTest {
         final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentRegistrationException exception =
-                Assertions.assertThrows(
-                        TournamentRegistrationException.class,
-                        () -> registrationService.closeRegistration(10L, UserUtils.getUser(2L)));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentJoinFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationForbiddenException.class,
+                () -> registrationService.closeRegistration(10L, UserUtils.getUser(2L)));
     }
 
     private List<TournamentTeam> configureCloseRegistrationWithTeamCreation(
