@@ -111,14 +111,7 @@ public class ModerationServiceImpl implements ModerationService {
             throw new ModerationException("report_limit", "Report limit reached.");
         }
 
-        final boolean duplicateReport =
-                moderationReportDao.findReportsByReporter(reporter).stream()
-                        .anyMatch(
-                                report ->
-                                        report.getTargetType() == targetType
-                                                && report.getTargetId().equals(targetId)
-                                                && isActiveReport(report.getStatus()));
-        if (duplicateReport) {
+        if (moderationReportDao.existsActiveReportForTarget(reporter, targetType, targetId)) {
             LOGGER.warn(
                     "Duplicate report attempt by userId={} targetType={} targetId={}",
                     reporter.getId(),
@@ -176,19 +169,6 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ModerationReport> findReports() {
-        return moderationReportDao.findReports();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ModerationReport> findReports(
-            List<ReportTargetType> targetTypes, List<ReportStatus> statuses) {
-        return moderationReportDao.findReports(targetTypes, statuses);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PaginatedResult<ModerationReport> findReports(
             final List<ReportTargetType> targetTypes,
             final List<ReportStatus> statuses,
@@ -196,22 +176,6 @@ public class ModerationServiceImpl implements ModerationService {
             final int pageSize) {
         return moderationReportDao.findReports(
                 targetTypes, statuses, normalizePage(page), normalizePageSize(pageSize));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ModerationReport> findReportsByReporter(final User reporter) {
-        return findReportsByReporter(reporter, List.of(), List.of());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ModerationReport> findReportsByReporter(
-            final User reporter,
-            final List<ReportTargetType> targetTypes,
-            final List<ReportStatus> statuses) {
-        nonNullUser(reporter);
-        return moderationReportDao.findReportsByReporter(reporter, targetTypes, statuses);
     }
 
     @Override
@@ -438,12 +402,6 @@ public class ModerationServiceImpl implements ModerationService {
     private void sendUnbanEmail(final User user) {
         nonNullUser(user);
         mailDispatchService.sendUnbanNotice(user);
-    }
-
-    private static boolean isActiveReport(final ReportStatus status) {
-        return status == ReportStatus.PENDING
-                || status == ReportStatus.UNDER_REVIEW
-                || status == ReportStatus.APPEALED;
     }
 
     private static int normalizePage(final int page) {

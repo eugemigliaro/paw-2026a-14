@@ -25,21 +25,11 @@ public interface ModerationService {
             ReportReason reason,
             String details);
 
-    List<ModerationReport> findReports();
-
-    List<ModerationReport> findReports(
-            List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
-
     PaginatedResult<ModerationReport> findReports(
             List<ReportTargetType> targetTypes,
             List<ReportStatus> statuses,
             int page,
             int pageSize);
-
-    List<ModerationReport> findReportsByReporter(User reporter);
-
-    List<ModerationReport> findReportsByReporter(
-            User reporter, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
     PaginatedResult<ModerationReport> findReportsByReporter(
             User reporter,

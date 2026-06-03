@@ -342,29 +342,23 @@ public class ModerationServiceImplTest {
     }
 
     @Test
-    public void findReportsByReporter_returnsExactlyTheReportsFromDao() {
-        final List<ModerationReport> expected = List.of(sampleUserReport());
+    public void reportContent_throwsModerationException_whenDuplicateActiveReportExists() {
+        Mockito.when(moderationReportDao.countActiveReportsByReporter(UserUtils.getUser(50L)))
+                .thenReturn(0);
         Mockito.when(
-                        moderationReportDao.findReportsByReporter(
-                                UserUtils.getUser(50L), List.of(), List.of()))
-                .thenReturn(expected);
+                        moderationReportDao.existsActiveReportForTarget(
+                                UserUtils.getUser(50L), ReportTargetType.USER, 88L))
+                .thenReturn(true);
 
-        final List<ModerationReport> actual =
-                moderationService.findReportsByReporter(
-                        UserUtils.getUser(50L), List.of(), List.of());
-
-        Assertions.assertEquals(expected, actual);
-    }
-
-    @Test
-    public void findReports_returnsAllReportsReturnedByDao() {
-        final ModerationReport report = sampleUserReport();
-        Mockito.when(moderationReportDao.findReports()).thenReturn(List.of(report));
-
-        final List<ModerationReport> reports = moderationService.findReports();
-
-        Assertions.assertEquals(1, reports.size());
-        Assertions.assertEquals(77L, reports.get(0).getId());
+        Assertions.assertThrows(
+                ModerationException.class,
+                () ->
+                        moderationService.reportContent(
+                                UserUtils.getUser(50L),
+                                ReportTargetType.USER,
+                                88L,
+                                ReportReason.SPAM,
+                                "Duplicate"));
     }
 
     @Test
