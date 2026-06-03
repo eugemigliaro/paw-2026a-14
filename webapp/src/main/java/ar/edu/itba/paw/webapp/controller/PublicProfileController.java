@@ -10,11 +10,14 @@ import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
-import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewInvalidReactionException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotEligibleException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewSelfReviewException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewUserNotFoundException;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
@@ -29,6 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -54,7 +58,7 @@ public class PublicProfileController {
     private final MessageSource messageSource;
     private final PlatformTimeZoneService platformTimeZoneService;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public PublicProfileController(
             final UserService userService,
             final PlayerReviewService playerReviewService,
@@ -68,21 +72,6 @@ public class PublicProfileController {
         this.userSportRatingService = userSportRatingService;
         this.messageSource = messageSource;
         this.platformTimeZoneService = platformTimeZoneService;
-    }
-
-    public PublicProfileController(
-            final UserService userService,
-            final PlayerReviewService playerReviewService,
-            final ModerationService moderationService,
-            final UserSportRatingService userSportRatingService,
-            final MessageSource messageSource) {
-        this(
-                userService,
-                playerReviewService,
-                moderationService,
-                userSportRatingService,
-                messageSource,
-                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/users/{username}")
@@ -184,12 +173,20 @@ public class PublicProfileController {
             return redirectToProfile(username, "invalid_reaction", null);
         }
 
+        String errorCode = null;
         try {
             playerReviewService.submitReview(currentUser, reviewedUser, reaction, comment);
             return redirectToProfile(username, null, "saved", redirectAttributes);
-        } catch (final PlayerReviewException e) {
-            return redirectToProfile(username, e.getCode(), null);
+        } catch (final PlayerReviewUserNotFoundException e) {
+            errorCode = "user_not_found";
+        } catch (final PlayerReviewInvalidReactionException e) {
+            errorCode = "invalid_reaction";
+        } catch (final PlayerReviewSelfReviewException e) {
+            errorCode = "self_review";
+        } catch (final PlayerReviewNotEligibleException e) {
+            errorCode = "not_eligible";
         }
+        return redirectToProfile(username, errorCode, null);
     }
 
     @PostMapping("/users/{username}/reviews/delete")
@@ -199,12 +196,16 @@ public class PublicProfileController {
         final User reviewedUser = findUserByUsernameOrThrow(username);
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
+        String errorCode = null;
         try {
             playerReviewService.deleteReview(currentUser, reviewedUser);
             return redirectToProfile(username, null, "deleted", redirectAttributes);
-        } catch (final PlayerReviewException e) {
-            return redirectToProfile(username, e.getCode(), null);
+        } catch (final PlayerReviewNotFoundException e) {
+            errorCode = "not_found";
+        } catch (final PlayerReviewUserNotFoundException e) {
+            errorCode = "user_not_found";
         }
+        return redirectToProfile(username, errorCode, null);
     }
 
     private void addRatingsModel(final ModelAndView mav, final User user, final Locale locale) {
@@ -283,12 +284,12 @@ public class PublicProfileController {
         mav.addObject(
                 "reviewPreviousPageHref",
                 reviewResult.hasPrevious()
-                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() - 1)
+                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() - 1, null)
                         : null);
         mav.addObject(
                 "reviewNextPageHref",
                 reviewResult.hasNext()
-                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() + 1)
+                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() + 1, null)
                         : null);
         mav.addObject("reviewCanSubmit", reviewCanSubmit);
         mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
@@ -300,7 +301,7 @@ public class PublicProfileController {
                 buildReviewPageUrl(user, reviewFilter, reviewResult.getPage(), "open"));
         mav.addObject(
                 "reviewSectionPath",
-                buildReviewPageUrl(user, reviewFilter, reviewResult.getPage()));
+                buildReviewPageUrl(user, reviewFilter, reviewResult.getPage(), null));
         if (reviewCanSubmit) {
             mav.addObject(
                     "reviewCommentPromptLabel",
@@ -339,7 +340,11 @@ public class PublicProfileController {
                 messageSource.getMessage(
                         "profile.reviews.filter." + filter.getQueryValue(), null, locale);
         return new FilterOptionViewModel(
-                label, buildReviewPageUrl(user, filter, 1), null, null, filter == selectedFilter);
+                label,
+                buildReviewPageUrl(user, filter, 1, null),
+                null,
+                null,
+                filter == selectedFilter);
     }
 
     private static List<PaginationItemViewModel> buildReviewPaginationItems(
@@ -381,14 +386,9 @@ public class PublicProfileController {
             final int currentPage) {
         return new PaginationItemViewModel(
                 Integer.toString(page),
-                buildReviewPageUrl(user, selectedFilter, page),
+                buildReviewPageUrl(user, selectedFilter, page, null),
                 page == currentPage,
                 false);
-    }
-
-    private static String buildReviewPageUrl(
-            final User user, final PlayerReviewFilter selectedFilter, final int page) {
-        return buildReviewPageUrl(user, selectedFilter, page, null);
     }
 
     private static String buildReviewPageUrl(

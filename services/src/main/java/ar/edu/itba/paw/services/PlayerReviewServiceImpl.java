@@ -111,7 +111,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new PlayerReviewReporterNotFoundException("Reporter user is required.");
+            throw new PlayerReviewUserNotFoundException("User is required.");
         }
     }
 
