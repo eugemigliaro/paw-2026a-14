@@ -193,8 +193,8 @@ public class FeedController {
                             searchForm.getTimezone(),
                             selectedPriceRange.minPrice(),
                             selectedPriceRange.maxPrice(),
-                            searchForm.getLatitude(),
-                            searchForm.getLongitude());
+                            exploreLocation != null ? exploreLocation.latitude() : null,
+                            exploreLocation != null ? exploreLocation.longitude() : null);
             mav.addObject(
                     "feedPage",
                     buildTournamentFeedPageViewModel(

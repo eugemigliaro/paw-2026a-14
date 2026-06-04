@@ -44,6 +44,7 @@ import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -246,6 +247,53 @@ class FeedControllerTournamentTest {
                                 .param("type", "tournament"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?sort=distance&type=tournament"));
+    }
+
+    @Test
+    void tournamentDistanceSearchUsesStoredExploreLocation() throws Exception {
+        final MvcResult locationResult =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-34.61")
+                                        .param("longitude", "-58.38")
+                                        .param("type", "tournament"))
+                        .andExpect(status().is3xxRedirection())
+                        .andReturn();
+        final MockHttpSession session =
+                (MockHttpSession) locationResult.getRequest().getSession(false);
+
+        Mockito.when(
+                        tournamentService.searchPublicTournaments(
+                                Mockito.eq(""),
+                                Mockito.<List<Sport>>argThat(
+                                        sports -> sports != null && sports.isEmpty()),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.eq(EventSort.DISTANCE),
+                                Mockito.eq(1),
+                                Mockito.eq(12),
+                                Mockito.nullable(ZoneId.class),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.eq(-34.61),
+                                Mockito.eq(-58.38)))
+                .thenReturn(new PaginatedResult<>(List.of(tournament(78L, "Nearby Cup")), 1, 1, 12));
+
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/")
+                                        .session(session)
+                                        .param("sort", "distance")
+                                        .param("type", "tournament"))
+                        .andExpect(status().isOk())
+                        .andExpect(model().attribute("selectedType", "tournament"))
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+
+        Assertions.assertEquals(1, feedPage.getFeaturedEvents().size());
+        Assertions.assertEquals("/tournaments/78", feedPage.getFeaturedEvents().get(0).getHref());
     }
 
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {
