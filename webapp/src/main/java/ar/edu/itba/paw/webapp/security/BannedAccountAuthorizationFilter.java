@@ -1,8 +1,7 @@
 package ar.edu.itba.paw.webapp.security;
 
-import ar.edu.itba.paw.persistence.UserBanDao;
+import ar.edu.itba.paw.services.ModerationService;
 import java.io.IOException;
-import java.time.Instant;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -11,10 +10,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 public class BannedAccountAuthorizationFilter extends OncePerRequestFilter {
 
-    private final UserBanDao userBanDao;
+    private final ModerationService moderationService;
 
-    public BannedAccountAuthorizationFilter(final UserBanDao userBanDao) {
-        this.userBanDao = userBanDao;
+    public BannedAccountAuthorizationFilter(final ModerationService moderationService) {
+        this.moderationService = moderationService;
     }
 
     @Override
@@ -26,7 +25,7 @@ public class BannedAccountAuthorizationFilter extends OncePerRequestFilter {
         final AuthenticatedUserPrincipal principal = CurrentAuthenticatedUser.get().orElse(null);
         final String path = requestPath(request);
         if (principal != null
-                && userBanDao.findActiveBanForUser(principal.getUser(), Instant.now()).isPresent()
+                && moderationService.findActiveBan(principal.getUser()).isPresent()
                 && !isAllowedForBannedAccount(path, request.getMethod())) {
             response.sendRedirect(request.getContextPath() + "/account/ban");
             return;

@@ -4,11 +4,9 @@ import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
@@ -30,21 +28,11 @@ public class UserBanAppealController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
-
-    @org.springframework.beans.factory.annotation.Autowired
-    public UserBanAppealController(
-            final ModerationService moderationService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
-        this.moderationService = moderationService;
-        this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
 
     public UserBanAppealController(
             final ModerationService moderationService, final MessageSource messageSource) {
-        this(moderationService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
+        this.moderationService = moderationService;
+        this.messageSource = messageSource;
     }
 
     @GetMapping
@@ -60,8 +48,6 @@ public class UserBanAppealController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final ModelAndView mav = new ModelAndView("account/banned");
         mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/account/ban"));
-        mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.accountBanned", null, locale));
         mav.addObject("banTitle", messageSource.getMessage("account.ban.title", null, locale));
         mav.addObject(
@@ -76,7 +62,7 @@ public class UserBanAppealController {
                 "banUntilLabel",
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                         .withLocale(locale)
-                        .withZone(platformTimeZoneService.defaultZone())
+                        .withZone(ZoneId.systemDefault())
                         .format(activeBan.getBannedUntil()));
         mav.addObject(
                 "banReason",

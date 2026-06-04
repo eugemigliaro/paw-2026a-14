@@ -3,11 +3,8 @@ package ar.edu.itba.paw.services.security;
 import static org.mockito.Mockito.when;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
-import ar.edu.itba.paw.services.PlayerReviewService;
-import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.util.List;
 import java.util.Optional;
@@ -23,16 +20,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class SecurityServiceImplTest {
 
     private MatchDao matchDao;
-    private PlayerReviewService playerReviewService;
-    private UserService userService;
     private SecurityServiceImpl securityService;
 
     @BeforeEach
     void setUp() {
         matchDao = Mockito.mock(MatchDao.class);
-        playerReviewService = Mockito.mock(PlayerReviewService.class);
-        userService = Mockito.mock(UserService.class);
-        securityService = new SecurityServiceImpl(matchDao, playerReviewService, userService);
+        securityService = new SecurityServiceImpl(matchDao);
     }
 
     @AfterEach
@@ -83,23 +76,5 @@ class SecurityServiceImplTest {
         when(matchDao.findById(10L)).thenReturn(Optional.of(match));
 
         Assertions.assertTrue(securityService.isHost(10L));
-    }
-
-    @Test
-    void hasReviewedDelegatesToPlayerReviewService() {
-        final User u = UserUtils.getUser(7L);
-        final TestPrincipal p = new TestPrincipal(u);
-        final var token =
-                new UsernamePasswordAuthenticationToken(
-                        p, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-        SecurityContextHolder.getContext().setAuthentication(token);
-
-        final User reviewed = UserUtils.getUser(13L);
-        when(userService.findByUsername(reviewed.getUsername())).thenReturn(Optional.of(reviewed));
-        when(playerReviewService.findReviewByPair(
-                        Mockito.argThat(user -> user.getId().equals(7L)), Mockito.eq(reviewed)))
-                .thenReturn(Optional.of(Mockito.mock(PlayerReview.class)));
-
-        Assertions.assertTrue(securityService.hasReviewed(reviewed.getUsername()));
     }
 }

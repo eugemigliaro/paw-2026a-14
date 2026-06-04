@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -23,7 +22,7 @@ public class UpdateMatchRequest {
     private final EventVisibility visibility;
     private final EventJoinPolicy joinPolicy;
     private final EventStatus status;
-    private final ImageMetadata bannerImageMetadata;
+    private final ImageUpload bannerImage;
 
     public UpdateMatchRequest(
             final String address,
@@ -36,7 +35,7 @@ public class UpdateMatchRequest {
             final Sport sport,
             final EventVisibility visibility,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata) {
+            final ImageUpload bannerImage) {
         this(
                 address,
                 title,
@@ -49,7 +48,7 @@ public class UpdateMatchRequest {
                 visibility,
                 defaultJoinPolicyForVisibility(visibility),
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 null,
                 null);
     }
@@ -66,7 +65,7 @@ public class UpdateMatchRequest {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata) {
+            final ImageUpload bannerImage) {
         this(
                 address,
                 title,
@@ -79,7 +78,7 @@ public class UpdateMatchRequest {
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 null,
                 null);
     }
@@ -96,7 +95,7 @@ public class UpdateMatchRequest {
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata,
+            final ImageUpload bannerImage,
             final Double latitude,
             final Double longitude) {
         this.address = address;
@@ -112,7 +111,7 @@ public class UpdateMatchRequest {
         this.visibility = visibility;
         this.joinPolicy = joinPolicy;
         this.status = status;
-        this.bannerImageMetadata = bannerImageMetadata;
+        this.bannerImage = bannerImage;
     }
 
     private static EventJoinPolicy defaultJoinPolicyForVisibility(
@@ -174,7 +173,7 @@ public class UpdateMatchRequest {
         return status;
     }
 
-    public ImageMetadata getBannerImageMetadata() {
-        return bannerImageMetadata;
+    public ImageUpload getBannerImage() {
+        return bannerImage;
     }
 }

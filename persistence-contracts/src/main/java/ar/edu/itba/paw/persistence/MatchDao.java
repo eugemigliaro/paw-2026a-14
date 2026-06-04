@@ -5,11 +5,12 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
-import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
@@ -233,7 +234,7 @@ public interface MatchDao {
             Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            MatchSort sort,
+            EventSort sort,
             ZoneId zoneId,
             Double latitude,
             Double longitude,
@@ -248,7 +249,7 @@ public interface MatchDao {
             Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            MatchSort sort,
+            EventSort sort,
             ZoneId zoneId,
             int offset,
             int limit) {
@@ -274,7 +275,7 @@ public interface MatchDao {
             final EventTimeFilter timeFilter,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final int offset,
             final int limit) {
@@ -325,7 +326,7 @@ public interface MatchDao {
             Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            MatchSort sort,
+            EventSort sort,
             ZoneId zoneId,
             int offset,
             int limit);
@@ -340,7 +341,7 @@ public interface MatchDao {
             final EventTimeFilter timeFilter,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final int offset,
             final int limit) {
@@ -414,7 +415,7 @@ public interface MatchDao {
             Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            MatchSort sort,
+            EventSort sort,
             ZoneId zoneId,
             int offset,
             int limit);
@@ -429,7 +430,7 @@ public interface MatchDao {
             final EventTimeFilter timeFilter,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final int offset,
             final int limit) {
@@ -490,4 +491,36 @@ public interface MatchDao {
                 maxPrice,
                 zoneId);
     }
+
+    List<Match> findDashboardMatches(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            List<EventStatus> statuses,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            EventSort sort,
+            ZoneId zoneId,
+            List<ParticipantStatus> participantStatuses,
+            int offset,
+            int limit);
+
+    int countDashboardMatches(
+            User user,
+            Boolean upcoming,
+            Boolean includeHosted,
+            String query,
+            List<Sport> sports,
+            List<EventStatus> statuses,
+            Instant startsAtFrom,
+            Instant startsAtTo,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            EventSort sort,
+            ZoneId zoneId,
+            List<ParticipantStatus> participantStatuses);
 }

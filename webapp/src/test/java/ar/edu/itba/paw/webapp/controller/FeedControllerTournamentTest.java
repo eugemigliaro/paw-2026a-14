@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -21,12 +22,18 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Assertions;
@@ -36,6 +43,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -60,13 +68,13 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         matchService.searchPublicMatches(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.nullable(List.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.nullable(String.class),
+                                ArgumentMatchers.nullable(ZoneId.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -75,13 +83,13 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.nullable(List.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.nullable(String.class),
+                                ArgumentMatchers.nullable(ZoneId.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -105,8 +113,15 @@ class FeedControllerTournamentTest {
                                         matchParticipationService,
                                         matchReservationService,
                                         tournamentService,
-                                        messageSource))
+                                        messageSource,
+                                        false,
+                                        "",
+                                        "",
+                                        0,
+                                        0,
+                                        0))
                         .setViewResolvers(viewResolver)
+                        .setConversionService(conversionService())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .build();
     }
@@ -131,13 +146,13 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 Mockito.eq("cup"),
-                                Mockito.eq("padel"),
+                                Mockito.eq(List.of(Sport.PADEL)),
                                 Mockito.isNull(),
                                 Mockito.isNull(),
-                                Mockito.eq("price"),
+                                Mockito.eq(EventSort.PRICE),
                                 Mockito.eq(2),
                                 Mockito.eq(12),
-                                Mockito.nullable(String.class),
+                                Mockito.nullable(ZoneId.class),
                                 Mockito.argThat(value -> value.compareTo(new BigDecimal("5")) == 0),
                                 Mockito.argThat(
                                         value -> value.compareTo(new BigDecimal("20")) == 0),
@@ -227,6 +242,17 @@ class FeedControllerTournamentTest {
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setFallbackToSystemLocale(false);
         return messageSource;
+    }
+
+    private static DefaultFormattingConversionService conversionService() {
+        final DefaultFormattingConversionService conversionService =
+                new DefaultFormattingConversionService();
+        conversionService.addConverter(new StringToSportConverter());
+        conversionService.addConverter(new StringToEventStatusConverter());
+        conversionService.addConverter(new StringToEventVisibilityConverter());
+        conversionService.addConverter(new StringToMatchSortConverter());
+        conversionService.addConverter(new StringToEventTypeConverter());
+        return conversionService;
     }
 
     private static Match match(final long id, final String title) {

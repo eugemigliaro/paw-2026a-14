@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.TournamentSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -15,6 +15,7 @@ import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +43,7 @@ public class TournamentServiceImplTest {
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMailService tournamentMailService;
+    @Mock private ImageService imageService;
     @Mock private MessageSource messageSource;
 
     private TournamentServiceImpl tournamentService;
@@ -51,9 +53,8 @@ public class TournamentServiceImplTest {
         tournamentService =
                 new TournamentServiceImpl(
                         tournamentDao,
-                        tournamentSoloEntryDao,
-                        tournamentTeamDao,
                         tournamentMailService,
+                        imageService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -90,7 +91,7 @@ public class TournamentServiceImplTest {
                                 request.getStartsAt(),
                                 request.getEndsAt(),
                                 request.getPricePerPlayer(),
-                                request.getBannerImageMetadata(),
+                                null,
                                 request.getFormat(),
                                 request.getBracketSize(),
                                 request.getTeamSize(),
@@ -354,7 +355,7 @@ public class TournamentServiceImplTest {
                                 Instant.parse("2026-04-11T00:00:00Z"),
                                 BigDecimal.ZERO,
                                 BigDecimal.TEN,
-                                TournamentSort.SOONEST,
+                                EventSort.SOONEST,
                                 null,
                                 null,
                                 20,
@@ -365,13 +366,13 @@ public class TournamentServiceImplTest {
         final PaginatedResult<Tournament> result =
                 tournamentService.searchPublicTournaments(
                         "cup",
-                        "padel",
-                        "2026-04-06",
-                        "2026-04-10",
-                        "spots",
+                        List.of(Sport.PADEL),
+                        Instant.parse("2026-04-06T00:00:00Z"),
+                        Instant.parse("2026-04-10T00:00:00Z"),
+                        EventSort.SOONEST,
                         9,
                         10,
-                        "UTC",
+                        ZoneId.of("UTC"),
                         BigDecimal.ZERO,
                         BigDecimal.TEN,
                         null,
@@ -399,7 +400,7 @@ public class TournamentServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                TournamentSort.DISTANCE,
+                                EventSort.DISTANCE,
                                 -34.60,
                                 -58.38,
                                 0,
@@ -409,7 +410,18 @@ public class TournamentServiceImplTest {
         // 2. Exercise
         final PaginatedResult<Tournament> result =
                 tournamentService.searchPublicTournaments(
-                        "", "", null, null, "distance", 1, 12, "UTC", null, null, -34.60, -58.38);
+                        "",
+                        List.of(),
+                        null,
+                        null,
+                        EventSort.DISTANCE,
+                        1,
+                        12,
+                        ZoneId.of("UTC"),
+                        null,
+                        null,
+                        -34.60,
+                        -58.38);
 
         // 3. Assert
         Assertions.assertEquals(1, result.getTotalCount());
@@ -421,25 +433,60 @@ public class TournamentServiceImplTest {
         // 1. Arrange
         final User user = UserUtils.getUser(1L);
         final Tournament hosted = tournament(10L, user, TournamentStatus.REGISTRATION);
-        final Tournament solo =
-                tournament(11L, UserUtils.getUser(2L), TournamentStatus.REGISTRATION);
-        final Tournament team =
-                tournament(12L, UserUtils.getUser(3L), TournamentStatus.IN_PROGRESS);
-        Mockito.when(tournamentDao.findHostedByUser(user, 0, Integer.MAX_VALUE))
+        tournament(11L, UserUtils.getUser(2L), TournamentStatus.REGISTRATION);
+        tournament(12L, UserUtils.getUser(3L), TournamentStatus.IN_PROGRESS);
+        Mockito.when(
+                        tournamentDao.findDashboardTournaments(
+                                user,
+                                Boolean.FALSE,
+                                Boolean.TRUE,
+                                "",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.SOONEST,
+                                null,
+                                null,
+                                0,
+                                12))
                 .thenReturn(List.of(hosted));
-        Mockito.when(tournamentSoloEntryDao.findTournamentsByUser(user)).thenReturn(List.of(solo));
-        Mockito.when(tournamentTeamDao.findTournamentsByMember(user)).thenReturn(List.of(team));
+        Mockito.when(
+                        tournamentDao.countDashboardTournaments(
+                                user,
+                                Boolean.FALSE,
+                                Boolean.TRUE,
+                                "",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null))
+                .thenReturn(1);
 
         // 2. Exercise
         final PaginatedResult<Tournament> result =
-                tournamentService.findHostedTournaments(
-                        user, false, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
+                tournamentService.findDashboardTournaments(
+                        user,
+                        false,
+                        true,
+                        "",
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        1,
+                        12,
+                        ZoneId.of("UTC"),
+                        null,
+                        null,
+                        null,
+                        null);
 
         // 3. Assert
-        Assertions.assertEquals(3, result.getTotalCount());
+        Assertions.assertEquals(1, result.getTotalCount());
         Assertions.assertTrue(result.getItems().contains(hosted));
-        Assertions.assertTrue(result.getItems().contains(solo));
-        Assertions.assertTrue(result.getItems().contains(team));
     }
 
     @Test
@@ -450,15 +497,54 @@ public class TournamentServiceImplTest {
                 tournamentWithSchedule(10L, user, TournamentStatus.REGISTRATION, null, null);
         final Tournament completed =
                 tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
-        Mockito.when(tournamentDao.findHostedByUser(user, 0, Integer.MAX_VALUE))
+        Mockito.when(
+                        tournamentDao.findDashboardTournaments(
+                                user,
+                                Boolean.FALSE,
+                                Boolean.TRUE,
+                                "",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.SOONEST,
+                                null,
+                                null,
+                                0,
+                                12))
                 .thenReturn(List.of(unscheduled, completed));
-        Mockito.when(tournamentSoloEntryDao.findTournamentsByUser(user)).thenReturn(List.of());
-        Mockito.when(tournamentTeamDao.findTournamentsByMember(user)).thenReturn(List.of());
+        Mockito.when(
+                        tournamentDao.countDashboardTournaments(
+                                user,
+                                Boolean.FALSE,
+                                Boolean.TRUE,
+                                "",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null))
+                .thenReturn(1);
 
         // 2. Exercise
         final PaginatedResult<Tournament> result =
-                tournamentService.findHostedTournaments(
-                        user, false, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
+                tournamentService.findDashboardTournaments(
+                        user,
+                        false,
+                        true,
+                        "",
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        1,
+                        12,
+                        ZoneId.of("UTC"),
+                        null,
+                        null,
+                        null,
+                        null);
 
         // 3. Assert
         Assertions.assertEquals(1, result.getTotalCount());
@@ -469,19 +555,49 @@ public class TournamentServiceImplTest {
     public void findHostedTournamentsExcludesActiveTournamentWithoutScheduleFromPast() {
         // 1. Arrange
         final User user = UserUtils.getUser(1L);
-        final Tournament unscheduled =
-                tournamentWithSchedule(10L, user, TournamentStatus.REGISTRATION, null, null);
+        tournamentWithSchedule(10L, user, TournamentStatus.REGISTRATION, null, null);
         final Tournament completed =
                 tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
-        Mockito.when(tournamentDao.findHostedByUser(user, 0, Integer.MAX_VALUE))
-                .thenReturn(List.of(unscheduled, completed));
-        Mockito.when(tournamentSoloEntryDao.findTournamentsByUser(user)).thenReturn(List.of());
-        Mockito.when(tournamentTeamDao.findTournamentsByMember(user)).thenReturn(List.of());
+        Mockito.when(
+                        tournamentDao.findDashboardTournaments(
+                                user,
+                                Boolean.TRUE,
+                                Boolean.TRUE,
+                                "",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.SOONEST,
+                                null,
+                                null,
+                                0,
+                                12))
+                .thenReturn(List.of(completed));
+        Mockito.when(
+                        tournamentDao.countDashboardTournaments(
+                                user, Boolean.TRUE, Boolean.TRUE, "", null, null, null, null, null))
+                .thenReturn(1);
 
         // 2. Exercise
         final PaginatedResult<Tournament> result =
-                tournamentService.findHostedTournaments(
-                        user, true, "", null, null, null, "soonest", 1, 12, "UTC", null, null);
+                tournamentService.findDashboardTournaments(
+                        user,
+                        true,
+                        true,
+                        "",
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        1,
+                        12,
+                        ZoneId.of("UTC"),
+                        null,
+                        null,
+                        null,
+                        null);
 
         // 3. Assert
         Assertions.assertEquals(1, result.getTotalCount());

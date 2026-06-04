@@ -152,7 +152,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 request.getEmail(),
                 request.getExpiresAt(),
                 message("verification.preview.account.confirm", locale),
-                "/login?verified=1",
                 List.of());
     }
 
@@ -184,7 +183,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                         ? account
                         : userDao.findAccountById(account.getId()).orElse(account);
         return new VerificationConfirmationResult(
-                verifiedAccount, "/", message("verification.message.accountVerified", locale));
+                verifiedAccount, message("verification.message.accountVerified", locale));
     }
 
     @Override
@@ -237,9 +236,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
         return new VerificationConfirmationResult(
-                account.getId(),
-                "/login?reset=1",
-                message("passwordReset.message.completed", locale));
+                account.getId(), message("passwordReset.message.completed", locale));
     }
 
     @Override

@@ -5,8 +5,8 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
-import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -330,7 +330,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final Double latitude,
             final Double longitude,
@@ -399,7 +399,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final int offset,
             final int limit) {
@@ -468,7 +468,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final MatchSort sort,
+            final EventSort sort,
             final ZoneId zoneId,
             final int offset,
             final int limit) {
@@ -520,7 +520,7 @@ public class MatchJpaDao implements MatchDao {
 
     private List<Match> findPage(
             final QueryParts parts,
-            final MatchSort sort,
+            final EventSort sort,
             final Boolean upcoming,
             final Double latitude,
             final Double longitude,
@@ -537,7 +537,7 @@ public class MatchJpaDao implements MatchDao {
                         .setMaxResults(limit);
         setCommonParams(idQuery);
         setParams(idQuery, parts.params);
-        if (sort == MatchSort.DISTANCE) {
+        if (sort == EventSort.DISTANCE) {
             setDistanceParams(idQuery, latitude, longitude);
         }
 
@@ -761,12 +761,12 @@ public class MatchJpaDao implements MatchDao {
     }
 
     private static String orderBy(
-            final MatchSort sort,
+            final EventSort sort,
             final Boolean upcoming,
             final Double latitude,
             final Double longitude) {
-        final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
-        if (safeSort == MatchSort.DISTANCE && latitude != null && longitude != null) {
+        final EventSort safeSort = sort == null ? EventSort.SOONEST : sort;
+        if (safeSort == EventSort.DISTANCE && latitude != null && longitude != null) {
             return " ORDER BY CASE WHEN m.latitude IS NULL OR m.longitude IS NULL THEN 1 ELSE 0 END ASC,"
                     + " ((m.latitude - :latitude) * (m.latitude - :latitude))"
                     + " + ((m.longitude - :longitude) * :cosLatitude * (m.longitude - :longitude) * :cosLatitude) ASC,"
@@ -843,6 +843,114 @@ public class MatchJpaDao implements MatchDao {
                     now.toLocalDate().atStartOfDay(zoneId).toInstant(), now.toInstant());
         }
         return new TimeRange(now.minusDays(7).toInstant(), now.toInstant());
+    }
+
+    @Override
+    public List<Match> findDashboardMatches(
+            final User user,
+            final Boolean upcoming,
+            final Boolean includeHosted,
+            final String query,
+            final List<Sport> sports,
+            final List<EventStatus> statuses,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final EventSort sort,
+            final ZoneId zoneId,
+            final List<ParticipantStatus> participantStatuses,
+            final int offset,
+            final int limit) {
+        final QueryParts parts = new QueryParts();
+        parts.where.add("m.deleted = FALSE");
+
+        final List<String> orClauses = new ArrayList<>();
+        if (participantStatuses != null && !participantStatuses.isEmpty()) {
+            orClauses.add(
+                    "EXISTS (SELECT 1 FROM MatchParticipant me"
+                            + " WHERE me.match = m"
+                            + " AND me.user.id = :dashboardUserId"
+                            + " AND me.status IN :dashboardStatuses)");
+            parts.params.put("dashboardUserId", user.getId());
+            parts.params.put("dashboardStatuses", participantStatuses);
+        }
+        if (includeHosted != null && includeHosted) {
+            orClauses.add("m.host.id = :dashboardUserId");
+            parts.params.put("dashboardUserId", user.getId());
+        }
+
+        if (!orClauses.isEmpty()) {
+            parts.where.add("(" + String.join(" OR ", orClauses) + ")");
+        }
+
+        appendManagedFilters(parts, null, statuses);
+        appendFilters(
+                parts,
+                query,
+                sports,
+                null,
+                startsAtFrom,
+                startsAtTo,
+                zoneId,
+                minPrice,
+                maxPrice,
+                upcoming);
+
+        return findPage(parts, sort, upcoming, null, null, offset, limit);
+    }
+
+    @Override
+    public int countDashboardMatches(
+            final User user,
+            final Boolean upcoming,
+            final Boolean includeHosted,
+            final String query,
+            final List<Sport> sports,
+            final List<EventStatus> statuses,
+            final Instant startsAtFrom,
+            final Instant startsAtTo,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final EventSort sort,
+            final ZoneId zoneId,
+            final List<ParticipantStatus> participantStatuses) {
+        final QueryParts parts = new QueryParts();
+        parts.where.add("m.deleted = FALSE");
+
+        final List<String> orClauses = new ArrayList<>();
+        if (participantStatuses != null && !participantStatuses.isEmpty()) {
+            orClauses.add(
+                    "EXISTS (SELECT 1 FROM MatchParticipant me"
+                            + " WHERE me.match = m"
+                            + " AND me.user.id = :dashboardUserId"
+                            + " AND me.status IN :dashboardStatuses)");
+            parts.params.put("dashboardUserId", user.getId());
+            parts.params.put("dashboardStatuses", participantStatuses);
+        }
+        if (includeHosted != null && includeHosted) {
+            orClauses.add("m.host.id = :dashboardUserId");
+            parts.params.put("dashboardUserId", user.getId());
+        }
+
+        if (!orClauses.isEmpty()) {
+            parts.where.add("(" + String.join(" OR ", orClauses) + ")");
+        }
+
+        appendManagedFilters(parts, null, statuses);
+        appendFilters(
+                parts,
+                query,
+                sports,
+                null,
+                startsAtFrom,
+                startsAtTo,
+                zoneId,
+                minPrice,
+                maxPrice,
+                upcoming);
+
+        return countMatches(parts);
     }
 
     private static final class QueryParts {

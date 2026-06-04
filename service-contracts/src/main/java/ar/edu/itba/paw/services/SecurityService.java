@@ -9,6 +9,4 @@ public interface SecurityService {
     User currentUser();
 
     boolean isHost(Long matchId);
-
-    boolean hasReviewed(String username);
 }

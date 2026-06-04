@@ -4,8 +4,8 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
-import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -368,7 +368,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -400,7 +400,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -431,7 +431,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -458,7 +458,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         2);
@@ -469,7 +469,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         2,
                         2);
@@ -506,7 +506,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.ALL,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -541,7 +541,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -581,7 +581,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         new BigDecimal("20"),
                         new BigDecimal("30"),
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -636,7 +636,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -711,7 +711,7 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         null,
-                        MatchSort.DISTANCE,
+                        EventSort.DISTANCE,
                         ZoneId.systemDefault(),
                         -34.6,
                         -58.4,
@@ -1287,7 +1287,7 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -1416,7 +1416,7 @@ public class MatchJpaDaoTest {
                         null,
                         new BigDecimal("20"),
                         new BigDecimal("40"),
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -1460,7 +1460,7 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -1533,7 +1533,7 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         null,
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -1594,7 +1594,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         new BigDecimal("20"),
                         new BigDecimal("30"),
-                        MatchSort.SOONEST,
+                        EventSort.SOONEST,
                         ZoneId.systemDefault(),
                         0,
                         20);
@@ -1623,7 +1623,7 @@ public class MatchJpaDaoTest {
                         EventTimeFilter.WEEK,
                         null,
                         null,
-                        MatchSort.SPOTS_DESC,
+                        EventSort.SPOTS_DESC,
                         ZoneId.systemDefault(),
                         0,
                         3);
@@ -2098,7 +2098,7 @@ public class MatchJpaDaoTest {
                 EventTimeFilter.WEEK,
                 null,
                 null,
-                MatchSort.SOONEST,
+                EventSort.SOONEST,
                 ZoneId.systemDefault(),
                 0,
                 20);
