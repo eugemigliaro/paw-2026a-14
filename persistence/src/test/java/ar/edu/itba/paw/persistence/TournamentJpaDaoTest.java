@@ -116,6 +116,10 @@ public class TournamentJpaDaoTest {
         final Tournament first = createTournament(TournamentStatus.REGISTRATION);
         final Tournament second = createTournament(TournamentStatus.IN_PROGRESS);
         createTournament(TournamentStatus.COMPLETED);
+        createTournament(player, "Other Host Cup", TournamentStatus.REGISTRATION);
+        final Tournament deleted = createTournament(TournamentStatus.REGISTRATION);
+        deleted.setDeleted(true);
+        tournamentDao.update(deleted);
 
         em.flush();
         em.clear();
@@ -136,10 +140,14 @@ public class TournamentJpaDaoTest {
                         null,
                         0,
                         10);
+        final int hostedCount =
+                tournamentDao.countDashboardTournaments(
+                        host, Boolean.TRUE, Boolean.TRUE, null, null, null, null, null, null);
         final List<Tournament> publicActive = tournamentDao.findPublicRegistrationOrLive(0, 10);
 
         Assertions.assertEquals(3, hosted.size());
-        Assertions.assertEquals(2, publicActive.size());
+        Assertions.assertEquals(3, hostedCount);
+        Assertions.assertEquals(3, publicActive.size());
         Assertions.assertTrue(publicActive.stream().anyMatch(t -> t.getId().equals(first.getId())));
         Assertions.assertTrue(
                 publicActive.stream().anyMatch(t -> t.getId().equals(second.getId())));
@@ -612,11 +620,16 @@ public class TournamentJpaDaoTest {
     }
 
     private Tournament createTournament(final TournamentStatus status) {
+        return createTournament(host, "Summer Cup", status);
+    }
+
+    private Tournament createTournament(
+            final User tournamentHost, final String title, final TournamentStatus status) {
         final Instant now = Instant.now();
         return tournamentDao.create(
-                host,
+                tournamentHost,
                 Sport.PADEL,
-                "Summer Cup",
+                title,
                 "Competitive padel tournament",
                 "Club Court 1",
                 -34.56,

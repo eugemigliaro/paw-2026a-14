@@ -44,7 +44,7 @@ final class MatchDashboardQueryState {
                 tournament ? List.of() : normalizedForm.getStatus();
         final List<ParticipantStatus> participantStatuses =
                 tournament ? List.of() : participantStatuses(selectedCategories);
-        final Boolean includeHosted = tournament ? null : includeHosted(selectedCategories);
+        final Boolean includeHosted = tournament ? Boolean.TRUE : includeHosted(selectedCategories);
 
         normalizedForm.setCategory(selectedCategories);
         normalizedForm.setStatus(selectedStatuses);

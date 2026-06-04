@@ -36,7 +36,7 @@ class MatchDashboardQueryStateTest {
         assertTrue(selection.searchForm().getCategory().isEmpty());
         assertNull(selection.searchForm().getStartDate());
         assertNull(selection.searchForm().getEndDate());
-        assertNull(selection.includeHosted());
+        assertEquals(Boolean.TRUE, selection.includeHosted());
         assertTrue(selection.participantStatuses().isEmpty());
     }
 

@@ -281,6 +281,7 @@ public class TournamentJpaDao implements TournamentDao {
     private static QueryParts dashboardSearchParts(
             final User user, final Boolean upcoming, final Boolean includeHosted) {
         final QueryParts parts = new QueryParts();
+        parts.where.add("t.deleted = FALSE");
         if (includeHosted != null && includeHosted) {
             parts.where.add("t.host = :user");
             parts.params.put("user", user);
