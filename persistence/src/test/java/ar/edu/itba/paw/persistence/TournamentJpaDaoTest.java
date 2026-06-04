@@ -116,6 +116,7 @@ public class TournamentJpaDaoTest {
         final Tournament first = createTournament(TournamentStatus.REGISTRATION);
         final Tournament second = createTournament(TournamentStatus.IN_PROGRESS);
         createTournament(TournamentStatus.COMPLETED);
+        final Tournament unscheduled = createUnscheduledTournament(TournamentStatus.REGISTRATION);
         createTournament(player, "Other Host Cup", TournamentStatus.REGISTRATION);
         final Tournament deleted = createTournament(TournamentStatus.REGISTRATION);
         deleted.setDeleted(true);
@@ -143,11 +144,30 @@ public class TournamentJpaDaoTest {
         final int hostedCount =
                 tournamentDao.countDashboardTournaments(
                         host, Boolean.TRUE, Boolean.TRUE, null, null, null, null, null, null);
+        final List<Tournament> hostedPast =
+                tournamentDao.findDashboardTournaments(
+                        host,
+                        Boolean.FALSE,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        null,
+                        null,
+                        0,
+                        10);
         final List<Tournament> publicActive = tournamentDao.findPublicRegistrationOrLive(0, 10);
 
-        Assertions.assertEquals(3, hosted.size());
-        Assertions.assertEquals(3, hostedCount);
-        Assertions.assertEquals(3, publicActive.size());
+        Assertions.assertEquals(4, hosted.size());
+        Assertions.assertEquals(4, hostedCount);
+        Assertions.assertTrue(hosted.stream().anyMatch(t -> t.getId().equals(unscheduled.getId())));
+        Assertions.assertTrue(
+                hostedPast.stream().noneMatch(t -> t.getId().equals(unscheduled.getId())));
+        Assertions.assertEquals(4, publicActive.size());
         Assertions.assertTrue(publicActive.stream().anyMatch(t -> t.getId().equals(first.getId())));
         Assertions.assertTrue(
                 publicActive.stream().anyMatch(t -> t.getId().equals(second.getId())));
@@ -621,6 +641,30 @@ public class TournamentJpaDaoTest {
 
     private Tournament createTournament(final TournamentStatus status) {
         return createTournament(host, "Summer Cup", status);
+    }
+
+    private Tournament createUnscheduledTournament(final TournamentStatus status) {
+        final Instant now = Instant.now();
+        return tournamentDao.create(
+                host,
+                Sport.PADEL,
+                "Unscheduled Cup",
+                "Competitive padel tournament",
+                "Club Court 1",
+                -34.56,
+                -58.45,
+                null,
+                null,
+                BigDecimal.ZERO,
+                null,
+                TournamentFormat.SINGLE_ELIMINATION,
+                8,
+                2,
+                true,
+                false,
+                now,
+                now.plusSeconds(2 * 24 * 60 * 60),
+                status);
     }
 
     private Tournament createTournament(

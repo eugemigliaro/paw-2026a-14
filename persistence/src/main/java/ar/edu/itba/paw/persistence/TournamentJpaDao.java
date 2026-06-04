@@ -288,7 +288,7 @@ public class TournamentJpaDao implements TournamentDao {
         }
         if (upcoming != null) {
             if (upcoming) {
-                parts.where.add("t.endsAt >= :now");
+                parts.where.add("(t.endsAt IS NULL OR t.endsAt >= :now)");
             } else {
                 parts.where.add("t.endsAt < :now");
             }
