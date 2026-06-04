@@ -239,6 +239,26 @@ class FeedControllerTournamentTest {
     }
 
     @Test
+    void tournamentSportFiltersPreserveTournamentFeedMode() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(get("/").param("type", "tournament"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        final FilterGroupViewModel sportGroup =
+                feedPage.getFilterGroups().stream()
+                        .filter(group -> "Sports".equals(group.getTitle()))
+                        .findFirst()
+                        .orElseThrow();
+
+        Assertions.assertTrue(
+                sportGroup.getOptions().stream()
+                        .allMatch(option -> "tournament".equals(option.getParams().get("type"))));
+    }
+
+    @Test
     void postExploreLocationWithTournamentTypePreservesTournamentFeedMode() throws Exception {
         mockMvc.perform(
                         post("/explore/location")
@@ -277,12 +297,12 @@ class FeedControllerTournamentTest {
                                 Mockito.isNull(),
                                 Mockito.eq(-34.61),
                                 Mockito.eq(-58.38)))
-                .thenReturn(new PaginatedResult<>(List.of(tournament(78L, "Nearby Cup")), 1, 1, 12));
+                .thenReturn(
+                        new PaginatedResult<>(List.of(tournament(78L, "Nearby Cup")), 1, 1, 12));
 
         final MvcResult result =
                 mockMvc.perform(
-                                get("/")
-                                        .session(session)
+                                get("/").session(session)
                                         .param("sort", "distance")
                                         .param("type", "tournament"))
                         .andExpect(status().isOk())
