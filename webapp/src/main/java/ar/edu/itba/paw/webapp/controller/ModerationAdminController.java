@@ -15,6 +15,7 @@ import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
 import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
@@ -284,7 +285,7 @@ public class ModerationAdminController {
                     redirectAttributes,
                     locale);
         } catch (final ModerationException ex) {
-            return redirectToReportsError(ex.getCode());
+            return redirectToReportsError(reportsErrorCode(ex));
         }
     }
 
@@ -310,7 +311,7 @@ public class ModerationAdminController {
                             : "appeal_lifted";
             return redirectToReports(action, redirectAttributes);
         } catch (final ModerationException ex) {
-            return redirectToReportsError(ex.getCode());
+            return redirectToReportsError(reportsErrorCode(ex));
         }
     }
 
@@ -338,7 +339,7 @@ public class ModerationAdminController {
             }
             return redirectToReports(actionCode, redirectAttributes);
         } catch (final ModerationException ex) {
-            return redirectToReportsError(ex.getCode());
+            return redirectToReportsError(reportsErrorCode(ex));
         }
     }
 
@@ -346,6 +347,13 @@ public class ModerationAdminController {
             final String actionCode, final RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute("action", actionCode);
         return new ModelAndView("redirect:/admin/reports");
+    }
+
+    private static String reportsErrorCode(final ModerationException exception) {
+        if (exception instanceof ModerationReportNotFoundException) {
+            return "report_not_found";
+        }
+        return "action_failed";
     }
 
     private ModelAndView redirectToReportsError(final String errorCode) {

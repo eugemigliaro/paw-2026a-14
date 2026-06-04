@@ -13,7 +13,14 @@ import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationDuplicateReportException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationInvalidReportException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportErrorException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportFailedException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportLimitException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationSelfReportException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationValueTooLongException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
@@ -262,7 +269,9 @@ public class ModerationReportController {
                     () ->
                             showUserReportPage(
                                     username, null, null, form, new ExtendedModelMap(), locale),
-                    () -> redirectToReportUser(username, exception.getCode(), null));
+                    () ->
+                            redirectToReportUser(
+                                    username, moderationReportErrorCode(exception), null));
         }
     }
 
@@ -309,7 +318,9 @@ public class ModerationReportController {
                     () ->
                             showReviewReportPage(
                                     reviewId, null, null, form, new ExtendedModelMap(), locale),
-                    () -> redirectToReportReview(review.getId(), exception.getCode(), null));
+                    () ->
+                            redirectToReportReview(
+                                    review.getId(), moderationReportErrorCode(exception), null));
         }
     }
 
@@ -356,7 +367,9 @@ public class ModerationReportController {
                     () ->
                             showMatchReportPage(
                                     matchId, null, null, form, new ExtendedModelMap(), locale),
-                    () -> redirectToReportMatch(match.getId(), exception.getCode(), null));
+                    () ->
+                            redirectToReportMatch(
+                                    match.getId(), moderationReportErrorCode(exception), null));
         }
     }
 
@@ -470,42 +483,37 @@ public class ModerationReportController {
             final BindingResult errors,
             final Supplier<ModelAndView> errorViewSupplier,
             final Supplier<ModelAndView> redirectSupplier) {
-        final String code = exception.getCode();
-        switch (code) {
-            case "duplicate_report":
-                errors.rejectValue("reason", "moderation.report.error.duplicate");
-                return errorViewSupplier
-                        .get()
-                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
-            case "report_limit":
-                errors.reject("moderation.report.error.limit");
-                return errorViewSupplier
-                        .get()
-                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
-            case "invalid_report":
-                errors.reject("moderation.report.error.invalid");
-                return errorViewSupplier
-                        .get()
-                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
-            case "self_report":
-                errors.reject("moderation.report.error.self");
-                return errorViewSupplier
-                        .get()
-                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
-            case "report_failed":
-            case "report_error":
-                errors.reject("moderation.report.error.generic");
-                return errorViewSupplier
-                        .get()
-                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
-            case "value_too_long":
-                errors.rejectValue("details", "Size.reportForm.details");
-                return errorViewSupplier
-                        .get()
-                        .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
-            default:
-                return redirectSupplier.get();
+        if (exception instanceof ModerationDuplicateReportException) {
+            errors.rejectValue("reason", "moderation.report.error.duplicate");
+        } else if (exception instanceof ModerationReportLimitException) {
+            errors.reject("moderation.report.error.limit");
+        } else if (exception instanceof ModerationInvalidReportException) {
+            errors.reject("moderation.report.error.invalid");
+        } else if (exception instanceof ModerationSelfReportException) {
+            errors.reject("moderation.report.error.self");
+        } else if (exception instanceof ModerationReportFailedException
+                || exception instanceof ModerationReportErrorException) {
+            errors.reject("moderation.report.error.generic");
+        } else if (exception instanceof ModerationValueTooLongException) {
+            errors.rejectValue("details", "Size.reportForm.details");
+        } else {
+            return redirectSupplier.get();
         }
+        return errorViewSupplier
+                .get()
+                .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
+    }
+
+    private static String moderationReportErrorCode(final ModerationException exception) {
+        return switch (exception) {
+            case ModerationDuplicateReportException ignored -> "duplicate_report";
+            case ModerationReportLimitException ignored -> "report_limit";
+            case ModerationInvalidReportException ignored -> "invalid_report";
+            case ModerationSelfReportException ignored -> "self_report";
+            case ModerationValueTooLongException ignored -> "value_too_long";
+            case ModerationReportFailedException ignored -> "report_failed";
+            default -> "report_error";
+        };
     }
 
     private String moderationReportErrorMessage(final String code, final Locale locale) {

@@ -15,7 +15,14 @@ import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationException;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityAboveMaxException;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateException;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateForbiddenException;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotEditableException;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotFoundException;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotRecurringException;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdatePendingRequestsExceedAvailableException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.time.Duration;
@@ -197,37 +204,24 @@ public class HostController {
 
         try {
             matchService.updateMatch(matchId, actingUser, request);
-        } catch (final MatchUpdateException exception) {
-            if (exception.getReason() == MatchUpdateFailureReason.MATCH_NOT_FOUND
-                    || exception.getReason() == MatchUpdateFailureReason.FORBIDDEN) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-            }
-            if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED) {
-                bindingResult.rejectValue(
-                        "maxPlayers",
-                        "match.update.error.capacityBelowConfirmed",
-                        exception.getMessage());
-            } else if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_ABOVE_MAX) {
-                bindingResult.rejectValue(
-                        "maxPlayers",
-                        "match.update.error.capacityAboveMax",
-                        exception.getMessage());
-            } else if (exception.getReason()
-                    == MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE) {
-                bindingResult.rejectValue(
-                        "joinPolicy",
-                        "match.update.error.pendingRequestsExceedAvailable",
-                        exception.getMessage());
-            } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
-                return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
-            } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
-                bindingResult.rejectValue(
-                        "eventTime", "match.schedule.error.invalid", exception.getMessage());
-            } else {
-                bindingResult.rejectValue(
-                        "eventTime", "match.schedule.error.startsAtPast", exception.getMessage());
-            }
+        } catch (final MatchUpdateNotFoundException | MatchUpdateForbiddenException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        } catch (final MatchUpdateCapacityBelowConfirmedException exception) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
             return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final MatchUpdateCapacityAboveMaxException exception) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityAboveMax");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final MatchUpdatePendingRequestsExceedAvailableException exception) {
+            bindingResult.rejectValue(
+                    "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final MatchUpdateNotEditableException exception) {
+            return hostFormView(
+                    createEventForm,
+                    messageSource.getMessage("match.update.error.notEditable", null, locale),
+                    locale,
+                    formConfig);
         }
 
         redirectAttributes.addFlashAttribute("hostAction", "updated");
@@ -261,38 +255,26 @@ public class HostController {
 
         try {
             matchService.updateSeriesFromOccurrence(matchId, actingUser, request);
-        } catch (final MatchUpdateException exception) {
-            if (exception.getReason() == MatchUpdateFailureReason.MATCH_NOT_FOUND
-                    || exception.getReason() == MatchUpdateFailureReason.FORBIDDEN
-                    || exception.getReason() == MatchUpdateFailureReason.NOT_RECURRING) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-            }
-            if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED) {
-                bindingResult.rejectValue(
-                        "maxPlayers",
-                        "match.update.error.capacityBelowConfirmed",
-                        exception.getMessage());
-            } else if (exception.getReason() == MatchUpdateFailureReason.CAPACITY_ABOVE_MAX) {
-                bindingResult.rejectValue(
-                        "maxPlayers",
-                        "match.update.error.capacityAboveMax",
-                        exception.getMessage());
-            } else if (exception.getReason()
-                    == MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE) {
-                bindingResult.rejectValue(
-                        "joinPolicy",
-                        "match.update.error.pendingRequestsExceedAvailable",
-                        exception.getMessage());
-            } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
-                return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
-            } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
-                bindingResult.rejectValue(
-                        "eventTime", "match.schedule.error.invalid", exception.getMessage());
-            } else {
-                bindingResult.rejectValue(
-                        "eventTime", "match.schedule.error.startsAtPast", exception.getMessage());
-            }
+        } catch (final MatchUpdateNotFoundException
+                | MatchUpdateForbiddenException
+                | MatchUpdateNotRecurringException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        } catch (final MatchUpdateCapacityBelowConfirmedException exception) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
             return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final MatchUpdateCapacityAboveMaxException exception) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityAboveMax");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final MatchUpdatePendingRequestsExceedAvailableException exception) {
+            bindingResult.rejectValue(
+                    "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final MatchUpdateNotEditableException exception) {
+            return hostFormView(
+                    createEventForm,
+                    messageSource.getMessage("match.update.error.notEditable", null, locale),
+                    locale,
+                    formConfig);
         }
 
         redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");

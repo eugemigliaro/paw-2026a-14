@@ -15,9 +15,14 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.server.ResponseStatusException;
 
 public final class SecurityControllerUtils {
+
+    private static final SecurityContextRepository SECURITY_CONTEXT_REPOSITORY =
+            new HttpSessionSecurityContextRepository();
 
     private SecurityControllerUtils() {}
 
@@ -57,6 +62,7 @@ public final class SecurityControllerUtils {
         final SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
         SecurityContextHolder.setContext(securityContext);
+        SECURITY_CONTEXT_REPOSITORY.saveContext(securityContext, request, response);
     }
 
     private static List<GrantedAuthority> authoritiesFor(final UserRole role) {

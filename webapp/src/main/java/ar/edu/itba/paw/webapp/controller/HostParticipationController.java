@@ -7,7 +7,25 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationAlreadyInvitedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationClosedException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationForbiddenException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationFullException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationIsHostException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotCancellableException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotFoundException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotJoinedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotParticipantException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyCoveredException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyInvitedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesClosedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesFullException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesStartedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationStartedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationUserNotFoundException;
 import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
@@ -115,8 +133,7 @@ public class HostParticipationController {
         } catch (final MatchParticipationException e) {
             throwIfAccessFailure(e);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
-            redirectAttributes.addFlashAttribute(
-                    "hostActionError", requestErrorMessage(e.getCode(), locale));
+            redirectAttributes.addFlashAttribute("hostActionError", requestErrorMessage(e, locale));
             return redirectToMatch(matchId);
         }
     }
@@ -143,8 +160,7 @@ public class HostParticipationController {
         } catch (final MatchParticipationException e) {
             throwIfAccessFailure(e);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
-            redirectAttributes.addFlashAttribute(
-                    "hostActionError", requestErrorMessage(e.getCode(), locale));
+            redirectAttributes.addFlashAttribute("hostActionError", requestErrorMessage(e, locale));
             return redirectToMatch(matchId);
         }
     }
@@ -205,7 +221,7 @@ public class HostParticipationController {
             return redirectToMatch(matchId);
         } catch (final MatchParticipationException e) {
             throwIfAccessFailure(e);
-            final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
+            final String errorMsg = inviteErrorMessage(e, inviteForm.getEmail(), locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
             redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
@@ -213,39 +229,36 @@ public class HostParticipationController {
         }
     }
 
-    private String inviteErrorMessage(final String code, final String email, final Locale locale) {
-        switch (code) {
-            case "user_not_found":
-                return messageSource.getMessage(
-                        "host.invites.error.userNotFound", new Object[] {email}, locale);
-            case "already_joined":
-                return messageSource.getMessage("host.invites.error.alreadyJoined", null, locale);
-            case "already_invited":
-                return messageSource.getMessage("host.invites.error.alreadyInvited", null, locale);
-            case "full":
-                return messageSource.getMessage("host.invites.error.full", null, locale);
-            case "is_host":
-                return messageSource.getMessage("host.invites.error.isHost", null, locale);
-            case "closed":
-                return messageSource.getMessage("host.invites.error.closed", null, locale);
-            case "series_started":
-                return messageSource.getMessage("host.invites.error.seriesStarted", null, locale);
-            case "series_closed":
-                return messageSource.getMessage("host.invites.error.seriesClosed", null, locale);
-            case "series_already_joined":
-                return messageSource.getMessage(
-                        "host.invites.error.seriesAlreadyJoined", null, locale);
-            case "series_already_invited":
-                return messageSource.getMessage(
-                        "host.invites.error.seriesAlreadyInvited", null, locale);
-            case "series_already_covered":
-                return messageSource.getMessage(
-                        "host.invites.error.seriesAlreadyCovered", null, locale);
-            case "series_full":
-                return messageSource.getMessage("host.invites.error.seriesFull", null, locale);
-            default:
-                return messageSource.getMessage("host.invites.error.generic", null, locale);
+    private String inviteErrorMessage(
+            final MatchParticipationException exception, final String email, final Locale locale) {
+        if (exception instanceof MatchParticipationUserNotFoundException) {
+            return messageSource.getMessage(
+                    "host.invites.error.userNotFound", new Object[] {email}, locale);
         }
+        final String key =
+                switch (exception) {
+                    case MatchParticipationAlreadyJoinedException ignored ->
+                            "host.invites.error.alreadyJoined";
+                    case MatchParticipationAlreadyInvitedException ignored ->
+                            "host.invites.error.alreadyInvited";
+                    case MatchParticipationFullException ignored -> "host.invites.error.full";
+                    case MatchParticipationIsHostException ignored -> "host.invites.error.isHost";
+                    case MatchParticipationClosedException ignored -> "host.invites.error.closed";
+                    case MatchParticipationSeriesStartedException ignored ->
+                            "host.invites.error.seriesStarted";
+                    case MatchParticipationSeriesClosedException ignored ->
+                            "host.invites.error.seriesClosed";
+                    case MatchParticipationSeriesAlreadyJoinedException ignored ->
+                            "host.invites.error.seriesAlreadyJoined";
+                    case MatchParticipationSeriesAlreadyInvitedException ignored ->
+                            "host.invites.error.seriesAlreadyInvited";
+                    case MatchParticipationSeriesAlreadyCoveredException ignored ->
+                            "host.invites.error.seriesAlreadyCovered";
+                    case MatchParticipationSeriesFullException ignored ->
+                            "host.invites.error.seriesFull";
+                    default -> "host.invites.error.generic";
+                };
+        return messageSource.getMessage(key, null, locale);
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/participants/{userId:\\d+}/remove")
@@ -265,7 +278,7 @@ public class HostParticipationController {
             throwIfAccessFailure(e);
             redirectAttributes.addFlashAttribute("hostActionTarget", "participants");
             redirectAttributes.addFlashAttribute(
-                    "hostActionError", participantErrorMessage(e.getCode(), locale));
+                    "hostActionError", participantErrorMessage(e, locale));
             return redirectToMatch(matchId);
         }
     }
@@ -315,16 +328,17 @@ public class HostParticipationController {
     }
 
     private void throwIfAccessFailure(final MatchParticipationException e) {
-        if ("forbidden".equals(e.getCode()) || "not_found".equals(e.getCode())) {
+        if (e instanceof MatchParticipationForbiddenException
+                || e instanceof MatchParticipationNotFoundException) {
             throw participationAccessStatus(e);
         }
     }
 
     private ResponseStatusException participationAccessStatus(final MatchParticipationException e) {
-        if ("not_found".equals(e.getCode())) {
+        if (e instanceof MatchParticipationNotFoundException) {
             return new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        if ("forbidden".equals(e.getCode())) {
+        if (e instanceof MatchParticipationForbiddenException) {
             return new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         return new ResponseStatusException(HttpStatus.BAD_REQUEST);
@@ -339,32 +353,34 @@ public class HostParticipationController {
                         () -> messageSource.getMessage("host.invites.error.generic", null, locale));
     }
 
-    private String requestErrorMessage(final String code, final Locale locale) {
-        if ("full".equals(code)) {
-            return messageSource.getMessage("event.host.requests.error.full", null, locale);
-        }
-        if ("closed".equals(code)) {
-            return messageSource.getMessage("event.host.requests.error.closed", null, locale);
-        }
-        return messageSource.getMessage("event.host.requests.error.noPendingRequest", null, locale);
+    private String requestErrorMessage(
+            final MatchParticipationException exception, final Locale locale) {
+        final String key =
+                switch (exception) {
+                    case MatchParticipationFullException ignored ->
+                            "event.host.requests.error.full";
+                    case MatchParticipationClosedException ignored ->
+                            "event.host.requests.error.closed";
+                    default -> "event.host.requests.error.noPendingRequest";
+                };
+        return messageSource.getMessage(key, null, locale);
     }
 
-    private String participantErrorMessage(final String code, final Locale locale) {
-        switch (code) {
-            case "started":
-                return messageSource.getMessage(
-                        "event.host.participants.error.started", null, locale);
-            case "not_cancellable":
-                return messageSource.getMessage(
-                        "event.host.participants.error.notCancellable", null, locale);
-            case "not_joined":
-            case "not_participant":
-                return messageSource.getMessage(
-                        "event.host.participants.error.notParticipant", null, locale);
-            default:
-                return messageSource.getMessage(
-                        "event.host.participants.error.generic", null, locale);
-        }
+    private String participantErrorMessage(
+            final MatchParticipationException exception, final Locale locale) {
+        final String key =
+                switch (exception) {
+                    case MatchParticipationStartedException ignored ->
+                            "event.host.participants.error.started";
+                    case MatchParticipationNotCancellableException ignored ->
+                            "event.host.participants.error.notCancellable";
+                    case MatchParticipationNotJoinedException ignored ->
+                            "event.host.participants.error.notParticipant";
+                    case MatchParticipationNotParticipantException ignored ->
+                            "event.host.participants.error.notParticipant";
+                    default -> "event.host.participants.error.generic";
+                };
+        return messageSource.getMessage(key, null, locale);
     }
 
     private static String avatarLabel(final String username) {

@@ -14,10 +14,11 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
-import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
@@ -65,7 +66,8 @@ class PublicProfileControllerTest {
                                         playerReviewService,
                                         moderationService,
                                         userSportRatingService,
-                                        messageSource))
+                                        messageSource,
+                                        PlatformTimeZoneServiceImpl.argentinaDefault()))
                         .setConversionService(conversionService())
                         .build();
     }
@@ -162,9 +164,7 @@ class PublicProfileControllerTest {
         AuthenticationUtils.authenticateUser(1L);
         final User user = UserUtils.getUser(42L);
         Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
-        Mockito.doThrow(
-                        new PlayerReviewException(
-                                PlayerReviewException.NOT_FOUND, "Player review not found."))
+        Mockito.doThrow(new PlayerReviewNotFoundException("Player review not found."))
                 .when(playerReviewService)
                 .deleteReview(Mockito.any(), Mockito.eq(user));
 

@@ -26,9 +26,11 @@ import ar.edu.itba.paw.services.TournamentMatchScheduleRequest;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.UpdateTournamentRequest;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
+import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotGeneratedException;
+import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleForbiddenException;
+import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleNotCancellableException;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationForbiddenException;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationUnderCapacityException;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
@@ -221,9 +223,7 @@ class HostTournamentControllerTest {
         Mockito.when(
                         tournamentRegistrationService.closeRegistration(
                                 Mockito.eq(77L), Mockito.any(User.class)))
-                .thenThrow(
-                        new TournamentRegistrationException(
-                                TournamentJoinFailureReason.FORBIDDEN, "Forbidden"));
+                .thenThrow(new TournamentRegistrationForbiddenException("Forbidden"));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/close-registration"))
@@ -238,9 +238,7 @@ class HostTournamentControllerTest {
         Mockito.when(
                         tournamentRegistrationService.closeRegistration(
                                 Mockito.eq(77L), Mockito.any(User.class)))
-                .thenThrow(
-                        new TournamentRegistrationException(
-                                TournamentJoinFailureReason.UNDER_CAPACITY, "Not enough players"));
+                .thenThrow(new TournamentRegistrationUnderCapacityException("Not enough players"));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/close-registration"))
@@ -337,9 +335,7 @@ class HostTournamentControllerTest {
         Mockito.when(
                         tournamentService.cancel(
                                 Mockito.eq(77L), Mockito.any(User.class), Mockito.anyString()))
-                .thenThrow(
-                        new TournamentLifecycleException(
-                                TournamentLifecycleFailureReason.FORBIDDEN, "Forbidden"));
+                .thenThrow(new TournamentLifecycleForbiddenException("Forbidden"));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/cancel")).andExpect(status().isForbidden());
@@ -353,10 +349,7 @@ class HostTournamentControllerTest {
         Mockito.when(
                         tournamentService.cancel(
                                 Mockito.eq(77L), Mockito.any(User.class), Mockito.anyString()))
-                .thenThrow(
-                        new TournamentLifecycleException(
-                                TournamentLifecycleFailureReason.NOT_CANCELLABLE,
-                                "Not cancellable"));
+                .thenThrow(new TournamentLifecycleNotCancellableException("Not cancellable"));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/cancel"))
@@ -451,10 +444,7 @@ class HostTournamentControllerTest {
         Mockito.when(tournamentService.findTournamentForHost(77L, host))
                 .thenReturn(java.util.Optional.of(tournament));
         Mockito.when(tournamentBracketService.getBracket(77L, host))
-                .thenThrow(
-                        new TournamentBracketException(
-                                TournamentBracketFailureReason.BRACKET_NOT_GENERATED,
-                                "Not generated"));
+                .thenThrow(new TournamentBracketNotGeneratedException("Not generated"));
         Mockito.when(tournamentBracketService.listTeamsForSetup(77L, host))
                 .thenReturn(List.of(firstTeam, secondTeam));
         Mockito.when(tournamentRegistrationService.listTeamMembers(77L)).thenReturn(teamMembers);
