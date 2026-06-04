@@ -23,7 +23,6 @@ public class BracketPublishFormValidator
         boolean valid = true;
         context.disableDefaultConstraintViolation();
 
-        final ZoneId zoneId = resolveZoneId(form.getTz());
         final Instant now = Instant.now();
         Instant previousRoundEnd = null;
         Integer previousRoundNumber = null;
@@ -51,8 +50,9 @@ public class BracketPublishFormValidator
             }
 
             final Instant startsAt =
-                    toInstant(schedule.getStartDate(), schedule.getStartTime(), zoneId);
-            final Instant endsAt = toInstant(schedule.getEndDate(), schedule.getEndTime(), zoneId);
+                    toInstant(schedule.getStartDate(), schedule.getStartTime(), form.getTz());
+            final Instant endsAt =
+                    toInstant(schedule.getEndDate(), schedule.getEndTime(), form.getTz());
 
             if (endsAt != null && startsAt != null && !endsAt.isAfter(startsAt)) {
                 reject(
@@ -84,7 +84,7 @@ public class BracketPublishFormValidator
                                                 toInstant(
                                                         other.getEndDate(),
                                                         other.getEndTime(),
-                                                        zoneId))
+                                                        form.getTz()))
                                 .filter(value -> value != null)
                                 .max(Comparator.naturalOrder())
                                 .orElse(previousRoundEnd);
@@ -106,17 +106,6 @@ public class BracketPublishFormValidator
     private static Instant toInstant(
             final java.time.LocalDate date, final java.time.LocalTime time, final ZoneId zoneId) {
         return LocalDateTime.of(date, time).atZone(zoneId).toInstant();
-    }
-
-    private static ZoneId resolveZoneId(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
     }
 
     private static void reject(

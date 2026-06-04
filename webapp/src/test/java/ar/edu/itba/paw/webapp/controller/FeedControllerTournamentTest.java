@@ -69,7 +69,7 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         matchService.searchPublicMatches(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(List.class),
+                                ArgumentMatchers.<List<Sport>>any(),
                                 ArgumentMatchers.nullable(Instant.class),
                                 ArgumentMatchers.nullable(Instant.class),
                                 ArgumentMatchers.nullable(EventSort.class),
@@ -90,7 +90,7 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(List.class),
+                                ArgumentMatchers.<List<Sport>>any(),
                                 ArgumentMatchers.nullable(Instant.class),
                                 ArgumentMatchers.nullable(Instant.class),
                                 ArgumentMatchers.nullable(EventSort.class),

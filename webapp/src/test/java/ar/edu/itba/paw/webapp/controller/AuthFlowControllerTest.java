@@ -11,11 +11,12 @@ import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
-import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureExpiredException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -157,7 +158,7 @@ class AuthFlowControllerTest {
         Mockito.when(
                         accountAuthService.register(
                                 ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new AccountRegistrationException("name_invalid", "Invalid name"));
+                .thenThrow(new NameInvalidException("Invalid name"));
 
         mockMvc.perform(validRegisterRequest())
                 .andExpect(status().isOk())
@@ -171,8 +172,7 @@ class AuthFlowControllerTest {
         Mockito.when(
                         accountAuthService.register(
                                 ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(
-                        new AccountRegistrationException("lastName_invalid", "Invalid last name"));
+                .thenThrow(new LastNameInvalidException("Invalid last name"));
 
         mockMvc.perform(validRegisterRequest())
                 .andExpect(status().isOk())
@@ -185,7 +185,7 @@ class AuthFlowControllerTest {
         Mockito.when(
                         accountAuthService.register(
                                 ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new AccountRegistrationException("phone_invalid", "Invalid phone"));
+                .thenThrow(new PhoneInvalidException("Invalid phone"));
 
         mockMvc.perform(validRegisterRequest())
                 .andExpect(status().isOk())
@@ -254,9 +254,7 @@ class AuthFlowControllerTest {
     @Test
     void getPasswordResetWithExpiredTokenRendersErrorPage() throws Exception {
         Mockito.when(accountAuthService.getPasswordResetPreview("expired-token"))
-                .thenThrow(
-                        new VerificationFailureException(
-                                VerificationFailureReason.EXPIRED, "Expired token"));
+                .thenThrow(new VerificationFailureExpiredException("Expired token"));
 
         mockMvc.perform(get("/password-reset/expired-token"))
                 .andExpect(status().isOk())

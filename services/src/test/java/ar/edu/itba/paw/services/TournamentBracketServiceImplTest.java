@@ -16,7 +16,7 @@ import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentMatchDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
+import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -25,7 +25,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,7 +38,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -54,7 +52,6 @@ public class TournamentBracketServiceImplTest {
     @Mock private TournamentMatchDao tournamentMatchDao;
     @Mock private UserSportRatingService userSportRatingService;
     @Mock private TournamentMailService tournamentMailService;
-    @Mock private MessageSource messageSource;
 
     private TournamentBracketServiceImpl bracketService;
 
@@ -67,16 +64,7 @@ public class TournamentBracketServiceImplTest {
                         tournamentMatchDao,
                         userSportRatingService,
                         tournamentMailService,
-                        messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
-        Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.isNull(),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
         Mockito.lenient()
                 .when(tournamentDao.update(ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -254,15 +242,10 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         configureGenerate(tournament, teams(tournament, 1), false);
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () -> bracketService.generateBracket(10L, tournament.getHost()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.UNDER_CAPACITY, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketUnderCapacityException.class,
+                () -> bracketService.generateBracket(10L, tournament.getHost()));
     }
 
     @Test
@@ -272,15 +255,10 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.REGISTRATION);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () -> bracketService.generateBracket(10L, tournament.getHost()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.NOT_READY_FOR_BRACKET, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketNotReadyForBracketException.class,
+                () -> bracketService.generateBracket(10L, tournament.getHost()));
     }
 
     @Test
@@ -292,15 +270,10 @@ public class TournamentBracketServiceImplTest {
         Mockito.when(tournamentMatchDao.findByTournament(10L))
                 .thenReturn(List.of(match(1000L, tournament, 1, 0, null, null, null, null)));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () -> bracketService.generateBracket(10L, tournament.getHost()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.BRACKET_ALREADY_GENERATED, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketAlreadyGeneratedException.class,
+                () -> bracketService.generateBracket(10L, tournament.getHost()));
     }
 
     @Test
@@ -310,14 +283,10 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () -> bracketService.generateBracket(10L, UserUtils.getUser(2L)));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentBracketFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketForbiddenException.class,
+                () -> bracketService.generateBracket(10L, UserUtils.getUser(2L)));
     }
 
     @Test
@@ -344,14 +313,10 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () -> bracketService.publishBracket(10L, UserUtils.getUser(2L), List.of()));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentBracketFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketForbiddenException.class,
+                () -> bracketService.publishBracket(10L, UserUtils.getUser(2L), List.of()));
     }
 
     @Test
@@ -395,19 +360,15 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () ->
-                                bracketService.declareWinner(
-                                        10L,
-                                        1000L,
-                                        new TournamentWinnerDeclarationRequest(100L),
-                                        UserUtils.getUser(2L)));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentBracketFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketForbiddenException.class,
+                () ->
+                        bracketService.declareWinner(
+                                10L,
+                                1000L,
+                                new TournamentWinnerDeclarationRequest(100L),
+                                UserUtils.getUser(2L)));
     }
 
     @Test
@@ -574,14 +535,10 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () -> bracketService.getBracket(10L, null));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentBracketFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketForbiddenException.class,
+                () -> bracketService.getBracket(10L, null));
     }
 
     @Test
@@ -680,19 +637,14 @@ public class TournamentBracketServiceImplTest {
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () ->
-                                bracketService.publishBracket(
-                                        10L,
-                                        tournament.getHost(),
-                                        List.of(schedule(matches.get(0).getId()))));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.MISSING_MATCH_SCHEDULE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketMissingMatchScheduleException.class,
+                () ->
+                        bracketService.publishBracket(
+                                10L,
+                                tournament.getHost(),
+                                List.of(schedule(matches.get(0).getId()))));
     }
 
     @Test
@@ -741,31 +693,26 @@ public class TournamentBracketServiceImplTest {
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () ->
-                                bracketService.publishBracket(
-                                        10L,
-                                        tournament.getHost(),
-                                        List.of(
-                                                scheduleAt(
-                                                        matches.get(0).getId(),
-                                                        FIXED_NOW.minusSeconds(3600),
-                                                        FIXED_NOW.plusSeconds(3600)),
-                                                scheduleAt(
-                                                        matches.get(1).getId(),
-                                                        FIXED_NOW.plusSeconds(3600),
-                                                        FIXED_NOW.plusSeconds(7200)),
-                                                scheduleAt(
-                                                        matches.get(2).getId(),
-                                                        FIXED_NOW.plusSeconds(7500),
-                                                        FIXED_NOW.plusSeconds(9000)))));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.SCHEDULE_BEFORE_NOW, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketInvalidScheduleException.class,
+                () ->
+                        bracketService.publishBracket(
+                                10L,
+                                tournament.getHost(),
+                                List.of(
+                                        scheduleAt(
+                                                matches.get(0).getId(),
+                                                FIXED_NOW.minusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(3600)),
+                                        scheduleAt(
+                                                matches.get(1).getId(),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200)),
+                                        scheduleAt(
+                                                matches.get(2).getId(),
+                                                FIXED_NOW.plusSeconds(7500),
+                                                FIXED_NOW.plusSeconds(9000)))));
     }
 
     @Test
@@ -777,31 +724,26 @@ public class TournamentBracketServiceImplTest {
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () ->
-                                bracketService.publishBracket(
-                                        10L,
-                                        tournament.getHost(),
-                                        List.of(
-                                                scheduleAt(
-                                                        matches.get(0).getId(),
-                                                        FIXED_NOW.plusSeconds(3600),
-                                                        FIXED_NOW.plusSeconds(7200)),
-                                                scheduleAt(
-                                                        matches.get(1).getId(),
-                                                        FIXED_NOW.plusSeconds(3900),
-                                                        FIXED_NOW.plusSeconds(7800)),
-                                                scheduleAt(
-                                                        matches.get(2).getId(),
-                                                        FIXED_NOW.plusSeconds(5400),
-                                                        FIXED_NOW.plusSeconds(9000)))));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.INVALID_ROUND_ORDER, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketInvalidRoundOrderException.class,
+                () ->
+                        bracketService.publishBracket(
+                                10L,
+                                tournament.getHost(),
+                                List.of(
+                                        scheduleAt(
+                                                matches.get(0).getId(),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200)),
+                                        scheduleAt(
+                                                matches.get(1).getId(),
+                                                FIXED_NOW.plusSeconds(3900),
+                                                FIXED_NOW.plusSeconds(7800)),
+                                        scheduleAt(
+                                                matches.get(2).getId(),
+                                                FIXED_NOW.plusSeconds(5400),
+                                                FIXED_NOW.plusSeconds(9000)))));
     }
 
     @Test
@@ -843,20 +785,15 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () ->
-                                bracketService.declareWinner(
-                                        10L,
-                                        1000L,
-                                        new TournamentWinnerDeclarationRequest(100L),
-                                        tournament.getHost()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.NOT_IN_PROGRESS, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketNotInProgressException.class,
+                () ->
+                        bracketService.declareWinner(
+                                10L,
+                                1000L,
+                                new TournamentWinnerDeclarationRequest(100L),
+                                tournament.getHost()));
     }
 
     @Test
@@ -869,20 +806,15 @@ public class TournamentBracketServiceImplTest {
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, matches.get(0).getId()))
                 .thenReturn(Optional.of(matches.get(0)));
 
-        // 2. Exercise
-        final TournamentBracketException exception =
-                Assertions.assertThrows(
-                        TournamentBracketException.class,
-                        () ->
-                                bracketService.declareWinner(
-                                        10L,
-                                        matches.get(0).getId(),
-                                        new TournamentWinnerDeclarationRequest(999L),
-                                        tournament.getHost()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentBracketFailureReason.WINNER_NOT_IN_MATCH, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentBracketWinnerNotInMatchException.class,
+                () ->
+                        bracketService.declareWinner(
+                                10L,
+                                matches.get(0).getId(),
+                                new TournamentWinnerDeclarationRequest(999L),
+                                tournament.getHost()));
     }
 
     @Test
@@ -1288,7 +1220,6 @@ public class TournamentBracketServiceImplTest {
                 tournamentMatchDao,
                 userSportRatingService,
                 tournamentMailService,
-                messageSource,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 

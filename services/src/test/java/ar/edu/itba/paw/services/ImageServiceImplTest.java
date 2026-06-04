@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.persistence.ImageDao;
-import ar.edu.itba.paw.services.exceptions.ImageUploadException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.*;
 import java.io.ByteArrayInputStream;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
@@ -33,16 +33,11 @@ public class ImageServiceImplTest {
 
     @Test
     public void testStoreRejectsUnsupportedContentType() {
-        final ImageUploadException exception =
-                Assertions.assertThrows(
-                        ImageUploadException.class,
-                        () ->
-                                imageService.store(
-                                        "application/pdf",
-                                        10,
-                                        new ByteArrayInputStream(new byte[10])));
-
-        Assertions.assertEquals(ImageUploadException.UNSUPPORTED_FORMAT, exception.getMessage());
+        Assertions.assertThrows(
+                UnsupportedImageFormatException.class,
+                () ->
+                        imageService.store(
+                                "application/pdf", 10, new ByteArrayInputStream(new byte[10])));
     }
 
     @Test
