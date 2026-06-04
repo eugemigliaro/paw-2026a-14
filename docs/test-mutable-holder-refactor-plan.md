@@ -422,21 +422,32 @@ Do not attempt the full plan as one bulk rewrite. The affected tests use differe
   - [x] `MatchParticipationServiceImplTest`
   - Verification run: `mvn -pl services -Dtest="AccountAuthServiceImplTest,ModerationServiceImplTest,PlayerReviewServiceImplTest,MatchServiceImplTest,MatchParticipationServiceImplTest" test`
   - Result: 120 tests run, 0 failures/errors.
-- [ ] Tournament service tests:
-  - [ ] `TournamentServiceImplTest`
-  - [ ] `TournamentRegistrationServiceImplTest`
-  - [ ] `TournamentBracketServiceImplTest`
-- [ ] Small webapp controller tests:
-  - [ ] `AuthenticatedLocalePersistenceInterceptorTest`
-  - [ ] `FeedControllerTournamentTest`
-  - [ ] `ModerationAdminControllerTest`
-  - [ ] `HostTournamentControllerTest`
-- [ ] Large `UiRouteTest` fixture refactor.
-- [ ] Final cleanup of imports and remaining holder-mutating `thenAnswer`/`doAnswer` blocks.
-- [ ] Final scans:
-  - [ ] `rg -n --glob '*/src/test/**' "AtomicReference|AtomicBoolean|AtomicInteger|AtomicLong" .`
-  - [ ] `rg -n --glob '*/src/test/**' "Mockito\.verify|\bverify\(" .`
+- [x] Tournament service tests:
+  - [x] `TournamentServiceImplTest`
+  - [x] `TournamentRegistrationServiceImplTest`
+  - [x] `TournamentBracketServiceImplTest`
+  - Verification run: `mvn -pl services -Dtest="TournamentServiceImplTest,TournamentBracketServiceImplTest,TournamentRegistrationServiceImplTest" test`
+  - Result: 68 tests run, 0 failures/errors.
+- [x] Small webapp controller tests:
+  - [x] `AuthenticatedLocalePersistenceInterceptorTest`
+  - [x] `FeedControllerTournamentTest`
+  - [x] `ModerationAdminControllerTest`
+  - [x] `HostTournamentControllerTest`
+  - Verification run: `mvn -pl webapp -Dtest="AuthenticatedLocalePersistenceInterceptorTest,FeedControllerTournamentTest,ModerationAdminControllerTest,HostTournamentControllerTest" test`
+  - Result: 36 tests run, 0 failures/errors.
+- [x] Large `UiRouteTest` fixture refactor.
+  - Verification run: `mvn -pl webapp -Dtest="UiRouteTest" test`
+  - Result: 125 tests run, 0 failures/errors.
+- [x] Final cleanup of imports and remaining holder-mutating `thenAnswer`/`doAnswer` blocks.
+- [x] Final scans:
+  - [x] `rg -n --glob '*/src/test/**' "AtomicReference|AtomicBoolean|AtomicInteger|AtomicLong" .`
+  - [x] `rg -n --glob '*/src/test/**' "Mockito\.verify|\bverify\(" .`
 - [ ] Full test suite: `mvn test`
+  - Attempted twice.
+  - Blocked by unrelated persistence failure before services/webapp run:
+    `UserBanJpaDaoTest.shouldUpliftBan_WhenBanExists` expects the uplifted ban to be inactive but receives an active result.
+  - The failing test passes in isolation with:
+    `mvn -pl persistence -Dtest="UserBanJpaDaoTest#shouldUpliftBan_WhenBanExists" test`.
 
 1. Service tests except tournament bracket:
    - `AccountAuthServiceImplTest`

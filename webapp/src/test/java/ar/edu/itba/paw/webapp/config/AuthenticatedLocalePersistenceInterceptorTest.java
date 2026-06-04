@@ -8,14 +8,17 @@ import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,11 +31,11 @@ import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 class AuthenticatedLocalePersistenceInterceptorTest {
 
     private MockMvc mockMvc;
-    private UserService userService;
+    private RecordingUserService userService;
 
     @BeforeEach
     void setUp() {
-        userService = Mockito.mock(UserService.class);
+        userService = new RecordingUserService();
         mockMvc =
                 MockMvcBuilders.standaloneSetup(new TestController())
                         .setLocaleResolver(localeResolver())
@@ -49,16 +52,6 @@ class AuthenticatedLocalePersistenceInterceptorTest {
 
     @Test
     void authenticatedLangSwitchPersistsResolvedLanguage() throws Exception {
-        final AtomicLong capturedUserId = new AtomicLong(-1L);
-        final AtomicReference<String> capturedLanguage = new AtomicReference<>();
-        Mockito.doAnswer(
-                        invocation -> {
-                            capturedUserId.set(invocation.<User>getArgument(0).getId());
-                            capturedLanguage.set(invocation.getArgument(1));
-                            return null;
-                        })
-                .when(userService)
-                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -79,20 +72,13 @@ class AuthenticatedLocalePersistenceInterceptorTest {
         mockMvc.perform(get("/ping").param("lang", "es").param("persistLang", "true"))
                 .andExpect(status().isOk());
 
-        Assertions.assertEquals(12L, capturedUserId.get());
-        Assertions.assertEquals(UserLanguages.SPANISH, capturedLanguage.get());
+        Assertions.assertEquals(
+                List.of(new LanguageUpdate(12L, UserLanguages.SPANISH)),
+                userService.languageUpdates);
     }
 
     @Test
     void authenticatedPreservedLangParameterDoesNotPersistLanguage() throws Exception {
-        final AtomicLong capturedUserId = new AtomicLong(-1L);
-        Mockito.doAnswer(
-                        invocation -> {
-                            capturedUserId.set(invocation.getArgument(0));
-                            return null;
-                        })
-                .when(userService)
-                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -112,19 +98,11 @@ class AuthenticatedLocalePersistenceInterceptorTest {
 
         mockMvc.perform(get("/ping").param("lang", "es")).andExpect(status().isOk());
 
-        Assertions.assertEquals(-1L, capturedUserId.get());
+        Assertions.assertTrue(userService.languageUpdates.isEmpty());
     }
 
     @Test
     void unsupportedLangSwitchDoesNotPersistDefaultLanguage() throws Exception {
-        final AtomicLong capturedUserId = new AtomicLong(-1L);
-        Mockito.doAnswer(
-                        invocation -> {
-                            capturedUserId.set(invocation.getArgument(0));
-                            return null;
-                        })
-                .when(userService)
-                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
@@ -145,23 +123,14 @@ class AuthenticatedLocalePersistenceInterceptorTest {
         mockMvc.perform(get("/ping").param("lang", "fr").param("persistLang", "true"))
                 .andExpect(status().isOk());
 
-        Assertions.assertEquals(-1L, capturedUserId.get());
+        Assertions.assertTrue(userService.languageUpdates.isEmpty());
     }
 
     @Test
     void anonymousLangSwitchDoesNotPersistLanguage() throws Exception {
-        final AtomicLong capturedUserId = new AtomicLong(-1L);
-        Mockito.doAnswer(
-                        invocation -> {
-                            capturedUserId.set(invocation.getArgument(0));
-                            return null;
-                        })
-                .when(userService)
-                .updatePreferredLanguage(Mockito.any(User.class), Mockito.anyString());
-
         mockMvc.perform(get("/ping").param("lang", "es")).andExpect(status().isOk());
 
-        Assertions.assertEquals(-1L, capturedUserId.get());
+        Assertions.assertTrue(userService.languageUpdates.isEmpty());
     }
 
     private static SessionLocaleResolver localeResolver() {
@@ -181,6 +150,67 @@ class AuthenticatedLocalePersistenceInterceptorTest {
         @GetMapping("/ping")
         public String ping() {
             return "ok";
+        }
+    }
+
+    private record LanguageUpdate(long userId, String language) {}
+
+    private static class RecordingUserService implements UserService {
+
+        private final List<LanguageUpdate> languageUpdates = new ArrayList<>();
+
+        @Override
+        public User createUser(final String email, final String username) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<User> findByEmail(final String email) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<User> findById(final Long id) {
+            return Optional.empty();
+        }
+
+        @Override
+        public List<User> findByIds(final Collection<Long> ids) {
+            return List.of();
+        }
+
+        @Override
+        public Optional<User> findByUsername(final String username) {
+            return Optional.empty();
+        }
+
+        @Override
+        public User updateProfile(
+                final User user,
+                final String username,
+                final String name,
+                final String lastName,
+                final String phone,
+                final String profileImageContentType,
+                final long profileImageContentLength,
+                final InputStream profileImageContentStream)
+                throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public User updateProfileImage(
+                final Long id,
+                final String contentType,
+                final long contentLength,
+                final InputStream contentStream)
+                throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void updatePreferredLanguage(final User user, final String preferredLanguage) {
+            languageUpdates.add(new LanguageUpdate(user.getId(), preferredLanguage));
         }
     }
 }

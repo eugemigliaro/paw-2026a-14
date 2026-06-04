@@ -44,7 +44,6 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,10 +65,6 @@ class HostTournamentControllerTest {
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
     private TournamentBracketService tournamentBracketService;
-    private AtomicReference<CreateTournamentRequest> createdRequest;
-    private AtomicReference<UpdateTournamentRequest> updatedRequest;
-    private AtomicReference<String> cancelReason;
-    private AtomicReference<List<TournamentMatchScheduleRequest>> publishedSchedules;
 
     @BeforeEach
     void setUp() {
@@ -77,10 +72,6 @@ class HostTournamentControllerTest {
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         tournamentBracketService = Mockito.mock(TournamentBracketService.class);
-        createdRequest = new AtomicReference<>();
-        updatedRequest = new AtomicReference<>();
-        cancelReason = new AtomicReference<>();
-        publishedSchedules = new AtomicReference<>();
 
         final MessageSource messageSource = messageSource();
         final Clock clock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
@@ -140,25 +131,14 @@ class HostTournamentControllerTest {
         Mockito.when(
                         tournamentService.createTournament(
                                 Mockito.any(User.class),
-                                Mockito.any(CreateTournamentRequest.class)))
-                .thenAnswer(
-                        invocation -> {
-                            createdRequest.set(invocation.getArgument(1));
-                            return tournament(99L, host, TournamentStatus.REGISTRATION);
-                        });
+                                Mockito.argThat(
+                                        HostTournamentControllerTest::isValidCreateRequest)))
+                .thenReturn(tournament(99L, host, TournamentStatus.REGISTRATION));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(validCreatePost())
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/99"));
-        Assertions.assertNotNull(createdRequest.get());
-        Assertions.assertEquals(Sport.PADEL, createdRequest.get().getSport());
-        Assertions.assertNull(createdRequest.get().getStartsAt());
-        Assertions.assertNull(createdRequest.get().getEndsAt());
-        Assertions.assertEquals(8, createdRequest.get().getBracketSize());
-        Assertions.assertEquals(1, createdRequest.get().getTeamSize());
-        Assertions.assertTrue(createdRequest.get().isAllowSoloSignup());
-        Assertions.assertTrue(createdRequest.get().isAllowTeamDraft());
     }
 
     @Test
@@ -169,25 +149,15 @@ class HostTournamentControllerTest {
         Mockito.when(
                         tournamentService.createTournament(
                                 Mockito.any(User.class),
-                                Mockito.any(CreateTournamentRequest.class)))
-                .thenAnswer(
-                        invocation -> {
-                            createdRequest.set(invocation.getArgument(1));
-                            return tournament(99L, host, TournamentStatus.REGISTRATION);
-                        });
+                                Mockito.argThat(
+                                        HostTournamentControllerTest
+                                                ::isCreateRequestWithArgentinaFallback)))
+                .thenReturn(tournament(99L, host, TournamentStatus.REGISTRATION));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(createPostWithoutTimezone("City Padel Cup"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/99"));
-
-        Assertions.assertNotNull(createdRequest.get());
-        Assertions.assertEquals(
-                Instant.parse("2030-04-01T12:00:00Z"),
-                createdRequest.get().getRegistrationOpensAt());
-        Assertions.assertEquals(
-                Instant.parse("2030-04-09T23:00:00Z"),
-                createdRequest.get().getRegistrationClosesAt());
     }
 
     @Test
@@ -198,20 +168,15 @@ class HostTournamentControllerTest {
         Mockito.when(
                         tournamentService.createTournament(
                                 Mockito.any(User.class),
-                                Mockito.any(CreateTournamentRequest.class)))
-                .thenAnswer(
-                        invocation -> {
-                            createdRequest.set(invocation.getArgument(1));
-                            return tournament(99L, host, TournamentStatus.REGISTRATION);
-                        });
+                                Mockito.argThat(
+                                        HostTournamentControllerTest
+                                                ::isTeamDraftOnlyCreateRequest)))
+                .thenReturn(tournament(99L, host, TournamentStatus.REGISTRATION));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(createPost("City Padel Cup", false, true))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/99"));
-        Assertions.assertNotNull(createdRequest.get());
-        Assertions.assertFalse(createdRequest.get().isAllowSoloSignup());
-        Assertions.assertTrue(createdRequest.get().isAllowTeamDraft());
     }
 
     @Test
@@ -225,7 +190,6 @@ class HostTournamentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attributeHasFieldErrors("createTournamentForm", "title"));
-        Assertions.assertNull(createdRequest.get());
     }
 
     @Test
@@ -240,7 +204,6 @@ class HostTournamentControllerTest {
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(
                         model().attributeHasFieldErrors("createTournamentForm", "allowSoloSignup"));
-        Assertions.assertNull(createdRequest.get());
     }
 
     @Test
@@ -254,7 +217,6 @@ class HostTournamentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attributeHasFieldErrors("createTournamentForm", "teamSize"));
-        Assertions.assertNull(createdRequest.get());
     }
 
     @Test
@@ -322,22 +284,14 @@ class HostTournamentControllerTest {
                         tournamentService.update(
                                 Mockito.eq(77L),
                                 Mockito.any(User.class),
-                                Mockito.any(UpdateTournamentRequest.class)))
-                .thenAnswer(
-                        invocation -> {
-                            updatedRequest.set(invocation.getArgument(2));
-                            return tournament(77L, host, TournamentStatus.REGISTRATION);
-                        });
+                                Mockito.argThat(
+                                        HostTournamentControllerTest::isValidUpdateRequest)))
+                .thenReturn(tournament(77L, host, TournamentStatus.REGISTRATION));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(editPost(77L, "Updated City Cup"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/77"));
-        Assertions.assertNotNull(updatedRequest.get());
-        Assertions.assertEquals("Updated City Cup", updatedRequest.get().getTitle());
-        Assertions.assertEquals(Sport.PADEL, updatedRequest.get().getSport());
-        Assertions.assertEquals(16, updatedRequest.get().getBracketSize());
-        Assertions.assertEquals(2, updatedRequest.get().getTeamSize());
     }
 
     @Test
@@ -359,18 +313,15 @@ class HostTournamentControllerTest {
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
         Mockito.when(
                         tournamentService.cancel(
-                                Mockito.eq(77L), Mockito.any(User.class), Mockito.anyString()))
-                .thenAnswer(
-                        invocation -> {
-                            cancelReason.set(invocation.getArgument(2));
-                            return tournament(77L, host, TournamentStatus.CANCELLED);
-                        });
+                                Mockito.eq(77L),
+                                Mockito.any(User.class),
+                                Mockito.eq("Host cancelled tournament")))
+                .thenReturn(tournament(77L, host, TournamentStatus.CANCELLED));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/77"));
-        Assertions.assertEquals("Host cancelled tournament", cancelReason.get());
     }
 
     @Test
@@ -589,22 +540,16 @@ class HostTournamentControllerTest {
                                 match));
         Mockito.when(
                         tournamentBracketService.publishBracket(
-                                Mockito.eq(77L), Mockito.eq(host), Mockito.anyList()))
-                .thenAnswer(
-                        invocation -> {
-                            publishedSchedules.set(invocation.getArgument(2));
-                            return tournament(77L, host, TournamentStatus.IN_PROGRESS);
-                        });
+                                Mockito.eq(77L),
+                                Mockito.eq(host),
+                                Mockito.argThat(
+                                        HostTournamentControllerTest::isValidPublishSchedule)))
+                .thenReturn(tournament(77L, host, TournamentStatus.IN_PROGRESS));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(validPublishPost())
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/77"));
-        Assertions.assertNotNull(publishedSchedules.get());
-        Assertions.assertEquals(2, publishedSchedules.get().size());
-        Assertions.assertEquals(10L, publishedSchedules.get().get(0).getMatchId());
-        Assertions.assertEquals("Downtown Club", publishedSchedules.get().get(0).getAddress());
-        Assertions.assertEquals(11L, publishedSchedules.get().get(1).getMatchId());
     }
 
     @Test
@@ -627,7 +572,45 @@ class HostTournamentControllerTest {
         mockMvc.perform(post("/host/tournaments/77/bracket/publish").param("tz", "UTC"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/host/tournaments/77/bracket/setup"));
-        Assertions.assertNull(publishedSchedules.get());
+    }
+
+    private static boolean isValidCreateRequest(final CreateTournamentRequest request) {
+        return request != null
+                && Sport.PADEL == request.getSport()
+                && request.getStartsAt() == null
+                && request.getEndsAt() == null
+                && request.getBracketSize() == 8
+                && request.getTeamSize() == 1
+                && request.isAllowSoloSignup()
+                && request.isAllowTeamDraft();
+    }
+
+    private static boolean isCreateRequestWithArgentinaFallback(
+            final CreateTournamentRequest request) {
+        return request != null
+                && Instant.parse("2030-04-01T12:00:00Z").equals(request.getRegistrationOpensAt())
+                && Instant.parse("2030-04-09T23:00:00Z").equals(request.getRegistrationClosesAt());
+    }
+
+    private static boolean isTeamDraftOnlyCreateRequest(final CreateTournamentRequest request) {
+        return request != null && !request.isAllowSoloSignup() && request.isAllowTeamDraft();
+    }
+
+    private static boolean isValidUpdateRequest(final UpdateTournamentRequest request) {
+        return request != null
+                && "Updated City Cup".equals(request.getTitle())
+                && Sport.PADEL == request.getSport()
+                && request.getBracketSize() == 16
+                && request.getTeamSize() == 2;
+    }
+
+    private static boolean isValidPublishSchedule(
+            final List<TournamentMatchScheduleRequest> schedules) {
+        return schedules != null
+                && schedules.size() == 2
+                && schedules.get(0).getMatchId() == 10L
+                && "Downtown Club".equals(schedules.get(0).getAddress())
+                && schedules.get(1).getMatchId() == 11L;
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

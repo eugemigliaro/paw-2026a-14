@@ -29,8 +29,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,10 +46,6 @@ class FeedControllerTournamentTest {
     private MatchService matchService;
     private TournamentService tournamentService;
     private MockMvc mockMvc;
-    private AtomicBoolean matchSearchCalled;
-    private AtomicBoolean tournamentSearchCalled;
-    private AtomicReference<String> tournamentSportFilter;
-    private AtomicReference<String> tournamentSortFilter;
 
     @BeforeEach
     void setUp() {
@@ -62,11 +56,6 @@ class FeedControllerTournamentTest {
         final MatchReservationService matchReservationService =
                 Mockito.mock(MatchReservationService.class);
         final MessageSource messageSource = messageSource();
-
-        matchSearchCalled = new AtomicBoolean(false);
-        tournamentSearchCalled = new AtomicBoolean(false);
-        tournamentSportFilter = new AtomicReference<>();
-        tournamentSortFilter = new AtomicReference<>();
 
         Mockito.when(
                         matchService.searchPublicMatches(
@@ -82,15 +71,7 @@ class FeedControllerTournamentTest {
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
                                 ArgumentMatchers.nullable(Double.class)))
-                .thenAnswer(
-                        invocation -> {
-                            matchSearchCalled.set(true);
-                            return new PaginatedResult<>(
-                                    List.of(match(42L, "Sunrise Padel")),
-                                    1,
-                                    1,
-                                    invocation.getArgument(6));
-                        });
+                .thenReturn(new PaginatedResult<>(List.of(match(42L, "Sunrise Padel")), 1, 1, 12));
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
@@ -106,16 +87,12 @@ class FeedControllerTournamentTest {
                                 ArgumentMatchers.nullable(Double.class),
                                 ArgumentMatchers.nullable(Double.class)))
                 .thenAnswer(
-                        invocation -> {
-                            tournamentSearchCalled.set(true);
-                            tournamentSportFilter.set(invocation.getArgument(1));
-                            tournamentSortFilter.set(invocation.getArgument(4));
-                            return new PaginatedResult<>(
-                                    List.of(tournament(77L, "City Cup")),
-                                    13,
-                                    invocation.getArgument(5),
-                                    invocation.getArgument(6));
-                        });
+                        invocation ->
+                                new PaginatedResult<>(
+                                        List.of(),
+                                        0,
+                                        invocation.getArgument(5),
+                                        invocation.getArgument(6)));
 
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
@@ -146,13 +123,28 @@ class FeedControllerTournamentTest {
         final FeedPageViewModel feedPage =
                 (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
 
-        Assertions.assertTrue(matchSearchCalled.get());
-        Assertions.assertFalse(tournamentSearchCalled.get());
         Assertions.assertEquals("/matches/42", feedPage.getFeaturedEvents().get(0).getHref());
     }
 
     @Test
     void tournamentFeedUsesTournamentSearchAndBuildsTournamentCards() throws Exception {
+        Mockito.when(
+                        tournamentService.searchPublicTournaments(
+                                Mockito.eq("cup"),
+                                Mockito.eq("padel"),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.eq("price"),
+                                Mockito.eq(2),
+                                Mockito.eq(12),
+                                Mockito.nullable(String.class),
+                                Mockito.argThat(value -> value.compareTo(new BigDecimal("5")) == 0),
+                                Mockito.argThat(
+                                        value -> value.compareTo(new BigDecimal("20")) == 0),
+                                Mockito.isNull(),
+                                Mockito.isNull()))
+                .thenReturn(new PaginatedResult<>(List.of(tournament(77L, "City Cup")), 13, 2, 12));
+
         final MvcResult result =
                 mockMvc.perform(
                                 get("/").param("type", "tournament")
@@ -171,10 +163,6 @@ class FeedControllerTournamentTest {
                 (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
         final EventCardViewModel card = feedPage.getFeaturedEvents().get(0);
 
-        Assertions.assertFalse(matchSearchCalled.get());
-        Assertions.assertTrue(tournamentSearchCalled.get());
-        Assertions.assertEquals("padel", tournamentSportFilter.get());
-        Assertions.assertEquals("price", tournamentSortFilter.get());
         Assertions.assertEquals("/tournaments/77", card.getHref());
         Assertions.assertEquals("Tournament", card.getBadge());
         Assertions.assertEquals("Registration", card.getLevel());
