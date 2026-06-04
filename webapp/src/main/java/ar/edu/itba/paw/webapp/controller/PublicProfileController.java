@@ -126,10 +126,10 @@ public class PublicProfileController {
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
+        final User currentUser =
+                SecurityControllerUtils.currentUserOrNull(); // TODO: add controller advice
         final boolean reportUserCanSubmit =
-                currentUser != null
-                        && !currentUser.getId().equals(user.getId()); // TODO: remove business logic
+                currentUser != null && !currentUser.getId().equals(user.getId());
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
         final Optional<UserBan> activeBan = moderationService.findActiveBan(user);
         mav.addObject("profileBanned", activeBan.isPresent());
@@ -163,21 +163,21 @@ public class PublicProfileController {
     @PostMapping("/users/{username}/reviews")
     public ModelAndView submitReview(
             @PathVariable("username") final String username,
-            @RequestParam("reaction") final PlayerReviewReaction reaction,
+            @RequestParam(value = "reaction", required = true) final PlayerReviewReaction reaction,
             @RequestParam(value = "comment", required = false) final String comment,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
-
-        if (reaction == null) {
-            return redirectToProfile(username, "invalid_reaction", null);
-        }
+        final User currentUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         String errorCode = null;
         try {
             playerReviewService.submitReview(currentUser, reviewedUser, reaction, comment);
             return redirectToProfile(username, null, "saved", redirectAttributes);
-        } catch (final PlayerReviewUserNotFoundException e) {
+        } catch (
+                final PlayerReviewUserNotFoundException
+                        e) { // TODO: move message code to service (?) and catch generic exception
+            // here
             errorCode = "user_not_found";
         } catch (final PlayerReviewInvalidReactionException e) {
             errorCode = "invalid_reaction";
@@ -194,13 +194,17 @@ public class PublicProfileController {
             @PathVariable("username") final String username,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         String errorCode = null;
         try {
             playerReviewService.deleteReview(currentUser, reviewedUser);
             return redirectToProfile(username, null, "deleted", redirectAttributes);
-        } catch (final PlayerReviewNotFoundException e) {
+        } catch (
+                final PlayerReviewNotFoundException
+                        e) { // TODO: move message code to service (?) and catch generic exception
+            // here
             errorCode = "not_found";
         } catch (final PlayerReviewUserNotFoundException e) {
             errorCode = "user_not_found";
@@ -239,7 +243,6 @@ public class PublicProfileController {
             final PlayerReviewFilter reviewFilter,
             final int reviewPage,
             final Locale locale) {
-        // TODO: remove business logic from controller
         final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user);
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
@@ -255,7 +258,7 @@ public class PublicProfileController {
                         : playerReviewService.findReviewByPair(currentUser, user);
         final boolean reviewCanSubmit =
                 currentUser != null
-                        && !currentUser.getId().equals(user.getId())
+                        && !currentUser.equals(user)
                         && playerReviewService.canReview(currentUser, user);
         final String profilePath = "/users/" + user.getUsername();
 
@@ -310,7 +313,7 @@ public class PublicProfileController {
                             new Object[] {user.getUsername()},
                             locale));
         }
-        final boolean isSelf = currentUser != null && currentUser.getId().equals(user.getId());
+        final boolean isSelf = currentUser != null && currentUser.equals(user);
         if (!reviewCanSubmit && !isSelf) {
             final String lockedKey =
                     currentUser == null

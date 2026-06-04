@@ -163,7 +163,7 @@ public class ModerationAdminController {
         return reportDetailModelAndView(report, reportVm, locale);
     }
 
-    private ModelAndView reportDetailModelAndView( // TODO: remove business logic
+    private ModelAndView reportDetailModelAndView(
             final ModerationReport report,
             final ModerationReportViewModel reportVm,
             final Locale locale) {
@@ -214,7 +214,8 @@ public class ModerationAdminController {
             @PathVariable("reportId") final Long reportId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentAdminUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         try {
             moderationService.markReportUnderReview(reportId, currentAdminUser);
             return redirectToReports("reviewed", redirectAttributes);
@@ -227,11 +228,11 @@ public class ModerationAdminController {
     public ModelAndView dismissReport(
             @PathVariable("reportId") final Long reportId,
             @Valid @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
-            final BindingResult errors,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        if (errors.hasErrors()) {
-            return reportDetailWithErrors(reportId, locale, form, errors);
+        if (bindingResult.hasErrors()) {
+            return reportDetailWithErrors(reportId, locale, form, bindingResult);
         }
         return resolveReport(
                 reportId,
@@ -247,11 +248,11 @@ public class ModerationAdminController {
     public ModelAndView deleteContent(
             @PathVariable("reportId") final Long reportId,
             @Valid @ModelAttribute("resolutionForm") final ModerationResolutionForm form,
-            final BindingResult errors,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        if (errors.hasErrors()) {
-            return reportDetailWithErrors(reportId, locale, form, errors);
+        if (bindingResult.hasErrors()) {
+            return reportDetailWithErrors(reportId, locale, form, bindingResult);
         }
         return resolveReport(
                 reportId,
@@ -269,11 +270,11 @@ public class ModerationAdminController {
             @Validated({Default.class, ModerationResolutionForm.BanAction.class})
                     @ModelAttribute("resolutionForm")
                     final ModerationResolutionForm form,
-            final BindingResult errors,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        if (errors.hasErrors()) {
-            return reportDetailWithErrors(reportId, locale, form, errors);
+        if (bindingResult.hasErrors()) {
+            return reportDetailWithErrors(reportId, locale, form, bindingResult);
         }
         try {
             return resolveReport(
@@ -294,14 +295,15 @@ public class ModerationAdminController {
             @PathVariable("reportId") final Long reportId,
             @Valid @ModelAttribute("appealResolutionForm")
                     final ModerationAppealResolutionForm form,
-            final BindingResult errors,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        if (errors.hasErrors()) {
-            return appealDetailWithErrors(reportId, locale, form, errors);
+        if (bindingResult.hasErrors()) {
+            return appealDetailWithErrors(reportId, locale, form, bindingResult);
         }
 
-        final User admin = SecurityControllerUtils.requireAuthenticatedUser();
+        final User admin =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         try {
             moderationService.finalizeReportAppeal(reportId, admin, form.getAppealDecision());
@@ -323,6 +325,8 @@ public class ModerationAdminController {
             final int banDurationDays,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
+        // TODO: get this as a parameter. Controller should have a controller advice that injects
+        // the user
         final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
@@ -364,28 +368,28 @@ public class ModerationAdminController {
             final Long reportId,
             final Locale locale,
             final ModerationResolutionForm form,
-            final BindingResult errors) {
+            final BindingResult bindingResult) {
         final ModerationReport report =
                 moderationService
                         .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return reportDetailModelAndView(report, toViewModel(report, locale), locale)
                 .addObject("resolutionForm", form)
-                .addObject(BindingResult.MODEL_KEY_PREFIX + "resolutionForm", errors);
+                .addObject(BindingResult.MODEL_KEY_PREFIX + "resolutionForm", bindingResult);
     }
 
     private ModelAndView appealDetailWithErrors(
             final Long reportId,
             final Locale locale,
             final ModerationAppealResolutionForm form,
-            final BindingResult errors) {
+            final BindingResult bindingResult) {
         final ModerationReport report =
                 moderationService
                         .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return reportDetailModelAndView(report, toViewModel(report, locale), locale)
                 .addObject("appealResolutionForm", form)
-                .addObject(BindingResult.MODEL_KEY_PREFIX + "appealResolutionForm", errors);
+                .addObject(BindingResult.MODEL_KEY_PREFIX + "appealResolutionForm", bindingResult);
     }
 
     private ModerationReportViewModel toViewModel(

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
@@ -120,7 +121,8 @@ public class TournamentController {
                 tournamentService
                         .findPublicTournament(tournamentId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
+        final User currentUser =
+                SecurityControllerUtils.currentUserOrNull(); // TODO: add controller advice
 
         final Optional<TournamentSoloEntry> soloEntry =
                 tournamentRegistrationService.findSoloEntry(tournamentId, currentUser);
@@ -155,7 +157,8 @@ public class TournamentController {
     public ModelAndView joinSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String tournamentErrorCode = null;
         try {
             tournamentRegistrationService.joinSolo(tournamentId, currentUser);
@@ -163,7 +166,10 @@ public class TournamentController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (TournamentRegistrationInvalidUserException exception) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final TournamentRegistrationNotOpenException exception) {
+        } catch (
+                final TournamentRegistrationNotOpenException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
             tournamentErrorCode = "tournament.registration.error.notOpen";
         } catch (final TournamentRegistrationSoloSignupDisabledException exception) {
             tournamentErrorCode = "tournament.registration.error.soloDisabled";
@@ -186,15 +192,15 @@ public class TournamentController {
             @PathVariable("tournamentId") final Long tournamentId,
             final Model model,
             final Locale locale) {
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
+        final User currentUser =
+                SecurityControllerUtils.currentUserOrNull(); // TODO: add controller advice
         TournamentBracketView bracketView;
         try {
             bracketView = tournamentBracketService.getBracket(tournamentId, currentUser);
         } catch (final TournamentBracketTournamentNotFoundException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final TournamentBracketForbiddenException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final TournamentBracketNotGeneratedException exception) {
+        } catch (final TournamentBracketForbiddenException
+                | TournamentBracketNotGeneratedException exception) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -225,7 +231,8 @@ public class TournamentController {
             @PathVariable("matchId") final Long matchId,
             @RequestParam("winnerTeamId") final Long winnerTeamId,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User actingUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
         try {
             tournamentBracketService.declareWinner(
@@ -235,14 +242,16 @@ public class TournamentController {
                     actingUser);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.result.saved");
-        } catch (final TournamentBracketTournamentNotFoundException exception) {
+        } catch (final TournamentBracketTournamentNotFoundException
+                | TournamentBracketMatchNotFoundException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (final TournamentBracketForbiddenException exception) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final TournamentBracketNotInProgressException exception) {
+        } catch (
+                final TournamentBracketNotInProgressException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
             errorCode = "tournament.bracket.error.notInProgress";
-        } catch (final TournamentBracketMatchNotFoundException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (final TournamentBracketMatchNotReadyException exception) {
             errorCode = "tournament.bracket.error.matchNotReady";
         } catch (final TournamentBracketMatchAlreadyDecidedException exception) {
@@ -261,7 +270,8 @@ public class TournamentController {
     public ModelAndView leaveSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
         try {
             tournamentRegistrationService.leaveSolo(tournamentId, currentUser);
@@ -269,7 +279,10 @@ public class TournamentController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         } catch (final TournamentRegistrationTournamentNotFoundException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final TournamentRegistrationNotOpenException exception) {
+        } catch (
+                final TournamentRegistrationNotOpenException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
             errorCode = "tournament.registration.error.notOpen";
         } catch (final TournamentRegistrationNotInSoloPoolException exception) {
             errorCode = "tournament.registration.error.notInSoloPool";
@@ -286,7 +299,7 @@ public class TournamentController {
             final User currentUser,
             final Optional<TournamentSoloEntry> soloEntry,
             final Optional<TournamentTeam> userTeam,
-            final Locale locale) { // TODO: remove business logic
+            final Locale locale) {
         final Instant now = Instant.now(clock);
         final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
         final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
@@ -308,7 +321,10 @@ public class TournamentController {
                 currentUser == null && registrationOpen && tournament.isAllowSoloSignup();
         final boolean canCloseRegistration =
                 TournamentStatus.REGISTRATION == tournament.getStatus()
-                        && (isHost(tournament, currentUser) || isAdminMod());
+                        && (isHost(tournament, currentUser)
+                                || isAdminMod()); // TODO: if admin can manage all tournaments,
+        // shuold they also be able to manage all matches
+        // as well?
         final boolean canEditTournament =
                 TournamentStatus.REGISTRATION == tournament.getStatus()
                         && (isHost(tournament, currentUser) || isAdminMod());
@@ -580,12 +596,6 @@ public class TournamentController {
             return null;
         }
         return "/users/" + host.getUsername();
-    }
-
-    private static String bannerUrlFor(final Tournament tournament) {
-        return tournament.hasBannerImage()
-                ? "/images/" + tournament.getBannerImageMetadata().getId()
-                : null;
     }
 
     private static boolean isHost(final Tournament tournament, final User currentUser) {

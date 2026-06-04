@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -60,7 +61,7 @@ public class ModerationReportController {
     private final MessageSource messageSource;
     private final PlatformTimeZoneService platformTimeZoneService;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public ModerationReportController(
             final ModerationService moderationService,
             final UserService userService,
@@ -237,7 +238,8 @@ public class ModerationReportController {
                 userService
                         .findByUsername(username)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         if (errors.hasErrors()) {
             LOGGER.warn(
@@ -286,7 +288,8 @@ public class ModerationReportController {
                 playerReviewService
                         .findReviewById(reviewId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         if (errors.hasErrors()) {
             LOGGER.warn(
@@ -335,7 +338,8 @@ public class ModerationReportController {
                 matchService
                         .findMatchById(matchId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         if (errors.hasErrors()) {
             LOGGER.warn(

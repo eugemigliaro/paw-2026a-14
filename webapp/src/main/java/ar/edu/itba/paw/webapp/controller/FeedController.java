@@ -101,7 +101,10 @@ public class FeedController {
     public ModelAndView showFeed(
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult,
-            @RequestParam(value = "email", required = false) final String email,
+            @RequestParam(value = "email", required = false)
+                    final String
+                            email, // TODO: remove - I don't know what it's being used for (just url
+            // building apparently)
             final HttpSession session,
             final Locale locale) {
         if (bindingResult.hasErrors()) {
@@ -808,7 +811,11 @@ public class FeedController {
     }
 
     private static DateRange normalizeDateRange(
-            final LocalDate rawStartDate, final LocalDate rawEndDate, final ZoneId zoneId) {
+            final LocalDate rawStartDate,
+            final LocalDate rawEndDate,
+            final ZoneId
+                    zoneId) { // TODO: do not change these fields in controller. Show error in form
+        // validation instead.
         LocalDate startDate = rawStartDate;
         LocalDate endDate = rawEndDate;
         final LocalDate today = LocalDate.now(zoneId);
@@ -827,8 +834,11 @@ public class FeedController {
         return new DateRange(startDate, endDate);
     }
 
-    private static PriceRange normalizePriceRange(
-            final BigDecimal rawMinPrice, final BigDecimal rawMaxPrice) {
+    private static PriceRange
+            normalizePriceRange( // TODO: do not change these fields in controller. Show error in
+                    // form validation instead.
+                    final BigDecimal rawMinPrice,
+                    final BigDecimal rawMaxPrice) {
         final BigDecimal minPrice =
                 rawMinPrice == null || rawMinPrice.compareTo(BigDecimal.ZERO) < 0
                         ? null

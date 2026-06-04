@@ -49,7 +49,10 @@ public class VerificationController {
                     VerificationViews.expiryFormatter(locale)
                             .format(preview.getExpiresAt().atZone(ZoneId.systemDefault())));
             return mav;
-        } catch (final VerificationFailureNotFoundException exception) {
+        } catch (
+                final VerificationFailureNotFoundException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
             messageKey = "verification.message.notFound";
         } catch (final VerificationFailureAlreadyUsedException exception) {
             messageKey = "verification.message.alreadyUsed";
@@ -81,7 +84,10 @@ public class VerificationController {
                                     SecurityControllerUtils.authenticateVerifiedAccount(
                                             account, request, response));
             return new ModelAndView("redirect:/");
-        } catch (final VerificationFailureNotFoundException exception) {
+        } catch (
+                final VerificationFailureNotFoundException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
             messageKey = "verification.message.notFound";
         } catch (final VerificationFailureAlreadyUsedException exception) {
             messageKey = "verification.message.alreadyUsed";

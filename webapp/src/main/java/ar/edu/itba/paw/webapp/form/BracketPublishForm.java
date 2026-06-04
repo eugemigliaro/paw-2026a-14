@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.webapp.validation.ValidBracketPublishForm;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import javax.validation.Valid;
@@ -8,15 +9,15 @@ import javax.validation.Valid;
 @ValidBracketPublishForm
 public class BracketPublishForm {
 
-    private String tz = "";
+    private ZoneId tz = ZoneId.systemDefault();
 
     @Valid private List<BracketPublishScheduleForm> schedules = new ArrayList<>();
 
-    public String getTz() {
+    public ZoneId getTz() {
         return tz;
     }
 
-    public void setTz(final String tz) {
+    public void setTz(final ZoneId tz) {
         this.tz = tz;
     }
 

@@ -46,7 +46,9 @@ public class AccountController {
 
     @GetMapping("/account")
     public ModelAndView showAccount(final Model model, final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils
+                        .requireAuthenticatedUser(); // TODO: controller advice for auth
         return accountView(
                 user,
                 locale,
@@ -62,7 +64,9 @@ public class AccountController {
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User currentUser =
+                SecurityControllerUtils
+                        .requireAuthenticatedUser(); // TODO: controller advice for auth
         String imageError = null;
 
         if (bindingResult.hasErrors()) {
@@ -81,7 +85,10 @@ public class AccountController {
             SecurityControllerUtils.refreshAuthentication(updatedUser);
             redirectAttributes.addFlashAttribute("accountUpdated", true);
             return new ModelAndView("redirect:/account");
-        } catch (final UsernameTakenException exception) {
+        } catch (
+                final UsernameTakenException
+                        exception) { // TODO: these checks should be in AccountProfileForm. Do not
+            // call updateProfile with invalid data.
             bindingResult.rejectValue("username", "auth.registration.error.usernameTaken");
             return accountView(currentUser, locale, false, accountProfileForm, imageError);
         } catch (final UsernameInvalidException exception) {
@@ -127,7 +134,9 @@ public class AccountController {
             final Locale locale,
             final boolean updated,
             final AccountProfileForm accountProfileForm,
-            final String profileImageError) {
+            final String
+                    profileImageError) { // TODO: remove messageSource and instead send msg keys to
+        // the view. Resolve them there with <spring:message>.
         final ModelAndView mav = new ModelAndView("account/index");
         mav.addObject(
                 "pageTitle",
@@ -196,7 +205,10 @@ public class AccountController {
         return form;
     }
 
-    private ImageUpload profileImageUpload(final MultipartFile profileImage) {
+    private ImageUpload profileImageUpload(
+            final MultipartFile
+                    profileImage) { // TODO: move to a different file. It's also used in other
+        // controllers.
         if (profileImage == null) {
             return null;
         }

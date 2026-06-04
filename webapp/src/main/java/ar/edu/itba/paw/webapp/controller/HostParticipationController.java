@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
@@ -68,7 +67,8 @@ public class HostParticipationController {
     @GetMapping("/host/matches/{matchId:\\d+}/participants")
     public ModelAndView showRoster(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         try {
             matchParticipationService.findConfirmedParticipants(matchId, host);
         } catch (final MatchParticipationException e) {
@@ -80,25 +80,21 @@ public class HostParticipationController {
     @GetMapping("/host/matches/{matchId:\\d+}/requests")
     public ModelAndView showPendingRequests(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         try {
             matchParticipationService.findPendingRequests(matchId, host);
         } catch (final MatchParticipationException e) {
             throw participationAccessStatus(e);
         }
-        final Match match = findMatchOrThrow(matchId);
-
-        if (match.getJoinPolicy()
-                != EventJoinPolicy.APPROVAL_REQUIRED) { // TODO: remove business logic
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
         return new ModelAndView("redirect:/matches/" + matchId + "#pending-requests");
     }
 
     @GetMapping("/host/requests")
-    public ModelAndView showAllPendingRequests(final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+    public ModelAndView showAllPendingRequests(
+            final Locale locale) { // TODO: this method is never used
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final List<PendingJoinRequest> pending =
                 matchParticipationService.findPendingRequestsForHost(host);
 
@@ -117,14 +113,9 @@ public class HostParticipationController {
             @PathVariable("userId") final Long userId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final User user = findUserOrThrow(userId);
-        final Match match = findMatchOrThrow(matchId);
-
-        if (match.getJoinPolicy()
-                != EventJoinPolicy.APPROVAL_REQUIRED) { // TODO: remove business logic
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
 
         try {
             matchParticipationService.approveRequest(matchId, host, user);
@@ -144,14 +135,9 @@ public class HostParticipationController {
             @PathVariable("userId") final Long userId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match = findMatchOrThrow(matchId);
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final User user = findUserOrThrow(userId);
-
-        if (match.getJoinPolicy()
-                != EventJoinPolicy.APPROVAL_REQUIRED) { // TODO: remove business logic
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
 
         try {
             matchParticipationService.rejectRequest(matchId, host, user);
@@ -173,16 +159,12 @@ public class HostParticipationController {
     @GetMapping("/host/matches/{matchId:\\d+}/invites")
     public ModelAndView showInvitePage(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         try {
             matchParticipationService.findInvitedUsers(matchId, host);
         } catch (final MatchParticipationException e) {
             throw participationAccessStatus(e);
-        }
-        final Match match = findMatchOrThrow(matchId);
-
-        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) { // TODO: remove business logic
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         return new ModelAndView("redirect:/matches/" + matchId + "#pending-invitations");
@@ -203,17 +185,13 @@ public class HostParticipationController {
             return redirectToMatch(matchId);
         }
 
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final Match match = findMatchOrThrow(matchId);
-
-        if (match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) { // TODO: remove business logic
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
 
         try {
             final boolean includeSeries =
-                    inviteForm.isInviteSeries()
-                            && match.isRecurringOccurrence(); // TODO: remove business logic
+                    inviteForm.isInviteSeries() && match.isRecurringOccurrence();
             matchParticipationService.inviteUser(
                     matchId, host, inviteForm.getEmail(), includeSeries);
             redirectAttributes.addFlashAttribute(
@@ -267,7 +245,8 @@ public class HostParticipationController {
             @PathVariable("userId") final Long userId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+        final User host =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final User user = findUserOrThrow(userId);
 
         try {

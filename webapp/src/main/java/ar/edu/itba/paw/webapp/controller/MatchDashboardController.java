@@ -58,7 +58,8 @@ public class MatchDashboardController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final SearchForm viewSearchForm = selection.searchForm();

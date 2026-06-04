@@ -145,6 +145,9 @@ public class HostController {
             final Match createdMatch = matchService.createMatch(request);
             return new ModelAndView("redirect:/matches/" + createdMatch.getId());
         } catch (final IllegalArgumentException exception) {
+            // TODO: add specific exceptions for validation errors. Same as AuthController.
+            //  Move error codes to exceptions and add validation in the form to avoid calling
+            // service with invalid data.
             return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
         }
     }
@@ -152,7 +155,8 @@ public class HostController {
     @GetMapping("/host/matches/{matchId:\\d+}/edit")
     public ModelAndView showEditEvent(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User actingUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         final Match match = findEditableMatchOrThrowNotFound(matchId, actingUser);
         return hostFormView(toForm(match), null, locale, editFormConfig(match, locale));
     }
@@ -164,7 +168,8 @@ public class HostController {
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User actingUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         final Match existingMatch = findEditableMatchOrThrowNotFound(matchId, actingUser);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
 
@@ -204,9 +209,14 @@ public class HostController {
 
         try {
             matchService.updateMatch(matchId, actingUser, request);
-        } catch (final MatchUpdateNotFoundException | MatchUpdateForbiddenException exception) {
+        } catch (final MatchUpdateNotFoundException
+                | MatchUpdateForbiddenException
+                        exception) { // TODO: shouldn't forbidden throw 403? These checks should be
+            // in security
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final MatchUpdateCapacityBelowConfirmedException exception) {
+        } catch (
+                final MatchUpdateCapacityBelowConfirmedException
+                        exception) { // TODO: same as AuthController
             bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
             return hostFormView(createEventForm, null, locale, formConfig);
         } catch (final MatchUpdateCapacityAboveMaxException exception) {
@@ -231,7 +241,8 @@ public class HostController {
     @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
     public ModelAndView showEditSeries(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User actingUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
         return hostFormView(toForm(match), null, locale, seriesEditFormConfig(match, locale));
     }
@@ -243,7 +254,8 @@ public class HostController {
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User actingUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
         final HostFormConfig formConfig = seriesEditFormConfig(match, locale);
 
@@ -257,7 +269,7 @@ public class HostController {
             matchService.updateSeriesFromOccurrence(matchId, actingUser, request);
         } catch (final MatchUpdateNotFoundException
                 | MatchUpdateForbiddenException
-                | MatchUpdateNotRecurringException exception) {
+                | MatchUpdateNotRecurringException exception) { // TODO: same as updateEvent
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (final MatchUpdateCapacityBelowConfirmedException exception) {
             bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
@@ -285,10 +297,13 @@ public class HostController {
     public ModelAndView cancelEvent(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User actingUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         try {
             matchService.cancelMatch(matchId, actingUser);
-        } catch (final MatchCancellationException exception) {
+        } catch (
+                final MatchCancellationException
+                        exception) { // TODO: move to a global exception handler?
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         redirectAttributes.addFlashAttribute("hostAction", "cancelled");
@@ -300,7 +315,8 @@ public class HostController {
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
 
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
+        final User actingUser =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         try {
             matchService.cancelSeriesFromOccurrence(matchId, actingUser);
         } catch (final MatchCancellationException exception) {
@@ -455,7 +471,9 @@ public class HostController {
     }
 
     private static Instant toInstant(
-            final LocalDate eventDate, final LocalTime eventTime, final ZoneId timezone) {
+            final LocalDate eventDate,
+            final LocalTime eventTime,
+            final ZoneId timezone) { // TODO: isn't this similar to the platformTimeZoneService ?
         return eventDate
                 .atTime(eventTime)
                 .atZone(timezone == null ? ZoneId.systemDefault() : timezone)
@@ -479,7 +497,10 @@ public class HostController {
                 form.getTimezone());
     }
 
-    private ImageUpload bannerUpload(final MultipartFile bannerImage) {
+    private ImageUpload bannerUpload(
+            final MultipartFile
+                    bannerImage) { // TODO: move this to a different file. It's also used in other
+        // controllers
         if (bannerImage == null) {
             return null;
         }

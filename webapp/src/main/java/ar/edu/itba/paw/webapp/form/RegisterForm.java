@@ -6,7 +6,8 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
-@ValidRegisterForm
+@ValidRegisterForm // TODO: add validation for individual fields (e.g. unique username/email). Those
+// validators should use service methods.
 public class RegisterForm {
 
     @NotBlank(message = "{RegisterForm.email.NotBlank}")

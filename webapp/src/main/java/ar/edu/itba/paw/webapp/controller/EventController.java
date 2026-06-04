@@ -190,7 +190,9 @@ public class EventController {
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
     }
 
-    private static String reservationErrorCode(final MatchReservationException exception) {
+    private static String reservationErrorCode(
+            final MatchReservationException
+                    exception) { // TODO: move these codes to the exceptions themselves
         return switch (exception) {
             case MatchReservationClosedException ignored -> "closed";
             case MatchReservationStartedException ignored -> "started";
@@ -205,7 +207,9 @@ public class EventController {
         };
     }
 
-    private static String cancellationErrorCode(final MatchParticipationException exception) {
+    private static String cancellationErrorCode(
+            final MatchParticipationException
+                    exception) { // TODO: move these codes to the exceptions themselves
         return switch (exception) {
             case MatchParticipationStartedException ignored -> "started";
             case MatchParticipationNotCancellableException ignored -> "not_cancellable";

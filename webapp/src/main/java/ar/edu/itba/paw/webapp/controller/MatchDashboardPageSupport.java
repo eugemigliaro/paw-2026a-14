@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
+import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
@@ -458,7 +459,9 @@ final class MatchDashboardPageSupport {
             final int page) {
         final Map<String, String> params = new LinkedHashMap<>();
         params.put("page", Integer.toString(page));
-        if ("/events".equals(path)) {
+        if ("/events"
+                .equals(path)) { // TODO: this is a bit hacky, find a better way to determine which
+            // params to include
             if (selectedType == EventType.TOURNAMENT) {
                 params.put("type", TYPE_TOURNAMENT);
             }
@@ -517,7 +520,9 @@ final class MatchDashboardPageSupport {
             params.put("tz", timezone);
         }
 
-        final String encodedStatuses = encodeCsv(selectedStatuses);
+        final String encodedStatuses =
+                encodeCsv(selectedStatuses); // TODO: is this necessary? is there a better way to do
+        // it?
         final String encodedSports = encodeCsv(selectedSports);
         final String encodedVisibility = encodeCsv(selectedVisibility);
         final String encodedCategories = encodeCsv(selectedCategories);
@@ -1005,10 +1010,6 @@ final class MatchDashboardPageSupport {
             }
         }
         return List.copyOf(dbValues);
-    }
-
-    static String encodeCsv(final List<String> values) {
-        return ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv(values);
     }
 
     private static String formatNullablePriceValue(final BigDecimal price) {

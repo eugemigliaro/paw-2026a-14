@@ -68,15 +68,18 @@ public class AuthController {
     }
 
     @GetMapping("/login")
-    public ModelAndView showLogin(
-            @RequestParam(value = "error", required = false) final String error,
-            @RequestParam(value = "email", required = false) final String email,
-            @RequestParam(value = "verified", required = false) final String verified,
-            @RequestParam(value = "reset", required = false) final String reset,
-            @RequestParam(value = "logout", required = false) final String logout,
-            @RequestParam(value = "continue", required = false) final String continueFlag,
-            final Locale locale) {
-        if (SecurityControllerUtils.currentUserOrNull() != null) {
+    public ModelAndView
+            showLogin( // TODO: consider typing these flags as boolean. "1".equals(flag) is a bit
+                    // weird
+                    @RequestParam(value = "error", required = false) final String error,
+                    @RequestParam(value = "email", required = false) final String email,
+                    @RequestParam(value = "verified", required = false) final String verified,
+                    @RequestParam(value = "reset", required = false) final String reset,
+                    @RequestParam(value = "logout", required = false) final String logout,
+                    @RequestParam(value = "continue", required = false) final String continueFlag,
+                    final Locale locale) {
+        if (SecurityControllerUtils.currentUserOrNull()
+                != null) { // TODO: redundant with SecurityConfig? check and remove if so
             LOGGER.debug("Authenticated user redirected from /login");
             return new ModelAndView("redirect:/");
         }
@@ -94,7 +97,8 @@ public class AuthController {
 
     @GetMapping("/register")
     public ModelAndView showRegister(final Locale locale) {
-        if (SecurityControllerUtils.currentUserOrNull() != null) {
+        if (SecurityControllerUtils.currentUserOrNull()
+                != null) { // TODO: redundant with SecurityConfig? check and remove if so
             LOGGER.debug("Authenticated user redirected from /register");
             return new ModelAndView("redirect:/");
         }
@@ -132,6 +136,10 @@ public class AuthController {
                     messageSource.getMessage("auth.registration.requested", null, locale),
                     result.getExpiresAt());
         } catch (final EmailTakenException exception) {
+            // TODO: move these checks to the form validator. Do not call register with invalid
+            // data.
+            // Also, consider assignig specific error codes to the exceptions instead of using their
+            // type to determine the error.
             LOGGER.debug("Registration rejected: email already taken");
             bindingResult.rejectValue("email", "auth.registration.error.emailTaken");
         } catch (final EmailPendingVerificationException exception) {
@@ -186,7 +194,10 @@ public class AuthController {
     @GetMapping("/forgot-password")
     public ModelAndView showForgotPassword(final Locale locale) {
         if (CurrentAuthenticatedUser.get().isPresent()) {
-            LOGGER.debug("Authenticated user redirected from /forgot-password");
+            LOGGER.debug(
+                    "Authenticated user redirected from /forgot-password"); // TODO: redundant with
+            // SecurityConfig? check
+            // and remove if so
             return new ModelAndView("redirect:/");
         }
         return forgotPasswordView(new ForgotPasswordForm(), locale);
@@ -202,6 +213,7 @@ public class AuthController {
             return forgotPasswordView(forgotPasswordForm, locale);
         }
 
+        // TODO: this method is not catching exceptions.
         final Optional<VerificationRequestResult> result =
                 accountAuthService.requestPasswordReset(forgotPasswordForm.getEmail());
         LOGGER.info("Password reset requested locale={}", locale);
@@ -249,6 +261,9 @@ public class AuthController {
         return mav;
     }
 
+    // TODO: consider changing the errors to "verify", "passwordSetup" and "invalid", and removing
+    // the messageSource from this class.
+    // That way we can send "auth.login.error." + error as the msg key and resolve it in the view.
     private String loginErrorMessage(final String error, final Locale locale) {
         if ("verify".equalsIgnoreCase(error)) {
             return messageSource.getMessage("auth.login.error.verify", null, locale);

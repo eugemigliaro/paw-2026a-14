@@ -45,14 +45,18 @@ public class PlayerParticipationController {
     public ModelAndView requestToJoin(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
             matchParticipationService.requestToJoin(matchId, user);
             redirectAttributes.addFlashAttribute("joinRequested", true);
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchParticipationUnauthenticatedException e) {
+        } catch (
+                final MatchParticipationUnauthenticatedException
+                        e) { // TODO: move message code to service (?) and catch generic exception
+            // here
             errorCode = "unauthenticated";
         } catch (final MatchParticipationIsHostException e) {
             errorCode = "is_host";
@@ -79,14 +83,18 @@ public class PlayerParticipationController {
     public ModelAndView requestToJoinSeries(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
             matchParticipationService.requestToJoinSeries(matchId, user);
             redirectAttributes.addFlashAttribute("seriesJoinRequested", true);
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchParticipationUnauthenticatedException e) {
+        } catch (
+                final MatchParticipationUnauthenticatedException
+                        e) { // TODO: move message code to service (?) and catch generic exception
+            // here
             errorCode = "unauthenticated";
         } catch (final MatchParticipationIsHostException e) {
             errorCode = "is_host";
@@ -110,7 +118,8 @@ public class PlayerParticipationController {
     public ModelAndView cancelJoinRequest(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
@@ -127,7 +136,8 @@ public class PlayerParticipationController {
     public ModelAndView acceptInvite(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
@@ -138,7 +148,10 @@ public class PlayerParticipationController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (final MatchParticipationInvalidUserException e) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final MatchParticipationIsHostException e) {
+        } catch (
+                final MatchParticipationIsHostException
+                        e) { // TODO: move message code to service (?) and catch generic exception
+            // here
             errorCode = "is_host";
         } catch (final MatchParticipationNoInvitationException e) {
             errorCode = "no_invitation";
@@ -152,7 +165,8 @@ public class PlayerParticipationController {
 
     @PostMapping("/matches/{matchId}/invites/decline")
     public ModelAndView declineInvite(@PathVariable("matchId") final Long matchId) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
@@ -162,7 +176,10 @@ public class PlayerParticipationController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (final MatchParticipationInvalidUserException e) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final MatchParticipationNoInvitationException e) {
+        } catch (
+                final MatchParticipationNoInvitationException
+                        e) { // TODO: move message code to service (?) and catch generic exception
+            // here
             errorCode = "no_invitation";
         }
         return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + errorCode);

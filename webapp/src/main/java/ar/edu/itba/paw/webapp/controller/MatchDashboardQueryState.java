@@ -26,7 +26,8 @@ final class MatchDashboardQueryState {
         normalizedForm.setTimezone(selectedTimezone);
 
         final boolean tournament = normalizedForm.getType() == EventType.TOURNAMENT;
-        final boolean upcoming = !"past".equalsIgnoreCase(normalizedForm.getFilter());
+        final boolean upcoming =
+                !"past".equalsIgnoreCase(normalizedForm.getFilter()); // TODO: add enum for this
         final DateRangeContext context =
                 upcoming ? DateRangeContext.UPCOMING : DateRangeContext.PAST;
         final DateRange dateRange =
@@ -97,6 +98,8 @@ final class MatchDashboardQueryState {
         }
 
         final List<ParticipantStatus> participantStatuses = new ArrayList<>();
+        // TODO: add enum for this (a category enum that includes "hosted", "joined", "invited", and
+        // "pending")
         if (selectedCategories.contains("joined")) {
             participantStatuses.add(ParticipantStatus.JOINED);
             participantStatuses.add(ParticipantStatus.CHECKED_IN);
@@ -110,11 +113,13 @@ final class MatchDashboardQueryState {
         return List.copyOf(participantStatuses);
     }
 
-    private static DateRange normalizeDateRange(
-            final LocalDate rawStartDate,
-            final LocalDate rawEndDate,
-            final DateRangeContext context,
-            final ZoneId zoneId) {
+    private static DateRange
+            normalizeDateRange( // TODO: remove this and instead show error messages in form
+                    // validation
+                    final LocalDate rawStartDate,
+                    final LocalDate rawEndDate,
+                    final DateRangeContext context,
+                    final ZoneId zoneId) {
         LocalDate startDate = rawStartDate;
         LocalDate endDate = rawEndDate;
         final LocalDate today = LocalDate.now(zoneId);

@@ -51,6 +51,8 @@ public class PasswordResetController {
                     new ResetPasswordForm(),
                     locale);
         } catch (final VerificationFailureNotFoundException exception) {
+            // TODO: move message code to service exception (?). Catch generic type and assign
+            // e.getMessage().
             messageKey = "verification.message.notFound";
         } catch (final VerificationFailureAlreadyUsedException exception) {
             messageKey = "verification.message.alreadyUsed";
@@ -77,7 +79,9 @@ public class PasswordResetController {
                         accountAuthService.getPasswordResetPreview(token),
                         resetPasswordForm,
                         locale);
-            } catch (final VerificationFailureNotFoundException exception) {
+            } catch (
+                    final VerificationFailureNotFoundException
+                            exception) { // TODO: same as showPasswordReset
                 messageKey = "verification.message.notFound";
             } catch (final VerificationFailureAlreadyUsedException exception) {
                 messageKey = "verification.message.alreadyUsed";
@@ -101,7 +105,9 @@ public class PasswordResetController {
                         accountAuthService.getPasswordResetPreview(token),
                         resetPasswordForm,
                         locale);
-            } catch (final VerificationFailureNotFoundException e) {
+            } catch (
+                    final VerificationFailureNotFoundException
+                            e) { // TODO: same as showPasswordReset
                 messageKey = "verification.message.notFound";
             } catch (final VerificationFailureAlreadyUsedException e) {
                 messageKey = "verification.message.alreadyUsed";

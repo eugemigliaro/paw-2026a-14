@@ -4,7 +4,9 @@ import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
-public class ForgotPasswordForm {
+public
+class ForgotPasswordForm { // TODO: add validator to check if email exists. That validator should
+    // use service methods.
 
     @NotBlank(message = "{ForgotPasswordForm.email.NotBlank}")
     @Email(message = "{ForgotPasswordForm.email.Email}")

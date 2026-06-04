@@ -39,7 +39,8 @@ public class UserBanAppealController {
 
     @GetMapping
     public ModelAndView showBanPage(final Model model, final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
@@ -81,7 +82,8 @@ public class UserBanAppealController {
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
@@ -91,7 +93,10 @@ public class UserBanAppealController {
             moderationService.appealReport(activeBan.getModerationReport().getId(), appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
-        } catch (final ModerationReportNotFoundException exception) {
+        } catch (
+                final ModerationReportNotFoundException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
             exceptionReason = "report_not_found";
         } catch (final ModerationAppealLimitException exception) {
             exceptionReason = "appeal_limit";
