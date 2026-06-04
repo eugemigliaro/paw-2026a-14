@@ -36,7 +36,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +44,7 @@ import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -55,8 +55,6 @@ class FeedControllerTournamentTest {
     private MatchService matchService;
     private TournamentService tournamentService;
     private MockMvc mockMvc;
-    private AtomicBoolean matchSearchCalled;
-    private AtomicBoolean tournamentSearchCalled;
 
     @BeforeEach
     void setUp() {
@@ -67,9 +65,6 @@ class FeedControllerTournamentTest {
         final MatchReservationService matchReservationService =
                 Mockito.mock(MatchReservationService.class);
         final MessageSource messageSource = messageSource();
-
-        matchSearchCalled = new AtomicBoolean(false);
-        tournamentSearchCalled = new AtomicBoolean(false);
 
         Mockito.when(
                         matchService.searchPublicMatches(
@@ -86,14 +81,12 @@ class FeedControllerTournamentTest {
                                 ArgumentMatchers.nullable(Double.class),
                                 ArgumentMatchers.nullable(Double.class)))
                 .thenAnswer(
-                        invocation -> {
-                            matchSearchCalled.set(true);
-                            return new PaginatedResult<>(
-                                    List.of(match(42L, "Sunrise Padel")),
-                                    1,
-                                    1,
-                                    invocation.getArgument(6));
-                        });
+                        invocation ->
+                                new PaginatedResult<>(
+                                        List.of(match(42L, "Sunrise Padel")),
+                                        1,
+                                        invocation.getArgument(5),
+                                        invocation.getArgument(6)));
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
@@ -109,14 +102,12 @@ class FeedControllerTournamentTest {
                                 ArgumentMatchers.nullable(Double.class),
                                 ArgumentMatchers.nullable(Double.class)))
                 .thenAnswer(
-                        invocation -> {
-                            tournamentSearchCalled.set(true);
-                            return new PaginatedResult<>(
-                                    List.of(tournament(77L, "City Cup")),
-                                    13,
-                                    invocation.getArgument(5),
-                                    invocation.getArgument(6));
-                        });
+                        invocation ->
+                                new PaginatedResult<>(
+                                        List.of(),
+                                        0,
+                                        invocation.getArgument(5),
+                                        invocation.getArgument(6)));
 
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
@@ -144,6 +135,22 @@ class FeedControllerTournamentTest {
 
     @Test
     void defaultFeedStillUsesMatchSearch() throws Exception {
+        Mockito.doThrow(new AssertionError("Default feed must not query tournaments"))
+                .when(tournamentService)
+                .searchPublicTournaments(
+                        ArgumentMatchers.anyString(),
+                        ArgumentMatchers.nullable(List.class),
+                        ArgumentMatchers.nullable(Instant.class),
+                        ArgumentMatchers.nullable(Instant.class),
+                        ArgumentMatchers.nullable(EventSort.class),
+                        ArgumentMatchers.anyInt(),
+                        ArgumentMatchers.anyInt(),
+                        ArgumentMatchers.nullable(ZoneId.class),
+                        ArgumentMatchers.nullable(BigDecimal.class),
+                        ArgumentMatchers.nullable(BigDecimal.class),
+                        ArgumentMatchers.nullable(Double.class),
+                        ArgumentMatchers.nullable(Double.class));
+
         final MvcResult result =
                 mockMvc.perform(get("/"))
                         .andExpect(status().isOk())
@@ -154,13 +161,29 @@ class FeedControllerTournamentTest {
         final FeedPageViewModel feedPage =
                 (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
 
-        Assertions.assertTrue(matchSearchCalled.get());
-        Assertions.assertFalse(tournamentSearchCalled.get());
         Assertions.assertEquals("/matches/42", feedPage.getFeaturedEvents().get(0).getHref());
     }
 
     @Test
     void tournamentFeedUsesTournamentSearchAndBuildsTournamentCards() throws Exception {
+        Mockito.when(
+                        tournamentService.searchPublicTournaments(
+                                Mockito.eq("cup"),
+                                Mockito.eq(List.of(Sport.PADEL)),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.eq(EventSort.PRICE_LOW),
+                                Mockito.eq(2),
+                                Mockito.eq(12),
+                                Mockito.nullable(ZoneId.class),
+                                Mockito.<BigDecimal>argThat(
+                                        value -> value.compareTo(new BigDecimal("5")) == 0),
+                                Mockito.<BigDecimal>argThat(
+                                        value -> value.compareTo(new BigDecimal("20")) == 0),
+                                Mockito.isNull(),
+                                Mockito.isNull()))
+                .thenReturn(new PaginatedResult<>(List.of(tournament(77L, "City Cup")), 13, 2, 12));
+
         final MvcResult result =
                 mockMvc.perform(
                                 get("/").param("type", "tournament")
@@ -179,8 +202,6 @@ class FeedControllerTournamentTest {
                 (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
         final EventCardViewModel card = feedPage.getFeaturedEvents().get(0);
 
-        Assertions.assertFalse(matchSearchCalled.get());
-        Assertions.assertTrue(tournamentSearchCalled.get());
         Assertions.assertEquals("/tournaments/77", card.getHref());
         Assertions.assertEquals("Tournament", card.getBadge());
         Assertions.assertEquals("Registration", card.getLevel());
@@ -218,6 +239,26 @@ class FeedControllerTournamentTest {
     }
 
     @Test
+    void tournamentSportFiltersPreserveTournamentFeedMode() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(get("/").param("type", "tournament"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        final FilterGroupViewModel sportGroup =
+                feedPage.getFilterGroups().stream()
+                        .filter(group -> "Sports".equals(group.getTitle()))
+                        .findFirst()
+                        .orElseThrow();
+
+        Assertions.assertTrue(
+                sportGroup.getOptions().stream()
+                        .allMatch(option -> "tournament".equals(option.getParams().get("type"))));
+    }
+
+    @Test
     void postExploreLocationWithTournamentTypePreservesTournamentFeedMode() throws Exception {
         mockMvc.perform(
                         post("/explore/location")
@@ -226,6 +267,53 @@ class FeedControllerTournamentTest {
                                 .param("type", "tournament"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?sort=distance&type=tournament"));
+    }
+
+    @Test
+    void tournamentDistanceSearchUsesStoredExploreLocation() throws Exception {
+        final MvcResult locationResult =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-34.61")
+                                        .param("longitude", "-58.38")
+                                        .param("type", "tournament"))
+                        .andExpect(status().is3xxRedirection())
+                        .andReturn();
+        final MockHttpSession session =
+                (MockHttpSession) locationResult.getRequest().getSession(false);
+
+        Mockito.when(
+                        tournamentService.searchPublicTournaments(
+                                Mockito.eq(""),
+                                Mockito.<List<Sport>>argThat(
+                                        sports -> sports != null && sports.isEmpty()),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.eq(EventSort.DISTANCE),
+                                Mockito.eq(1),
+                                Mockito.eq(12),
+                                Mockito.nullable(ZoneId.class),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.eq(-34.61),
+                                Mockito.eq(-58.38)))
+                .thenReturn(
+                        new PaginatedResult<>(List.of(tournament(78L, "Nearby Cup")), 1, 1, 12));
+
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/").session(session)
+                                        .param("sort", "distance")
+                                        .param("type", "tournament"))
+                        .andExpect(status().isOk())
+                        .andExpect(model().attribute("selectedType", "tournament"))
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+
+        Assertions.assertEquals(1, feedPage.getFeaturedEvents().size());
+        Assertions.assertEquals("/tournaments/78", feedPage.getFeaturedEvents().get(0).getHref());
     }
 
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {

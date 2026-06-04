@@ -25,7 +25,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -98,7 +97,6 @@ class ModerationAdminControllerTest {
 
     @Test
     void postBanUserUsesSubmittedDuration() throws Exception {
-        final AtomicInteger capturedBanDays = new AtomicInteger(-1);
         Mockito.when(
                         moderationService.resolveReport(
                                 Mockito.eq(17L),
@@ -106,12 +104,8 @@ class ModerationAdminControllerTest {
                                 Mockito.eq(ReportResolution.USER_BANNED),
                                 Mockito.eq("Repeated abuse"),
                                 Mockito.eq(ReportStatus.RESOLVED),
-                                Mockito.anyInt()))
-                .thenAnswer(
-                        invocation -> {
-                            capturedBanDays.set(invocation.getArgument(5));
-                            return samplePendingReport();
-                        });
+                                Mockito.eq(30)))
+                .thenReturn(samplePendingReport());
 
         AuthenticationUtils.authenticateAdmin(99L, "ignored");
 
@@ -122,8 +116,6 @@ class ModerationAdminControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/reports"))
                 .andExpect(flash().attribute("action", "banned"));
-
-        org.junit.jupiter.api.Assertions.assertEquals(30, capturedBanDays.get());
     }
 
     @Test

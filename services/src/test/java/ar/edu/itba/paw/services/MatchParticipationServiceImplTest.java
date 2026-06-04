@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -567,7 +566,6 @@ public class MatchParticipationServiceImplTest {
                         0,
                         100L,
                         6);
-        final List<Long> invitedMatchIds = new ArrayList<>();
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
         Mockito.when(matchDao.findSeriesOccurrences(100L))
                 .thenReturn(
@@ -589,14 +587,17 @@ public class MatchParticipationServiceImplTest {
                                 Mockito.anyLong(), Mockito.eq(u), Mockito.eq(true)))
                 .thenAnswer(
                         invocation -> {
-                            invitedMatchIds.add(invocation.getArgument(0));
+                            final Long targetMatchId = invocation.getArgument(0);
+                            if (!List.of(10L, 11L).contains(targetMatchId)) {
+                                throw new AssertionError(
+                                        "Only eligible future private occurrences should be invited");
+                            }
                             return true;
                         });
         // Exercise
         matchParticipationService.inviteUser(10L, UserUtils.getUser(1L), "player@test.com", true);
 
         // Assert
-        Assertions.assertEquals(List.of(10L, 11L), invitedMatchIds);
         Assertions.assertEquals(1, mailDispatchService.actions.size());
         Assertions.assertEquals("series-invitation", mailDispatchService.actions.get(0));
         Assertions.assertEquals(u.getEmail(), mailDispatchService.recipients.get(0));
@@ -692,23 +693,19 @@ public class MatchParticipationServiceImplTest {
                         1,
                         100L,
                         1);
-        final AtomicInteger acceptedRows = new AtomicInteger();
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchParticipantDao.hasInvitation(10L, u)).thenReturn(true);
         Mockito.when(matchParticipantDao.isSeriesInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, u, FIXED_NOW))
-                .thenAnswer(
-                        invocation -> {
-                            acceptedRows.set(2);
-                            return 2;
-                        });
+        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, u, FIXED_NOW)).thenReturn(2);
 
         // Exercise
         matchParticipationService.acceptInvite(10L, u);
 
         // Assert
-        Assertions.assertEquals(2, acceptedRows.get());
+        Assertions.assertEquals(List.of("invite-accepted"), mailDispatchService.actions);
+        Assertions.assertEquals(
+                List.of(selectedOccurrence.getHost().getEmail()), mailDispatchService.recipients);
     }
 
     @Test
@@ -725,23 +722,19 @@ public class MatchParticipationServiceImplTest {
                         0,
                         100L,
                         1);
-        final AtomicInteger acceptedRows = new AtomicInteger();
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(staleOccurrence));
         Mockito.when(matchParticipantDao.hasInvitation(10L, u)).thenReturn(true);
         Mockito.when(matchParticipantDao.isSeriesInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, u, FIXED_NOW))
-                .thenAnswer(
-                        invocation -> {
-                            acceptedRows.set(1);
-                            return 1;
-                        });
+        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, u, FIXED_NOW)).thenReturn(1);
 
         // Exercise
         matchParticipationService.acceptInvite(10L, u);
 
         // Assert
-        Assertions.assertEquals(1, acceptedRows.get());
+        Assertions.assertEquals(List.of("invite-accepted"), mailDispatchService.actions);
+        Assertions.assertEquals(
+                List.of(staleOccurrence.getHost().getEmail()), mailDispatchService.recipients);
     }
 
     @Test
@@ -758,23 +751,19 @@ public class MatchParticipationServiceImplTest {
                         1,
                         100L,
                         1);
-        final AtomicInteger declinedRows = new AtomicInteger();
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchParticipantDao.hasInvitation(10L, u)).thenReturn(true);
         Mockito.when(matchParticipantDao.isSeriesInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.declineSeriesInvite(100L, u))
-                .thenAnswer(
-                        invocation -> {
-                            declinedRows.set(2);
-                            return 2;
-                        });
+        Mockito.when(matchParticipantDao.declineSeriesInvite(100L, u)).thenReturn(2);
 
         // Exercise
         matchParticipationService.declineInvite(10L, u);
 
         // Assert
-        Assertions.assertEquals(2, declinedRows.get());
+        Assertions.assertEquals(List.of("invite-declined"), mailDispatchService.actions);
+        Assertions.assertEquals(
+                List.of(selectedOccurrence.getHost().getEmail()), mailDispatchService.recipients);
     }
 
     @Test
@@ -921,6 +910,18 @@ public class MatchParticipationServiceImplTest {
         public void sendPlayerRemoved(final User player, final Match match) {
             actions.add("player-removed");
             recipients.add(player.getEmail());
+        }
+
+        @Override
+        public void sendInviteAccepted(final User host, final Match match, final User player) {
+            actions.add("invite-accepted");
+            recipients.add(host.getEmail());
+        }
+
+        @Override
+        public void sendInviteDeclined(final User host, final Match match, final User player) {
+            actions.add("invite-declined");
+            recipients.add(host.getEmail());
         }
     }
 

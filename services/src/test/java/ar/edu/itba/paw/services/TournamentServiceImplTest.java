@@ -19,8 +19,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -283,42 +281,31 @@ public class TournamentServiceImplTest {
     @Test
     public void searchPublicTournamentsPaginatesAndNormalizesInvalidSortToSoonest() {
         // 1. Arrange
-        final AtomicReference<EventSort> capturedSort = new AtomicReference<>();
-        final AtomicInteger capturedOffset = new AtomicInteger(-1);
-        final AtomicInteger capturedLimit = new AtomicInteger(-1);
+        final Tournament expectedTournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
         Mockito.when(
                         tournamentDao.countPublicTournaments(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.anyList(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any()))
+                                "cup",
+                                List.of(Sport.PADEL),
+                                Instant.parse("2026-04-06T00:00:00Z"),
+                                Instant.parse("2026-04-10T00:00:00Z"),
+                                BigDecimal.ZERO,
+                                BigDecimal.TEN))
                 .thenReturn(25);
         Mockito.when(
                         tournamentDao.findPublicTournaments(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.anyList(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.anyInt()))
-                .thenAnswer(
-                        invocation -> {
-                            capturedSort.set(invocation.getArgument(6));
-                            capturedOffset.set(invocation.getArgument(9));
-                            capturedLimit.set(invocation.getArgument(10));
-                            return List.of(
-                                    tournament(
-                                            10L,
-                                            UserUtils.getUser(1L),
-                                            TournamentStatus.REGISTRATION));
-                        });
+                                "cup",
+                                List.of(Sport.PADEL),
+                                Instant.parse("2026-04-06T00:00:00Z"),
+                                Instant.parse("2026-04-10T00:00:00Z"),
+                                BigDecimal.ZERO,
+                                BigDecimal.TEN,
+                                EventSort.SOONEST,
+                                null,
+                                null,
+                                20,
+                                10))
+                .thenReturn(List.of(expectedTournament));
 
         // 2. Exercise
         final PaginatedResult<Tournament> result =
@@ -338,65 +325,52 @@ public class TournamentServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals(3, result.getPage());
+        Assertions.assertEquals(10, result.getPageSize());
         Assertions.assertEquals(25, result.getTotalCount());
-        Assertions.assertEquals(EventSort.SOONEST, capturedSort.get());
-        Assertions.assertEquals(20, capturedOffset.get());
-        Assertions.assertEquals(10, capturedLimit.get());
+        Assertions.assertEquals(List.of(expectedTournament), result.getItems());
     }
 
     @Test
     public void searchPublicTournamentsUsesDistanceSortOnlyWhenCoordinatesArePresent() {
         // 1. Arrange
-        final AtomicReference<EventSort> capturedSort = new AtomicReference<>();
-        Mockito.when(
-                        tournamentDao.countPublicTournaments(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.anyList(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any()))
+        final Tournament expectedTournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
+        Mockito.when(tournamentDao.countPublicTournaments("", List.of(), null, null, null, null))
                 .thenReturn(1);
         Mockito.when(
                         tournamentDao.findPublicTournaments(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.anyList(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.anyInt()))
-                .thenAnswer(
-                        invocation -> {
-                            capturedSort.set(invocation.getArgument(6));
-                            return List.of(
-                                    tournament(
-                                            10L,
-                                            UserUtils.getUser(1L),
-                                            TournamentStatus.REGISTRATION));
-                        });
+                                "",
+                                List.of(),
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.DISTANCE,
+                                -34.60,
+                                -58.38,
+                                0,
+                                12))
+                .thenReturn(List.of(expectedTournament));
 
         // 2. Exercise
-        tournamentService.searchPublicTournaments(
-                "",
-                List.of(),
-                null,
-                null,
-                EventSort.DISTANCE,
-                1,
-                12,
-                ZoneId.of("UTC"),
-                null,
-                null,
-                -34.60,
-                -58.38);
+        final PaginatedResult<Tournament> result =
+                tournamentService.searchPublicTournaments(
+                        "",
+                        List.of(),
+                        null,
+                        null,
+                        EventSort.DISTANCE,
+                        1,
+                        12,
+                        ZoneId.of("UTC"),
+                        null,
+                        null,
+                        -34.60,
+                        -58.38);
 
         // 3. Assert
-        Assertions.assertEquals(EventSort.DISTANCE, capturedSort.get());
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(List.of(expectedTournament), result.getItems());
     }
 
     @Test

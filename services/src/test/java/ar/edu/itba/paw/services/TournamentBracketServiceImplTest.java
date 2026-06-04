@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
@@ -26,8 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -416,19 +415,9 @@ public class TournamentBracketServiceImplTest {
                         List.of(
                                 member(firstRoundMatch.getTeamA(), winningPlayer),
                                 member(firstRoundMatch.getTeamB(), losingPlayer)));
-        final AtomicReference<List<User>> capturedWinners = new AtomicReference<>();
-        final AtomicReference<List<User>> capturedLosers = new AtomicReference<>();
-        Mockito.when(
-                        userSportRatingService.applyMatchResult(
-                                ArgumentMatchers.anyList(),
-                                ArgumentMatchers.anyList(),
-                                ArgumentMatchers.eq(Sport.FOOTBALL)))
-                .thenAnswer(
-                        invocation -> {
-                            capturedWinners.set(invocation.getArgument(0));
-                            capturedLosers.set(invocation.getArgument(1));
-                            return new EloUpdatedResult(Sport.FOOTBALL, List.of());
-                        });
+        final RecordingUserSportRatingService recordingRatingService =
+                new RecordingUserSportRatingService();
+        final TournamentBracketServiceImpl bracketService = bracketService(recordingRatingService);
 
         // 2. Exercise
         bracketService.declareWinner(
@@ -438,8 +427,9 @@ public class TournamentBracketServiceImplTest {
                 tournament.getHost());
 
         // 3. Assert
-        Assertions.assertEquals(List.of(winningPlayer), capturedWinners.get());
-        Assertions.assertEquals(List.of(losingPlayer), capturedLosers.get());
+        Assertions.assertEquals(List.of(winningPlayer), recordingRatingService.winners);
+        Assertions.assertEquals(List.of(losingPlayer), recordingRatingService.losers);
+        Assertions.assertEquals(Sport.FOOTBALL, recordingRatingService.sport);
     }
 
     @Test
@@ -1017,7 +1007,6 @@ public class TournamentBracketServiceImplTest {
     }
 
     private void configureMatchCreation() {
-        final AtomicLong matchIds = new AtomicLong(1000L);
         Mockito.when(
                         tournamentMatchDao.create(
                                 ArgumentMatchers.any(Tournament.class),
@@ -1031,7 +1020,9 @@ public class TournamentBracketServiceImplTest {
                 .thenAnswer(
                         invocation ->
                                 new TournamentMatch(
-                                        matchIds.getAndIncrement(),
+                                        matchIdFor(
+                                                invocation.getArgument(1),
+                                                invocation.getArgument(2)),
                                         invocation.getArgument(0),
                                         invocation.getArgument(1),
                                         invocation.getArgument(2),
@@ -1054,7 +1045,6 @@ public class TournamentBracketServiceImplTest {
             final Tournament tournament,
             final List<TournamentTeam> teams,
             final List<TournamentMatch> persistedMatches) {
-        final AtomicLong matchIds = new AtomicLong(1000L);
         tournament.setPairingStrategy(TournamentPairingStrategy.RANDOM);
         Mockito.when(tournamentDao.findById(tournament.getId()))
                 .thenReturn(Optional.of(tournament));
@@ -1086,7 +1076,9 @@ public class TournamentBracketServiceImplTest {
                         invocation -> {
                             final TournamentMatch match =
                                     new TournamentMatch(
-                                            matchIds.getAndIncrement(),
+                                            matchIdFor(
+                                                    invocation.getArgument(1),
+                                                    invocation.getArgument(2)),
                                             invocation.getArgument(0),
                                             invocation.getArgument(1),
                                             invocation.getArgument(2),
@@ -1106,6 +1098,10 @@ public class TournamentBracketServiceImplTest {
                             persistedMatches.add(match);
                             return match;
                         });
+    }
+
+    private static long matchIdFor(final int roundNumber, final int matchIndex) {
+        return 1000L + roundNumber * 100L + matchIndex;
     }
 
     private static List<TournamentMatch> fourTeamBracket(final Tournament tournament) {
@@ -1225,6 +1221,49 @@ public class TournamentBracketServiceImplTest {
                 userSportRatingService,
                 tournamentMailService,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+    }
+
+    private TournamentBracketServiceImpl bracketService(
+            final UserSportRatingService userSportRatingService) {
+        return new TournamentBracketServiceImpl(
+                tournamentDao,
+                tournamentTeamDao,
+                tournamentMatchDao,
+                userSportRatingService,
+                tournamentMailService,
+                messageSource,
+                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+    }
+
+    private static class RecordingUserSportRatingService implements UserSportRatingService {
+
+        private List<User> winners = List.of();
+        private List<User> losers = List.of();
+        private Sport sport;
+
+        @Override
+        public Optional<UserSportRating> findRating(final User user, final Sport sport) {
+            return Optional.empty();
+        }
+
+        @Override
+        public int getEffectiveElo(final User user, final Sport sport) {
+            return 1000;
+        }
+
+        @Override
+        public List<UserSportRating> findRatingsForUser(final User user) {
+            return List.of();
+        }
+
+        @Override
+        public EloUpdatedResult applyMatchResult(
+                final List<User> winners, final List<User> losers, final Sport sport) {
+            this.winners = List.copyOf(winners);
+            this.losers = List.copyOf(losers);
+            this.sport = sport;
+            return new EloUpdatedResult(sport, List.of());
+        }
     }
 
     private static class RecordingTournamentMailService implements TournamentMailService {

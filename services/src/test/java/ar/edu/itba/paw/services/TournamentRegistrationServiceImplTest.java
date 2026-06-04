@@ -23,7 +23,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -352,7 +351,6 @@ public class TournamentRegistrationServiceImplTest {
             final Tournament tournament, final List<TournamentSoloEntry> activeEntries) {
         configureCloseRegistration(tournament, activeEntries);
         final List<TournamentTeam> createdTeams = new ArrayList<>();
-        final AtomicLong teamIds = new AtomicLong(100L);
         Mockito.when(
                         tournamentTeamDao.create(
                                 ArgumentMatchers.eq(tournament),
@@ -363,7 +361,7 @@ public class TournamentRegistrationServiceImplTest {
                         invocation -> {
                             final TournamentTeam team =
                                     new TournamentTeam(
-                                            teamIds.getAndIncrement(),
+                                            100L + createdTeams.size(),
                                             tournament,
                                             invocation.getArgument(1),
                                             TournamentTeamOrigin.SOLO_POOL,
