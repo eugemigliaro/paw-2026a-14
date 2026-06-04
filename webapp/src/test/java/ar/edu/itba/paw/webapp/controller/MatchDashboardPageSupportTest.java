@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
@@ -122,11 +123,11 @@ class MatchDashboardPageSupportTest {
         assertNull(mav.getModel().get("selectedStartDateValue"));
         assertNull(mav.getModel().get("selectedEndDateValue"));
         assertEquals(
-                LocalDate.now(ZoneId.of("UTC")).toString(),
+                LocalDate.now(PlatformTime.ZONE).toString(),
                 mav.getModel().get("selectedDateMinValue"));
         assertNull(mav.getModel().get("selectedDateMaxValue"));
         assertEquals(List.of(), mav.getModel().get("selectedCategories"));
-        assertEquals("UTC", mav.getModel().get("selectedTimezone"));
+        assertEquals(PlatformTime.ZONE.getId(), mav.getModel().get("selectedTimezone"));
         assertEquals(2, mav.getModel().get("pageNumber"));
         assertTrue((Boolean) mav.getModel().get("pageHasPrevious"));
         assertFalse((Boolean) mav.getModel().get("pageHasNext"));

@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
@@ -741,7 +742,7 @@ public class MatchJpaDao implements MatchDao {
         if (Boolean.FALSE.equals(upcoming) && timeFilter == EventTimeFilter.TOMORROW) {
             return;
         }
-        final ZoneId safeZoneId = zoneId == null ? ZoneId.systemDefault() : zoneId;
+        final ZoneId safeZoneId = zoneId == null ? PlatformTime.ZONE : zoneId;
         if (timeFilter == EventTimeFilter.FUTURE) {
             parts.where.add("m.startsAt >= :timeStart");
             parts.params.put("timeStart", ZonedDateTime.now(safeZoneId).toInstant());

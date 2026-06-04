@@ -4,6 +4,7 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.AppealDecision;
@@ -11,8 +12,6 @@ import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
@@ -51,29 +50,15 @@ public class ModerationAdminController {
     private final ModerationService moderationService;
     private final UserService userService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public ModerationAdminController(
             final ModerationService moderationService,
             final UserService userService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.userService = userService;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
-    public ModerationAdminController(
-            final ModerationService moderationService,
-            final UserService userService,
-            final MessageSource messageSource) {
-        this(
-                moderationService,
-                userService,
-                messageSource,
-                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @ModelAttribute("resolutionForm")
@@ -394,18 +379,13 @@ public class ModerationAdminController {
                 report.getAppealReason(),
                 report.getResolutionDetails(),
                 report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(report.getUpdatedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getAppealedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getReviewedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(report.getCreatedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getUpdatedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getAppealedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getReviewedAt(), locale, PlatformTime.ZONE),
                 report.getReviewer(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
-                formatInstant(
-                        report.getAppealResolvedAt(),
-                        locale,
-                        platformTimeZoneService.defaultZone()),
+                formatInstant(report.getAppealResolvedAt(), locale, PlatformTime.ZONE),
                 report.getAppealResolvedBy(),
                 isAppealed(report));
     }
@@ -434,8 +414,7 @@ public class ModerationAdminController {
 
         final UserBan ban = latestBanForUser.get();
         return new UserBanViewModel(
-                ban.getId(),
-                formatInstant(ban.getBannedUntil(), locale, platformTimeZoneService.defaultZone()));
+                ban.getId(), formatInstant(ban.getBannedUntil(), locale, PlatformTime.ZONE));
     }
 
     public static final class UserBanViewModel {

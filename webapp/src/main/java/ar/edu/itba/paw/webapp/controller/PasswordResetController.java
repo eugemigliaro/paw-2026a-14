@@ -1,12 +1,12 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.exceptions.PasswordResetException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.form.ResetPasswordForm;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,7 +100,7 @@ public class PasswordResetController {
         mav.addObject(
                 "expiresAtLabel",
                 VerificationViews.expiryFormatter(locale)
-                        .format(preview.getExpiresAt().atZone(ZoneId.systemDefault())));
+                        .format(preview.getExpiresAt().atZone(PlatformTime.ZONE)));
         mav.addObject("resetPasswordForm", resetPasswordForm);
         return mav;
     }

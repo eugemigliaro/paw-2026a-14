@@ -1,12 +1,12 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
@@ -62,7 +62,7 @@ public class UserBanAppealController {
                 "banUntilLabel",
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                         .withLocale(locale)
-                        .withZone(ZoneId.systemDefault())
+                        .withZone(PlatformTime.ZONE)
                         .format(activeBan.getBannedUntil()));
         mav.addObject(
                 "banReason",

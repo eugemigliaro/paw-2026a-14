@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.validation;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.webapp.form.BracketPublishForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishScheduleForm;
 import java.time.Instant;
@@ -23,7 +24,7 @@ public class BracketPublishFormValidator
         boolean valid = true;
         context.disableDefaultConstraintViolation();
 
-        final ZoneId zoneId = resolveZoneId(form.getTz());
+        final ZoneId zoneId = PlatformTime.ZONE;
         final Instant now = Instant.now();
         Instant previousRoundEnd = null;
         Integer previousRoundNumber = null;
@@ -106,17 +107,6 @@ public class BracketPublishFormValidator
     private static Instant toInstant(
             final java.time.LocalDate date, final java.time.LocalTime time, final ZoneId zoneId) {
         return LocalDateTime.of(date, time).atZone(zoneId).toInstant();
-    }
-
-    private static ZoneId resolveZoneId(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
     }
 
     private static void reject(

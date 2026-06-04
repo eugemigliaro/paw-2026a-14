@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -22,8 +23,8 @@ import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -406,8 +407,7 @@ public class HostController {
 
     private CreateEventForm toForm(final Match match) {
         final CreateEventForm form = new CreateEventForm();
-        final LocalDateTime startsAt =
-                LocalDateTime.ofInstant(match.getStartsAt(), ZoneId.systemDefault());
+        final OffsetDateTime startsAt = match.getStartsAtDateTime();
         form.setTitle(match.getTitle());
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
@@ -418,13 +418,12 @@ public class HostController {
         form.setJoinPolicy(match.getJoinPolicy());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
-        final LocalDateTime endsAt =
-                LocalDateTime.ofInstant(resolveEndsAt(match), ZoneId.systemDefault());
+        final OffsetDateTime endsAt = PlatformTime.toOffsetDateTime(resolveEndsAt(match));
         form.setEndDate(endsAt.toLocalDate());
         form.setEndTime(endsAt.toLocalTime());
         form.setMaxPlayers(match.getMaxPlayers());
         form.setPricePerPlayer(match.getPricePerPlayer());
-        form.setTimezone(ZoneId.systemDefault());
+        form.setTimezone(PlatformTime.ZONE);
         return form;
     }
 
@@ -475,10 +474,7 @@ public class HostController {
 
     private static Instant toInstant(
             final LocalDate eventDate, final LocalTime eventTime, final ZoneId timezone) {
-        return eventDate
-                .atTime(eventTime)
-                .atZone(timezone == null ? ZoneId.systemDefault() : timezone)
-                .toInstant();
+        return PlatformTime.toInstant(eventDate, eventTime);
     }
 
     private static CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {
@@ -495,7 +491,7 @@ public class HostController {
                 form.getRecurrenceEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
                         ? form.getRecurrenceOccurrenceCount()
                         : null,
-                form.getTimezone());
+                PlatformTime.ZONE);
     }
 
     private ImageUpload bannerUpload(final MultipartFile bannerImage) {

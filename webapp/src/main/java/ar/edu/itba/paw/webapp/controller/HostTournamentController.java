@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -34,7 +35,6 @@ import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -572,7 +572,7 @@ public class HostTournamentController {
     private BracketPublishForm createBracketPublishForm(
             final TournamentBracketViewModel bracketPage) {
         final BracketPublishForm form = new BracketPublishForm();
-        form.setTz(ZoneId.systemDefault().getId());
+        form.setTz(PlatformTime.ZONE.getId());
         final List<BracketPublishScheduleForm> schedules = new ArrayList<>();
         for (final TournamentBracketViewModel.RoundViewModel round : bracketPage.getRounds()) {
             for (final TournamentBracketViewModel.MatchViewModel match : round.getMatches()) {
@@ -611,7 +611,7 @@ public class HostTournamentController {
 
     private List<TournamentMatchScheduleRequest> toMatchScheduleRequests(
             final BracketPublishForm form) {
-        final ZoneId zoneId = resolveZoneId(form.getTz());
+        final ZoneId zoneId = PlatformTime.ZONE;
         final List<TournamentMatchScheduleRequest> schedules = new ArrayList<>();
         for (final BracketPublishScheduleForm schedule : form.getSchedules()) {
             schedules.add(
@@ -654,7 +654,6 @@ public class HostTournamentController {
     }
 
     private CreateTournamentForm toForm(final Tournament tournament) {
-        final ZoneId zoneId = ZoneId.systemDefault();
         final CreateTournamentForm form = new CreateTournamentForm();
         form.setTitle(tournament.getTitle());
         form.setDescription(tournament.getDescription());
@@ -667,15 +666,11 @@ public class HostTournamentController {
         form.setAllowSoloSignup(tournament.isAllowSoloSignup());
         form.setAllowTeamDraft(tournament.isAllowTeamDraft());
         form.setPricePerPlayer(tournament.getPricePerPlayer());
-        form.setRegistrationOpensDate(
-                LocalDate.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
-        form.setRegistrationOpensTime(
-                LocalTime.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
-        form.setRegistrationClosesDate(
-                LocalDate.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
-        form.setRegistrationClosesTime(
-                LocalTime.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
-        form.setTz(zoneId.getId());
+        form.setRegistrationOpensDate(tournament.getRegistrationOpensAtDateTime().toLocalDate());
+        form.setRegistrationOpensTime(tournament.getRegistrationOpensAtDateTime().toLocalTime());
+        form.setRegistrationClosesDate(tournament.getRegistrationClosesAtDateTime().toLocalDate());
+        form.setRegistrationClosesTime(tournament.getRegistrationClosesAtDateTime().toLocalTime());
+        form.setTz(PlatformTime.ZONE.getId());
         return form;
     }
 
@@ -877,8 +872,7 @@ public class HostTournamentController {
     private TournamentBracketViewModel buildBracketPage(
             final TournamentBracketView bracketView, final Locale locale) {
         final Tournament tournament = bracketView.getTournament();
-        final String defaultScheduleDate =
-                LocalDate.now(ZoneId.systemDefault()).plusDays(1).toString();
+        final String defaultScheduleDate = LocalDate.now(PlatformTime.ZONE).plusDays(1).toString();
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 bracketView.getMatches().stream()
                         .sorted(
@@ -1106,13 +1100,13 @@ public class HostTournamentController {
             return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
         }
         if (match.getScheduledEndsAt() == null) {
-            return formatInstant(match.getScheduledStartsAt(), locale, ZoneId.systemDefault());
+            return formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE);
         }
         return messageSource.getMessage(
                 "tournament.bracket.schedule.range",
                 new Object[] {
-                    formatInstant(match.getScheduledStartsAt(), locale, ZoneId.systemDefault()),
-                    formatInstant(match.getScheduledEndsAt(), locale, ZoneId.systemDefault())
+                    formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE),
+                    formatInstant(match.getScheduledEndsAt(), locale, PlatformTime.ZONE)
                 },
                 locale);
     }
@@ -1129,14 +1123,13 @@ public class HostTournamentController {
     private static String scheduleDate(final Instant instant) {
         return instant == null
                 ? ""
-                : LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalDate().toString();
+                : PlatformTime.toOffsetDateTime(instant).toLocalDate().toString();
     }
 
     private static String scheduleTime(final Instant instant) {
         return instant == null
                 ? ""
-                : TIME_INPUT_FORMATTER.format(
-                        LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalTime());
+                : TIME_INPUT_FORMATTER.format(PlatformTime.toOffsetDateTime(instant).toLocalTime());
     }
 
     private static String scheduleAddress(
@@ -1186,23 +1179,12 @@ public class HostTournamentController {
 
     private static Instant toInstant(
             final LocalDate date, final LocalTime time, final String timezone) {
-        return date.atTime(time).atZone(resolveZoneId(timezone)).toInstant();
+        return PlatformTime.toInstant(date, time);
     }
 
     private static Instant toInstant(
             final LocalDate date, final LocalTime time, final ZoneId zoneId) {
-        return date.atTime(time).atZone(zoneId).toInstant();
-    }
-
-    private static ZoneId resolveZoneId(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+        return PlatformTime.toInstant(date, time);
     }
 
     private static String normalizeBlank(final String value) {

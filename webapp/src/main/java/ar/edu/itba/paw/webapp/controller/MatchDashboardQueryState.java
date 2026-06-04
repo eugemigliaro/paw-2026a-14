@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
@@ -19,10 +20,7 @@ final class MatchDashboardQueryState {
         final SearchForm normalizedForm = copy(sourceForm);
         normalizedForm.normalizeDefaults();
 
-        final ZoneId selectedTimezone =
-                normalizedForm.getTimezone() == null
-                        ? ZoneId.systemDefault()
-                        : normalizedForm.getTimezone();
+        final ZoneId selectedTimezone = PlatformTime.ZONE;
         normalizedForm.setTimezone(selectedTimezone);
 
         final boolean tournament = normalizedForm.getType() == EventType.TOURNAMENT;

@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
@@ -986,7 +987,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private static ZoneId resolveZone(final ZoneId zoneId) {
-        return zoneId == null ? ZoneId.systemDefault() : zoneId;
+        return zoneId == null ? PlatformTime.ZONE : zoneId;
     }
 
     private String message(final String code) {

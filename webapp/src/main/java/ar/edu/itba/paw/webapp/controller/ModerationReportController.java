@@ -4,13 +4,12 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
@@ -51,7 +50,6 @@ public class ModerationReportController {
     private final MatchService matchService;
     private final PlayerReviewService playerReviewService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public ModerationReportController(
@@ -59,29 +57,12 @@ public class ModerationReportController {
             final UserService userService,
             final MatchService matchService,
             final PlayerReviewService playerReviewService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.userService = userService;
         this.matchService = matchService;
         this.playerReviewService = playerReviewService;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
-    public ModerationReportController(
-            final ModerationService moderationService,
-            final UserService userService,
-            final MatchService matchService,
-            final PlayerReviewService playerReviewService,
-            final MessageSource messageSource) {
-        this(
-                moderationService,
-                userService,
-                matchService,
-                playerReviewService,
-                messageSource,
-                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/reports/users/{username}")
@@ -172,7 +153,7 @@ public class ModerationReportController {
                                                 ? review.getCreatedAt()
                                                 : review.getUpdatedAt(),
                                         locale,
-                                        platformTimeZoneService.defaultZone())),
+                                        PlatformTime.ZONE)),
                         null));
     }
 
@@ -211,10 +192,7 @@ public class ModerationReportController {
                                 match.getDescription(),
                                 host.getUsername(),
                                 host.getUsername() == null ? null : "/users/" + host.getUsername(),
-                                formatInstant(
-                                        match.getStartsAt(),
-                                        locale,
-                                        platformTimeZoneService.defaultZone()),
+                                formatInstant(match.getStartsAt(), locale, PlatformTime.ZONE),
                                 match.getAddress(),
                                 priceLabel(match.getPricePerPlayer(), locale))));
     }

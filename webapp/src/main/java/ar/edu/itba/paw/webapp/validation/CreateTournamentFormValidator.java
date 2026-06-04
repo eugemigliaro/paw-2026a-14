@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.webapp.validation;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import java.time.Instant;
-import java.time.ZoneId;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
@@ -153,18 +153,7 @@ public class CreateTournamentFormValidator
 
     private static Instant toInstant(
             final java.time.LocalDate date, final java.time.LocalTime time, final String timezone) {
-        return date.atTime(time).atZone(resolveZoneId(timezone)).toInstant();
-    }
-
-    private static ZoneId resolveZoneId(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+        return PlatformTime.toInstant(date, time);
     }
 
     private static void reject(

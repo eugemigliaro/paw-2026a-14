@@ -5,6 +5,7 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
@@ -109,10 +110,7 @@ public class FeedController {
         }
 
         final ExploreLocation exploreLocation = exploreLocation(session);
-        final ZoneId selectedTimezone =
-                searchForm.getTimezone() == null
-                        ? ZoneId.systemDefault()
-                        : searchForm.getTimezone();
+        final ZoneId selectedTimezone = PlatformTime.ZONE;
         final DateRange selectedDateRange =
                 normalizeDateRange(
                         searchForm.getStartDate(), searchForm.getEndDate(), selectedTimezone);
@@ -135,8 +133,7 @@ public class FeedController {
                                 .map(Sport::getDbValue)
                                 .collect(Collectors.toList())
                         : null;
-        String selectedTimezoneValue =
-                searchForm.getTimezone() != null ? searchForm.getTimezone().getId() : null;
+        String selectedTimezoneValue = selectedTimezone.getId();
         String selectedMinPriceValue = formatNullablePriceValue(searchForm.getMinPrice());
         String selectedMaxPriceValue = formatNullablePriceValue(searchForm.getMaxPrice());
         String selectedStartDateValue =
@@ -190,7 +187,7 @@ public class FeedController {
                             selectedSort,
                             searchForm.getPage(),
                             PAGE_SIZE,
-                            searchForm.getTimezone(),
+                            selectedTimezone,
                             selectedPriceRange.minPrice(),
                             selectedPriceRange.maxPrice(),
                             searchForm.getLatitude(),
@@ -304,7 +301,7 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
+        final ZoneId zoneId = selectedTimezone;
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
@@ -402,7 +399,7 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
+        final ZoneId zoneId = selectedTimezone;
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
@@ -795,18 +792,6 @@ public class FeedController {
                                 * Math.sin(deltaLonRad / 2)
                                 * Math.sin(deltaLonRad / 2);
         return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
     }
 
     private static ExploreLocation exploreLocation(final HttpSession session) {
