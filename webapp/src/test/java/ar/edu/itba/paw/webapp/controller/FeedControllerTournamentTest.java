@@ -79,7 +79,13 @@ class FeedControllerTournamentTest {
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
                                 ArgumentMatchers.nullable(Double.class)))
-                .thenReturn(new PaginatedResult<>(List.of(match(42L, "Sunrise Padel")), 1, 1, 12));
+                .thenAnswer(
+                        invocation ->
+                                new PaginatedResult<>(
+                                        List.of(match(42L, "Sunrise Padel")),
+                                        1,
+                                        invocation.getArgument(5),
+                                        invocation.getArgument(6)));
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
@@ -128,6 +134,22 @@ class FeedControllerTournamentTest {
 
     @Test
     void defaultFeedStillUsesMatchSearch() throws Exception {
+        Mockito.doThrow(new AssertionError("Default feed must not query tournaments"))
+                .when(tournamentService)
+                .searchPublicTournaments(
+                        ArgumentMatchers.anyString(),
+                        ArgumentMatchers.nullable(List.class),
+                        ArgumentMatchers.nullable(Instant.class),
+                        ArgumentMatchers.nullable(Instant.class),
+                        ArgumentMatchers.nullable(EventSort.class),
+                        ArgumentMatchers.anyInt(),
+                        ArgumentMatchers.anyInt(),
+                        ArgumentMatchers.nullable(ZoneId.class),
+                        ArgumentMatchers.nullable(BigDecimal.class),
+                        ArgumentMatchers.nullable(BigDecimal.class),
+                        ArgumentMatchers.nullable(Double.class),
+                        ArgumentMatchers.nullable(Double.class));
+
         final MvcResult result =
                 mockMvc.perform(get("/"))
                         .andExpect(status().isOk())

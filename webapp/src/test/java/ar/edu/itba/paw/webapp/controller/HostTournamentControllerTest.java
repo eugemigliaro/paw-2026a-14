@@ -170,6 +170,7 @@ class HostTournamentControllerTest {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
                 UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        failIfTournamentCreationIsAttempted();
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(createPost(""))
@@ -183,6 +184,7 @@ class HostTournamentControllerTest {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
                 UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        failIfTournamentCreationIsAttempted();
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(createPost("City Padel Cup", false, false))
@@ -197,6 +199,7 @@ class HostTournamentControllerTest {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
                 UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        failIfTournamentCreationIsAttempted();
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(
@@ -585,6 +588,12 @@ class HostTournamentControllerTest {
 
     private static boolean isTeamDraftOnlyCreateRequest(final CreateTournamentRequest request) {
         return request != null && !request.isAllowSoloSignup() && request.isAllowTeamDraft();
+    }
+
+    private void failIfTournamentCreationIsAttempted() {
+        Mockito.doThrow(new AssertionError("Invalid tournament forms must not create events"))
+                .when(tournamentService)
+                .createTournament(Mockito.any(User.class), Mockito.any());
     }
 
     private static boolean isValidUpdateRequest(final UpdateTournamentRequest request) {

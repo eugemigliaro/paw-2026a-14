@@ -124,6 +124,8 @@ class UiRouteTest {
     private boolean currentUserHasSeriesReservation;
     private boolean currentUserHasJoinRequest;
     private boolean currentUserHasSeriesJoinRequest;
+    private boolean occurrenceReservationCancellationUsed;
+    private boolean seriesReservationCancellationUsed;
     private CreateMatchRequest lastCreateMatchRequest;
     private UpdateMatchRequest lastUpdateMatchRequest;
     private Match lastUpdatedMatch;
@@ -148,6 +150,8 @@ class UiRouteTest {
         currentUserHasSeriesReservation = false;
         currentUserHasJoinRequest = false;
         currentUserHasSeriesJoinRequest = false;
+        occurrenceReservationCancellationUsed = false;
+        seriesReservationCancellationUsed = false;
         lastCreateMatchRequest = null;
         lastUpdateMatchRequest = null;
         lastUpdatedMatch = null;
@@ -950,12 +954,12 @@ class UiRouteTest {
                         if (user == null) {
                             return false;
                         }
-                        if (Boolean.TRUE.equals(currentUserHasReservation)
+                        if (currentUserHasReservation
                                 && (user.getId() == 9L || user.getId() == 7L)
                                 && (matchId == 42L || matchId == 51L)) {
                             return true;
                         }
-                        return Boolean.TRUE.equals(currentUserHasSeriesReservation)
+                        return currentUserHasSeriesReservation
                                 && user.getId() == 9L
                                 && (matchId == 46L || matchId == 47L);
                     }
@@ -963,7 +967,7 @@ class UiRouteTest {
                     @Override
                     public Set<Long> findActiveFutureReservationMatchIdsForSeries(
                             final Long seriesId, final User user) {
-                        if (Boolean.TRUE.equals(currentUserHasSeriesReservation)
+                        if (currentUserHasSeriesReservation
                                 && user != null
                                 && user.getId() == 9L
                                 && seriesId == 600L) {
@@ -1004,6 +1008,7 @@ class UiRouteTest {
 
                     @Override
                     public void cancelSeriesReservations(final Long matchId, final User user) {
+                        seriesReservationCancellationUsed = true;
                         final MatchReservationException failure = seriesCancellationFailure;
                         if (failure != null) {
                             throw failure;
@@ -1052,14 +1057,14 @@ class UiRouteTest {
                                     null, "User must be authenticated to check pending requests");
                         }
 
-                        return Boolean.TRUE.equals(currentUserHasJoinRequest)
+                        return currentUserHasJoinRequest
                                 && user.getId() == 9L
                                 && (matchId == 52L || matchId == 53L || matchId == 56L);
                     }
 
                     @Override
                     public boolean hasPendingSeriesRequest(final Long matchId, final User user) {
-                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest)
+                        return currentUserHasSeriesJoinRequest
                                 && user != null
                                 && user.getId() == 9L
                                 && (matchId == 52L || matchId == 53L);
@@ -1068,7 +1073,7 @@ class UiRouteTest {
                     @Override
                     public Set<Long> findPendingFutureRequestMatchIdsForSeries(
                             final Long seriesId, final User user) {
-                        if (Boolean.TRUE.equals(currentUserHasSeriesJoinRequest)
+                        if (currentUserHasSeriesJoinRequest
                                 && user != null
                                 && user.getId() == 9L
                                 && seriesId == 700L) {
@@ -1093,6 +1098,7 @@ class UiRouteTest {
                     public void removeParticipant(
                             final Long matchId, final User host, final User target) {
                         if (host.equals(target)) {
+                            occurrenceReservationCancellationUsed = true;
                             final MatchParticipationException failure =
                                     reservationCancellationFailure;
                             if (failure != null) {
@@ -1126,9 +1132,7 @@ class UiRouteTest {
 
                     @Override
                     public List<Match> findPendingRequestMatches(final User user) {
-                        return Boolean.TRUE.equals(currentUserHasSeriesJoinRequest)
-                                        && user != null
-                                        && user.getId() == 9L
+                        return currentUserHasSeriesJoinRequest && user != null && user.getId() == 9L
                                 ? List.of(pendingFutureMatch)
                                 : List.of();
                     }
@@ -2361,6 +2365,9 @@ class UiRouteTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/46"))
                 .andExpect(flash().attribute("reservationStatus", "cancelled"));
+
+        Assertions.assertTrue(occurrenceReservationCancellationUsed);
+        Assertions.assertFalse(seriesReservationCancellationUsed);
     }
 
     @Test
