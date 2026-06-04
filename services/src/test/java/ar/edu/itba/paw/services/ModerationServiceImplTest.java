@@ -88,6 +88,21 @@ public class ModerationServiceImplTest {
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
+    private void useUserBanDao(final UserBanDao userBanDao) {
+        moderationService =
+                new ModerationServiceImpl(
+                        userBanDao,
+                        moderationReportDao,
+                        userDao,
+                        matchDao,
+                        matchParticipantDao,
+                        playerReviewDao,
+                        mailDispatchService,
+                        matchService,
+                        messageSource(),
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+    }
+
     private static MessageSource messageSource() {
         final StaticMessageSource messageSource = new StaticMessageSource();
         messageSource.addMessage("ban.period.unknown", Locale.getDefault(), "Unknown");
@@ -245,8 +260,8 @@ public class ModerationServiceImplTest {
     @Test
     public void resolveReportWithUserBan_banIsLinkedToSourceReport() {
         final ModerationReport report = sampleUserReport();
-        final UserBan expectedBan =
-                new UserBan(10L, report, FIXED_NOW.plusSeconds(7L * 24L * 3600L));
+        final RecordingUserBanDao recordingUserBanDao = new RecordingUserBanDao();
+        useUserBanDao(recordingUserBanDao);
 
         Mockito.when(
                         matchService.findJoinedMatches(
@@ -294,9 +309,6 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(ReportStatus.RESOLVED)))
                 .thenReturn(true);
 
-        Mockito.when(userBanDao.createBan(report, expectedBan.getBannedUntil()))
-                .thenReturn(expectedBan);
-
         Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
 
         moderationService.resolveReport(
@@ -307,10 +319,12 @@ public class ModerationServiceImplTest {
                 ReportStatus.RESOLVED,
                 7);
 
-        Assertions.assertEquals(
-                77L,
-                expectedBan.getModerationReport().getId(),
-                "The ban must be linked to the originating report id");
+        Assertions.assertNotNull(
+                recordingUserBanDao.createdBan, "A ban must be created for the resolved report");
+        Assertions.assertSame(
+                report,
+                recordingUserBanDao.createdBan.getModerationReport(),
+                "The ban must be linked to the originating report");
     }
 
     @Test
@@ -742,6 +756,38 @@ public class ModerationServiceImplTest {
 
         private boolean matches(final User reviewer, final User reviewed) {
             return review.getReviewer().equals(reviewer) && review.getReviewed().equals(reviewed);
+        }
+    }
+
+    private static class RecordingUserBanDao implements UserBanDao {
+
+        private UserBan createdBan;
+
+        @Override
+        public UserBan createBan(
+                final ModerationReport moderationReport, final Instant bannedUntil) {
+            createdBan = new UserBan(10L, moderationReport, bannedUntil);
+            return createdBan;
+        }
+
+        @Override
+        public Optional<UserBan> findById(final Long banId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<UserBan> findLatestBanForUser(final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<UserBan> findActiveBanForUser(final User user, final Instant now) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void upliftBan(final Long banId) {
+            throw new UnsupportedOperationException();
         }
     }
 
