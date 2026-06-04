@@ -249,6 +249,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(host);
         nonNullUser(targetUser);
         requireHost(match, host.getId());
+        requireApprovalBasedMatch(match);
 
         if (match.isRecurringOccurrence()
                 && matchParticipantDao.isSeriesJoinRequest(matchId, targetUser)) {
@@ -287,6 +288,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(host);
         nonNullUser(targetUser);
         requireHost(match, host.getId());
+        requireApprovalBasedMatch(match);
 
         if (!matchParticipantDao.rejectRequest(matchId, targetUser)) {
             throw new MatchParticipationNoPendingRequestException(
@@ -327,6 +329,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
+        requireApprovalBasedMatch(match);
         return matchParticipantDao.findPendingRequests(matchId);
     }
 
@@ -537,6 +540,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
+        requireApprovalBasedMatch(match);
         return matchParticipantDao.findInvitedUsers(matchId);
     }
 
@@ -589,6 +593,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 || match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
             throw new MatchParticipationNotInviteOnlyException(
                     "Invitations are only supported for private invite-only events.");
+        }
+    }
+
+    private static void requireApprovalBasedMatch(final Match match) {
+        if (match.getVisibility() != EventVisibility.PUBLIC
+                || match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
+            throw new MatchParticipationNotInviteOnlyException(
+                    "This action is only supported for public events that require approval to join.");
         }
     }
 
