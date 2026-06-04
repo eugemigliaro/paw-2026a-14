@@ -149,12 +149,13 @@ class FeedControllerTournamentTest {
                                 Mockito.eq(List.of(Sport.PADEL)),
                                 Mockito.isNull(),
                                 Mockito.isNull(),
-                                Mockito.eq(EventSort.PRICE),
+                                Mockito.eq(EventSort.PRICE_LOW),
                                 Mockito.eq(2),
                                 Mockito.eq(12),
                                 Mockito.nullable(ZoneId.class),
-                                Mockito.argThat(value -> value.compareTo(new BigDecimal("5")) == 0),
-                                Mockito.argThat(
+                                Mockito.<BigDecimal>argThat(
+                                        value -> value.compareTo(new BigDecimal("5")) == 0),
+                                Mockito.<BigDecimal>argThat(
                                         value -> value.compareTo(new BigDecimal("20")) == 0),
                                 Mockito.isNull(),
                                 Mockito.isNull()))

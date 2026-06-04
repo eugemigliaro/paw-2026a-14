@@ -635,6 +635,25 @@ class HostTournamentControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            createPostWithoutTimezone(final String title) {
+        return post("/host/tournaments")
+                .locale(Locale.ENGLISH)
+                .param("title", title)
+                .param("sport", Sport.PADEL.getDbValue())
+                .param("description", "Open city tournament")
+                .param("address", "Downtown Club")
+                .param("registrationOpensDate", "2030-04-01")
+                .param("registrationOpensTime", "09:00")
+                .param("registrationClosesDate", "2030-04-09")
+                .param("registrationClosesTime", "20:00")
+                .param("bracketSize", "8")
+                .param("teamSize", "1")
+                .param("pricePerPlayer", "10.00")
+                .param("allowSoloSignup", "true")
+                .param("allowTeamDraft", "true");
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             createPost(
                     final String title,
                     final boolean allowSoloSignup,

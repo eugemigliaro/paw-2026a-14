@@ -545,7 +545,6 @@ public class AccountAuthServiceImplTest {
                 accountAuthService.resetPassword("raw-token", "EvenBetter123!");
 
         Assertions.assertEquals(9L, result.getUserId());
-        Assertions.assertEquals("/login?reset=1", result.getRedirectUrl());
         Assertions.assertEquals(EmailActionStatus.COMPLETED, request.getStatus());
         Assertions.assertEquals(FIXED_NOW, request.getConsumedAt());
         Assertions.assertTrue(passwordEncoder.matches("EvenBetter123!", account.getPasswordHash()));

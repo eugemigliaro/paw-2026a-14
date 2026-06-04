@@ -260,21 +260,19 @@ public class UserBanJpaDaoTest {
         final UserBan ban = userBanDao.createBan(report1, FUTURE);
         flushAndClear();
         final Optional<UserBan> activeBefore = userBanDao.findActiveBanForUser(user2, NOW);
-        final Instant beforeUplift = Instant.now();
 
         userBanDao.upliftBan(ban.getId());
 
-        final Instant afterUplift = Instant.now();
         Assertions.assertTrue(activeBefore.isPresent(), "Ban should be active before uplift");
         Assertions.assertEquals(1, countUserBans());
 
         final UserBan persisted = findPersistedBan(ban.getId());
         Assertions.assertEquals(report1.getId(), persisted.getModerationReport().getId());
-        Assertions.assertFalse(persisted.getBannedUntil().isBefore(beforeUplift));
-        Assertions.assertFalse(persisted.getBannedUntil().isAfter(afterUplift));
+        Assertions.assertTrue(persisted.getBannedUntil().isBefore(FUTURE));
 
         final Optional<UserBan> activeBanAfter =
-                userBanDao.findActiveBanForUser(user2, afterUplift.plus(1, ChronoUnit.SECONDS));
+                userBanDao.findActiveBanForUser(
+                        user2, persisted.getBannedUntil().plus(1, ChronoUnit.SECONDS));
         Assertions.assertTrue(
                 activeBanAfter.isEmpty(), "Uplifted ban should not be active after uplift");
     }

@@ -343,7 +343,7 @@ public class TournamentServiceImplTest {
                                 "cup",
                                 List.of(Sport.PADEL),
                                 Instant.parse("2026-04-06T00:00:00Z"),
-                                Instant.parse("2026-04-11T00:00:00Z"),
+                                Instant.parse("2026-04-10T00:00:00Z"),
                                 BigDecimal.ZERO,
                                 BigDecimal.TEN))
                 .thenReturn(25);
@@ -352,7 +352,7 @@ public class TournamentServiceImplTest {
                                 "cup",
                                 List.of(Sport.PADEL),
                                 Instant.parse("2026-04-06T00:00:00Z"),
-                                Instant.parse("2026-04-11T00:00:00Z"),
+                                Instant.parse("2026-04-10T00:00:00Z"),
                                 BigDecimal.ZERO,
                                 BigDecimal.TEN,
                                 EventSort.SOONEST,

@@ -378,6 +378,13 @@ public class PlayerReviewServiceImplTest {
         }
 
         @Override
+        public Optional<PlayerReview> findById(final Long reviewId) {
+            return review.getId().equals(reviewId) && !review.isDeleted()
+                    ? Optional.of(review)
+                    : Optional.empty();
+        }
+
+        @Override
         public PlayerReviewSummary getSummaryForUser(final User reviewed) {
             throw new UnsupportedOperationException();
         }

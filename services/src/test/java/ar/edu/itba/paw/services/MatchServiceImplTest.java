@@ -92,6 +92,7 @@ public class MatchServiceImplTest {
         matchService =
                 new MatchServiceImpl(
                         matchDao,
+                        imageService,
                         matchParticipantDao,
                         matchNotificationService,
                         securityService,

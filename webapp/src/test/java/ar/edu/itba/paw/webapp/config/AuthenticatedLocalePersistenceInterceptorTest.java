@@ -6,10 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.UserRole;
+import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -191,19 +191,7 @@ class AuthenticatedLocalePersistenceInterceptorTest {
                 final String name,
                 final String lastName,
                 final String phone,
-                final String profileImageContentType,
-                final long profileImageContentLength,
-                final InputStream profileImageContentStream)
-                throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public User updateProfileImage(
-                final Long id,
-                final String contentType,
-                final long contentLength,
-                final InputStream contentStream)
+                final ImageUpload profileImage)
                 throws IOException {
             throw new UnsupportedOperationException();
         }
