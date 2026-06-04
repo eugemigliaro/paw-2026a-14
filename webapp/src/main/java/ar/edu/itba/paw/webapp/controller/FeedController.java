@@ -133,7 +133,6 @@ public class FeedController {
                                 .map(Sport::getDbValue)
                                 .collect(Collectors.toList())
                         : null;
-        String selectedTimezoneValue = selectedTimezone.getId();
         String selectedMinPriceValue = formatNullablePriceValue(searchForm.getMinPrice());
         String selectedMaxPriceValue = formatNullablePriceValue(searchForm.getMaxPrice());
         String selectedStartDateValue =
@@ -145,7 +144,6 @@ public class FeedController {
         mav.addObject("selectedType", selectedTypeValue);
         mav.addObject("selectedSort", selectedSortValue);
         mav.addObject("selectedSports", selectedSports);
-        mav.addObject("selectedTimezone", selectedTimezoneValue);
         mav.addObject("selectedMinPrice", selectedPriceRange.minPrice());
         mav.addObject("selectedMaxPrice", selectedPriceRange.maxPrice());
         mav.addObject("selectedMinPriceValue", selectedMinPriceValue);
@@ -187,7 +185,6 @@ public class FeedController {
                             selectedSort,
                             searchForm.getPage(),
                             PAGE_SIZE,
-                            selectedTimezone,
                             selectedPriceRange.minPrice(),
                             selectedPriceRange.maxPrice(),
                             searchForm.getLatitude(),
@@ -203,7 +200,6 @@ public class FeedController {
                             selectedTimezone,
                             selectedStartDateValue,
                             selectedEndDateValue,
-                            selectedTimezoneValue,
                             selectedPriceRange,
                             result,
                             locale,
@@ -229,7 +225,6 @@ public class FeedController {
                             selectedSort,
                             searchForm.getPage(),
                             PAGE_SIZE,
-                            selectedTimezone,
                             selectedPriceRange.minPrice(),
                             selectedPriceRange.maxPrice(),
                             exploreLocation != null ? exploreLocation.latitude() : null,
@@ -245,7 +240,6 @@ public class FeedController {
                             selectedTimezone,
                             selectedStartDateValue,
                             selectedEndDateValue,
-                            selectedTimezoneValue,
                             selectedPriceRange,
                             result,
                             locale,
@@ -294,7 +288,6 @@ public class FeedController {
             final ZoneId selectedTimezone,
             final String selectedStartDateValue,
             final String selectedEndDateValue,
-            final String selectedTimezoneValue,
             final PriceRange selectedPriceRange,
             final PaginatedResult<Match> result,
             final Locale locale,
@@ -320,7 +313,6 @@ public class FeedController {
                         selectedTimezone,
                         selectedStartDateValue,
                         selectedEndDateValue,
-                        selectedTimezoneValue,
                         selectedPriceRange,
                         locale,
                         email),
@@ -392,7 +384,6 @@ public class FeedController {
             final ZoneId selectedTimezone,
             final String selectedStartDateValue,
             final String selectedEndDateValue,
-            final String selectedTimezoneValue,
             final PriceRange selectedPriceRange,
             final PaginatedResult<Tournament> result,
             final Locale locale,
@@ -418,7 +409,6 @@ public class FeedController {
                         selectedTimezone,
                         selectedStartDateValue,
                         selectedEndDateValue,
-                        selectedTimezoneValue,
                         selectedPriceRange,
                         locale,
                         email),
@@ -583,7 +573,6 @@ public class FeedController {
             final ZoneId selectedTimezone,
             final String selectedStartDateValue,
             final String selectedEndDateValue,
-            final String selectedTimezoneValue,
             final PriceRange selectedPriceRange,
             final Locale locale,
             final String email) {
@@ -894,9 +883,6 @@ public class FeedController {
         }
         if (selectedDateRange.endDate() != null) {
             params.put("endDate", selectedDateRange.endDate().toString());
-        }
-        if (selectedTimezone != null) {
-            params.put("tz", selectedTimezone.getId());
         }
         if (selectedPriceRange.minPrice() != null) {
             params.put("minPrice", formatPriceValue(selectedPriceRange.minPrice()));

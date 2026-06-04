@@ -153,12 +153,10 @@ public class HostTournamentController {
                         createTournamentForm.isAllowTeamDraft(),
                         toInstant(
                                 createTournamentForm.getRegistrationOpensDate(),
-                                createTournamentForm.getRegistrationOpensTime(),
-                                createTournamentForm.getTz()),
+                                createTournamentForm.getRegistrationOpensTime()),
                         toInstant(
                                 createTournamentForm.getRegistrationClosesDate(),
-                                createTournamentForm.getRegistrationClosesTime(),
-                                createTournamentForm.getTz()));
+                                createTournamentForm.getRegistrationClosesTime()));
 
         try {
             final Tournament createdTournament =
@@ -222,12 +220,10 @@ public class HostTournamentController {
                         createTournamentForm.getTeamSize(),
                         toInstant(
                                 createTournamentForm.getRegistrationOpensDate(),
-                                createTournamentForm.getRegistrationOpensTime(),
-                                createTournamentForm.getTz()),
+                                createTournamentForm.getRegistrationOpensTime()),
                         toInstant(
                                 createTournamentForm.getRegistrationClosesDate(),
-                                createTournamentForm.getRegistrationClosesTime(),
-                                createTournamentForm.getTz()));
+                                createTournamentForm.getRegistrationClosesTime()));
 
         try {
             tournamentService.update(tournamentId, actingUser, request);
@@ -572,7 +568,6 @@ public class HostTournamentController {
     private BracketPublishForm createBracketPublishForm(
             final TournamentBracketViewModel bracketPage) {
         final BracketPublishForm form = new BracketPublishForm();
-        form.setTz(PlatformTime.ZONE.getId());
         final List<BracketPublishScheduleForm> schedules = new ArrayList<>();
         for (final TournamentBracketViewModel.RoundViewModel round : bracketPage.getRounds()) {
             for (final TournamentBracketViewModel.MatchViewModel match : round.getMatches()) {
@@ -670,7 +665,6 @@ public class HostTournamentController {
         form.setRegistrationOpensTime(tournament.getRegistrationOpensAtDateTime().toLocalTime());
         form.setRegistrationClosesDate(tournament.getRegistrationClosesAtDateTime().toLocalDate());
         form.setRegistrationClosesTime(tournament.getRegistrationClosesAtDateTime().toLocalTime());
-        form.setTz(PlatformTime.ZONE.getId());
         return form;
     }
 
@@ -1177,8 +1171,7 @@ public class HostTournamentController {
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
     }
 
-    private static Instant toInstant(
-            final LocalDate date, final LocalTime time, final String timezone) {
+    private static Instant toInstant(final LocalDate date, final LocalTime time) {
         return PlatformTime.toInstant(date, time);
     }
 

@@ -97,9 +97,6 @@
 						data-submit-loading-label="${submitLoadingLabel}" cssClass="create-form"
 						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-						<input type="hidden" name="tz" id="match-timezone"
-							value="<c:out value='${createEventForm.timezone}' />"
-							data-browser-timezone-field="true" />
 						<c:if test="${not empty formError}">
 							<p class="field__error">
 								<c:out value="${formError}" />

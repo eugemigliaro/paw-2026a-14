@@ -65,7 +65,7 @@ Important product rules:
 - reservation cannot exceed capacity
 - cancelling a reservation releases the spot
 - a user can reserve their own event
-- match editability and "already started" checks must be based on `startsAt` compared to the current clock, not on `EventStatus.COMPLETED`; `COMPLETED` is a stored/status display concept and must not be used as a proxy for whether a match has already started
+- match editability and "already started" checks must be based on `startsAt` compared to the current clock, not on `EventStatus.COMPLETED`; for standalone matches, `COMPLETED` is a persisted-or-derived ended/display status and must not be used as a proxy for whether a match has already started
 
 Moving beyond the MVP does not mean implementing the whole roadmap at once. Build the smallest coherent slice that satisfies the current request, and call out product-rule conflicts before coding.
 

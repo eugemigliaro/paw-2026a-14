@@ -43,12 +43,6 @@
 						cssClass="create-form"
 						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-						<input
-							type="hidden"
-							name="tz"
-							id="tournament-timezone"
-							value="<c:out value='${createTournamentForm.tz}' />"
-							data-browser-timezone-field="true" />
 
 						<c:if test="${not empty formError}">
 							<p class="field__error create-form__global-error"><c:out value="${formError}" /></p>

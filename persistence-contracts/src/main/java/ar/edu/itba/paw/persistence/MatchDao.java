@@ -16,7 +16,6 @@ import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -235,7 +234,6 @@ public interface MatchDao {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             Double latitude,
             Double longitude,
             int offset,
@@ -250,7 +248,6 @@ public interface MatchDao {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             int offset,
             int limit) {
         return findPublicMatches(
@@ -262,7 +259,6 @@ public interface MatchDao {
                 minPrice,
                 maxPrice,
                 sort,
-                zoneId,
                 null,
                 null,
                 offset,
@@ -276,7 +272,6 @@ public interface MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final int offset,
             final int limit) {
         return findPublicMatches(
@@ -288,7 +283,8 @@ public interface MatchDao {
                 minPrice,
                 maxPrice,
                 sort,
-                zoneId,
+                null,
+                null,
                 offset,
                 limit);
     }
@@ -300,18 +296,15 @@ public interface MatchDao {
             Instant startsAtFrom,
             Instant startsAtTo,
             BigDecimal minPrice,
-            BigDecimal maxPrice,
-            ZoneId zoneId);
+            BigDecimal maxPrice);
 
     default int countPublicMatches(
             final String query,
             final List<Sport> sports,
             final EventTimeFilter timeFilter,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final ZoneId zoneId) {
-        return countPublicMatches(
-                query, sports, timeFilter, null, null, minPrice, maxPrice, zoneId);
+            final BigDecimal maxPrice) {
+        return countPublicMatches(query, sports, timeFilter, null, null, minPrice, maxPrice);
     }
 
     List<Match> findHostedMatches(
@@ -327,7 +320,6 @@ public interface MatchDao {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             int offset,
             int limit);
 
@@ -342,7 +334,6 @@ public interface MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final int offset,
             final int limit) {
         return findHostedMatches(
@@ -358,7 +349,6 @@ public interface MatchDao {
                 minPrice,
                 maxPrice,
                 sort,
-                zoneId,
                 offset,
                 limit);
     }
@@ -374,8 +364,7 @@ public interface MatchDao {
             Instant startsAtFrom,
             Instant startsAtTo,
             BigDecimal minPrice,
-            BigDecimal maxPrice,
-            ZoneId zoneId);
+            BigDecimal maxPrice);
 
     default int countHostedMatches(
             final User host,
@@ -386,8 +375,7 @@ public interface MatchDao {
             final List<EventStatus> statuses,
             final EventTimeFilter timeFilter,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final ZoneId zoneId) {
+            final BigDecimal maxPrice) {
         return countHostedMatches(
                 host,
                 upcoming,
@@ -399,8 +387,7 @@ public interface MatchDao {
                 null,
                 null,
                 minPrice,
-                maxPrice,
-                zoneId);
+                maxPrice);
     }
 
     List<Match> findJoinedMatches(
@@ -416,7 +403,6 @@ public interface MatchDao {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             int offset,
             int limit);
 
@@ -431,7 +417,6 @@ public interface MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final int offset,
             final int limit) {
         return findJoinedMatches(
@@ -447,7 +432,6 @@ public interface MatchDao {
                 minPrice,
                 maxPrice,
                 sort,
-                zoneId,
                 offset,
                 limit);
     }
@@ -463,8 +447,7 @@ public interface MatchDao {
             Instant startsAtFrom,
             Instant startsAtTo,
             BigDecimal minPrice,
-            BigDecimal maxPrice,
-            ZoneId zoneId);
+            BigDecimal maxPrice);
 
     default int countJoinedMatches(
             final User user,
@@ -475,8 +458,7 @@ public interface MatchDao {
             final List<EventStatus> statuses,
             final EventTimeFilter timeFilter,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final ZoneId zoneId) {
+            final BigDecimal maxPrice) {
         return countJoinedMatches(
                 user,
                 upcoming,
@@ -488,8 +470,7 @@ public interface MatchDao {
                 null,
                 null,
                 minPrice,
-                maxPrice,
-                zoneId);
+                maxPrice);
     }
 
     List<Match> findDashboardMatches(
@@ -504,7 +485,6 @@ public interface MatchDao {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             List<ParticipantStatus> participantStatuses,
             int offset,
             int limit);
@@ -521,6 +501,5 @@ public interface MatchDao {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             List<ParticipantStatus> participantStatuses);
 }

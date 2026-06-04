@@ -344,7 +344,6 @@ public class ModerationServiceImpl implements ModerationService {
                                 null,
                                 null,
                                 null,
-                                null,
                                 1,
                                 DEFAULT_REPORT_PAGE_SIZE)
                         .getItems()
@@ -361,7 +360,6 @@ public class ModerationServiceImpl implements ModerationService {
                                 user,
                                 true,
                                 true,
-                                null,
                                 null,
                                 null,
                                 null,

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
@@ -24,7 +25,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,7 +103,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 EventSort.SOONEST,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 10,
@@ -117,8 +116,7 @@ public class MatchServiceImplTest {
                                 expectedStart,
                                 expectedEndExclusive,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(25);
 
         final PaginatedResult<Match> result =
@@ -130,7 +128,6 @@ public class MatchServiceImplTest {
                         EventSort.SOONEST,
                         2,
                         10,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -156,7 +153,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -170,24 +166,12 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null,
-                        List.of(Sport.PADEL),
-                        null,
-                        null,
-                        null,
-                        1,
-                        0,
-                        ZoneId.of("UTC"),
-                        null,
-                        null,
-                        null,
-                        null);
+                        null, List.of(Sport.PADEL), null, null, null, 1, 0, null, null, null, null);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Padel", result.getItems().get(0).getTitle());
@@ -208,7 +192,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -222,8 +205,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(2);
 
         final PaginatedResult<Match> result =
@@ -235,7 +217,6 @@ public class MatchServiceImplTest {
                         null,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -261,7 +242,6 @@ public class MatchServiceImplTest {
                                 minPrice,
                                 maxPrice,
                                 EventSort.PRICE_LOW,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -275,8 +255,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 minPrice,
-                                maxPrice,
-                                ZoneId.of("UTC")))
+                                maxPrice))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
@@ -288,7 +267,6 @@ public class MatchServiceImplTest {
                         EventSort.PRICE_LOW,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         minPrice,
                         maxPrice,
                         null,
@@ -309,8 +287,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(13);
         Mockito.when(
                         matchDao.findPublicMatches(
@@ -322,7 +299,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 EventSort.SOONEST,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 12,
@@ -338,7 +314,6 @@ public class MatchServiceImplTest {
                         EventSort.SOONEST,
                         99,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -478,7 +453,13 @@ public class MatchServiceImplTest {
                         null);
         Mockito.when(
                         matchDao.createMatchSeries(
-                                host, RecurrenceFrequency.WEEKLY, startsAt, endsAt, "UTC", null, 3))
+                                host,
+                                RecurrenceFrequency.WEEKLY,
+                                startsAt,
+                                endsAt,
+                                PlatformTime.ZONE.getId(),
+                                null,
+                                3))
                 .thenReturn(77L);
         Mockito.when(
                         matchDao.createMatch(
@@ -562,8 +543,7 @@ public class MatchServiceImplTest {
                                         RecurrenceFrequency.WEEKLY,
                                         RecurrenceEndMode.OCCURRENCE_COUNT,
                                         null,
-                                        3,
-                                        ZoneId.of("UTC"))));
+                                        3)));
 
         // 3. Assert
         Assertions.assertNotNull(result);
@@ -636,7 +616,7 @@ public class MatchServiceImplTest {
                                 RecurrenceFrequency.WEEKLY,
                                 startsAt,
                                 endsAt,
-                                "UTC",
+                                PlatformTime.ZONE.getId(),
                                 untilDate,
                                 null))
                 .thenReturn(88L);
@@ -702,8 +682,7 @@ public class MatchServiceImplTest {
                                         RecurrenceFrequency.WEEKLY,
                                         RecurrenceEndMode.UNTIL_DATE,
                                         untilDate,
-                                        null,
-                                        ZoneId.of("UTC"))));
+                                        null)));
 
         // 3. Assert
         Assertions.assertEquals(111L, result.getId());
@@ -741,8 +720,7 @@ public class MatchServiceImplTest {
                                                         RecurrenceFrequency.WEEKLY,
                                                         RecurrenceEndMode.UNTIL_DATE,
                                                         java.time.LocalDate.of(2026, 4, 12),
-                                                        null,
-                                                        ZoneId.of("UTC")))));
+                                                        null))));
 
         // 3. Assert
         Assertions.assertEquals("match.recurrence.error.tooFewOccurrences", exception.getMessage());
@@ -1668,7 +1646,6 @@ public class MatchServiceImplTest {
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.any(),
                                 Mockito.anyInt(),
                                 Mockito.anyInt()))
                 .thenReturn(expectedMatches);
@@ -1685,7 +1662,6 @@ public class MatchServiceImplTest {
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.any(),
                                 Mockito.any()))
                 .thenReturn(3);
 
@@ -1693,7 +1669,6 @@ public class MatchServiceImplTest {
                 matchService.findDashboardMatches(
                         user,
                         Boolean.TRUE,
-                        null,
                         null,
                         null,
                         null,
@@ -1734,7 +1709,6 @@ public class MatchServiceImplTest {
                                 Mockito.isNull(),
                                 Mockito.isNull(),
                                 Mockito.isNull(),
-                                Mockito.isNull(),
                                 Mockito.eq(5), // offset = (2-1)*5 = 5
                                 Mockito.eq(5))) // limit = 5
                 .thenReturn(expected);
@@ -1751,7 +1725,6 @@ public class MatchServiceImplTest {
                                 Mockito.isNull(),
                                 Mockito.isNull(),
                                 Mockito.isNull(),
-                                Mockito.isNull(),
                                 Mockito.isNull()))
                 .thenReturn(6);
 
@@ -1760,7 +1733,6 @@ public class MatchServiceImplTest {
                         user,
                         Boolean.TRUE,
                         false,
-                        null,
                         null,
                         null,
                         null,
@@ -2437,7 +2409,6 @@ public class MatchServiceImplTest {
                                 null,
                                 EventSort.SOONEST,
                                 null,
-                                null,
                                 0,
                                 9))
                 .thenReturn(List.of(hosted));
@@ -2454,7 +2425,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 EventSort.SOONEST,
-                                null,
                                 null))
                 .thenReturn(1);
 
@@ -2471,7 +2441,6 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        null,
                         null,
                         1,
                         9);

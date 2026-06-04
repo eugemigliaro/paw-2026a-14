@@ -922,7 +922,6 @@ class UiRouteTest {
                             final EventSort sort,
                             final int page,
                             final int pageSize,
-                            final ZoneId timezone,
                             final BigDecimal minPrice,
                             final BigDecimal maxPrice,
                             final Double latitude,
@@ -952,7 +951,6 @@ class UiRouteTest {
                             BigDecimal minPrice,
                             BigDecimal maxPrice,
                             EventSort sort,
-                            ZoneId timezone,
                             List<ParticipantStatus> participantStatuses,
                             int page,
                             int pageSize) {
@@ -1641,7 +1639,6 @@ class UiRouteTest {
                                 ArgumentMatchers.nullable(EventSort.class),
                                 Mockito.anyInt(),
                                 Mockito.anyInt(),
-                                ArgumentMatchers.nullable(ZoneId.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),

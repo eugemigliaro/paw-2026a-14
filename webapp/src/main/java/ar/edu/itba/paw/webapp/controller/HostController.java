@@ -25,7 +25,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,15 +104,9 @@ public class HostController {
         }
 
         final Instant startsAt =
-                toInstant(
-                        createEventForm.getEventDate(),
-                        createEventForm.getEventTime(),
-                        createEventForm.getTimezone());
+                toInstant(createEventForm.getEventDate(), createEventForm.getEventTime());
         final Instant endsAt =
-                toInstant(
-                        createEventForm.getEndDate(),
-                        createEventForm.getEndTime(),
-                        createEventForm.getTimezone());
+                toInstant(createEventForm.getEndDate(), createEventForm.getEndTime());
 
         final CreateMatchRequest request =
                 new CreateMatchRequest(
@@ -168,15 +161,9 @@ public class HostController {
         }
 
         final Instant startsAt =
-                toInstant(
-                        createEventForm.getEventDate(),
-                        createEventForm.getEventTime(),
-                        createEventForm.getTimezone());
+                toInstant(createEventForm.getEventDate(), createEventForm.getEventTime());
         final Instant endsAt =
-                toInstant(
-                        createEventForm.getEndDate(),
-                        createEventForm.getEndTime(),
-                        createEventForm.getTimezone());
+                toInstant(createEventForm.getEndDate(), createEventForm.getEndTime());
 
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
@@ -423,7 +410,6 @@ public class HostController {
         form.setEndTime(endsAt.toLocalTime());
         form.setMaxPlayers(match.getMaxPlayers());
         form.setPricePerPlayer(match.getPricePerPlayer());
-        form.setTimezone(PlatformTime.ZONE);
         return form;
     }
 
@@ -435,8 +421,8 @@ public class HostController {
                 form.getAddress(),
                 form.getTitle(),
                 form.getDescription(),
-                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone()),
-                toInstant(form.getEndDate(), form.getEndTime(), form.getTimezone()),
+                toInstant(form.getEventDate(), form.getEventTime()),
+                toInstant(form.getEndDate(), form.getEndTime()),
                 form.getMaxPlayers().intValue(),
                 form.getPricePerPlayer(),
                 form.getSport() == null ? Sport.PADEL : form.getSport(),
@@ -472,8 +458,7 @@ public class HostController {
         }
     }
 
-    private static Instant toInstant(
-            final LocalDate eventDate, final LocalTime eventTime, final ZoneId timezone) {
+    private static Instant toInstant(final LocalDate eventDate, final LocalTime eventTime) {
         return PlatformTime.toInstant(eventDate, eventTime);
     }
 
@@ -490,8 +475,7 @@ public class HostController {
                         : null,
                 form.getRecurrenceEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
                         ? form.getRecurrenceOccurrenceCount()
-                        : null,
-                PlatformTime.ZONE);
+                        : null);
     }
 
     private ImageUpload bannerUpload(final MultipartFile bannerImage) {

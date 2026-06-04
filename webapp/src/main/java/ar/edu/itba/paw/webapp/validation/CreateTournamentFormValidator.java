@@ -131,15 +131,9 @@ public class CreateTournamentFormValidator
         }
 
         final Instant opensAt =
-                toInstant(
-                        form.getRegistrationOpensDate(),
-                        form.getRegistrationOpensTime(),
-                        form.getTz());
+                toInstant(form.getRegistrationOpensDate(), form.getRegistrationOpensTime());
         final Instant closesAt =
-                toInstant(
-                        form.getRegistrationClosesDate(),
-                        form.getRegistrationClosesTime(),
-                        form.getTz());
+                toInstant(form.getRegistrationClosesDate(), form.getRegistrationClosesTime());
 
         if (!closesAt.isAfter(opensAt)) {
             reject(
@@ -152,7 +146,7 @@ public class CreateTournamentFormValidator
     }
 
     private static Instant toInstant(
-            final java.time.LocalDate date, final java.time.LocalTime time, final String timezone) {
+            final java.time.LocalDate date, final java.time.LocalTime time) {
         return PlatformTime.toInstant(date, time);
     }
 

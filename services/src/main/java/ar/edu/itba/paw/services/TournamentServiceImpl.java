@@ -12,7 +12,6 @@ import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -102,7 +101,6 @@ public class TournamentServiceImpl implements TournamentService {
             final EventSort sort,
             final int page,
             final int pageSize,
-            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,
@@ -150,7 +148,6 @@ public class TournamentServiceImpl implements TournamentService {
             final EventSort sort,
             final int page,
             final int pageSize,
-            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,

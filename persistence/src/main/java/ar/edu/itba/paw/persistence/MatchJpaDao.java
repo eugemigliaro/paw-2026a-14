@@ -332,7 +332,6 @@ public class MatchJpaDao implements MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final Double latitude,
             final Double longitude,
             final int offset,
@@ -350,7 +349,6 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
-                zoneId,
                 minPrice,
                 maxPrice,
                 Boolean.TRUE);
@@ -365,8 +363,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtFrom,
             final Instant startsAtTo,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final ZoneId zoneId) {
+            final BigDecimal maxPrice) {
         final QueryParts parts = new QueryParts();
         parts.where.add("m.visibility IN :visibility");
         parts.params.put("visibility", List.of(EventVisibility.PUBLIC));
@@ -380,7 +377,6 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
-                zoneId,
                 minPrice,
                 maxPrice,
                 Boolean.TRUE);
@@ -401,7 +397,6 @@ public class MatchJpaDao implements MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final int offset,
             final int limit) {
         final QueryParts parts = new QueryParts();
@@ -416,7 +411,6 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
-                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -435,8 +429,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtFrom,
             final Instant startsAtTo,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final ZoneId zoneId) {
+            final BigDecimal maxPrice) {
         final QueryParts parts = new QueryParts();
         parts.where.add("m.host.id = :hostUserId");
         parts.params.put("hostUserId", host.getId());
@@ -449,7 +442,6 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
-                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -470,7 +462,6 @@ public class MatchJpaDao implements MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final int offset,
             final int limit) {
         final QueryParts parts = joinedParts(user.getId());
@@ -482,7 +473,6 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
-                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -501,8 +491,7 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtFrom,
             final Instant startsAtTo,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final ZoneId zoneId) {
+            final BigDecimal maxPrice) {
         final QueryParts parts = joinedParts(user.getId());
         appendManagedFilters(parts, visibility, statuses);
         appendFilters(
@@ -512,7 +501,6 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
-                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -666,7 +654,6 @@ public class MatchJpaDao implements MatchDao {
             final EventTimeFilter timeFilter,
             final Instant startsAtFrom,
             final Instant startsAtTo,
-            final ZoneId zoneId,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Boolean upcoming) {
@@ -677,7 +664,7 @@ public class MatchJpaDao implements MatchDao {
         }
         appendDateRangeFilter(parts, startsAtFrom, startsAtTo);
         if (startsAtFrom == null && startsAtTo == null) {
-            appendTimeFilter(parts, timeFilter, zoneId, upcoming);
+            appendTimeFilter(parts, timeFilter, upcoming);
         }
         if (minPrice != null) {
             parts.where.add("m.pricePerPlayer >= :minPrice");
@@ -732,26 +719,22 @@ public class MatchJpaDao implements MatchDao {
     }
 
     private static void appendTimeFilter(
-            final QueryParts parts,
-            final EventTimeFilter timeFilter,
-            final ZoneId zoneId,
-            final Boolean upcoming) {
+            final QueryParts parts, final EventTimeFilter timeFilter, final Boolean upcoming) {
         if (timeFilter == null || timeFilter == EventTimeFilter.ALL) {
             return;
         }
         if (Boolean.FALSE.equals(upcoming) && timeFilter == EventTimeFilter.TOMORROW) {
             return;
         }
-        final ZoneId safeZoneId = zoneId == null ? PlatformTime.ZONE : zoneId;
         if (timeFilter == EventTimeFilter.FUTURE) {
             parts.where.add("m.startsAt >= :timeStart");
-            parts.params.put("timeStart", ZonedDateTime.now(safeZoneId).toInstant());
+            parts.params.put("timeStart", ZonedDateTime.now(PlatformTime.ZONE).toInstant());
             return;
         }
         final TimeRange range =
                 Boolean.FALSE.equals(upcoming)
-                        ? buildPastTimeRange(timeFilter, safeZoneId)
-                        : buildTimeRange(timeFilter, safeZoneId);
+                        ? buildPastTimeRange(timeFilter, PlatformTime.ZONE)
+                        : buildTimeRange(timeFilter, PlatformTime.ZONE);
         parts.where.add("m.startsAt >= :timeStart AND m.startsAt < :timeEnd");
         parts.params.put("timeStart", range.start());
         parts.params.put("timeEnd", range.end());
@@ -859,7 +842,6 @@ public class MatchJpaDao implements MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final List<ParticipantStatus> participantStatuses,
             final int offset,
             final int limit) {
@@ -887,16 +869,7 @@ public class MatchJpaDao implements MatchDao {
 
         appendManagedFilters(parts, null, statuses);
         appendFilters(
-                parts,
-                query,
-                sports,
-                null,
-                startsAtFrom,
-                startsAtTo,
-                zoneId,
-                minPrice,
-                maxPrice,
-                upcoming);
+                parts, query, sports, null, startsAtFrom, startsAtTo, minPrice, maxPrice, upcoming);
 
         return findPage(parts, sort, upcoming, null, null, offset, limit);
     }
@@ -914,7 +887,6 @@ public class MatchJpaDao implements MatchDao {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final List<ParticipantStatus> participantStatuses) {
         final QueryParts parts = new QueryParts();
         parts.where.add("m.deleted = FALSE");
@@ -940,16 +912,7 @@ public class MatchJpaDao implements MatchDao {
 
         appendManagedFilters(parts, null, statuses);
         appendFilters(
-                parts,
-                query,
-                sports,
-                null,
-                startsAtFrom,
-                startsAtTo,
-                zoneId,
-                minPrice,
-                maxPrice,
-                upcoming);
+                parts, query, sports, null, startsAtFrom, startsAtTo, minPrice, maxPrice, upcoming);
 
         return countMatches(parts);
     }

@@ -107,7 +107,7 @@ public class MatchServiceImpl implements MatchService {
                         recurrence.getFrequency(),
                         request.getStartsAt(),
                         request.getEndsAt(),
-                        resolveZone(recurrence.getZoneId()).getId(),
+                        PlatformTime.ZONE.getId(),
                         recurrence.getEndMode() == RecurrenceEndMode.UNTIL_DATE
                                 ? recurrence.getUntilDate()
                                 : null,
@@ -122,7 +122,7 @@ public class MatchServiceImpl implements MatchService {
                         recurrence.getFrequency(),
                         request.getStartsAt(),
                         request.getEndsAt(),
-                        resolveZone(recurrence.getZoneId()).getId(),
+                        PlatformTime.ZONE.getId(),
                         recurrence.getEndMode() == RecurrenceEndMode.UNTIL_DATE
                                 ? recurrence.getUntilDate()
                                 : null,
@@ -783,7 +783,6 @@ public class MatchServiceImpl implements MatchService {
             final EventSort sort,
             final int page,
             final int pageSize,
-            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,
@@ -804,8 +803,7 @@ public class MatchServiceImpl implements MatchService {
                                 dateRange.start(),
                                 dateRange.endExclusive(),
                                 minPrice,
-                                maxPrice,
-                                timezone),
+                                maxPrice),
                 (offset, safePageSize) ->
                         matchDao.findPublicMatches(
                                 query,
@@ -816,7 +814,6 @@ public class MatchServiceImpl implements MatchService {
                                 minPrice,
                                 maxPrice,
                                 sortFilter,
-                                timezone,
                                 latitude,
                                 longitude,
                                 offset,
@@ -836,7 +833,6 @@ public class MatchServiceImpl implements MatchService {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId timezone,
             List<ParticipantStatus> participantStatuses,
             int page,
             int pageSize) {
@@ -859,7 +855,6 @@ public class MatchServiceImpl implements MatchService {
                         minPrice,
                         maxPrice,
                         sort,
-                        timezone,
                         participantStatuses,
                         offset,
                         limit);
@@ -877,7 +872,6 @@ public class MatchServiceImpl implements MatchService {
                         minPrice,
                         maxPrice,
                         sort,
-                        timezone,
                         participantStatuses);
         return new PaginatedResult<>(paginatedItems, totalCount, page, pageSize);
     }
@@ -904,7 +898,7 @@ public class MatchServiceImpl implements MatchService {
             throw new IllegalArgumentException(message("match.recurrence.error.invalid"));
         }
 
-        final ZoneId zoneId = resolveZone(recurrence.getZoneId());
+        final ZoneId zoneId = PlatformTime.ZONE;
         final LocalDateTime firstLocalStart =
                 LocalDateTime.ofInstant(request.getStartsAt(), zoneId);
         final Duration duration =
@@ -987,10 +981,6 @@ public class MatchServiceImpl implements MatchService {
             default:
                 return firstLocalStart.plusWeeks(index);
         }
-    }
-
-    private static ZoneId resolveZone(final ZoneId zoneId) {
-        return zoneId == null ? PlatformTime.ZONE : zoneId;
     }
 
     private String message(final String code) {

@@ -7,7 +7,6 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -39,7 +38,6 @@ public class SearchForm {
 
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
-    private ZoneId timezone;
     private List<Sport> sport = new ArrayList<>();
     private List<EventStatus> status = new ArrayList<>();
     private List<String> category = new ArrayList<>();
@@ -112,14 +110,6 @@ public class SearchForm {
 
     public void setMaxPrice(final BigDecimal maxPrice) {
         this.maxPrice = maxPrice;
-    }
-
-    public ZoneId getTimezone() {
-        return timezone;
-    }
-
-    public void setTimezone(final ZoneId timezone) {
-        this.timezone = timezone;
     }
 
     public List<Sport> getSport() {

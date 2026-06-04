@@ -15,7 +15,6 @@ import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
@@ -385,7 +384,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         9,
                         10,
-                        ZoneId.of("UTC"),
                         BigDecimal.ZERO,
                         BigDecimal.TEN,
                         null,
@@ -437,18 +435,7 @@ public class TournamentServiceImplTest {
 
         // 2. Exercise
         tournamentService.searchPublicTournaments(
-                "",
-                List.of(),
-                null,
-                null,
-                EventSort.DISTANCE,
-                1,
-                12,
-                ZoneId.of("UTC"),
-                null,
-                null,
-                -34.60,
-                -58.38);
+                "", List.of(), null, null, EventSort.DISTANCE, 1, 12, null, null, -34.60, -58.38);
 
         // 3. Assert
         Assertions.assertEquals(EventSort.DISTANCE, capturedSort.get());
@@ -504,7 +491,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -566,7 +552,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -619,7 +604,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,

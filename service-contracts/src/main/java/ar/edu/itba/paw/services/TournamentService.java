@@ -7,7 +7,6 @@ import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,7 +26,6 @@ public interface TournamentService {
             EventSort sort,
             int page,
             int pageSize,
-            ZoneId timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Double latitude,
@@ -44,7 +42,6 @@ public interface TournamentService {
             EventSort sort,
             int page,
             int pageSize,
-            ZoneId timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Double latitude,

@@ -586,7 +586,7 @@ class HostTournamentControllerTest {
                 .thenReturn(java.util.Optional.of(tournament));
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(post("/host/tournaments/77/bracket/publish").param("tz", "UTC"))
+        mockMvc.perform(post("/host/tournaments/77/bracket/publish"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/bracket-setup"));
         Assertions.assertNull(publishedSchedules.get());
@@ -613,8 +613,7 @@ class HostTournamentControllerTest {
                 .param("teamSize", "2")
                 .param("pricePerPlayer", "15.00")
                 .param("allowSoloSignup", "true")
-                .param("_allowTeamDraft", "on")
-                .param("tz", "UTC");
+                .param("_allowTeamDraft", "on");
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -650,8 +649,7 @@ class HostTournamentControllerTest {
                         .param("registrationClosesTime", "20:00")
                         .param("bracketSize", "8")
                         .param("teamSize", teamSize)
-                        .param("pricePerPlayer", "10.00")
-                        .param("tz", "UTC");
+                        .param("pricePerPlayer", "10.00");
         if (allowSoloSignup) {
             builder.param("allowSoloSignup", "true");
         } else {
@@ -689,8 +687,7 @@ class HostTournamentControllerTest {
                 .param("schedules[1].matchId", "11")
                 .param("schedules[1].roundNumber", "1")
                 .param("schedules[1].roundLabel", "Round 1")
-                .param("schedules[1].matchLabel", "Match 2")
-                .param("tz", "UTC");
+                .param("schedules[1].matchLabel", "Match 2");
     }
 
     private static Tournament tournament(

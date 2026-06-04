@@ -79,8 +79,6 @@ public class CreateTournamentForm {
 
     private MultipartFile bannerImage;
 
-    private String tz = "";
-
     public String getTitle() {
         return title;
     }
@@ -207,13 +205,5 @@ public class CreateTournamentForm {
 
     public void setBannerImage(final MultipartFile bannerImage) {
         this.bannerImage = bannerImage;
-    }
-
-    public String getTz() {
-        return tz;
-    }
-
-    public void setTz(final String tz) {
-        this.tz = tz;
     }
 }

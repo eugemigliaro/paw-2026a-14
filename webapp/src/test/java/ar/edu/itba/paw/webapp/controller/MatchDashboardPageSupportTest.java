@@ -22,7 +22,6 @@ import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,7 +94,6 @@ class MatchDashboardPageSupportTest {
         searchForm.setMaxPrice(new BigDecimal("50.00"));
         searchForm.setStartDate(LocalDate.of(2099, 4, 10));
         searchForm.setEndDate(LocalDate.of(2099, 4, 11));
-        searchForm.setTimezone(ZoneId.of("UTC"));
         searchForm.setPage(2);
 
         final MatchDashboardQueryState.DashboardSelection selection =
@@ -127,7 +125,7 @@ class MatchDashboardPageSupportTest {
                 mav.getModel().get("selectedDateMinValue"));
         assertNull(mav.getModel().get("selectedDateMaxValue"));
         assertEquals(List.of(), mav.getModel().get("selectedCategories"));
-        assertEquals(PlatformTime.ZONE.getId(), mav.getModel().get("selectedTimezone"));
+        assertNull(mav.getModel().get("selectedTimezone"));
         assertEquals(2, mav.getModel().get("pageNumber"));
         assertTrue((Boolean) mav.getModel().get("pageHasPrevious"));
         assertFalse((Boolean) mav.getModel().get("pageHasNext"));
@@ -153,8 +151,6 @@ class MatchDashboardPageSupportTest {
         searchForm.setCategory(List.of("joined", "pending"));
         searchForm.setStatus(List.of(EventStatus.OPEN, EventStatus.COMPLETED));
         searchForm.setSport(List.of(Sport.PADEL));
-        searchForm.setTimezone(ZoneId.of("UTC"));
-
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final PaginatedResult<Match> matchResult = new PaginatedResult<>(List.of(), 0, 1, 1);
@@ -180,7 +176,7 @@ class MatchDashboardPageSupportTest {
         assertEquals("match", mav.getModel().get("selectedType"));
         assertEquals(List.of("joined", "pending"), mav.getModel().get("selectedCategories"));
         assertEquals(
-                LocalDate.now(ZoneId.of("UTC")).toString(),
+                LocalDate.now(PlatformTime.ZONE).toString(),
                 mav.getModel().get("selectedDateMinValue"));
         assertEquals(
                 List.of(
