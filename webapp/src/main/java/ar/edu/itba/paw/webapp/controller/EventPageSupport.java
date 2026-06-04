@@ -768,7 +768,7 @@ final class EventPageSupport {
 
     private String eventStateNotice(final Match match, final Locale locale) {
         final EventDisplayState state = eventDisplayState(match);
-        if ("completed".equals(state.key())) {
+        if ("completed".equals(state.key()) || "inProgress".equals(state.key())) {
             return messageSource.getMessage("event.state.completedNotice", null, locale);
         }
         if ("cancelled".equals(state.key())) {
@@ -961,7 +961,7 @@ final class EventPageSupport {
     }
 
     private boolean canHostEdit(final Match match) {
-        if (hasEventEnded(match)) {
+        if (hasEventStarted(match)) {
             return false;
         }
         return match.getStatus() != EventStatus.COMPLETED
@@ -969,7 +969,7 @@ final class EventPageSupport {
     }
 
     private boolean canHostCancel(final Match match) {
-        if (hasEventEnded(match)) {
+        if (hasEventStarted(match)) {
             return false;
         }
         return match.getStatus() != EventStatus.COMPLETED

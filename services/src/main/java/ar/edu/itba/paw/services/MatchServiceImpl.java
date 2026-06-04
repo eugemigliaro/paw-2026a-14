@@ -717,7 +717,7 @@ public class MatchServiceImpl implements MatchService {
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() != null)
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() >= pivotIndex)
                 .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
-                .filter(MatchServiceImpl::isEditableMatch)
+                .filter(this::isEditableMatch)
                 .toList();
     }
 
@@ -729,13 +729,16 @@ public class MatchServiceImpl implements MatchService {
         final Instant now = Instant.now(clock);
         return matchDao.findSeriesOccurrences(pivot.getSeries().getId()).stream()
                 .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
-                .filter(MatchServiceImpl::isEditableMatch)
+                .filter(this::isEditableMatch)
                 .toList();
     }
 
-    private static boolean isEditableMatch(final Match match) {
+    private boolean isEditableMatch(final Match match) {
+        final Instant startsAt = match.getStartsAt();
         return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
+                && match.getStatus() != EventStatus.CANCELLED
+                && startsAt != null
+                && startsAt.isAfter(Instant.now(clock));
     }
 
     @Override
