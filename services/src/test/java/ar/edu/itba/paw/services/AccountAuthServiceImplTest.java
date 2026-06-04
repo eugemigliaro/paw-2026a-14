@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.EmailActionRequest;
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
@@ -14,14 +15,18 @@ import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import ar.edu.itba.paw.services.utils.UserUtils;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,60 +87,10 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRegisterCreatesUnverifiedAccountAndSendsVerificationMail() {
-        final AtomicReference<String> capturedPasswordHash = new AtomicReference<>();
-        final UserAccount createdAccount =
-                new UserAccount(
-                        9L,
-                        "new@test.com",
-                        "new_user",
-                        null,
-                        null,
-                        null,
-                        null,
-                        "{bcrypt}hash",
-                        UserRole.USER,
-                        null,
-                        UserLanguages.ENGLISH);
+        final FakeUserDao fakeUserDao = new FakeUserDao();
+        final FakeEmailActionRequestDao fakeEmailActionRequestDao = new FakeEmailActionRequestDao();
+        accountAuthService = accountAuthService(fakeUserDao, fakeEmailActionRequestDao);
 
-        Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
-        Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
-        Mockito.when(
-                        userDao.createAccount(
-                                ArgumentMatchers.eq("new@test.com"),
-                                ArgumentMatchers.eq("new_user"),
-                                ArgumentMatchers.eq("Jamie"),
-                                ArgumentMatchers.eq("Rivera"),
-                                ArgumentMatchers.eq("+1 555 123 4567"),
-                                ArgumentMatchers.eq(UserLanguages.ENGLISH),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.eq(UserRole.USER),
-                                ArgumentMatchers.isNull()))
-                .thenAnswer(
-                        invocation -> {
-                            capturedPasswordHash.set(invocation.getArgument(6));
-                            return createdAccount;
-                        });
-        Mockito.when(
-                        emailActionRequestDao.create(
-                                ArgumentMatchers.eq(EmailActionType.ACCOUNT_VERIFICATION),
-                                ArgumentMatchers.eq("new@test.com"),
-                                ArgumentMatchers.any(User.class),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.eq("{}"),
-                                ArgumentMatchers.eq(FIXED_NOW.plusSeconds(24 * 3600L))))
-                .thenReturn(
-                        new EmailActionRequest(
-                                20L,
-                                EmailActionType.ACCOUNT_VERIFICATION,
-                                "new@test.com",
-                                UserUtils.getUser(9L),
-                                "token-hash",
-                                "{}",
-                                EmailActionStatus.PENDING,
-                                FIXED_NOW.plusSeconds(24 * 3600L),
-                                null,
-                                FIXED_NOW,
-                                FIXED_NOW));
         final VerificationRequestResult result =
                 accountAuthService.register(
                         new RegisterAccountRequest(
@@ -148,8 +103,23 @@ public class AccountAuthServiceImplTest {
 
         Assertions.assertEquals("new@test.com", result.getEmail());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(24 * 3600L), result.getExpiresAt());
-        Assertions.assertNotNull(capturedPasswordHash.get());
-        Assertions.assertTrue(passwordEncoder.matches("Password123!", capturedPasswordHash.get()));
+        final UserAccount createdAccount =
+                fakeUserDao.findAccountByEmail("new@test.com").orElseThrow();
+        Assertions.assertEquals("new_user", createdAccount.getUsername());
+        Assertions.assertEquals("Jamie", createdAccount.getName());
+        Assertions.assertEquals("Rivera", createdAccount.getLastName());
+        Assertions.assertEquals("+1 555 123 4567", createdAccount.getPhone());
+        Assertions.assertEquals(UserLanguages.ENGLISH, createdAccount.getPreferredLanguage());
+        Assertions.assertEquals(UserRole.USER, createdAccount.getRole());
+        Assertions.assertNull(createdAccount.getEmailVerifiedAt());
+        Assertions.assertTrue(
+                passwordEncoder.matches("Password123!", createdAccount.getPasswordHash()));
+        Assertions.assertEquals(1, fakeEmailActionRequestDao.requests.size());
+        Assertions.assertEquals(
+                EmailActionType.ACCOUNT_VERIFICATION,
+                fakeEmailActionRequestDao.requests.get(0).getActionType());
+        Assertions.assertEquals(
+                EmailActionStatus.PENDING, fakeEmailActionRequestDao.requests.get(0).getStatus());
         Assertions.assertEquals(List.of("account-verification"), mailDispatchService.actions);
         Assertions.assertEquals(List.of("new@test.com"), mailDispatchService.recipients);
         Assertions.assertTrue(mailDispatchService.urls.get(0).contains("/verifications/"));
@@ -380,57 +350,37 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testConfirmVerificationMarksAccountAsVerified() {
-        final AtomicReference<Instant> verificationTimestamp = new AtomicReference<>();
-        final AtomicReference<EmailActionStatus> updatedStatus = new AtomicReference<>();
+        final FakeUserDao fakeUserDao = new FakeUserDao();
+        final FakeEmailActionRequestDao fakeEmailActionRequestDao = new FakeEmailActionRequestDao();
+        final UserAccount account =
+                new UserAccount(
+                        5L,
+                        "verify@test.com",
+                        "verified_user",
+                        null,
+                        null,
+                        null,
+                        null,
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        null,
+                        UserLanguages.DEFAULT_LANGUAGE);
         final EmailActionRequest request =
                 new EmailActionRequest(
                         31L,
                         EmailActionType.ACCOUNT_VERIFICATION,
                         "verify@test.com",
                         UserUtils.getUser(5L),
-                        "token-hash",
+                        hashToken("raw-token"),
                         "{}",
                         EmailActionStatus.PENDING,
                         FIXED_NOW.plusSeconds(24 * 3600L),
                         null,
                         FIXED_NOW,
                         FIXED_NOW);
-
-        Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
-                .thenReturn(Optional.of(request));
-        Mockito.when(userDao.findAccountById(5L))
-                .thenReturn(
-                        Optional.of(
-                                new UserAccount(
-                                        5L,
-                                        "verify@test.com",
-                                        "verified_user",
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        "{bcrypt}hash",
-                                        UserRole.USER,
-                                        null,
-                                        UserLanguages.DEFAULT_LANGUAGE)));
-        Mockito.doAnswer(
-                        invocation -> {
-                            verificationTimestamp.set(invocation.getArgument(1));
-                            return null;
-                        })
-                .when(userDao)
-                .markEmailVerified(ArgumentMatchers.eq(5L), ArgumentMatchers.any());
-        Mockito.doAnswer(
-                        invocation -> {
-                            updatedStatus.set(invocation.getArgument(1));
-                            return null;
-                        })
-                .when(emailActionRequestDao)
-                .updateStatus(
-                        ArgumentMatchers.eq(31L),
-                        ArgumentMatchers.any(),
-                        ArgumentMatchers.any(User.class),
-                        ArgumentMatchers.any());
+        fakeUserDao.accounts.add(account);
+        fakeEmailActionRequestDao.requests.add(request);
+        accountAuthService = accountAuthService(fakeUserDao, fakeEmailActionRequestDao);
 
         final VerificationConfirmationResult result =
                 accountAuthService.confirmVerification("raw-token");
@@ -439,8 +389,9 @@ public class AccountAuthServiceImplTest {
         Assertions.assertEquals("/", result.getRedirectUrl());
         Assertions.assertTrue(result.getAccount().isPresent());
         Assertions.assertEquals(5L, result.getAccount().orElseThrow().getId());
-        Assertions.assertEquals(EmailActionStatus.COMPLETED, updatedStatus.get());
-        Assertions.assertEquals(FIXED_NOW, verificationTimestamp.get());
+        Assertions.assertEquals(EmailActionStatus.COMPLETED, request.getStatus());
+        Assertions.assertEquals(FIXED_NOW, request.getConsumedAt());
+        Assertions.assertEquals(FIXED_NOW, account.getEmailVerifiedAt());
     }
 
     @Test
@@ -559,67 +510,68 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testResetPasswordUpdatesHashAndCompletesRequest() {
-        final AtomicReference<String> capturedPasswordHash = new AtomicReference<>();
-        final AtomicReference<EmailActionStatus> updatedStatus = new AtomicReference<>();
+        final FakeUserDao fakeUserDao = new FakeUserDao();
+        final FakeEmailActionRequestDao fakeEmailActionRequestDao = new FakeEmailActionRequestDao();
+        final UserAccount account =
+                new UserAccount(
+                        9L,
+                        "player@test.com",
+                        "player",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        UserRole.USER,
+                        FIXED_NOW.minusSeconds(60),
+                        UserLanguages.DEFAULT_LANGUAGE);
         final EmailActionRequest request =
                 new EmailActionRequest(
                         60L,
                         EmailActionType.PASSWORD_RESET,
                         "player@test.com",
                         UserUtils.getUser(9L),
-                        "token-hash",
+                        hashToken("raw-token"),
                         "{}",
                         EmailActionStatus.PENDING,
                         FIXED_NOW.plusSeconds(24 * 3600L),
                         null,
                         FIXED_NOW,
                         FIXED_NOW);
-
-        Mockito.when(emailActionRequestDao.findByTokenHashForUpdate(ArgumentMatchers.anyString()))
-                .thenReturn(Optional.of(request));
-        Mockito.when(userDao.findAccountById(9L))
-                .thenReturn(
-                        Optional.of(
-                                new UserAccount(
-                                        9L,
-                                        "player@test.com",
-                                        "player",
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        UserRole.USER,
-                                        FIXED_NOW.minusSeconds(60),
-                                        UserLanguages.DEFAULT_LANGUAGE)));
-        Mockito.doAnswer(
-                        invocation -> {
-                            capturedPasswordHash.set(invocation.getArgument(1));
-                            return null;
-                        })
-                .when(userDao)
-                .updatePasswordHash(ArgumentMatchers.eq(9L), ArgumentMatchers.anyString());
-        Mockito.doAnswer(
-                        invocation -> {
-                            updatedStatus.set(invocation.getArgument(1));
-                            return null;
-                        })
-                .when(emailActionRequestDao)
-                .updateStatus(
-                        ArgumentMatchers.eq(60L),
-                        ArgumentMatchers.any(),
-                        ArgumentMatchers.any(User.class),
-                        ArgumentMatchers.any());
+        fakeUserDao.accounts.add(account);
+        fakeEmailActionRequestDao.requests.add(request);
+        accountAuthService = accountAuthService(fakeUserDao, fakeEmailActionRequestDao);
 
         final VerificationConfirmationResult result =
                 accountAuthService.resetPassword("raw-token", "EvenBetter123!");
 
         Assertions.assertEquals(9L, result.getUserId());
         Assertions.assertEquals("/login?reset=1", result.getRedirectUrl());
-        Assertions.assertEquals(EmailActionStatus.COMPLETED, updatedStatus.get());
-        Assertions.assertNotNull(capturedPasswordHash.get());
-        Assertions.assertTrue(
-                passwordEncoder.matches("EvenBetter123!", capturedPasswordHash.get()));
+        Assertions.assertEquals(EmailActionStatus.COMPLETED, request.getStatus());
+        Assertions.assertEquals(FIXED_NOW, request.getConsumedAt());
+        Assertions.assertTrue(passwordEncoder.matches("EvenBetter123!", account.getPasswordHash()));
+    }
+
+    private AccountAuthServiceImpl accountAuthService(
+            final UserDao userDao, final EmailActionRequestDao emailActionRequestDao) {
+        return new AccountAuthServiceImpl(
+                userDao,
+                emailActionRequestDao,
+                new MailProperties(
+                        MailMode.LOG,
+                        "http://localhost:8080",
+                        "no-reply@matchpoint.local",
+                        "",
+                        587,
+                        "",
+                        "",
+                        false,
+                        true,
+                        24),
+                mailDispatchService,
+                messageSource(),
+                passwordEncoder,
+                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     private static MessageSource messageSource() {
@@ -706,6 +658,16 @@ public class AccountAuthServiceImplTest {
         return messageSource;
     }
 
+    private static String hashToken(final String rawToken) {
+        try {
+            final MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of()
+                    .formatHex(messageDigest.digest(rawToken.getBytes(StandardCharsets.UTF_8)));
+        } catch (final NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available", exception);
+        }
+    }
+
     private static class RecordingMailDispatchService implements MailDispatchService {
 
         private final List<String> actions = new ArrayList<>();
@@ -735,6 +697,190 @@ public class AccountAuthServiceImplTest {
             recipients.add(account.getEmail());
             urls.add(resetUrl);
             locales.add(locale);
+        }
+    }
+
+    private static class FakeUserDao implements UserDao {
+
+        private final List<UserAccount> accounts = new ArrayList<>();
+        private long nextAccountId = 9L;
+
+        @Override
+        public User createUser(final String email, final String username) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public UserAccount createAccount(
+                final String email,
+                final String username,
+                final String name,
+                final String lastName,
+                final String phone,
+                final String preferredLanguage,
+                final String passwordHash,
+                final UserRole role,
+                final Instant emailVerifiedAt) {
+            final UserAccount account =
+                    new UserAccount(
+                            nextAccountId++,
+                            email,
+                            username,
+                            name,
+                            lastName,
+                            phone,
+                            null,
+                            passwordHash,
+                            role,
+                            emailVerifiedAt,
+                            preferredLanguage);
+            accounts.add(account);
+            return account;
+        }
+
+        @Override
+        public Optional<User> findByEmail(final String email) {
+            return findAccountByEmail(email).map(UserAccount::toUser);
+        }
+
+        @Override
+        public Optional<UserAccount> findAccountByEmail(final String email) {
+            return accounts.stream()
+                    .filter(account -> account.getEmail().equals(email))
+                    .findFirst();
+        }
+
+        @Override
+        public Optional<User> findById(final Long id) {
+            return findAccountById(id).map(UserAccount::toUser);
+        }
+
+        @Override
+        public List<User> findByIds(final Collection<Long> ids) {
+            return accounts.stream()
+                    .filter(account -> ids.contains(account.getId()))
+                    .map(UserAccount::toUser)
+                    .toList();
+        }
+
+        @Override
+        public Optional<UserAccount> findAccountById(final Long id) {
+            return accounts.stream().filter(account -> account.getId().equals(id)).findFirst();
+        }
+
+        @Override
+        public Optional<User> findByUsername(final String username) {
+            return accounts.stream()
+                    .filter(account -> account.getUsername().equals(username))
+                    .findFirst()
+                    .map(UserAccount::toUser);
+        }
+
+        @Override
+        public void updateProfile(
+                final Long id,
+                final String username,
+                final String name,
+                final String lastName,
+                final String phone,
+                final ImageMetadata profileImageMetadata) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void updateProfileImage(final Long id, final ImageMetadata profileImageMetadata) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void updatePasswordHash(final Long id, final String passwordHash) {
+            findAccountById(id).orElseThrow().setPasswordHash(passwordHash);
+        }
+
+        @Override
+        public void markEmailVerified(final Long id, final Instant emailVerifiedAt) {
+            findAccountById(id).orElseThrow().setEmailVerifiedAt(emailVerifiedAt);
+        }
+
+        @Override
+        public void updatePreferredLanguage(final Long id, final String preferredLanguage) {
+            findAccountById(id).orElseThrow().setPreferredLanguage(preferredLanguage);
+        }
+    }
+
+    private static class FakeEmailActionRequestDao implements EmailActionRequestDao {
+
+        private final List<EmailActionRequest> requests = new ArrayList<>();
+        private long nextRequestId = 20L;
+
+        @Override
+        public EmailActionRequest create(
+                final EmailActionType actionType,
+                final String email,
+                final User user,
+                final String tokenHash,
+                final String payloadJson,
+                final Instant expiresAt) {
+            final EmailActionRequest request =
+                    new EmailActionRequest(
+                            nextRequestId++,
+                            actionType,
+                            email,
+                            user,
+                            tokenHash,
+                            payloadJson,
+                            EmailActionStatus.PENDING,
+                            expiresAt,
+                            null,
+                            FIXED_NOW,
+                            FIXED_NOW);
+            requests.add(request);
+            return request;
+        }
+
+        @Override
+        public Optional<EmailActionRequest> findByTokenHash(final String tokenHash) {
+            return requests.stream()
+                    .filter(request -> request.getTokenHash().equals(tokenHash))
+                    .filter(request -> request.getStatus() == EmailActionStatus.PENDING)
+                    .findFirst();
+        }
+
+        @Override
+        public Optional<EmailActionRequest> findByTokenHashForUpdate(final String tokenHash) {
+            return findByTokenHash(tokenHash);
+        }
+
+        @Override
+        public void updateStatus(
+                final Long id,
+                final EmailActionStatus status,
+                final User user,
+                final Instant consumedAt) {
+            final EmailActionRequest request =
+                    requests.stream()
+                            .filter(candidate -> candidate.getId().equals(id))
+                            .findFirst()
+                            .orElseThrow();
+            request.setStatus(status);
+            request.setUser(user);
+            request.setConsumedAt(consumedAt);
+            request.setUpdatedAt(consumedAt);
+        }
+
+        @Override
+        public void expirePendingByEmailAndActionType(
+                final EmailActionType actionType, final String email, final Instant consumedAt) {
+            requests.stream()
+                    .filter(request -> request.getActionType() == actionType)
+                    .filter(request -> request.getEmail().equals(email))
+                    .filter(request -> request.getStatus() == EmailActionStatus.PENDING)
+                    .forEach(
+                            request -> {
+                                request.setStatus(EmailActionStatus.EXPIRED);
+                                request.setConsumedAt(consumedAt);
+                                request.setUpdatedAt(consumedAt);
+                            });
         }
     }
 }

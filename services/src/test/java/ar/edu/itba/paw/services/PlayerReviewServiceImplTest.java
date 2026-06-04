@@ -10,7 +10,6 @@ import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -174,23 +173,17 @@ public class PlayerReviewServiceImplTest {
     }
 
     @Test
-    public void testDeleteReviewDelegatesToDao() {
-        final List<Long> deletedReviewArgs = new ArrayList<>();
-        Mockito.when(playerReviewDao.softDeleteReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
-                .thenAnswer(
-                        invocation -> {
-                            final User reviewer = invocation.getArgument(0);
-                            final User reviewed = invocation.getArgument(1);
-
-                            deletedReviewArgs.add(reviewer.getId());
-                            deletedReviewArgs.add(reviewed.getId());
-
-                            return true;
-                        });
+    public void testDeleteReviewRemovesExistingReviewFromLookup() {
+        final PlayerReview persisted =
+                review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great teammate", null);
+        playerReviewService = new PlayerReviewServiceImpl(new StatefulPlayerReviewDao(persisted));
 
         playerReviewService.deleteReview(UserUtils.getUser(2L), UserUtils.getUser(3L));
 
-        Assertions.assertEquals(List.of(2L, 3L), deletedReviewArgs);
+        Assertions.assertTrue(
+                playerReviewService
+                        .findReviewByPair(UserUtils.getUser(2L), UserUtils.getUser(3L))
+                        .isEmpty());
     }
 
     @Test
@@ -330,5 +323,92 @@ public class PlayerReviewServiceImplTest {
                 deletedAt,
                 null,
                 null);
+    }
+
+    private static class StatefulPlayerReviewDao implements PlayerReviewDao {
+
+        private final PlayerReview review;
+
+        private StatefulPlayerReviewDao(final PlayerReview review) {
+            this.review = review;
+        }
+
+        @Override
+        public PlayerReview upsertReview(
+                final User reviewer,
+                final User reviewed,
+                final PlayerReviewReaction reaction,
+                final String comment) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean softDeleteReview(final User reviewer, final User reviewed) {
+            if (matches(reviewer, reviewed) && !review.isDeleted()) {
+                review.setDeleted(true);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean softDeleteReview(
+                final User reviewer,
+                final User reviewed,
+                final User deletedBy,
+                final String deleteReason) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean restoreReview(final User reviewer, final User reviewed) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<PlayerReview> findByPair(final User reviewer, final User reviewed) {
+            return matches(reviewer, reviewed) && !review.isDeleted()
+                    ? Optional.of(review)
+                    : Optional.empty();
+        }
+
+        @Override
+        public Optional<PlayerReview> findByIdIncludingDeleted(final Long reviewId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public PlayerReviewSummary getSummaryForUser(final User reviewed) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int countReviewsForUser(final User reviewed, final PlayerReviewFilter filter) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<PlayerReview> findReviewsForUser(
+                final User reviewed,
+                final PlayerReviewFilter filter,
+                final int limit,
+                final int offset) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean canReview(final User reviewer, final User reviewed) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<Long> findReviewableUserIds(final User reviewer) {
+            throw new UnsupportedOperationException();
+        }
+
+        private boolean matches(final User reviewer, final User reviewed) {
+            return review.getReviewer().getId().equals(reviewer.getId())
+                    && review.getReviewed().getId().equals(reviewed.getId());
+        }
     }
 }

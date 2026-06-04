@@ -30,8 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -82,6 +80,20 @@ public class MatchServiceImplTest {
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(2));
+    }
+
+    private void useMatchNotificationService(
+            final MatchNotificationService matchNotificationService) {
+        this.matchNotificationService = matchNotificationService;
+        matchService =
+                new MatchServiceImpl(
+                        matchDao,
+                        matchParticipantDao,
+                        matchNotificationService,
+                        securityService,
+                        new RecurringMatchAsyncService(matchDao),
+                        messageSource,
+                        clock);
     }
 
     @Test
@@ -1078,26 +1090,15 @@ public class MatchServiceImplTest {
         final User host = UserUtils.getUser(1L);
         final User u = UserUtils.getUser(2L);
         final List<User> invitedUsers = List.of(u);
-        final AtomicBoolean invitationsCancelled = new AtomicBoolean(false);
-        final AtomicBoolean notificationSent = new AtomicBoolean(false);
+        final RecordingMatchNotificationService notifications =
+                new RecordingMatchNotificationService();
+        useMatchNotificationService(notifications);
         Mockito.when(matchDao.findById(18L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
         Mockito.when(matchParticipantDao.findConfirmedParticipants(18L)).thenReturn(List.of());
         Mockito.when(matchParticipantDao.findInvitedUsers(18L)).thenReturn(invitedUsers);
-        Mockito.when(matchParticipantDao.cancelPendingInvitations(18L))
-                .thenAnswer(
-                        invocation -> {
-                            invitationsCancelled.set(true);
-                            return 1;
-                        });
-        Mockito.doAnswer(
-                        invocation -> {
-                            notificationSent.set(true);
-                            return null;
-                        })
-                .when(matchNotificationService)
-                .notifyInvitationOpenedToPublic(updatedMatch, invitedUsers);
+        Mockito.when(matchParticipantDao.cancelPendingInvitations(18L)).thenReturn(1);
         Mockito.when(
                         matchDao.updateMatch(
                                 18L,
@@ -1119,26 +1120,30 @@ public class MatchServiceImplTest {
                 .thenReturn(true);
 
         // 2. Exercise
-        matchService.updateMatch(
-                18L,
-                host,
-                new UpdateMatchRequest(
-                        "Test Address",
-                        "Private Match",
-                        "Test Description",
-                        FIXED_NOW.plusSeconds(3600),
-                        FIXED_NOW.plusSeconds(7200),
-                        10,
-                        BigDecimal.ZERO,
-                        Sport.FOOTBALL,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        null));
+        final Match result =
+                matchService.updateMatch(
+                        18L,
+                        host,
+                        new UpdateMatchRequest(
+                                "Test Address",
+                                "Private Match",
+                                "Test Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null));
 
         // 3. Assert
-        Assertions.assertTrue(notificationSent.get());
-        Assertions.assertTrue(invitationsCancelled.get());
+        Assertions.assertEquals(EventVisibility.PUBLIC, result.getVisibility());
+        Assertions.assertEquals(EventJoinPolicy.DIRECT, result.getJoinPolicy());
+        Assertions.assertEquals(
+                List.of("invitation-opened-to-public", "match-updated"), notifications.actions);
+        Assertions.assertEquals(List.of(invitedUsers), notifications.affectedUserGroups);
     }
 
     @Test
@@ -1149,26 +1154,15 @@ public class MatchServiceImplTest {
         final Match updatedMatch =
                 createTestMatch(19L, "Request Match", "football", "private", "invite_only");
         final List<User> pendingUsers = List.of(UserUtils.getUser(2L));
-        final AtomicBoolean requestsCancelled = new AtomicBoolean(false);
-        final AtomicBoolean notificationSent = new AtomicBoolean(false);
+        final RecordingMatchNotificationService notifications =
+                new RecordingMatchNotificationService();
+        useMatchNotificationService(notifications);
         Mockito.when(matchDao.findById(19L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
         Mockito.when(matchParticipantDao.findConfirmedParticipants(19L)).thenReturn(List.of());
         Mockito.when(matchParticipantDao.findPendingRequests(19L)).thenReturn(pendingUsers);
-        Mockito.when(matchParticipantDao.cancelPendingRequests(19L))
-                .thenAnswer(
-                        invocation -> {
-                            requestsCancelled.set(true);
-                            return 1;
-                        });
-        Mockito.doAnswer(
-                        invocation -> {
-                            notificationSent.set(true);
-                            return null;
-                        })
-                .when(matchNotificationService)
-                .notifyPendingRequestClosedByPrivacyChange(updatedMatch, pendingUsers);
+        Mockito.when(matchParticipantDao.cancelPendingRequests(19L)).thenReturn(1);
         Mockito.when(
                         matchDao.updateMatch(
                                 19L,
@@ -1190,26 +1184,30 @@ public class MatchServiceImplTest {
                 .thenReturn(true);
 
         // 2. Exercise
-        matchService.updateMatch(
-                19L,
-                UserUtils.getUser(1L),
-                new UpdateMatchRequest(
-                        "Test Address",
-                        "Request Match",
-                        "Test Description",
-                        FIXED_NOW.plusSeconds(3600),
-                        FIXED_NOW.plusSeconds(7200),
-                        10,
-                        BigDecimal.ZERO,
-                        Sport.FOOTBALL,
-                        EventVisibility.PRIVATE,
-                        EventJoinPolicy.INVITE_ONLY,
-                        EventStatus.OPEN,
-                        null));
+        final Match result =
+                matchService.updateMatch(
+                        19L,
+                        UserUtils.getUser(1L),
+                        new UpdateMatchRequest(
+                                "Test Address",
+                                "Request Match",
+                                "Test Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                EventVisibility.PRIVATE,
+                                EventJoinPolicy.INVITE_ONLY,
+                                EventStatus.OPEN,
+                                null));
 
         // 3. Assert
-        Assertions.assertTrue(notificationSent.get());
-        Assertions.assertTrue(requestsCancelled.get());
+        Assertions.assertEquals(EventVisibility.PRIVATE, result.getVisibility());
+        Assertions.assertEquals(EventJoinPolicy.INVITE_ONLY, result.getJoinPolicy());
+        Assertions.assertEquals(
+                List.of("pending-request-closed", "match-updated"), notifications.actions);
+        Assertions.assertEquals(List.of(pendingUsers), notifications.affectedUserGroups);
     }
 
     @Test
@@ -1262,27 +1260,16 @@ public class MatchServiceImplTest {
         final User user2 = UserUtils.getUser(2L);
         final User user3 = UserUtils.getUser(3L);
         final List<User> pendingUsers = List.of(user2, user3);
-        final AtomicBoolean requestsApproved = new AtomicBoolean(false);
-        final AtomicInteger approvalNotifications = new AtomicInteger(0);
+        final RecordingMatchNotificationService notifications =
+                new RecordingMatchNotificationService();
+        useMatchNotificationService(notifications);
         Mockito.when(matchDao.findById(24L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
         Mockito.when(matchParticipantDao.findConfirmedParticipants(24L)).thenReturn(List.of());
         Mockito.when(matchParticipantDao.countPendingRequests(24L)).thenReturn(2);
         Mockito.when(matchParticipantDao.findPendingRequests(24L)).thenReturn(pendingUsers);
-        Mockito.when(matchParticipantDao.approveAllPendingRequests(24L))
-                .thenAnswer(
-                        invocation -> {
-                            requestsApproved.set(true);
-                            return 2;
-                        });
-        Mockito.doAnswer(
-                        invocation -> {
-                            approvalNotifications.incrementAndGet();
-                            return null;
-                        })
-                .when(matchNotificationService)
-                .notifyPlayerRequestApproved(Mockito.eq(updatedMatch), Mockito.any(User.class));
+        Mockito.when(matchParticipantDao.approveAllPendingRequests(24L)).thenReturn(2);
         Mockito.when(
                         matchDao.updateMatch(
                                 24L,
@@ -1304,26 +1291,30 @@ public class MatchServiceImplTest {
                 .thenReturn(true);
 
         // 2. Exercise
-        matchService.updateMatch(
-                24L,
-                user1,
-                new UpdateMatchRequest(
-                        "Test Address",
-                        "Request Match",
-                        "Test Description",
-                        FIXED_NOW.plusSeconds(3600),
-                        FIXED_NOW.plusSeconds(7200),
-                        4,
-                        BigDecimal.ZERO,
-                        Sport.FOOTBALL,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        null));
+        final Match result =
+                matchService.updateMatch(
+                        24L,
+                        user1,
+                        new UpdateMatchRequest(
+                                "Test Address",
+                                "Request Match",
+                                "Test Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                4,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null));
 
         // 3. Assert
-        Assertions.assertTrue(requestsApproved.get());
-        Assertions.assertEquals(2, approvalNotifications.get());
+        Assertions.assertEquals(EventJoinPolicy.DIRECT, result.getJoinPolicy());
+        Assertions.assertEquals(
+                List.of("request-approved", "request-approved", "match-updated"),
+                notifications.actions);
+        Assertions.assertEquals(pendingUsers, notifications.approvedUsers);
     }
 
     @Test
@@ -2140,6 +2131,87 @@ public class MatchServiceImplTest {
         public void sendMatchCancelled(final User recipient, final Match match) {
             actions.add("match-cancelled");
             recipients.add(recipient.getEmail());
+        }
+    }
+
+    private static class RecordingMatchNotificationService implements MatchNotificationService {
+
+        private final List<String> actions = new ArrayList<>();
+        private final List<List<User>> affectedUserGroups = new ArrayList<>();
+        private final List<User> approvedUsers = new ArrayList<>();
+
+        @Override
+        public void notifyMatchUpdated(final Match match) {
+            actions.add("match-updated");
+        }
+
+        @Override
+        public void notifyMatchCancelled(final Match match) {
+            actions.add("match-cancelled");
+        }
+
+        @Override
+        public void notifyRecurringMatchesUpdated(final List<Match> matches) {
+            actions.add("recurring-matches-updated");
+        }
+
+        @Override
+        public void notifyRecurringMatchesCancelled(final List<Match> matches) {
+            actions.add("recurring-matches-cancelled");
+        }
+
+        @Override
+        public void notifyHostPlayerJoined(final Match match, final User player) {
+            actions.add("host-player-joined");
+        }
+
+        @Override
+        public void notifyHostJoinRequestReceived(final Match match, final User player) {
+            actions.add("host-join-request-received");
+        }
+
+        @Override
+        public void notifyPlayerRequestApproved(final Match match, final User player) {
+            actions.add("request-approved");
+            approvedUsers.add(player);
+        }
+
+        @Override
+        public void notifyPlayerRequestRejected(final Match match, final User player) {
+            actions.add("request-rejected");
+        }
+
+        @Override
+        public void notifyPendingRequestClosedByPrivacyChange(
+                final Match match, final List<User> players) {
+            actions.add("pending-request-closed");
+            affectedUserGroups.add(players);
+        }
+
+        @Override
+        public void notifyInvitationOpenedToPublic(final Match match, final List<User> players) {
+            actions.add("invitation-opened-to-public");
+            affectedUserGroups.add(players);
+        }
+
+        @Override
+        public void notifyHostInviteAccepted(final Match match, final User player) {
+            actions.add("host-invite-accepted");
+        }
+
+        @Override
+        public void notifyHostInviteDeclined(final Match match, final User player) {
+            actions.add("host-invite-declined");
+        }
+
+        @Override
+        public void notifyHostPlayerLeft(final Match match, final User player) {
+            actions.add("host-player-left");
+        }
+
+        @Override
+        public void notifyPlayerRemovedByHost(final Match match, final User player) {
+            actions.add("player-removed-by-host");
         }
     }
 
