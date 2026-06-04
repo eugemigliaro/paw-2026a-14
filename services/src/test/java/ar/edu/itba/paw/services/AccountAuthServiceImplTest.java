@@ -9,7 +9,7 @@ import ar.edu.itba.paw.models.types.EmailActionType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import ar.edu.itba.paw.services.exceptions.registration.*;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
@@ -174,20 +174,17 @@ public class AccountAuthServiceImplTest {
                                         FIXED_NOW.minusSeconds(300),
                                         UserLanguages.ENGLISH)));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "player@test.com",
-                                                "player",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("email_taken", exception.getCode());
+        Assertions.assertThrows(
+                EmailTakenException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "player@test.com",
+                                        "player",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
@@ -208,20 +205,17 @@ public class AccountAuthServiceImplTest {
                                         null,
                                         UserLanguages.ENGLISH)));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "pending@test.com",
-                                                "pending",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("email_pending_verification", exception.getCode());
+        Assertions.assertThrows(
+                EmailPendingVerificationException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "pending@test.com",
+                                        "pending",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
@@ -230,20 +224,17 @@ public class AccountAuthServiceImplTest {
         final User userWithTakenName = UserUtils.getUser(7L);
         Mockito.when(userDao.findByUsername("user7")).thenReturn(Optional.of(userWithTakenName));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "new@test.com",
-                                                "user7",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("username_taken", exception.getCode());
+        Assertions.assertThrows(
+                UsernameTakenException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "new@test.com",
+                                        "user7",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test

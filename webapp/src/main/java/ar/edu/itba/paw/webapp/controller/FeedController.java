@@ -101,7 +101,10 @@ public class FeedController {
     public ModelAndView showFeed(
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult,
-            @RequestParam(value = "email", required = false) final String email,
+            @RequestParam(value = "email", required = false)
+                    final String
+                            email, // TODO: remove - I don't know what it's being used for (just url
+            // building apparently)
             final HttpSession session,
             final Locale locale) {
         if (bindingResult.hasErrors()) {
@@ -304,7 +307,6 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
@@ -332,7 +334,7 @@ public class FeedController {
                                 match ->
                                         toCard(
                                                 match,
-                                                zoneId,
+                                                selectedTimezone,
                                                 locale,
                                                 currentUser,
                                                 messageSource.getMessage(
@@ -402,7 +404,6 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
@@ -430,7 +431,7 @@ public class FeedController {
                                 tournament ->
                                         toCard(
                                                 tournament,
-                                                zoneId,
+                                                selectedTimezone,
                                                 locale,
                                                 currentUser,
                                                 messageSource.getMessage(
@@ -797,18 +798,6 @@ public class FeedController {
         return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
-    }
-
     private static ExploreLocation exploreLocation(final HttpSession session) {
         if (session == null) {
             return null;
@@ -822,7 +811,11 @@ public class FeedController {
     }
 
     private static DateRange normalizeDateRange(
-            final LocalDate rawStartDate, final LocalDate rawEndDate, final ZoneId zoneId) {
+            final LocalDate rawStartDate,
+            final LocalDate rawEndDate,
+            final ZoneId
+                    zoneId) { // TODO: do not change these fields in controller. Show error in form
+        // validation instead.
         LocalDate startDate = rawStartDate;
         LocalDate endDate = rawEndDate;
         final LocalDate today = LocalDate.now(zoneId);
@@ -841,8 +834,11 @@ public class FeedController {
         return new DateRange(startDate, endDate);
     }
 
-    private static PriceRange normalizePriceRange(
-            final BigDecimal rawMinPrice, final BigDecimal rawMaxPrice) {
+    private static PriceRange
+            normalizePriceRange( // TODO: do not change these fields in controller. Show error in
+                    // form validation instead.
+                    final BigDecimal rawMinPrice,
+                    final BigDecimal rawMaxPrice) {
         final BigDecimal minPrice =
                 rawMinPrice == null || rawMinPrice.compareTo(BigDecimal.ZERO) < 0
                         ? null

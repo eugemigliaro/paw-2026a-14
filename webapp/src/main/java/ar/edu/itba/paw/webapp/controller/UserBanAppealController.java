@@ -4,7 +4,9 @@ import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -37,7 +39,8 @@ public class UserBanAppealController {
 
     @GetMapping
     public ModelAndView showBanPage(final Model model, final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
@@ -79,17 +82,27 @@ public class UserBanAppealController {
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+        final User user =
+                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+        String exceptionReason;
         try {
             moderationService.appealReport(activeBan.getModerationReport().getId(), appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
-        } catch (final ModerationException exception) {
-            return new ModelAndView("redirect:/account/ban?error=" + exception.getCode());
+        } catch (
+                final ModerationReportNotFoundException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
+            exceptionReason = "report_not_found";
+        } catch (final ModerationAppealLimitException exception) {
+            exceptionReason = "appeal_limit";
+        } catch (final ModerationAppealRejectedException exception) {
+            exceptionReason = "appeal_rejected";
         }
+        return new ModelAndView("redirect:/account/ban?error=" + exceptionReason);
     }
 }

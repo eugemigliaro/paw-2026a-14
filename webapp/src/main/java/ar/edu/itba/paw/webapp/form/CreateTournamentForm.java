@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -79,7 +80,7 @@ public class CreateTournamentForm {
 
     private MultipartFile bannerImage;
 
-    private String tz = "";
+    private ZoneId tz = ZoneId.systemDefault();
 
     public String getTitle() {
         return title;
@@ -209,11 +210,11 @@ public class CreateTournamentForm {
         this.bannerImage = bannerImage;
     }
 
-    public String getTz() {
+    public ZoneId getTz() {
         return tz;
     }
 
-    public void setTz(final String tz) {
+    public void setTz(final ZoneId tz) {
         this.tz = tz;
     }
 }

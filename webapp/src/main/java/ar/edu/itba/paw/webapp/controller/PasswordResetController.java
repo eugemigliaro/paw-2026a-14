@@ -2,8 +2,11 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
-import ar.edu.itba.paw.services.exceptions.PasswordResetException;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.services.exceptions.passwordReset.PasswordResetInvalidException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureAlreadyUsedException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureExpiredException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureInvalidActionException;
+import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureNotFoundException;
 import ar.edu.itba.paw.webapp.form.ResetPasswordForm;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.time.ZoneId;
@@ -40,15 +43,25 @@ public class PasswordResetController {
     @GetMapping("/password-reset/{token}")
     public ModelAndView showPasswordReset(
             @PathVariable("token") final String token, final Locale locale) {
+        String messageKey;
         try {
             return passwordResetView(
                     token,
                     accountAuthService.getPasswordResetPreview(token),
                     new ResetPasswordForm(),
                     locale);
-        } catch (final VerificationFailureException exception) {
-            return buildErrorView(exception, locale);
+        } catch (final VerificationFailureNotFoundException exception) {
+            // TODO: move message code to service exception (?). Catch generic type and assign
+            // e.getMessage().
+            messageKey = "verification.message.notFound";
+        } catch (final VerificationFailureAlreadyUsedException exception) {
+            messageKey = "verification.message.alreadyUsed";
+        } catch (final VerificationFailureExpiredException exception) {
+            messageKey = "verification.message.expired";
+        } catch (final VerificationFailureInvalidActionException exception) {
+            messageKey = "passwordReset.message.unavailable";
         }
+        return buildErrorView(messageKey, locale);
     }
 
     @PostMapping("/password-reset/{token}")
@@ -57,6 +70,7 @@ public class PasswordResetController {
             @Valid @ModelAttribute("resetPasswordForm") final ResetPasswordForm resetPasswordForm,
             final BindingResult bindingResult,
             final Locale locale) {
+        String messageKey;
 
         if (bindingResult.hasErrors()) {
             try {
@@ -65,28 +79,53 @@ public class PasswordResetController {
                         accountAuthService.getPasswordResetPreview(token),
                         resetPasswordForm,
                         locale);
-            } catch (final VerificationFailureException exception) {
-                return buildErrorView(exception, locale);
+            } catch (
+                    final VerificationFailureNotFoundException
+                            exception) { // TODO: same as showPasswordReset
+                messageKey = "verification.message.notFound";
+            } catch (final VerificationFailureAlreadyUsedException exception) {
+                messageKey = "verification.message.alreadyUsed";
+            } catch (final VerificationFailureExpiredException exception) {
+                messageKey = "verification.message.expired";
+            } catch (final VerificationFailureInvalidActionException exception) {
+                messageKey = "passwordReset.message.unavailable";
             }
+            return buildErrorView(messageKey, locale);
         }
 
         try {
             accountAuthService.resetPassword(token, resetPasswordForm.getPassword());
             return new ModelAndView("redirect:/login?reset=1");
-        } catch (final PasswordResetException exception) {
-            bindingResult.rejectValue("password", exception.getCode(), exception.getMessage());
+        } catch (final PasswordResetInvalidException exception) {
+            bindingResult.rejectValue(
+                    "password", "auth.registration.error.passwordInvalid", exception.getMessage());
             try {
                 return passwordResetView(
                         token,
                         accountAuthService.getPasswordResetPreview(token),
                         resetPasswordForm,
                         locale);
-            } catch (final VerificationFailureException verificationFailureException) {
-                return buildErrorView(verificationFailureException, locale);
+            } catch (
+                    final VerificationFailureNotFoundException
+                            e) { // TODO: same as showPasswordReset
+                messageKey = "verification.message.notFound";
+            } catch (final VerificationFailureAlreadyUsedException e) {
+                messageKey = "verification.message.alreadyUsed";
+            } catch (final VerificationFailureExpiredException e) {
+                messageKey = "verification.message.expired";
+            } catch (final VerificationFailureInvalidActionException e) {
+                messageKey = "passwordReset.message.unavailable";
             }
-        } catch (final VerificationFailureException exception) {
-            return buildErrorView(exception, locale);
+        } catch (final VerificationFailureNotFoundException exception) {
+            messageKey = "verification.message.notFound";
+        } catch (final VerificationFailureAlreadyUsedException exception) {
+            messageKey = "verification.message.alreadyUsed";
+        } catch (final VerificationFailureExpiredException exception) {
+            messageKey = "verification.message.expired";
+        } catch (final VerificationFailureInvalidActionException exception) {
+            messageKey = "passwordReset.message.unavailable";
         }
+        return buildErrorView(messageKey, locale);
     }
 
     private ModelAndView passwordResetView(
@@ -105,9 +144,8 @@ public class PasswordResetController {
         return mav;
     }
 
-    private ModelAndView buildErrorView(
-            final VerificationFailureException exception, final Locale locale) {
+    private ModelAndView buildErrorView(final String messageKey, final Locale locale) {
         return VerificationViews.buildErrorView(
-                exception, messageSource, locale, "/forgot-password");
+                messageKey, messageSource, locale, "/forgot-password");
     }
 }

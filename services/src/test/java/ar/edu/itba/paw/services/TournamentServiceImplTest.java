@@ -10,7 +10,7 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
+import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -18,7 +18,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,7 +30,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,7 +44,6 @@ public class TournamentServiceImplTest {
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
-    @Mock private MessageSource messageSource;
 
     private TournamentServiceImpl tournamentService;
 
@@ -57,16 +54,7 @@ public class TournamentServiceImplTest {
                         tournamentDao,
                         tournamentMailService,
                         imageService,
-                        messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
-        Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.isNull(),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
         SecurityContextHolder.clearContext();
     }
 
@@ -119,15 +107,10 @@ public class TournamentServiceImplTest {
                 createRequest(
                         5, 1, true, false, futureRegistrationOpen(), futureRegistrationClose());
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_BRACKET_SIZE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidBracketSizeException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -137,15 +120,10 @@ public class TournamentServiceImplTest {
                 createRequest(
                         4, 0, true, false, futureRegistrationOpen(), futureRegistrationClose());
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_TEAM_SIZE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidTeamSizeException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -160,16 +138,10 @@ public class TournamentServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         FIXED_NOW.plusSeconds(3600));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidRegistrationWindowException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -184,16 +156,10 @@ public class TournamentServiceImplTest {
                         FIXED_NOW.minusSeconds(7200),
                         FIXED_NOW.minusSeconds(3600));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidRegistrationWindowException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -207,16 +173,10 @@ public class TournamentServiceImplTest {
                                         UserUtils.getUser(1L),
                                         TournamentStatus.REGISTRATION)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () ->
-                                tournamentService.update(
-                                        10L, UserUtils.getUser(2L), validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentLifecycleFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleForbiddenException.class,
+                () -> tournamentService.update(10L, UserUtils.getUser(2L), validUpdateRequest()));
     }
 
     @Test
@@ -270,15 +230,10 @@ public class TournamentServiceImplTest {
         Mockito.when(tournamentDao.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.update(10L, host, validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_EDITABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotEditableException.class,
+                () -> tournamentService.update(10L, host, validUpdateRequest()));
     }
 
     @Test
@@ -288,15 +243,10 @@ public class TournamentServiceImplTest {
         Mockito.when(tournamentDao.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.BRACKET_SETUP)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.update(10L, host, validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_EDITABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotEditableException.class,
+                () -> tournamentService.update(10L, host, validUpdateRequest()));
     }
 
     @Test
@@ -306,15 +256,10 @@ public class TournamentServiceImplTest {
         Mockito.when(tournamentDao.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.cancel(10L, host, "No longer available"));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_CANCELLABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotCancellableException.class,
+                () -> tournamentService.cancel(10L, host, "No longer available"));
     }
 
     @Test

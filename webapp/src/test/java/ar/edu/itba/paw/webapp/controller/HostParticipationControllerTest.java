@@ -13,7 +13,9 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationClosedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationForbiddenException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationStartedException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import java.util.Locale;
 import java.util.Optional;
@@ -93,7 +95,7 @@ class HostParticipationControllerTest {
                         Mockito.isNull(),
                         Mockito.<Locale>any()))
                 .thenReturn("This event is closed.");
-        Mockito.doThrow(new MatchParticipationException("closed", "The event is not open."))
+        Mockito.doThrow(new MatchParticipationClosedException("The event is not open."))
                 .when(matchParticipationService)
                 .approveRequest(
                         Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
@@ -115,7 +117,7 @@ class HostParticipationControllerTest {
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
-        Mockito.doThrow(new MatchParticipationException("forbidden", "Only the host can approve."))
+        Mockito.doThrow(new MatchParticipationForbiddenException("Only the host can approve."))
                 .when(matchParticipationService)
                 .approveRequest(
                         Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
@@ -191,9 +193,7 @@ class HostParticipationControllerTest {
                         Mockito.isNull(),
                         Mockito.<Locale>any()))
                 .thenReturn("This event has already started.");
-        Mockito.doThrow(
-                        new MatchParticipationException(
-                                "started", "The event has already started."))
+        Mockito.doThrow(new MatchParticipationStartedException("The event has already started."))
                 .when(matchParticipationService)
                 .removeParticipant(
                         Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
@@ -211,7 +211,7 @@ class HostParticipationControllerTest {
         Mockito.when(
                         matchParticipationService.findConfirmedParticipants(
                                 Mockito.eq(42L), Mockito.any(User.class)))
-                .thenThrow(new MatchParticipationException("forbidden", "Only the host can view."));
+                .thenThrow(new MatchParticipationForbiddenException("Only the host can view."));
 
         mockMvc.perform(get("/host/matches/42/participants")).andExpect(status().isForbidden());
     }

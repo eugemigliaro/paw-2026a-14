@@ -146,45 +146,46 @@ final class EventPageSupport {
                         .findMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
+        final User currentUser =
+                SecurityControllerUtils
+                        .currentUserOrNull(); // TODO: pass as parameter instead of looking up
+        // again. Should be a controller advice
 
         if (!isMatchVisibleToUser(match, currentUser)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
-        final boolean isHostViewer =
-                currentUser != null && currentUser.getId().equals(match.getHost().getId());
+        final boolean isHost = isHost(match, currentUser);
         final boolean hasPendingRequest =
-                !isHostViewer
+                !isHost
                         && currentUser != null
                         && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
                         && matchParticipationService.hasPendingRequest(eventId, currentUser);
         final boolean isInvitedPlayer =
-                !isHostViewer
+                !isHost
                         && currentUser != null
                         && match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY
                         && matchParticipationService.hasInvitation(eventId, currentUser);
         final boolean isConfirmedParticipant =
                 currentUser != null
-                        && matchReservationService.hasActiveReservation(match.getId(), currentUser);
+                        && matchReservationService.hasActiveReservation(eventId, currentUser);
         final boolean isApprovalRequired =
                 match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
         final boolean isInviteOnly = match.getJoinPolicy() == EventJoinPolicy.INVITE_ONLY;
         final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
-        final boolean hostCanManage = isHost(match, currentUser);
-        final boolean hostCanManageParticipants = hostCanManage && canHostManageParticipants(match);
+        final boolean hostCanManageParticipants = isHost && canHostManageParticipants(match);
         final List<User> pendingHostRequests =
-                isHostViewer && isApprovalRequired
+                isHost && isApprovalRequired
                         ? matchParticipationService.findPendingRequests(eventId, currentUser)
                         : List.of();
         final List<User> pendingHostInvites =
-                isHostViewer && isInviteOnly
+                isHost && isInviteOnly
                         ? matchParticipationService.findInvitedUsers(eventId, currentUser)
                         : List.of();
         final List<User> declinedHostInvites =
-                isHostViewer && isInviteOnly
+                isHost && isInviteOnly
                         ? matchParticipationService.findDeclinedInvitees(eventId, currentUser)
                         : List.of();
         final PaginatedResult<Match> seriesOccurrencesPage =
@@ -196,14 +197,11 @@ final class EventPageSupport {
         final SeriesReservationUiState seriesReservationState =
                 match.isRecurringOccurrence()
                         ? buildSeriesReservationUiState(
-                                match.getSeries().getId(),
-                                seriesOccurrences,
-                                currentUser,
-                                isHostViewer)
+                                match.getSeries().getId(), seriesOccurrences, currentUser, isHost)
                         : buildSeriesReservationUiState(
-                                null, seriesOccurrences, currentUser, isHostViewer);
+                                null, seriesOccurrences, currentUser, isHost);
         final SeriesJoinRequestUiState seriesJoinRequestState =
-                isHostViewer
+                isHost
                         ? new SeriesJoinRequestUiState(false, false)
                         : buildSeriesJoinRequestUiState(match, seriesOccurrences, currentUser);
         final boolean suppressReservationErrors =
@@ -239,7 +237,7 @@ final class EventPageSupport {
                             p -> buildSeriesScheduleUrl(eventId, p)));
         }
 
-        mav.addObject("reservationEnabled", canReserveMatch(match, isHostViewer));
+        mav.addObject("reservationEnabled", canReserveMatch(match, isHost));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationCancelPath", "/matches/" + eventId + "/reservations/cancel");
         mav.addObject(
@@ -274,7 +272,7 @@ final class EventPageSupport {
 
         mav.addObject(
                 "joinRequestEnabled",
-                !isHostViewer && canRequestToJoin(match) && !seriesJoinRequestState.pending());
+                !isHost && canRequestToJoin(match) && !seriesJoinRequestState.pending());
         mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
         mav.addObject("seriesJoinRequestPath", "/matches/" + eventId + "/recurring-join-requests");
         mav.addObject("seriesJoinRequestEnabled", seriesJoinRequestState.available());
@@ -297,18 +295,17 @@ final class EventPageSupport {
         mav.addObject("inviteAccepted", "accepted".equalsIgnoreCase(inviteStatus));
         mav.addObject("inviteError", inviteError);
 
-        mav.addObject("hostViewer", isHostViewer);
+        mav.addObject("hostViewer", isHost);
         mav.addObject("isPrivateEvent", isPrivateEvent);
-        mav.addObject("hostCanManage", hostCanManage);
+        mav.addObject("hostCanManage", isHost);
         mav.addObject("hostCanManageParticipants", hostCanManageParticipants);
-        mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
-        mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
+        mav.addObject("hostCanEdit", isHost && canHostEdit(match));
+        mav.addObject("hostCanCancel", isHost && canHostCancel(match));
         mav.addObject(
-                "hostCanEditSeries",
-                hostCanManage && match.isRecurringOccurrence() && canHostEdit(match));
+                "hostCanEditSeries", isHost && match.isRecurringOccurrence() && canHostEdit(match));
         mav.addObject(
                 "hostCanCancelSeries",
-                hostCanManage && match.isRecurringOccurrence() && canHostCancel(match));
+                isHost && match.isRecurringOccurrence() && canHostCancel(match));
         mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
         mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
@@ -461,7 +458,7 @@ final class EventPageSupport {
                                         participant.getUsername(),
                                         avatarLabelForUsername(participant.getUsername()),
                                         profileHrefFor(participant),
-                                        profileImageUrlForParticipant(participant),
+                                        profileUrlFor(participant),
                                         reviewHrefForParticipant(
                                                 participant, currentUser, reviewableUserIds),
                                         includeHostParticipantActions && participant.getId() != null
@@ -493,7 +490,7 @@ final class EventPageSupport {
                                                 + user.getId()
                                                 + "/reject",
                                         profileHrefFor(user),
-                                        profileImageUrlForParticipant(user),
+                                        profileUrlFor(user),
                                         null,
                                         null,
                                         false))
@@ -508,7 +505,7 @@ final class EventPageSupport {
                                         user.getUsername(),
                                         avatarLabelForUsername(user.getUsername()),
                                         profileHrefFor(user),
-                                        profileImageUrlForParticipant(user)))
+                                        profileUrlFor(user)))
                 .toList();
     }
 
@@ -520,10 +517,6 @@ final class EventPageSupport {
             return null;
         }
         return "/users/" + participant.getUsername() + "?reviewForm=open#reviews";
-    }
-
-    private String profileImageUrlForParticipant(final User participant) {
-        return profileUrlFor(participant);
     }
 
     private String profileHrefFor(final User user) {
@@ -808,7 +801,12 @@ final class EventPageSupport {
                         "event.participants.many", new Object[] {participantCount}, locale);
     }
 
-    private String reservationErrorMessage(final String code, final Locale locale) {
+    private String reservationErrorMessage(
+            final String code,
+            final Locale
+                    locale) { // TODO: check. could be rewritten to be "reservation.error." + code
+        // in the message key, and then have a default message for unknown
+        // codes
         switch (code) {
             case "closed":
                 return messageSource.getMessage("reservation.error.closed", null, locale);
@@ -861,7 +859,8 @@ final class EventPageSupport {
         return compact.substring(0, 1).toUpperCase();
     }
 
-    private String joinErrorMessage(final String code, final Locale locale) {
+    private String joinErrorMessage(
+            final String code, final Locale locale) { // TODO: same obs as reservationErrorMessage
         switch (code) {
             case "closed":
                 return messageSource.getMessage("join.error.closed", null, locale);
@@ -897,7 +896,8 @@ final class EventPageSupport {
         }
     }
 
-    private String inviteErrorMessage(final String code, final Locale locale) {
+    private String inviteErrorMessage(
+            final String code, final Locale locale) { // TODO: same obs as reservationErrorMessage
         if (code == null) {
             return null;
         }
@@ -916,7 +916,9 @@ final class EventPageSupport {
         }
     }
 
-    private String hostActionNotice(final String hostAction, final Locale locale) {
+    private String hostActionNotice(
+            final String hostAction,
+            final Locale locale) { // TODO: same obs as reservationErrorMessage
         if ("updated".equalsIgnoreCase(hostAction)) {
             return messageSource.getMessage("host.action.updated", null, locale);
         }
@@ -947,18 +949,23 @@ final class EventPageSupport {
         return null;
     }
 
-    private static boolean isRequestHostAction(final String hostAction) {
+    private static boolean isRequestHostAction(
+            final String
+                    hostAction) { // TODO: use an enum for host actions instead of strings ¿? If
+        // changed, change param typing in controller and add enum
+        // converter to WebConfig
         return "requestApproved".equalsIgnoreCase(hostAction)
                 || "requestRejected".equalsIgnoreCase(hostAction);
     }
 
-    private static boolean isInviteHostAction(final String hostAction) {
+    private static boolean isInviteHostAction(
+            final String hostAction) { // TODO: same as isRequestHostAction
         return "inviteSent".equalsIgnoreCase(hostAction)
                 || "seriesInviteSent".equalsIgnoreCase(hostAction);
     }
 
     private boolean isHost(final Match match, final User currentUser) {
-        return currentUser != null && currentUser.getId().equals(match.getHost().getId());
+        return currentUser != null && currentUser.equals(match.getHost());
     }
 
     private boolean canHostEdit(final Match match) {
@@ -982,13 +989,14 @@ final class EventPageSupport {
     }
 
     private boolean isMatchVisibleToUser(final Match match, final User currentUser) {
-        if (EventStatus.DRAFT == match.getStatus()) {
-            return currentUser != null && currentUser.getId().equals(match.getHost().getId());
+        if (EventStatus.DRAFT
+                == match.getStatus()) { // TODO: remove (?) we do not manage 'draft' matches.
+            return isHost(match, currentUser);
         }
 
         if (match.getVisibility() == EventVisibility.PRIVATE
                 || EventStatus.CANCELLED == match.getStatus()) {
-            if (currentUser != null && currentUser.getId().equals(match.getHost().getId())) {
+            if (isHost(match, currentUser)) {
                 return true;
             }
             if (currentUser != null

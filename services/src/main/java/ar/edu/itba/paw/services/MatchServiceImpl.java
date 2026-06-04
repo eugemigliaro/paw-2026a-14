@@ -16,8 +16,8 @@ import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
-import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
-import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.exceptions.matchCancelation.*;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.*;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -270,19 +270,16 @@ public class MatchServiceImpl implements MatchService {
         validateScheduleOrThrow(
                 request.getStartsAt(),
                 request.getEndsAt(),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.startsAtPast")),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.endBeforeStart")));
         validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final int confirmedParticipants =
                 matchParticipantDao.findConfirmedParticipants(matchId).size();
         if (request.getMaxPlayers() < confirmedParticipants) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+            throw new MatchUpdateCapacityBelowConfirmedException(
                     message("match.update.error.capacityBelowConfirmed"));
         }
         final ParticipationPolicyTransition participationPolicyTransition =
@@ -308,16 +305,14 @@ public class MatchServiceImpl implements MatchService {
                         request.getStatus());
 
         if (!updated) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+            throw new MatchUpdateForbiddenException(message("match.update.error.forbidden"));
         }
 
         final Match updatedMatch =
                 matchDao.findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                        new MatchUpdateNotFoundException(
                                                 message("match.update.error.notFound")));
         applyParticipationPolicyTransition(updatedMatch, participationPolicyTransition);
         matchNotificationService.notifyMatchUpdated(updatedMatch);
@@ -330,8 +325,7 @@ public class MatchServiceImpl implements MatchService {
                 matchDao.findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                        new MatchUpdateNotFoundException(
                                                 message("match.update.error.notFound")));
         validateMatchUpdateAccess(match, actingUser);
         return match;
@@ -341,9 +335,7 @@ public class MatchServiceImpl implements MatchService {
     public Match findEditableRecurringMatchForHost(final Long matchId, final User actingUser) {
         final Match match = findEditableMatchForHost(matchId, actingUser);
         if (!match.isRecurringOccurrence()) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_RECURRING,
-                    message("match.update.error.notRecurring"));
+            throw new MatchUpdateNotRecurringException(message("match.update.error.notRecurring"));
         }
         return match;
     }
@@ -362,8 +354,7 @@ public class MatchServiceImpl implements MatchService {
             final int pendingRequests = matchParticipantDao.countPendingRequests(match.getId());
             final int availableSpots = request.getMaxPlayers() - confirmedParticipants;
             if (pendingRequests > availableSpots) {
-                throw new MatchUpdateException(
-                        MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE,
+                throw new MatchUpdatePendingRequestsExceedAvailableException(
                         message("match.update.error.pendingRequestsExceedAvailable"));
             }
             return ParticipationPolicyTransition.approvePendingRequests(
@@ -467,35 +458,29 @@ public class MatchServiceImpl implements MatchService {
                 matchDao.findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                        new MatchUpdateNotFoundException(
                                                 message("match.update.error.notFound")));
 
         validateSeriesUpdateAccess(pivot, actingUser);
         validateScheduleOrThrow(
                 request.getStartsAt(),
                 request.getEndsAt(),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.startsAtPast")),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.endBeforeStart")));
         validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final List<Match> targets = editableFutureSeriesTargets(pivot);
         if (targets.isEmpty()) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_EDITABLE,
-                    message("match.update.error.notEditable"));
+            throw new MatchUpdateNotEditableException(message("match.update.error.notEditable"));
         }
 
         for (final Match target : targets) {
             final int confirmedParticipants =
                     matchParticipantDao.findConfirmedParticipants(target.getId()).size();
             if (request.getMaxPlayers() < confirmedParticipants) {
-                throw new MatchUpdateException(
-                        MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                throw new MatchUpdateCapacityBelowConfirmedException(
                         message("match.update.error.capacityBelowConfirmed"));
             }
         }
@@ -520,11 +505,9 @@ public class MatchServiceImpl implements MatchService {
             validateScheduleOrThrow(
                     targetStartsAt,
                     targetEndsAt,
-                    new MatchUpdateException(
-                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                    new MatchUpdateInvalidScheduleException(
                             message("match.schedule.error.startsAtPast")),
-                    new MatchUpdateException(
-                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                    new MatchUpdateInvalidScheduleException(
                             message("match.schedule.error.endBeforeStart")));
             final UpdateMatchRequest targetRequest =
                     new UpdateMatchRequest(
@@ -552,17 +535,14 @@ public class MatchServiceImpl implements MatchService {
                                     targetRequest.getVisibility(), targetRequest.getJoinPolicy()),
                             target.getStatus());
             if (!updated) {
-                throw new MatchUpdateException(
-                        MatchUpdateFailureReason.FORBIDDEN,
-                        message("match.update.error.forbidden"));
+                throw new MatchUpdateForbiddenException(message("match.update.error.forbidden"));
             }
 
             final Match updatedMatch =
                     matchDao.findById(target.getId())
                             .orElseThrow(
                                     () ->
-                                            new MatchUpdateException(
-                                                    MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                            new MatchUpdateNotFoundException(
                                                     message("match.update.error.notFound")));
             updatedMatches.add(updatedMatch);
         }
@@ -578,22 +558,17 @@ public class MatchServiceImpl implements MatchService {
                 matchDao.findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchCancellationException(
-                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                        new MatchCancellationNotFoundException(
                                                 message("match.cancel.error.notFound")));
 
         final User currentUser = securityService.currentUser();
         if (!match.getHost().getId().equals(actingUser.getId())
                 && (currentUser == null || !currentUser.getId().equals(actingUser.getId()))) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         if (EventStatus.COMPLETED.equals(match.getStatus())) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         if (EventStatus.CANCELLED.equals(match.getStatus())) {
@@ -602,17 +577,14 @@ public class MatchServiceImpl implements MatchService {
 
         final boolean updated = matchDao.cancelMatch(matchId, actingUser);
         if (!updated) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         final Match cancelledMatch =
                 matchDao.findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchCancellationException(
-                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                        new MatchCancellationNotFoundException(
                                                 message("match.cancel.error.notFound")));
         matchNotificationService.notifyMatchCancelled(cancelledMatch);
         return cancelledMatch;
@@ -625,25 +597,21 @@ public class MatchServiceImpl implements MatchService {
                 matchDao.findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchCancellationException(
-                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                        new MatchCancellationNotFoundException(
                                                 message("match.cancel.error.notFound")));
 
         validateSeriesCancellationAccess(pivot, actingUser);
 
         final List<Match> targets = cancellableFutureSeriesTargets(pivot);
         if (targets.isEmpty()) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         final List<Match> cancelledMatches = new ArrayList<>();
         for (final Match target : targets) {
             final boolean updated = matchDao.cancelMatch(target.getId(), actingUser);
             if (!updated) {
-                throw new MatchCancellationException(
-                        MatchCancellationFailureReason.FORBIDDEN,
+                throw new MatchCancellationForbiddenException(
                         message("match.cancel.error.forbidden"));
             }
 
@@ -651,8 +619,7 @@ public class MatchServiceImpl implements MatchService {
                     matchDao.findById(target.getId())
                             .orElseThrow(
                                     () ->
-                                            new MatchCancellationException(
-                                                    MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                            new MatchCancellationNotFoundException(
                                                     message("match.cancel.error.notFound")));
             cancelledMatches.add(cancelledMatch);
         }
@@ -664,9 +631,7 @@ public class MatchServiceImpl implements MatchService {
     private void validateSeriesUpdateAccess(final Match pivot, final User actingUser) {
         validateMatchHostAccess(pivot, actingUser);
         if (!pivot.isRecurringOccurrence()) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_RECURRING,
-                    message("match.update.error.notRecurring"));
+            throw new MatchUpdateNotRecurringException(message("match.update.error.notRecurring"));
         }
         validateEditableMatch(pivot);
     }
@@ -678,29 +643,23 @@ public class MatchServiceImpl implements MatchService {
 
     private void validateEditableMatch(final Match match) {
         if (!isEditableMatch(match)) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_EDITABLE,
-                    message("match.update.error.notEditable"));
+            throw new MatchUpdateNotEditableException(message("match.update.error.notEditable"));
         }
     }
 
     private void validateMatchHostAccess(final Match match, final User actingUser) {
         if (!match.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+            throw new MatchUpdateForbiddenException(message("match.update.error.forbidden"));
         }
     }
 
     private void validateSeriesCancellationAccess(final Match pivot, final User actingUser) {
         if (!pivot.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         if (!pivot.isRecurringOccurrence()) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.NOT_RECURRING,
+            throw new MatchCancellationNotRecurringException(
                     message("match.cancel.error.notRecurring"));
         }
     }
@@ -1023,8 +982,7 @@ public class MatchServiceImpl implements MatchService {
 
     private void validateUpdateCapacityOrThrow(final int maxPlayers) {
         if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.CAPACITY_ABOVE_MAX,
+            throw new MatchUpdateCapacityAboveMaxException(
                     message("match.update.error.capacityAboveMax"));
         }
     }
