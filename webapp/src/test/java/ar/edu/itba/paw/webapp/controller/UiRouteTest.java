@@ -32,7 +32,6 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
-import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -84,9 +83,6 @@ import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -1562,36 +1558,6 @@ class UiRouteTest {
                     }
                 };
 
-        final ImageService imageService =
-                new ImageService() {
-                    @Override
-                    public Long store(
-                            final String contentType,
-                            final long contentLength,
-                            final InputStream contentStream)
-                            throws IOException {
-                        return 500L;
-                    }
-
-                    @Override
-                    public Optional<ImageMetadata> findMetadataById(final Long imageId) {
-                        return Optional.empty();
-                    }
-
-                    @Override
-                    public boolean streamContentById(
-                            final Long imageId, final OutputStream outputStream)
-                            throws IOException {
-                        return false;
-                    }
-
-                    @Override
-                    public ImageMetadata resolveImageMetadata(final ImageUpload image) {
-                        return new ImageMetadata(
-                                500L, image.getContentType(), image.getContentLength());
-                    }
-                };
-
         final Tournament hostedTournament =
                 new Tournament(
                         70L,
@@ -1623,7 +1589,7 @@ class UiRouteTest {
                                 Mockito.any(),
                                 Mockito.any(),
                                 ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(List.class),
+                                ArgumentMatchers.<List<Sport>>any(),
                                 ArgumentMatchers.nullable(Instant.class),
                                 ArgumentMatchers.nullable(Instant.class),
                                 ArgumentMatchers.nullable(EventSort.class),
