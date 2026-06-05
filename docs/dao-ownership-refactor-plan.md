@@ -35,10 +35,10 @@ relevant focused Maven test pass.
 
    Expected current result: only `UserDataServiceImpl`.
 
-5. [ ] Add `PlayerReviewDataService` / `PlayerReviewDataServiceImpl`.
-6. [ ] Move `PlayerReviewDao` access in `PlayerReviewServiceImpl` and
+5. [x] Add `PlayerReviewDataService` / `PlayerReviewDataServiceImpl`.
+6. [x] Move `PlayerReviewDao` access in `PlayerReviewServiceImpl` and
    `ModerationServiceImpl` behind `PlayerReviewDataService`.
-7. [ ] Update affected `PlayerReviewDao`-based service tests.
+7. [x] Update affected `PlayerReviewDao`-based service tests.
 8. [ ] Add `TournamentDataService` / `TournamentDataServiceImpl`.
 9. [ ] Move `TournamentDao` access in `TournamentServiceImpl`,
    `TournamentRegistrationServiceImpl`, and `TournamentBracketServiceImpl` behind

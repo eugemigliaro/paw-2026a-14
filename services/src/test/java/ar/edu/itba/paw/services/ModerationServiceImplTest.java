@@ -16,9 +16,9 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
-import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -50,7 +50,7 @@ public class ModerationServiceImplTest {
     @Mock private UserDataService userDataService;
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
-    @Mock private PlayerReviewDao playerReviewDao;
+    @Mock private PlayerReviewDataService playerReviewDataService;
     @Mock private MatchService matchService;
 
     private RecordingMailDispatchService mailDispatchService;
@@ -66,14 +66,14 @@ public class ModerationServiceImplTest {
                         userDataService,
                         matchDao,
                         matchParticipantDao,
-                        playerReviewDao,
+                        playerReviewDataService,
                         mailDispatchService,
                         matchService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
-    private void usePlayerReviewDao(final PlayerReviewDao playerReviewDao) {
+    private void usePlayerReviewDataService(final PlayerReviewDataService playerReviewDataService) {
         moderationService =
                 new ModerationServiceImpl(
                         userBanDao,
@@ -81,7 +81,7 @@ public class ModerationServiceImplTest {
                         userDataService,
                         matchDao,
                         matchParticipantDao,
-                        playerReviewDao,
+                        playerReviewDataService,
                         mailDispatchService,
                         matchService,
                         messageSource(),
@@ -96,7 +96,7 @@ public class ModerationServiceImplTest {
                         userDataService,
                         matchDao,
                         matchParticipantDao,
-                        playerReviewDao,
+                        playerReviewDataService,
                         mailDispatchService,
                         matchService,
                         messageSource(),
@@ -296,7 +296,7 @@ public class ModerationServiceImplTest {
                         null,
                         null,
                         null);
-        usePlayerReviewDao(new ModeratedPlayerReviewDao(review));
+        usePlayerReviewDataService(new ModeratedPlayerReviewDataService(review));
 
         Mockito.when(moderationReportDao.findById(45L)).thenReturn(Optional.of(report));
         Mockito.when(
@@ -458,7 +458,7 @@ public class ModerationServiceImplTest {
                         null,
                         null,
                         null);
-        usePlayerReviewDao(new ModeratedPlayerReviewDao(review));
+        usePlayerReviewDataService(new ModeratedPlayerReviewDataService(review));
 
         final boolean result =
                 moderationService.softDeleteReview(
@@ -488,7 +488,7 @@ public class ModerationServiceImplTest {
                         FIXED_NOW,
                         UserUtils.getUser(3L),
                         "SPAM");
-        usePlayerReviewDao(new ModeratedPlayerReviewDao(review));
+        usePlayerReviewDataService(new ModeratedPlayerReviewDataService(review));
 
         final boolean result =
                 moderationService.restoreReview(UserUtils.getUser(1L), UserUtils.getUser(2L));
@@ -608,11 +608,11 @@ public class ModerationServiceImplTest {
                 FIXED_NOW);
     }
 
-    private static class ModeratedPlayerReviewDao implements PlayerReviewDao {
+    private static class ModeratedPlayerReviewDataService implements PlayerReviewDataService {
 
         private final PlayerReview review;
 
-        private ModeratedPlayerReviewDao(final PlayerReview review) {
+        private ModeratedPlayerReviewDataService(final PlayerReview review) {
             this.review = review;
         }
 

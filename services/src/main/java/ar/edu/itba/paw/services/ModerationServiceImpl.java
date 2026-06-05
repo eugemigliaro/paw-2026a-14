@@ -15,9 +15,9 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
-import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.time.Clock;
@@ -49,7 +49,7 @@ public class ModerationServiceImpl implements ModerationService {
     private final UserDataService userDataService;
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
-    private final PlayerReviewDao playerReviewDao;
+    private final PlayerReviewDataService playerReviewDataService;
     private final MailDispatchService mailDispatchService;
     private final MatchService matchService;
     private final MessageSource messageSource;
@@ -62,7 +62,7 @@ public class ModerationServiceImpl implements ModerationService {
             final UserDataService userDataService,
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
-            final PlayerReviewDao playerReviewDao,
+            final PlayerReviewDataService playerReviewDataService,
             final MailDispatchService mailDispatchService,
             final MatchService matchService,
             final MessageSource messageSource,
@@ -72,7 +72,7 @@ public class ModerationServiceImpl implements ModerationService {
         this.userDataService = userDataService;
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
-        this.playerReviewDao = playerReviewDao;
+        this.playerReviewDataService = playerReviewDataService;
         this.mailDispatchService = mailDispatchService;
         this.matchService = matchService;
         this.messageSource = messageSource;
@@ -295,14 +295,14 @@ public class ModerationServiceImpl implements ModerationService {
     @Transactional
     public boolean softDeleteReview(
             final User reviewer, final User reviewed, final String reason, final User deletedBy) {
-        return playerReviewDao.softDeleteReview(
+        return playerReviewDataService.softDeleteReview(
                 reviewer, reviewed, deletedBy, normalizeText(reason, 4000));
     }
 
     @Override
     @Transactional
     public boolean restoreReview(final User reviewer, final User reviewed) {
-        return playerReviewDao.restoreReview(reviewer, reviewed);
+        return playerReviewDataService.restoreReview(reviewer, reviewed);
     }
 
     @Override
@@ -438,7 +438,7 @@ public class ModerationServiceImpl implements ModerationService {
                                                             new Object[] {targetId},
                                                             locale));
                     case REVIEW ->
-                            playerReviewDao
+                            playerReviewDataService
                                     .findByIdIncludingDeleted(targetId)
                                     .map(review -> review.getReviewer().getUsername())
                                     .map(
@@ -523,7 +523,7 @@ public class ModerationServiceImpl implements ModerationService {
         }
         if (report.getTargetType() == ReportTargetType.REVIEW) {
             final Optional<PlayerReview> review =
-                    playerReviewDao.findByIdIncludingDeleted(report.getTargetId());
+                    playerReviewDataService.findByIdIncludingDeleted(report.getTargetId());
             review.ifPresent(
                     found ->
                             softDeleteReview(
@@ -541,7 +541,7 @@ public class ModerationServiceImpl implements ModerationService {
     private void upliftReportDecision(final ModerationReport report) {
         if (report.getTargetType() == ReportTargetType.REVIEW) {
             final Optional<PlayerReview> review =
-                    playerReviewDao.findByIdIncludingDeleted(report.getTargetId());
+                    playerReviewDataService.findByIdIncludingDeleted(report.getTargetId());
             review.ifPresent(found -> restoreReview(found.getReviewer(), found.getReviewed()));
             return;
         }

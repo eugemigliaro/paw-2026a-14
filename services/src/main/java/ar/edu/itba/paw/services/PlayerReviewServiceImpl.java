@@ -6,9 +6,9 @@ import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
-import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -22,11 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     private static final int DEFAULT_RECENT_LIMIT = 10;
-    private final PlayerReviewDao playerReviewDao;
+    private final PlayerReviewDataService playerReviewDataService;
 
     @Autowired
-    public PlayerReviewServiceImpl(final PlayerReviewDao playerReviewDao) {
-        this.playerReviewDao = playerReviewDao;
+    public PlayerReviewServiceImpl(final PlayerReviewDataService playerReviewDataService) {
+        this.playerReviewDataService = playerReviewDataService;
     }
 
     @Override
@@ -38,7 +38,8 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
             final String comment) {
         validateReviewRequest(reviewer, reviewed, reaction);
         final String normalizedComment = normalizeComment(comment);
-        return playerReviewDao.upsertReview(reviewer, reviewed, reaction, normalizedComment);
+        return playerReviewDataService.upsertReview(
+                reviewer, reviewed, reaction, normalizedComment);
     }
 
     @Override
@@ -46,7 +47,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     public void deleteReview(final User reviewer, final User reviewed) {
         nonNullUser(reviewer);
         nonNullUser(reviewed);
-        if (!playerReviewDao.softDeleteReview(reviewer, reviewed)) {
+        if (!playerReviewDataService.softDeleteReview(reviewer, reviewed)) {
             throw new PlayerReviewException(
                     PlayerReviewException.NOT_FOUND, "Player review not found.");
         }
@@ -56,23 +57,23 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     public Optional<PlayerReview> findReviewByPair(final User reviewer, final User reviewed) {
         nonNullUser(reviewer);
         nonNullUser(reviewed);
-        return playerReviewDao.findByPair(reviewer, reviewed);
+        return playerReviewDataService.findByPair(reviewer, reviewed);
     }
 
     @Override
     public Optional<PlayerReview> findReviewByIdIncludingDeleted(final Long reviewId) {
-        return playerReviewDao.findByIdIncludingDeleted(reviewId);
+        return playerReviewDataService.findByIdIncludingDeleted(reviewId);
     }
 
     @Override
     public Optional<PlayerReview> findReviewById(final Long reviewId) {
-        return playerReviewDao.findById(reviewId);
+        return playerReviewDataService.findById(reviewId);
     }
 
     @Override
     public PlayerReviewSummary findSummaryForUser(final User reviewed) {
         nonNullUser(reviewed);
-        return playerReviewDao.getSummaryForUser(reviewed);
+        return playerReviewDataService.getSummaryForUser(reviewed);
     }
 
     @Override
@@ -85,13 +86,14 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         final int safePage = page > 0 ? page : 1;
         final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_RECENT_LIMIT;
         final PlayerReviewFilter safeFilter = filter == null ? PlayerReviewFilter.BOTH : filter;
-        final int totalCount = playerReviewDao.countReviewsForUser(reviewed, safeFilter);
+        final int totalCount = playerReviewDataService.countReviewsForUser(reviewed, safeFilter);
         final int totalPages =
                 totalCount == 0 ? 1 : (int) Math.ceil((double) totalCount / safePageSize);
         final int clampedPage = Math.min(safePage, totalPages);
         final int offset = (clampedPage - 1) * safePageSize;
         final List<PlayerReview> items =
-                playerReviewDao.findReviewsForUser(reviewed, safeFilter, safePageSize, offset);
+                playerReviewDataService.findReviewsForUser(
+                        reviewed, safeFilter, safePageSize, offset);
         return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
     }
 
@@ -100,7 +102,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         return reviewer != null
                 && reviewed != null
                 && !reviewer.equals(reviewed)
-                && playerReviewDao.canReview(reviewer, reviewed);
+                && playerReviewDataService.canReview(reviewer, reviewed);
     }
 
     @Override
@@ -108,7 +110,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         if (reviewer == null) {
             return Set.of();
         }
-        return new HashSet<>(playerReviewDao.findReviewableUserIds(reviewer));
+        return new HashSet<>(playerReviewDataService.findReviewableUserIds(reviewer));
     }
 
     private void nonNullUser(final User user) {
