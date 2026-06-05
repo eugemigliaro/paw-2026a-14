@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,9 +39,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 public class TournamentBracketServiceImplTest {
@@ -54,6 +50,7 @@ public class TournamentBracketServiceImplTest {
     @Mock private TournamentMatchDao tournamentMatchDao;
     @Mock private UserSportRatingService userSportRatingService;
     @Mock private TournamentMailService tournamentMailService;
+    @Mock private SecurityService securityService;
     @Mock private MessageSource messageSource;
 
     private TournamentBracketServiceImpl bracketService;
@@ -67,6 +64,7 @@ public class TournamentBracketServiceImplTest {
                         tournamentMatchDao,
                         userSportRatingService,
                         tournamentMailService,
+                        securityService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -83,12 +81,6 @@ public class TournamentBracketServiceImplTest {
         Mockito.lenient()
                 .when(tournamentMatchDao.update(ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        SecurityContextHolder.clearContext();
-    }
-
-    @AfterEach
-    public void tearDown() {
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -323,14 +315,14 @@ public class TournamentBracketServiceImplTest {
     @Test
     public void adminModCanGenerateForAnotherHost() {
         // 1. Arrange
-        authenticateAdminMod();
+        final User actingUser = UserUtils.getUser(99L);
+        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         configureGenerate(tournament, teams(tournament, 4));
 
         // 2. Exercise
-        final List<TournamentMatch> matches =
-                bracketService.generateBracket(10L, UserUtils.getUser(99L));
+        final List<TournamentMatch> matches = bracketService.generateBracket(10L, actingUser);
 
         // 3. Assert
         Assertions.assertEquals(3, matches.size());
@@ -357,7 +349,8 @@ public class TournamentBracketServiceImplTest {
     @Test
     public void adminModCanPublishForAnotherHost() {
         // 1. Arrange
-        authenticateAdminMod();
+        final User actingUser = UserUtils.getUser(99L);
+        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
@@ -368,7 +361,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament result =
                 bracketService.publishBracket(
                         10L,
-                        UserUtils.getUser(99L),
+                        actingUser,
                         List.of(
                                 scheduleAt(
                                         matches.get(0).getId(),
@@ -413,7 +406,8 @@ public class TournamentBracketServiceImplTest {
     @Test
     public void adminModCanDeclareWinnerForAnotherHost() {
         // 1. Arrange
-        authenticateAdminMod();
+        final User actingUser = UserUtils.getUser(99L);
+        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
@@ -429,7 +423,7 @@ public class TournamentBracketServiceImplTest {
                         10L,
                         firstRoundMatch.getId(),
                         new TournamentWinnerDeclarationRequest(firstRoundMatch.getTeamA().getId()),
-                        UserUtils.getUser(99L));
+                        actingUser);
 
         // 3. Assert
         Assertions.assertSame(firstRoundMatch.getTeamA(), result.getWinnerTeam());
@@ -1288,6 +1282,7 @@ public class TournamentBracketServiceImplTest {
                 tournamentMatchDao,
                 userSportRatingService,
                 tournamentMailService,
+                securityService,
                 messageSource,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -1300,6 +1295,7 @@ public class TournamentBracketServiceImplTest {
                 tournamentMatchDao,
                 userSportRatingService,
                 tournamentMailService,
+                securityService,
                 messageSource,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -1363,14 +1359,5 @@ public class TournamentBracketServiceImplTest {
         public void sendTournamentCancelledEmail(final Tournament tournament) {
             actions.add("cancelled");
         }
-    }
-
-    private static void authenticateAdminMod() {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                "admin",
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
     }
 }

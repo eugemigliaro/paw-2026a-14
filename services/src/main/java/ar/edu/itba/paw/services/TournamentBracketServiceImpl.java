@@ -31,9 +31,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,13 +44,13 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     TournamentStatus.IN_PROGRESS,
                     TournamentStatus.COMPLETED,
                     TournamentStatus.CANCELLED);
-    private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDao tournamentDao;
     private final TournamentTeamDao tournamentTeamDao;
     private final TournamentMatchDao tournamentMatchDao;
     private final UserSportRatingService userSportRatingService;
     private final TournamentMailService tournamentMailService;
+    private final SecurityService securityService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -63,6 +60,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             final TournamentMatchDao tournamentMatchDao,
             final UserSportRatingService userSportRatingService,
             final TournamentMailService tournamentMailService,
+            final SecurityService securityService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
@@ -70,6 +68,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         this.tournamentMatchDao = tournamentMatchDao;
         this.userSportRatingService = userSportRatingService;
         this.tournamentMailService = tournamentMailService;
+        this.securityService = securityService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -429,7 +428,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         if (tournament == null || actingUser == null || actingUser.getId() == null) {
             return false;
         }
-        return tournament.getHost().getId().equals(actingUser.getId()) || isAdminMod();
+        return tournament.getHost().getId().equals(actingUser.getId())
+                || securityService.canActAsAdminMod(actingUser);
     }
 
     private boolean canReadBracket(final Tournament tournament, final User viewer) {
@@ -438,18 +438,6 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         }
         return TournamentStatus.BRACKET_SETUP == tournament.getStatus()
                 && canMutate(tournament, viewer);
-    }
-
-    private boolean isAdminMod() {
-        final Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .filter(Objects::nonNull)
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(ADMIN_MOD_AUTHORITY::equals);
     }
 
     private void requireBracketSetup(final Tournament tournament) {

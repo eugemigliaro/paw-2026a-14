@@ -19,9 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,11 +28,11 @@ public class TournamentServiceImpl implements TournamentService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
-    private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDao tournamentDao;
     private final TournamentMailService tournamentMailService;
     private final ImageService imageService;
+    private final SecurityService securityService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -43,11 +40,13 @@ public class TournamentServiceImpl implements TournamentService {
             final TournamentDao tournamentDao,
             final TournamentMailService tournamentMailService,
             final ImageService imageService,
+            final SecurityService securityService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDao = tournamentDao;
         this.tournamentMailService = tournamentMailService;
         this.imageService = imageService;
+        this.securityService = securityService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -274,19 +273,8 @@ public class TournamentServiceImpl implements TournamentService {
         if (tournament == null || actingUser == null || actingUser.getId() == null) {
             return false;
         }
-        return tournament.getHost().getId().equals(actingUser.getId()) || isAdminMod();
-    }
-
-    private boolean isAdminMod() {
-        final Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .filter(Objects::nonNull)
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(ADMIN_MOD_AUTHORITY::equals);
+        return tournament.getHost().getId().equals(actingUser.getId())
+                || securityService.canActAsAdminMod(actingUser);
     }
 
     private static boolean hasCoordinates(final Double latitude, final Double longitude) {

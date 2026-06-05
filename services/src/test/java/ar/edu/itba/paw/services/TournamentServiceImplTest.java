@@ -20,7 +20,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,9 +29,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 public class TournamentServiceImplTest {
@@ -44,6 +40,7 @@ public class TournamentServiceImplTest {
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
+    @Mock private SecurityService securityService;
     @Mock private MessageSource messageSource;
 
     private TournamentServiceImpl tournamentService;
@@ -55,6 +52,7 @@ public class TournamentServiceImplTest {
                         tournamentDao,
                         tournamentMailService,
                         imageService,
+                        securityService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -65,12 +63,6 @@ public class TournamentServiceImplTest {
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(2));
-        SecurityContextHolder.clearContext();
-    }
-
-    @AfterEach
-    public void tearDown() {
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -245,7 +237,8 @@ public class TournamentServiceImplTest {
     @Test
     public void adminModCanUpdateTournamentForAnotherHost() {
         // 1. Arrange
-        authenticateAdminMod();
+        final User actingUser = UserUtils.getUser(99L);
+        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
         final UpdateTournamentRequest request = validUpdateRequest();
@@ -254,7 +247,7 @@ public class TournamentServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // 2. Exercise
-        final Tournament result = tournamentService.update(10L, UserUtils.getUser(99L), request);
+        final Tournament result = tournamentService.update(10L, actingUser, request);
 
         // 3. Assert
         Assertions.assertEquals(request.getTitle(), result.getTitle());
@@ -731,14 +724,5 @@ public class TournamentServiceImplTest {
 
     private static Instant futureRegistrationClose() {
         return FIXED_NOW.plusSeconds(7200);
-    }
-
-    private static void authenticateAdminMod() {
-        SecurityContextHolder.getContext()
-                .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                "admin",
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
     }
 }

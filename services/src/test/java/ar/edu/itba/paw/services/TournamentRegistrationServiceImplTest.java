@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +33,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 public class TournamentRegistrationServiceImplTest {
@@ -44,6 +42,7 @@ public class TournamentRegistrationServiceImplTest {
     @Mock private TournamentDao tournamentDao;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
+    @Mock private SecurityService securityService;
     @Mock private MessageSource messageSource;
 
     private TournamentRegistrationServiceImpl registrationService;
@@ -55,6 +54,7 @@ public class TournamentRegistrationServiceImplTest {
                         tournamentDao,
                         tournamentSoloEntryDao,
                         tournamentTeamDao,
+                        securityService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -71,12 +71,6 @@ public class TournamentRegistrationServiceImplTest {
         Mockito.lenient()
                 .when(tournamentDao.update(ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        SecurityContextHolder.clearContext();
-    }
-
-    @AfterEach
-    public void tearDown() {
-        SecurityContextHolder.clearContext();
     }
 
     @Test

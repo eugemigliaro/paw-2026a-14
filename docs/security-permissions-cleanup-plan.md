@@ -24,7 +24,7 @@ Use this as the working checklist. Mark a module complete only after the code
 change, targeted tests, and the module acceptance criteria are all done.
 
 - [x] Module 1: Inventory controller permissions.
-- [ ] Module 2: Establish shared authorization vocabulary.
+- [x] Module 2: Establish shared authorization vocabulary.
 - [ ] Module 3: Match detail visibility.
 - [ ] Module 4: Match detail action state.
 - [ ] Module 5: Tournament detail permissions.
@@ -232,11 +232,41 @@ Preferred minimal direction:
 
 Acceptance criteria:
 
-- [ ] One convention is chosen before refactoring match and tournament flows.
-- [ ] The convention does not require controllers to inspect roles or ownership.
-- [ ] Ordinary services no longer read `SecurityContextHolder` directly.
-- [ ] Tests can exercise regular-user and admin/mod paths without duplicating
+- [x] One convention is chosen before refactoring match and tournament flows.
+- [x] The convention does not require controllers to inspect roles or ownership.
+- [x] Ordinary services no longer read `SecurityContextHolder` directly.
+- [x] Tests can exercise regular-user and admin/mod paths without duplicating
   authority-inspection logic in each service test.
+
+### Module 2 Convention - 2026-06-05
+
+Chosen convention:
+
+- Keep service methods receiving `User actingUser`; do not introduce a new actor
+  object yet.
+- Keep route-level authentication and role URL rules in `SecurityConfig`.
+- Keep current-user extraction in controllers only for passing the actor to
+  services or harmless presentation state.
+- Use `SecurityService` as the single service-layer bridge to Spring Security.
+- Use `SecurityService.canActAsAdminMod(User actingUser)` for elevated
+  ownership overrides. The helper verifies that the authenticated principal
+  matches `actingUser` and has the `ROLE_ADMIN_MOD` authority, so services do
+  not trust detached user objects for elevated access.
+- Keep visibility/read methods returning `Optional` for hidden/not-found reads
+  unless a flow already uses a domain exception/result type.
+- Keep mutating service methods using existing domain exceptions or result
+  types, with controllers translating those outcomes to `404`, `403`, flash
+  messages, or redirects.
+
+Implementation notes:
+
+- Added `SecurityService.canActAsAdminMod(User actingUser)` and tests for
+  matching admin, matching regular user, and detached actor mismatch.
+- Replaced direct `SecurityContextHolder`/authority reads in
+  `TournamentServiceImpl`, `TournamentRegistrationServiceImpl`, and
+  `TournamentBracketServiceImpl` with the new helper.
+- Tournament service tests now mock the helper for admin/mod paths instead of
+  constructing Spring Security authentication contexts.
 
 ## Module 3: Match Detail Visibility
 
@@ -419,11 +449,15 @@ infrastructure.
 
 Current suspicious files:
 
-- `services/src/main/java/ar/edu/itba/paw/services/TournamentServiceImpl.java`
-- `services/src/main/java/ar/edu/itba/paw/services/TournamentRegistrationServiceImpl.java`
-- `services/src/main/java/ar/edu/itba/paw/services/TournamentBracketServiceImpl.java`
 - `services/src/main/java/ar/edu/itba/paw/services/MatchServiceImpl.java`
 - `webapp/src/main/java/ar/edu/itba/paw/webapp/controller/TournamentController.java`
+
+Fixed after Module 2:
+
+- `TournamentServiceImpl`, `TournamentRegistrationServiceImpl`, and
+  `TournamentBracketServiceImpl` no longer read `SecurityContextHolder`
+  directly for admin/mod ownership overrides; they use
+  `SecurityService.canActAsAdminMod(User actingUser)`.
 
 Search command:
 
