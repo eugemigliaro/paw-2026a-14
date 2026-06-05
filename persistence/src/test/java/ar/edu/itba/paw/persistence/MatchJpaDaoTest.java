@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
@@ -13,7 +14,6 @@ import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import javax.persistence.EntityManager;
@@ -99,7 +99,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
 
@@ -110,7 +110,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -253,7 +253,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
 
@@ -264,7 +264,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -1044,7 +1044,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
 
@@ -1055,7 +1055,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -1640,7 +1640,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3);
         final MatchSeries matchSeries =
@@ -1650,7 +1650,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3,
                         null,
@@ -1729,7 +1729,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3);
         final MatchSeries matchSeries =
@@ -1739,7 +1739,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3,
                         null,
@@ -1816,7 +1816,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
         final MatchSeries matchSeries =
@@ -1826,7 +1826,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -1886,7 +1886,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
         final MatchSeries matchSeries =
@@ -1896,7 +1896,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,

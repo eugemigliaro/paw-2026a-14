@@ -17,7 +17,6 @@ import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -733,8 +732,8 @@ public class MatchJpaDao implements MatchDao {
         }
         final TimeRange range =
                 Boolean.FALSE.equals(upcoming)
-                        ? buildPastTimeRange(timeFilter, PlatformTime.ZONE)
-                        : buildTimeRange(timeFilter, PlatformTime.ZONE);
+                        ? buildPastTimeRange(timeFilter)
+                        : buildTimeRange(timeFilter);
         parts.where.add("m.startsAt >= :timeStart AND m.startsAt < :timeEnd");
         parts.params.put("timeStart", range.start());
         parts.params.put("timeEnd", range.end());
@@ -802,29 +801,29 @@ public class MatchJpaDao implements MatchDao {
         }
     }
 
-    private static TimeRange buildTimeRange(final EventTimeFilter timeFilter, final ZoneId zoneId) {
-        final ZonedDateTime now = ZonedDateTime.now(zoneId);
+    private static TimeRange buildTimeRange(final EventTimeFilter timeFilter) {
+        final ZonedDateTime now = ZonedDateTime.now(PlatformTime.ZONE);
         if (timeFilter == EventTimeFilter.WEEK) {
             return new TimeRange(now.toInstant(), now.plusDays(7).toInstant());
         }
         final LocalDate today = now.toLocalDate();
         if (timeFilter == EventTimeFilter.TOMORROW) {
-            final ZonedDateTime start = today.plusDays(1).atStartOfDay(zoneId);
+            final ZonedDateTime start = today.plusDays(1).atStartOfDay(PlatformTime.ZONE);
             return new TimeRange(start.toInstant(), start.plusDays(1).toInstant());
         }
         if (timeFilter == EventTimeFilter.TODAY) {
             return new TimeRange(
-                    now.toInstant(), today.plusDays(1).atStartOfDay(zoneId).toInstant());
+                    now.toInstant(), today.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
         }
-        return new TimeRange(now.toInstant(), today.plusDays(1).atStartOfDay(zoneId).toInstant());
+        return new TimeRange(
+                now.toInstant(), today.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
     }
 
-    private static TimeRange buildPastTimeRange(
-            final EventTimeFilter timeFilter, final ZoneId zoneId) {
-        final ZonedDateTime now = ZonedDateTime.now(zoneId);
+    private static TimeRange buildPastTimeRange(final EventTimeFilter timeFilter) {
+        final ZonedDateTime now = ZonedDateTime.now(PlatformTime.ZONE);
         if (timeFilter == EventTimeFilter.TODAY) {
             return new TimeRange(
-                    now.toLocalDate().atStartOfDay(zoneId).toInstant(), now.toInstant());
+                    now.toLocalDate().atStartOfDay(PlatformTime.ZONE).toInstant(), now.toInstant());
         }
         return new TimeRange(now.minusDays(7).toInstant(), now.toInstant());
     }

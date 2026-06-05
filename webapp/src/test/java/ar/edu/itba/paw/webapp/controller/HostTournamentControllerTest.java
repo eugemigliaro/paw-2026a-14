@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -40,7 +41,6 @@ import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -498,7 +498,7 @@ class HostTournamentControllerTest {
                                 java.util.List.of(roundOneMatch, roundTwoMatch),
                                 null,
                                 roundOneMatch));
-        final String expectedDate = LocalDate.now(ZoneId.systemDefault()).plusDays(1).toString();
+        final String expectedDate = LocalDate.now(PlatformTime.ZONE).plusDays(1).toString();
 
         // 2. Exercise
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();

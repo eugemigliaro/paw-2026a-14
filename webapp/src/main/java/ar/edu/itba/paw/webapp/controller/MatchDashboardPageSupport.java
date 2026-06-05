@@ -24,7 +24,6 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,12 +68,11 @@ final class MatchDashboardPageSupport {
                 searchForm.getEndDate() == null ? null : searchForm.getEndDate().toString();
         final BigDecimal minPrice = searchForm.getMinPrice();
         final BigDecimal maxPrice = searchForm.getMaxPrice();
-        final ZoneId timezone = PlatformTime.ZONE;
         final List<String> selectedStatusesStr = toDbValues(searchForm.getStatus());
         final List<String> selectedSportsStr = toDbValues(searchForm.getSport());
         final List<String> selectedVisibilityStr = toDbValues(searchForm.getVisibility());
         final List<String> selectedCategories = searchForm.getCategory();
-        final DateRangeBounds dateBounds = dateRangeBounds(path, timezone);
+        final DateRangeBounds dateBounds = dateRangeBounds(path);
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         mav.addObject("pageTitleCode", pageTitleCode);
@@ -120,7 +118,6 @@ final class MatchDashboardPageSupport {
                                         tournament ->
                                                 toCard(
                                                         tournament,
-                                                        PlatformTime.ZONE,
                                                         locale,
                                                         currentUser,
                                                         messageSource.getMessage(
@@ -137,7 +134,6 @@ final class MatchDashboardPageSupport {
                                         match ->
                                                 toCard(
                                                         match,
-                                                        PlatformTime.ZONE,
                                                         locale,
                                                         currentUser,
                                                         messageSource.getMessage(
@@ -941,8 +937,8 @@ final class MatchDashboardPageSupport {
                 "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
-    private static DateRangeBounds dateRangeBounds(final String path, final ZoneId zoneId) {
-        final LocalDate today = LocalDate.now(zoneId);
+    private static DateRangeBounds dateRangeBounds(final String path) {
+        final LocalDate today = LocalDate.now(PlatformTime.ZONE);
         if (path.endsWith("/finished") || path.endsWith("/past")) {
             return new DateRangeBounds(null, today.toString());
         }

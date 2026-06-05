@@ -36,7 +36,6 @@ import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -151,10 +150,10 @@ public class HostTournamentController {
                         createTournamentForm.getTeamSize(),
                         createTournamentForm.isAllowSoloSignup(),
                         createTournamentForm.isAllowTeamDraft(),
-                        toInstant(
+                        PlatformTime.toInstant(
                                 createTournamentForm.getRegistrationOpensDate(),
                                 createTournamentForm.getRegistrationOpensTime()),
-                        toInstant(
+                        PlatformTime.toInstant(
                                 createTournamentForm.getRegistrationClosesDate(),
                                 createTournamentForm.getRegistrationClosesTime()));
 
@@ -218,10 +217,10 @@ public class HostTournamentController {
                         bannerUpload(createTournamentForm.getBannerImage()),
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
-                        toInstant(
+                        PlatformTime.toInstant(
                                 createTournamentForm.getRegistrationOpensDate(),
                                 createTournamentForm.getRegistrationOpensTime()),
-                        toInstant(
+                        PlatformTime.toInstant(
                                 createTournamentForm.getRegistrationClosesDate(),
                                 createTournamentForm.getRegistrationClosesTime()));
 
@@ -606,14 +605,14 @@ public class HostTournamentController {
 
     private List<TournamentMatchScheduleRequest> toMatchScheduleRequests(
             final BracketPublishForm form) {
-        final ZoneId zoneId = PlatformTime.ZONE;
         final List<TournamentMatchScheduleRequest> schedules = new ArrayList<>();
         for (final BracketPublishScheduleForm schedule : form.getSchedules()) {
             schedules.add(
                     new TournamentMatchScheduleRequest(
                             schedule.getMatchId(),
-                            toInstant(schedule.getStartDate(), schedule.getStartTime(), zoneId),
-                            toInstant(schedule.getEndDate(), schedule.getEndTime(), zoneId),
+                            PlatformTime.toInstant(
+                                    schedule.getStartDate(), schedule.getStartTime()),
+                            PlatformTime.toInstant(schedule.getEndDate(), schedule.getEndTime()),
                             schedule.getAddress(),
                             schedule.getLatitude(),
                             schedule.getLongitude()));
@@ -1169,15 +1168,6 @@ public class HostTournamentController {
     private static Optional<String> flashString(final Model model, final String name) {
         final Object value = model.asMap().get(name);
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
-    }
-
-    private static Instant toInstant(final LocalDate date, final LocalTime time) {
-        return PlatformTime.toInstant(date, time);
-    }
-
-    private static Instant toInstant(
-            final LocalDate date, final LocalTime time, final ZoneId zoneId) {
-        return PlatformTime.toInstant(date, time);
     }
 
     private static String normalizeBlank(final String value) {

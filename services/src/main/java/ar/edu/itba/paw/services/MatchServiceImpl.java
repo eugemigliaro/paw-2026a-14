@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -898,9 +897,8 @@ public class MatchServiceImpl implements MatchService {
             throw new IllegalArgumentException(message("match.recurrence.error.invalid"));
         }
 
-        final ZoneId zoneId = PlatformTime.ZONE;
         final LocalDateTime firstLocalStart =
-                LocalDateTime.ofInstant(request.getStartsAt(), zoneId);
+                LocalDateTime.ofInstant(request.getStartsAt(), PlatformTime.ZONE);
         final Duration duration =
                 request.getEndsAt() == null
                         ? null
@@ -913,7 +911,7 @@ public class MatchServiceImpl implements MatchService {
                             final LocalDateTime occurrenceLocalStart =
                                     addFrequency(firstLocalStart, recurrence.getFrequency(), index);
                             final Instant startsAt =
-                                    occurrenceLocalStart.atZone(zoneId).toInstant();
+                                    occurrenceLocalStart.atZone(PlatformTime.ZONE).toInstant();
                             final Instant endsAt =
                                     duration == null ? null : startsAt.plus(duration);
                             return new OccurrenceWindow(startsAt, endsAt);

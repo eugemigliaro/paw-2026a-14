@@ -8,7 +8,6 @@ import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,8 +29,7 @@ final class MatchDashboardQueryState {
                         : normalizeDateRange(
                                 normalizedForm.getStartDate(),
                                 normalizedForm.getEndDate(),
-                                context,
-                                PlatformTime.ZONE);
+                                context);
 
         final List<String> selectedCategories =
                 tournament ? List.of() : normalizeCsvValues(normalizedForm.getCategory());
@@ -106,11 +104,10 @@ final class MatchDashboardQueryState {
     private static DateRange normalizeDateRange(
             final LocalDate rawStartDate,
             final LocalDate rawEndDate,
-            final DateRangeContext context,
-            final ZoneId zoneId) {
+            final DateRangeContext context) {
         LocalDate startDate = rawStartDate;
         LocalDate endDate = rawEndDate;
-        final LocalDate today = LocalDate.now(zoneId);
+        final LocalDate today = LocalDate.now(PlatformTime.ZONE);
 
         if (context == DateRangeContext.UPCOMING) {
             if (startDate == null) {

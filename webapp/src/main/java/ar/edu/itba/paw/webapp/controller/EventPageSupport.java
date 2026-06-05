@@ -356,7 +356,6 @@ final class EventPageSupport {
         return new EventDetailPageViewModel(
                 toCard(
                         match,
-                        PlatformTime.ZONE,
                         locale,
                         currentUser,
                         buildAvailabilityLabel(match, locale),
