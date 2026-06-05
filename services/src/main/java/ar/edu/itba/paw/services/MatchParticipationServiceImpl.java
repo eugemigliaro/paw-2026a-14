@@ -540,7 +540,6 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        requireApprovalBasedMatch(match);
         return matchParticipantDao.findInvitedUsers(matchId);
     }
 
