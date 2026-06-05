@@ -42,7 +42,8 @@ import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegi
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloSignupDisabledException;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationTournamentNotFoundException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
 import java.time.Clock;
@@ -114,6 +115,7 @@ public class TournamentController {
 
     @GetMapping("/tournaments/{tournamentId:\\d+}")
     public ModelAndView showTournament(
+            @CurrentUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final Model model,
             final Locale locale) {
@@ -121,13 +123,11 @@ public class TournamentController {
                 tournamentService
                         .findPublicTournament(tournamentId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser =
-                SecurityControllerUtils.currentUserOrNull(); // TODO: add controller advice
 
         final Optional<TournamentSoloEntry> soloEntry =
-                tournamentRegistrationService.findSoloEntry(tournamentId, currentUser);
+                tournamentRegistrationService.findSoloEntry(tournamentId, user);
         final Optional<TournamentTeam> userTeam =
-                tournamentRegistrationService.findUserTeam(tournamentId, currentUser);
+                tournamentRegistrationService.findUserTeam(tournamentId, user);
 
         final ModelAndView mav = new ModelAndView("tournaments/detail");
         mav.addObject(
@@ -138,7 +138,7 @@ public class TournamentController {
                         locale));
         mav.addObject(
                 "tournamentPage",
-                buildTournamentPage(tournament, currentUser, soloEntry, userTeam, locale));
+                buildTournamentPage(tournament, user, soloEntry, userTeam, locale));
         mav.addObject("soloJoinPath", "/tournaments/" + tournamentId + "/solo-entry");
         mav.addObject("soloLeavePath", "/tournaments/" + tournamentId + "/solo-entry/leave");
         mav.addObject(
@@ -155,13 +155,12 @@ public class TournamentController {
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry")
     public ModelAndView joinSolo(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        final User currentUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String tournamentErrorCode = null;
         try {
-            tournamentRegistrationService.joinSolo(tournamentId, currentUser);
+            tournamentRegistrationService.joinSolo(tournamentId, user);
         } catch (final TournamentRegistrationTournamentNotFoundException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (TournamentRegistrationInvalidUserException exception) {
@@ -189,14 +188,13 @@ public class TournamentController {
 
     @GetMapping("/tournaments/{tournamentId:\\d+}/bracket")
     public ModelAndView showBracket(
+            @CurrentUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final Model model,
             final Locale locale) {
-        final User currentUser =
-                SecurityControllerUtils.currentUserOrNull(); // TODO: add controller advice
         TournamentBracketView bracketView;
         try {
-            bracketView = tournamentBracketService.getBracket(tournamentId, currentUser);
+            bracketView = tournamentBracketService.getBracket(tournamentId, user);
         } catch (final TournamentBracketTournamentNotFoundException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         } catch (final TournamentBracketForbiddenException
@@ -211,11 +209,11 @@ public class TournamentController {
                         "page.title.tournamentBracket",
                         new Object[] {bracketView.getTournament().getTitle()},
                         locale));
-        mav.addObject("bracketPage", buildBracketPage(bracketView, locale));
+        mav.addObject("bracketPage", buildBracketPage(user, bracketView, locale));
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
                 "matchDatesSetupPath",
-                canDefineMatchDates(bracketView.getTournament(), currentUser)
+                canDefineMatchDates(bracketView.getTournament(), user)
                         ? "/host/tournaments/" + tournamentId + "/bracket/setup"
                         : null);
         mav.addObject(
@@ -227,19 +225,18 @@ public class TournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/matches/{matchId:\\d+}/winner")
     public ModelAndView declareWinner(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             @PathVariable("matchId") final Long matchId,
             @RequestParam("winnerTeamId") final Long winnerTeamId,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
         try {
             tournamentBracketService.declareWinner(
                     tournamentId,
                     matchId,
                     new TournamentWinnerDeclarationRequest(winnerTeamId),
-                    actingUser);
+                    user);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.result.saved");
         } catch (final TournamentBracketTournamentNotFoundException
@@ -268,13 +265,12 @@ public class TournamentController {
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry/leave")
     public ModelAndView leaveSolo(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        final User currentUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
         try {
-            tournamentRegistrationService.leaveSolo(tournamentId, currentUser);
+            tournamentRegistrationService.leaveSolo(tournamentId, user);
         } catch (final TournamentRegistrationInvalidUserException exception) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         } catch (final TournamentRegistrationTournamentNotFoundException exception) {
@@ -617,14 +613,13 @@ public class TournamentController {
     }
 
     private TournamentBracketViewModel buildBracketPage(
-            final TournamentBracketView bracketView, final Locale locale) {
+            final User currentUser, final TournamentBracketView bracketView, final Locale locale) {
         final Tournament tournament = bracketView.getTournament();
         final Long viewerTeamId =
                 bracketView.getViewerTeam() == null ? null : bracketView.getViewerTeam().getId();
         final boolean canManageResults =
                 TournamentStatus.IN_PROGRESS == tournament.getStatus()
-                        && (isHost(tournament, SecurityControllerUtils.currentUserOrNull())
-                                || isAdminMod());
+                        && (isHost(tournament, currentUser) || isAdminMod());
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 bracketView.getMatches().stream()
                         .sorted(

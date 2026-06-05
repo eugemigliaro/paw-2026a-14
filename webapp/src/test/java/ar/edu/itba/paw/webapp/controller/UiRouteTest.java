@@ -74,6 +74,7 @@ import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConve
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -1620,6 +1621,7 @@ class UiRouteTest {
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .setValidator(validator)
                         .setConversionService(formattingConversionServiceWithSportConverter())
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
 

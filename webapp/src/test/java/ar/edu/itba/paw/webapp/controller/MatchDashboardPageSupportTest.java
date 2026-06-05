@@ -104,6 +104,7 @@ class MatchDashboardPageSupportTest {
 
         final ModelAndView mav =
                 MatchDashboardPageSupport.buildListPage(
+                        null,
                         "events/list",
                         "/events",
                         "page.title.events",
@@ -162,6 +163,7 @@ class MatchDashboardPageSupportTest {
 
         final ModelAndView mav =
                 MatchDashboardPageSupport.buildListPage(
+                        null,
                         "events/list",
                         "/events",
                         "page.title.events",

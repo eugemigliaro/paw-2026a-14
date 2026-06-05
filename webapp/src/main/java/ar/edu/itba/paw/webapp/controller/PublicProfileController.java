@@ -18,8 +18,9 @@ import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotEligibleE
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewSelfReviewException;
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewUserNotFoundException;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
@@ -76,6 +77,7 @@ public class PublicProfileController {
 
     @GetMapping("/users/{username}")
     public ModelAndView showPublicProfile(
+            @CurrentUser final User user,
             @PathVariable("username") final String username,
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
             @RequestParam(value = "reviewFilter", required = false, defaultValue = "both")
@@ -84,7 +86,7 @@ public class PublicProfileController {
             final Model model,
             final Locale locale) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
-        final User user = findUserByUsernameOrThrow(username);
+        final User targetUser = findUserByUsernameOrThrow(username);
 
         final ModelAndView mav = new ModelAndView("users/profile");
         mav.addObject("reviewStatus", model.asMap().get("reviewStatus"));
@@ -93,25 +95,25 @@ public class PublicProfileController {
                 "pageTitle",
                 messageSource.getMessage(
                         "page.title.publicProfile",
-                        new Object[] {user.getUsername()},
-                        "Match Point | " + user.getUsername(),
+                        new Object[] {targetUser.getUsername()},
+                        "Match Point | " + targetUser.getUsername(),
                         resolvedLocale));
         mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(
-                        user.getUsername(),
-                        user.getName(),
-                        user.getLastName(),
-                        user.getEmail(),
-                        user.getPhone(),
-                        ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, reviewForm, reviewFilter, reviewPage, resolvedLocale);
+                        targetUser.getUsername(),
+                        targetUser.getName(),
+                        targetUser.getLastName(),
+                        targetUser.getEmail(),
+                        targetUser.getPhone(),
+                        ImageUrlHelper.profileUrlFor(targetUser)));
+        addReviewModel(mav, targetUser, user, reviewForm, reviewFilter, reviewPage, resolvedLocale);
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(
                         "profile.public.avatarAlt",
-                        new Object[] {user.getUsername()},
-                        user.getUsername() + " profile picture",
+                        new Object[] {targetUser.getUsername()},
+                        targetUser.getUsername() + " profile picture",
                         resolvedLocale));
         mav.addObject(
                 "profileUsernameLabel",
@@ -126,12 +128,9 @@ public class PublicProfileController {
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
-        final User currentUser =
-                SecurityControllerUtils.currentUserOrNull(); // TODO: add controller advice
-        final boolean reportUserCanSubmit =
-                currentUser != null && !currentUser.getId().equals(user.getId());
+        final boolean reportUserCanSubmit = user != null && !user.equals(targetUser);
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
-        final Optional<UserBan> activeBan = moderationService.findActiveBan(user);
+        final Optional<UserBan> activeBan = moderationService.findActiveBan(targetUser);
         mav.addObject("profileBanned", activeBan.isPresent());
         mav.addObject(
                 "profileBannedLabel",
@@ -149,30 +148,28 @@ public class PublicProfileController {
                                                             platformTimeZoneService
                                                                     .defaultZone())));
                 });
-        if (currentUser != null && currentUser.equals(user)) {
+        if (user != null && user.equals(targetUser)) {
             mav.addObject("profileEditHref", "/account");
             mav.addObject(
                     "profileEditLabel",
                     messageSource.getMessage(
                             "profile.public.edit", null, "Edit profile", resolvedLocale));
         }
-        addRatingsModel(mav, user, resolvedLocale);
+        addRatingsModel(mav, targetUser, resolvedLocale);
         return mav;
     }
 
     @PostMapping("/users/{username}/reviews")
     public ModelAndView submitReview(
+            @AuthenticatedUser final User user,
             @PathVariable("username") final String username,
             @RequestParam(value = "reaction", required = true) final PlayerReviewReaction reaction,
             @RequestParam(value = "comment", required = false) final String comment,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final User currentUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
-
         String errorCode = null;
         try {
-            playerReviewService.submitReview(currentUser, reviewedUser, reaction, comment);
+            playerReviewService.submitReview(user, reviewedUser, reaction, comment);
             return redirectToProfile(username, null, "saved", redirectAttributes);
         } catch (
                 final PlayerReviewUserNotFoundException
@@ -191,15 +188,14 @@ public class PublicProfileController {
 
     @PostMapping("/users/{username}/reviews/delete")
     public ModelAndView deleteReview(
+            @AuthenticatedUser final User user,
             @PathVariable("username") final String username,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
-        final User currentUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         String errorCode = null;
         try {
-            playerReviewService.deleteReview(currentUser, reviewedUser);
+            playerReviewService.deleteReview(user, reviewedUser);
             return redirectToProfile(username, null, "deleted", redirectAttributes);
         } catch (
                 final PlayerReviewNotFoundException
@@ -238,29 +234,29 @@ public class PublicProfileController {
 
     private void addReviewModel(
             final ModelAndView mav,
-            final User user,
+            final User targetUser,
+            final User currentUser,
             final String reviewForm,
             final PlayerReviewFilter reviewFilter,
             final int reviewPage,
             final Locale locale) {
-        final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user);
+        final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(targetUser);
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
-                        user, reviewFilter, reviewPage, REVIEW_PAGE_SIZE);
+                        targetUser, reviewFilter, reviewPage, REVIEW_PAGE_SIZE);
         final List<PlayerReviewViewModel> reviews =
                 reviewResult.getItems().stream()
                         .map(review -> toReviewViewModel(review, locale))
                         .toList();
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
         final Optional<PlayerReview> viewerReview =
                 currentUser == null
                         ? Optional.empty()
-                        : playerReviewService.findReviewByPair(currentUser, user);
+                        : playerReviewService.findReviewByPair(currentUser, targetUser);
         final boolean reviewCanSubmit =
                 currentUser != null
-                        && !currentUser.equals(user)
-                        && playerReviewService.canReview(currentUser, user);
-        final String profilePath = "/users/" + user.getUsername();
+                        && !currentUser.equals(targetUser)
+                        && playerReviewService.canReview(currentUser, targetUser);
+        final String profilePath = "/users/" + targetUser.getUsername();
 
         mav.addObject("reviewSummary", summary);
         mav.addObject(
@@ -278,21 +274,23 @@ public class PublicProfileController {
                         "profile.reviews.dislikes",
                         locale));
         mav.addObject("profileReviews", reviews);
-        mav.addObject("reviewFilterOptions", reviewFilterOptions(user, reviewFilter, locale));
+        mav.addObject("reviewFilterOptions", reviewFilterOptions(targetUser, reviewFilter, locale));
         mav.addObject("selectedReviewFilter", reviewFilter.getQueryValue());
         mav.addObject("reviewTotalPages", reviewResult.getTotalPages());
         mav.addObject(
                 "reviewPaginationItems",
-                buildReviewPaginationItems(user, reviewFilter, reviewResult));
+                buildReviewPaginationItems(targetUser, reviewFilter, reviewResult));
         mav.addObject(
                 "reviewPreviousPageHref",
                 reviewResult.hasPrevious()
-                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() - 1, null)
+                        ? buildReviewPageUrl(
+                                targetUser, reviewFilter, reviewResult.getPage() - 1, null)
                         : null);
         mav.addObject(
                 "reviewNextPageHref",
                 reviewResult.hasNext()
-                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() + 1, null)
+                        ? buildReviewPageUrl(
+                                targetUser, reviewFilter, reviewResult.getPage() + 1, null)
                         : null);
         mav.addObject("reviewCanSubmit", reviewCanSubmit);
         mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
@@ -301,26 +299,26 @@ public class PublicProfileController {
         mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
         mav.addObject(
                 "reviewFormPath",
-                buildReviewPageUrl(user, reviewFilter, reviewResult.getPage(), "open"));
+                buildReviewPageUrl(targetUser, reviewFilter, reviewResult.getPage(), "open"));
         mav.addObject(
                 "reviewSectionPath",
-                buildReviewPageUrl(user, reviewFilter, reviewResult.getPage(), null));
+                buildReviewPageUrl(targetUser, reviewFilter, reviewResult.getPage(), null));
         if (reviewCanSubmit) {
             mav.addObject(
                     "reviewCommentPromptLabel",
                     messageSource.getMessage(
                             "profile.reviews.commentPrompt",
-                            new Object[] {user.getUsername()},
+                            new Object[] {targetUser.getUsername()},
                             locale));
         }
-        final boolean isSelf = currentUser != null && currentUser.equals(user);
+        final boolean isSelf = currentUser != null && currentUser.equals(targetUser);
         if (!reviewCanSubmit && !isSelf) {
             final String lockedKey =
                     currentUser == null
                             ? "profile.reviews.locked.anonymous"
                             : "profile.reviews.locked.authenticated";
             final Object[] lockedArgs =
-                    currentUser == null ? null : new Object[] {user.getUsername()};
+                    currentUser == null ? null : new Object[] {targetUser.getUsername()};
             mav.addObject(
                     "reviewLockedMessage", messageSource.getMessage(lockedKey, lockedArgs, locale));
         }

@@ -19,6 +19,7 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
@@ -62,6 +63,7 @@ class ModerationAdminControllerTest {
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .setConversionService(conversionService())
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
 

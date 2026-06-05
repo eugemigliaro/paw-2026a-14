@@ -59,8 +59,8 @@ import ar.edu.itba.paw.webapp.form.BracketManualPairingsForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishScheduleForm;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -154,12 +154,11 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments")
     public ModelAndView createTournament(
+            @AuthenticatedUser final User user,
             @Valid @ModelAttribute("createTournamentForm")
                     final CreateTournamentForm createTournamentForm,
             final BindingResult bindingResult,
             final Locale locale) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         if (bindingResult.hasErrors()) {
             return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
@@ -192,8 +191,7 @@ public class HostTournamentController {
                                 createTournamentForm.getTz()));
 
         try {
-            final Tournament createdTournament =
-                    tournamentService.createTournament(actingUser, request);
+            final Tournament createdTournament = tournamentService.createTournament(user, request);
             return new ModelAndView("redirect:/tournaments/" + createdTournament.getId());
         } catch (final TournamentLifecycleException exception) {
             applyServiceError(exception, bindingResult, locale);
@@ -206,12 +204,12 @@ public class HostTournamentController {
 
     @GetMapping("/host/tournaments/{tournamentId:\\d+}/edit")
     public ModelAndView showEditTournament(
-            @PathVariable("tournamentId") final Long tournamentId, final Locale locale) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
+            @AuthenticatedUser final User user,
+            @PathVariable("tournamentId") final Long tournamentId,
+            final Locale locale) {
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, actingUser)
+                        .findTournamentForHost(tournamentId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!isEditable(tournament)) { // TODO: is not found the correct response here?
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -221,17 +219,16 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/edit")
     public ModelAndView updateTournament(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             @Valid @ModelAttribute("createTournamentForm")
                     final CreateTournamentForm createTournamentForm,
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, actingUser)
+                        .findTournamentForHost(tournamentId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final TournamentFormConfig formConfig = editFormConfig(tournament, locale);
 
@@ -265,7 +262,7 @@ public class HostTournamentController {
         try {
             tournamentService.update(
                     tournamentId,
-                    actingUser,
+                    user,
                     request); // TODO: check if it's editable before calling service
         } catch (final TournamentLifecycleForbiddenException exception) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -281,14 +278,13 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/close-registration")
     public ModelAndView closeRegistration(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         try {
             final Tournament tournament =
-                    tournamentRegistrationService.closeRegistration(tournamentId, actingUser);
+                    tournamentRegistrationService.closeRegistration(tournamentId, user);
             if (TournamentStatus.BRACKET_SETUP == tournament.getStatus()) {
                 redirectAttributes.addFlashAttribute(
                         "tournamentNoticeCode", "tournament.host.close.success.bracketSetup");
@@ -313,14 +309,12 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/strategy")
     public ModelAndView updateBracketStrategy(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             @RequestParam("pairingStrategy") final TournamentPairingStrategy pairingStrategy,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         try {
-            tournamentBracketService.updatePairingStrategy(
-                    tournamentId, actingUser, pairingStrategy);
+            tournamentBracketService.updatePairingStrategy(tournamentId, user, pairingStrategy);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.strategy.updated");
         } catch (final TournamentBracketException exception) {
@@ -331,16 +325,12 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/cancel")
     public ModelAndView cancelTournament(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
-
         try {
             tournamentService.cancel(
-                    tournamentId,
-                    actingUser,
-                    "Host cancelled tournament"); // TODO: reason not localized
+                    tournamentId, user, "Host cancelled tournament"); // TODO: reason not localized
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.host.cancel.success");
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
@@ -355,13 +345,11 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/generate")
     public ModelAndView generateBracket(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
-
         try {
-            tournamentBracketService.generateBracket(tournamentId, actingUser);
+            tournamentBracketService.generateBracket(tournamentId, user);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.generate.success");
             return new ModelAndView(
@@ -375,14 +363,13 @@ public class HostTournamentController {
 
     @GetMapping("/host/tournaments/{tournamentId:\\d+}/bracket/setup")
     public ModelAndView showBracketSetup(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final Model model,
             final Locale locale) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, actingUser)
+                        .findTournamentForHost(tournamentId, user)
                         .orElseGet(
                                 () -> {
                                     if (tournamentService
@@ -397,9 +384,9 @@ public class HostTournamentController {
         try {
             bracketPage =
                     buildBracketPage(
-                            tournamentBracketService.getBracket(tournamentId, actingUser), locale);
+                            tournamentBracketService.getBracket(tournamentId, user), locale);
         } catch (final TournamentBracketNotGeneratedException exception) {
-            bracketPage = buildUngeneratedBracketPage(tournament, actingUser, locale);
+            bracketPage = buildUngeneratedBracketPage(tournament, user, locale);
         } catch (final TournamentBracketException exception) {
             handleBracketException(exception, null);
             throw exception;
@@ -408,7 +395,7 @@ public class HostTournamentController {
         final List<TournamentTeam> manualPairingTeams =
                 bracketPage.isGenerated()
                         ? List.of()
-                        : tournamentBracketService.listTeamsForSetup(tournamentId, actingUser);
+                        : tournamentBracketService.listTeamsForSetup(tournamentId, user);
         final BracketPublishForm publishForm =
                 bracketPage.isGenerated() ? createBracketPublishForm(bracketPage) : null;
         final BracketManualPairingsForm manualPairingsForm =
@@ -428,26 +415,24 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/manual-pairings")
     public ModelAndView saveManualPairings(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             @Valid @ModelAttribute("manualPairingsForm")
                     final BracketManualPairingsForm manualPairingsForm,
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
-
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, actingUser)
+                        .findTournamentForHost(tournamentId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         try {
             if (bindingResult.hasErrors()) {
                 final TournamentBracketViewModel bracketPage =
-                        buildUngeneratedBracketPage(tournament, actingUser, locale);
+                        buildUngeneratedBracketPage(tournament, user, locale);
                 final List<TournamentTeam> manualPairingTeams =
-                        tournamentBracketService.listTeamsForSetup(tournamentId, actingUser);
+                        tournamentBracketService.listTeamsForSetup(tournamentId, user);
                 return bracketSetupView(
                         tournamentId,
                         tournament,
@@ -461,7 +446,7 @@ public class HostTournamentController {
             }
 
             tournamentBracketService.saveManualPairings(
-                    tournamentId, actingUser, manualPairingsForm.getTeamIds());
+                    tournamentId, user, manualPairingsForm.getTeamIds());
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.manualPairings.saved");
         } catch (final TournamentBracketException exception) {
@@ -475,22 +460,21 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/publish")
     public ModelAndView publishBracket(
+            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             @Valid @ModelAttribute("bracketPublishForm")
                     final BracketPublishForm bracketPublishForm,
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, actingUser)
+                        .findTournamentForHost(tournamentId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         try {
             final TournamentBracketView bracketView =
-                    tournamentBracketService.getBracket(tournamentId, actingUser);
+                    tournamentBracketService.getBracket(tournamentId, user);
             if (bindingResult.hasErrors()) {
                 final TournamentBracketViewModel bracketPage =
                         buildBracketPage(bracketView, locale);
@@ -508,7 +492,7 @@ public class HostTournamentController {
 
             final List<TournamentMatchScheduleRequest> schedules =
                     toMatchScheduleRequests(bracketPublishForm);
-            tournamentBracketService.publishBracket(tournamentId, actingUser, schedules);
+            tournamentBracketService.publishBracket(tournamentId, user, schedules);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.publish.success");
             return new ModelAndView("redirect:/tournaments/" + tournamentId);

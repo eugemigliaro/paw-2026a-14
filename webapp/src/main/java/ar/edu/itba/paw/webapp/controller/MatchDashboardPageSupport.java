@@ -16,7 +16,6 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
@@ -43,6 +42,7 @@ final class MatchDashboardPageSupport {
     private MatchDashboardPageSupport() {}
 
     static ModelAndView buildListPage(
+            final User currentUser,
             final String view,
             final String path,
             final String pageTitleCode,
@@ -76,7 +76,6 @@ final class MatchDashboardPageSupport {
         final List<String> selectedVisibilityStr = toDbValues(searchForm.getVisibility());
         final List<String> selectedCategories = searchForm.getCategory();
         final DateRangeBounds dateBounds = dateRangeBounds(path, timezone);
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         mav.addObject("pageTitleCode", pageTitleCode);
         mav.addObject("listTitle", title);

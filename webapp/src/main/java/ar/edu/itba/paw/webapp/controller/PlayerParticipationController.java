@@ -20,7 +20,7 @@ import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipation
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesStartedException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationStartedException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationUnauthenticatedException;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -43,10 +43,9 @@ public class PlayerParticipationController {
 
     @PostMapping("/matches/{matchId}/join-requests")
     public ModelAndView requestToJoin(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
@@ -81,10 +80,9 @@ public class PlayerParticipationController {
         "/matches/{matchId}/series-join-requests"
     })
     public ModelAndView requestToJoinSeries(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
@@ -116,10 +114,9 @@ public class PlayerParticipationController {
 
     @PostMapping("/matches/{matchId}/join-requests/cancel")
     public ModelAndView cancelJoinRequest(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
@@ -134,10 +131,9 @@ public class PlayerParticipationController {
 
     @PostMapping("/matches/{matchId}/invites/accept")
     public ModelAndView acceptInvite(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         String errorCode = null;
 
         try {
@@ -164,9 +160,8 @@ public class PlayerParticipationController {
     }
 
     @PostMapping("/matches/{matchId}/invites/decline")
-    public ModelAndView declineInvite(@PathVariable("matchId") final Long matchId) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
+    public ModelAndView declineInvite(
+            @AuthenticatedUser final User user, @PathVariable("matchId") final Long matchId) {
         String errorCode = null;
 
         try {

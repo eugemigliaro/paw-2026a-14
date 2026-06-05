@@ -15,8 +15,8 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
@@ -99,6 +99,7 @@ public class FeedController {
 
     @GetMapping("/")
     public ModelAndView showFeed(
+            @CurrentUser final User user,
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult,
             @RequestParam(value = "email", required = false)
@@ -201,6 +202,7 @@ public class FeedController {
             mav.addObject(
                     "feedPage",
                     buildTournamentFeedPageViewModel(
+                            user,
                             searchForm.getQ(),
                             searchForm.getType(),
                             selectedSort,
@@ -243,6 +245,7 @@ public class FeedController {
             mav.addObject(
                     "feedPage",
                     buildMatchFeedPageViewModel(
+                            user,
                             searchForm.getQ(),
                             searchForm.getType(),
                             selectedSort,
@@ -292,6 +295,7 @@ public class FeedController {
     }
 
     private FeedPageViewModel buildMatchFeedPageViewModel(
+            final User currentUser,
             final String query,
             final EventType selectedType,
             final EventSort selectedSort,
@@ -306,8 +310,6 @@ public class FeedController {
             final Locale locale,
             final String email,
             final ExploreLocation exploreLocation) {
-
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
                 "",
@@ -389,6 +391,7 @@ public class FeedController {
     }
 
     private FeedPageViewModel buildTournamentFeedPageViewModel(
+            final User currentUser,
             final String query,
             final EventType selectedType,
             final EventSort selectedSort,
@@ -403,8 +406,6 @@ public class FeedController {
             final Locale locale,
             final String email,
             final ExploreLocation exploreLocation) {
-
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
                 "",

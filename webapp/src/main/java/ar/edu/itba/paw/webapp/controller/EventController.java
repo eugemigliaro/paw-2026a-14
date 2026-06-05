@@ -21,7 +21,8 @@ import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeri
 import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesNotJoinedException;
 import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesStartedException;
 import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationStartedException;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import java.time.Clock;
 import java.util.Locale;
 import java.util.Optional;
@@ -77,6 +78,7 @@ public class EventController {
 
     @GetMapping("/matches/{eventId:\\d+}")
     public ModelAndView showEventDetails(
+            @CurrentUser final User user,
             @PathVariable("eventId") final Long eventId,
             @RequestParam(value = "reservation", required = false) final String reservationStatus,
             @RequestParam(value = "reservationError", required = false)
@@ -92,6 +94,7 @@ public class EventController {
             final Model model,
             final Locale locale) {
         return eventPageSupport.showEventDetails(
+                user,
                 eventId,
                 flashString(model, "reservationStatus").orElse(reservationStatus),
                 reservationError,
@@ -112,38 +115,39 @@ public class EventController {
 
     @PostMapping("/matches/{matchId:\\d+}/reservations")
     public ModelAndView requestReservation(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            matchReservationService.reserveSpot(matchId, currentUser);
+            matchReservationService.reserveSpot(matchId, user);
             redirectAttributes.addFlashAttribute("reservationStatus", "confirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
-            return reservationErrorDetails(matchId, reservationErrorCode(exception), locale);
+            return reservationErrorDetails(user, matchId, reservationErrorCode(exception), locale);
         }
     }
 
     @PostMapping("/matches/{matchId:\\d+}/reservations/cancel")
     public ModelAndView cancelReservation(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
         final Match cancellationContext = matchService.findMatchById(matchId).orElse(null);
 
         try {
-            matchParticipationService.removeParticipant(matchId, currentUser, currentUser);
+            matchParticipationService.removeParticipant(
+                    matchId, user, user); // TODO: sending user twice ?
             if (eventPageSupport.shouldRedirectToPlayerMatchesAfterCancellation(
-                    cancellationContext, currentUser)) {
+                    cancellationContext, user)) {
                 return new ModelAndView("redirect:/events");
             }
             redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchParticipationException exception) {
-            return reservationErrorDetails(matchId, cancellationErrorCode(exception), locale);
+            return reservationErrorDetails(user, matchId, cancellationErrorCode(exception), locale);
         }
     }
 
@@ -152,17 +156,18 @@ public class EventController {
         "/matches/{matchId:\\d+}/series-reservations"
     })
     public ModelAndView requestSeriesReservation(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            matchReservationService.reserveSeries(matchId, currentUser);
+            matchReservationService.reserveSeries(matchId, user);
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringConfirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
-            return seriesReservationErrorDetails(matchId, reservationErrorCode(exception), locale);
+            return seriesReservationErrorDetails(
+                    user, matchId, reservationErrorCode(exception), locale);
         }
     }
 
@@ -171,17 +176,18 @@ public class EventController {
         "/matches/{matchId:\\d+}/series-reservations/cancel"
     })
     public ModelAndView cancelSeriesReservations(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         try {
-            matchReservationService.cancelSeriesReservations(matchId, currentUser);
+            matchReservationService.cancelSeriesReservations(matchId, user);
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringCancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchReservationException exception) {
-            return seriesReservationErrorDetails(matchId, reservationErrorCode(exception), locale);
+            return seriesReservationErrorDetails(
+                    user, matchId, reservationErrorCode(exception), locale);
         }
     }
 
@@ -220,16 +226,52 @@ public class EventController {
     }
 
     private ModelAndView reservationErrorDetails(
-            final Long matchId, final String errorCode, final Locale locale) {
+            final User currentUser,
+            final Long matchId,
+            final String errorCode,
+            final Locale locale) {
         return eventPageSupport.showEventDetails(
-                matchId, null, errorCode, null, null, null, null, "", null, null, null, null, false,
-                false, 1, locale);
+                currentUser,
+                matchId,
+                null,
+                errorCode,
+                null,
+                null,
+                null,
+                null,
+                "",
+                null,
+                null,
+                null,
+                null,
+                false,
+                false,
+                1,
+                locale);
     }
 
     private ModelAndView seriesReservationErrorDetails(
-            final Long matchId, final String errorCode, final Locale locale) {
+            final User currentUser,
+            final Long matchId,
+            final String errorCode,
+            final Locale locale) {
         return eventPageSupport.showEventDetails(
-                matchId, null, null, errorCode, null, null, null, "", null, null, null, null, false,
-                false, 1, locale);
+                currentUser,
+                matchId,
+                null,
+                null,
+                errorCode,
+                null,
+                null,
+                null,
+                "",
+                null,
+                null,
+                null,
+                null,
+                false,
+                false,
+                1,
+                locale);
     }
 }

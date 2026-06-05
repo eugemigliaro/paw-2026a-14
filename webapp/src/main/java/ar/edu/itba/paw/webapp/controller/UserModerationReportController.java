@@ -13,8 +13,9 @@ import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,14 +59,13 @@ public class UserModerationReportController {
 
     @GetMapping
     public ModelAndView showMyReports(
+            @CurrentUser final User user,
             @RequestParam(value = "type", required = false, defaultValue = "")
                     final List<ReportTargetType> typeFilters,
             @RequestParam(value = "status", required = false, defaultValue = "")
                     final List<ReportStatus> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
-        final User user =
-                SecurityControllerUtils.currentUserOrNull(); // TODO: add controller advice
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
                         user, typeFilters, statusFilters, page, PAGE_SIZE);
@@ -120,9 +120,10 @@ public class UserModerationReportController {
 
     @GetMapping("/{reportId:\\d+}")
     public ModelAndView showMyReportDetail(
-            @PathVariable("reportId") final Long reportId, final Model model, final Locale locale) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
+            @AuthenticatedUser final User user,
+            @PathVariable("reportId") final Long reportId,
+            final Model model,
+            final Locale locale) {
         final ModerationReport report =
                 moderationService
                         .findReportById(reportId)

@@ -10,6 +10,7 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.math.BigDecimal;
 import java.util.Locale;
 import org.junit.jupiter.api.AfterEach;
@@ -63,7 +64,8 @@ class MatchDashboardControllerTest {
         bindingResult.rejectValue("q", "Pattern");
 
         try {
-            controller.showEventsPage(searchForm, bindingResult, Locale.ENGLISH);
+            controller.showEventsPage(
+                    UserUtils.getUser(1L), searchForm, bindingResult, Locale.ENGLISH);
             fail("Expected a bad request response");
         } catch (final ResponseStatusException exception) {
             assertEquals(400, exception.getStatus().value());

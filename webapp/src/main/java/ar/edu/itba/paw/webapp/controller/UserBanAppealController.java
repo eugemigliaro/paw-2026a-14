@@ -7,7 +7,7 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -38,9 +38,8 @@ public class UserBanAppealController {
     }
 
     @GetMapping
-    public ModelAndView showBanPage(final Model model, final Locale locale) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
+    public ModelAndView showBanPage(
+            @AuthenticatedUser final User user, final Model model, final Locale locale) {
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
@@ -79,11 +78,10 @@ public class UserBanAppealController {
 
     @PostMapping("/appeal")
     public ModelAndView appealBan(
+            @AuthenticatedUser final User user,
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)

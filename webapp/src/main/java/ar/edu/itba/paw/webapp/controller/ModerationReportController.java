@@ -22,7 +22,7 @@ import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportLimitExcep
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationSelfReportException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationValueTooLongException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportReviewViewModel;
@@ -229,6 +229,7 @@ public class ModerationReportController {
 
     @PostMapping("/reports/users/{username}")
     public ModelAndView reportUser(
+            @AuthenticatedUser final User user,
             @PathVariable("username") final String username,
             @Valid @ModelAttribute("reportForm") final ReportForm form,
             final BindingResult errors,
@@ -238,13 +239,11 @@ public class ModerationReportController {
                 userService
                         .findByUsername(username)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         if (errors.hasErrors()) {
             LOGGER.warn(
                     "Report submission failed validation for user={} targetUser={} reason={} errors={}",
-                    currentUser.getId(),
+                    user.getId(),
                     username,
                     form.getReason(),
                     errors.getAllErrors());
@@ -254,11 +253,11 @@ public class ModerationReportController {
         try {
             LOGGER.info(
                     "User {} is reporting user {} for reason: {}",
-                    currentUser.getId(),
+                    user.getId(),
                     reportedUser.getId(),
                     form.getReason());
             moderationService.reportContent(
-                    currentUser,
+                    user,
                     ReportTargetType.USER,
                     reportedUser.getId(),
                     form.getReason(),
@@ -279,6 +278,7 @@ public class ModerationReportController {
 
     @PostMapping("/reports/reviews/{reviewId}")
     public ModelAndView reportReview(
+            @AuthenticatedUser final User user,
             @PathVariable("reviewId") final Long reviewId,
             @Valid @ModelAttribute("reportForm") final ReportForm form,
             final BindingResult errors,
@@ -288,13 +288,11 @@ public class ModerationReportController {
                 playerReviewService
                         .findReviewById(reviewId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         if (errors.hasErrors()) {
             LOGGER.warn(
                     "Report submission failed validation for user={} targetReview={} reason={} errors={}",
-                    currentUser.getId(),
+                    user.getId(),
                     reviewId,
                     form.getReason(),
                     errors.getAllErrors());
@@ -304,11 +302,11 @@ public class ModerationReportController {
         try {
             LOGGER.info(
                     "User {} is reporting review {} for reason: {}",
-                    currentUser.getId(),
+                    user.getId(),
                     review.getId(),
                     form.getReason());
             moderationService.reportContent(
-                    currentUser,
+                    user,
                     ReportTargetType.REVIEW,
                     review.getId(),
                     form.getReason(),
@@ -329,6 +327,7 @@ public class ModerationReportController {
 
     @PostMapping("/reports/matches/{matchId}")
     public ModelAndView reportMatch(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("reportForm") final ReportForm form,
             final BindingResult errors,
@@ -338,13 +337,11 @@ public class ModerationReportController {
                 matchService
                         .findMatchById(matchId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User currentUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
 
         if (errors.hasErrors()) {
             LOGGER.warn(
                     "Report submission failed validation for user={} targetMatch={} reason={} errors={}",
-                    currentUser.getId(),
+                    user.getId(),
                     matchId,
                     form.getReason(),
                     errors.getAllErrors());
@@ -354,11 +351,11 @@ public class ModerationReportController {
         try {
             LOGGER.info(
                     "User {} is reporting match {} for reason: {}",
-                    currentUser.getId(),
+                    user.getId(),
                     match.getId(),
                     form.getReason());
             moderationService.reportContent(
-                    currentUser,
+                    user,
                     ReportTargetType.MATCH,
                     match.getId(),
                     form.getReason(),

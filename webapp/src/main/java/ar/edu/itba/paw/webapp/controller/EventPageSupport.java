@@ -19,7 +19,6 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventOccurrenceViewModel;
@@ -78,6 +77,7 @@ final class EventPageSupport {
     }
 
     ModelAndView showEventDetails(
+            final User currentUser,
             final Long eventId,
             final String reservationStatus,
             final String reservationErrorCode,
@@ -95,6 +95,7 @@ final class EventPageSupport {
             final int seriesPage,
             final Locale locale) {
         return showRealEventDetails(
+                currentUser,
                 eventId,
                 reservationStatus,
                 hostAction,
@@ -125,6 +126,7 @@ final class EventPageSupport {
     }
 
     private ModelAndView showRealEventDetails(
+            final User currentUser,
             final Long eventId,
             final String reservationStatus,
             final String hostAction,
@@ -145,11 +147,6 @@ final class EventPageSupport {
                 matchService
                         .findMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        final User currentUser =
-                SecurityControllerUtils
-                        .currentUserOrNull(); // TODO: pass as parameter instead of looking up
-        // again. Should be a controller advice
 
         if (!isMatchVisibleToUser(match, currentUser)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);

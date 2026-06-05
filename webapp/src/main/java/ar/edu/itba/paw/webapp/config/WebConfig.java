@@ -18,6 +18,8 @@ import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverte
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToZoneIdConverter;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import javax.persistence.EntityManagerFactory;
@@ -45,6 +47,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
@@ -208,6 +211,11 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventJoinPolicyConverter());
         registry.addConverter(new StringToRecurrenceFrequencyConverter());
         registry.addConverter(new StringToRecurrenceEndModeConverter());
+    }
+
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(new CurrentUserArgumentResolver());
     }
 
     @Override

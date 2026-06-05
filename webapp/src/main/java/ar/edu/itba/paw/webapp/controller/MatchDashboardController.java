@@ -9,7 +9,7 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -51,15 +51,13 @@ public class MatchDashboardController {
 
     @GetMapping("/events")
     public ModelAndView showEventsPage(
+            @AuthenticatedUser final User user,
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult,
             final Locale locale) {
         if (bindingResult.hasErrors()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-
-        final User user =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: add controller advice
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final SearchForm viewSearchForm = selection.searchForm();
@@ -117,6 +115,7 @@ public class MatchDashboardController {
                         : null;
 
         return MatchDashboardPageSupport.buildListPage(
+                user,
                 "events/list",
                 "/events",
                 "page.title.events",

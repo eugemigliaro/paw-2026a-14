@@ -24,7 +24,7 @@ import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotFoundExcept
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotRecurringException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdatePendingRequestsExceedAvailableException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -98,11 +98,11 @@ public class HostController {
 
     @PostMapping("/host/matches/new")
     public ModelAndView publishEvent(
+            @AuthenticatedUser final User user,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
             final Locale locale) {
 
-        final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
         final HostFormConfig formConfig = createFormConfig(locale);
 
         if (bindingResult.hasErrors()) {
@@ -122,7 +122,7 @@ public class HostController {
 
         final CreateMatchRequest request =
                 new CreateMatchRequest(
-                        actingUser,
+                        user,
                         createEventForm.getAddress(),
                         createEventForm.getLatitude(),
                         createEventForm.getLongitude(),
@@ -154,23 +154,22 @@ public class HostController {
 
     @GetMapping("/host/matches/{matchId:\\d+}/edit")
     public ModelAndView showEditEvent(
-            @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
-        final Match match = findEditableMatchOrThrowNotFound(matchId, actingUser);
+            @AuthenticatedUser final User user,
+            @PathVariable("matchId") final Long matchId,
+            final Locale locale) {
+        final Match match = findEditableMatchOrThrowNotFound(matchId, user);
         return hostFormView(toForm(match), null, locale, editFormConfig(match, locale));
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/edit")
     public ModelAndView updateEvent(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
-        final Match existingMatch = findEditableMatchOrThrowNotFound(matchId, actingUser);
+        final Match existingMatch = findEditableMatchOrThrowNotFound(matchId, user);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
 
         if (bindingResult.hasErrors()) {
@@ -208,7 +207,7 @@ public class HostController {
                         createEventForm.getLongitude());
 
         try {
-            matchService.updateMatch(matchId, actingUser, request);
+            matchService.updateMatch(matchId, user, request);
         } catch (final MatchUpdateNotFoundException
                 | MatchUpdateForbiddenException
                         exception) { // TODO: shouldn't forbidden throw 403? These checks should be
@@ -240,23 +239,22 @@ public class HostController {
 
     @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
     public ModelAndView showEditSeries(
-            @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
-        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
+            @AuthenticatedUser final User user,
+            @PathVariable("matchId") final Long matchId,
+            final Locale locale) {
+        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, user);
         return hostFormView(toForm(match), null, locale, seriesEditFormConfig(match, locale));
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/series/edit")
     public ModelAndView updateSeries(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
-        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
+        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, user);
         final HostFormConfig formConfig = seriesEditFormConfig(match, locale);
 
         if (bindingResult.hasErrors()) {
@@ -266,7 +264,7 @@ public class HostController {
         final UpdateMatchRequest request = toUpdateRequest(createEventForm, match.getStatus());
 
         try {
-            matchService.updateSeriesFromOccurrence(matchId, actingUser, request);
+            matchService.updateSeriesFromOccurrence(matchId, user, request);
         } catch (final MatchUpdateNotFoundException
                 | MatchUpdateForbiddenException
                 | MatchUpdateNotRecurringException exception) { // TODO: same as updateEvent
@@ -295,12 +293,11 @@ public class HostController {
 
     @PostMapping("/host/matches/{matchId:\\d+}/cancel")
     public ModelAndView cancelEvent(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         try {
-            matchService.cancelMatch(matchId, actingUser);
+            matchService.cancelMatch(matchId, user);
         } catch (
                 final MatchCancellationException
                         exception) { // TODO: move to a global exception handler?
@@ -312,13 +309,12 @@ public class HostController {
 
     @PostMapping("/host/matches/{matchId:\\d+}/series/cancel")
     public ModelAndView cancelSeries(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
 
-        final User actingUser =
-                SecurityControllerUtils.requireAuthenticatedUser(); // TODO: controller advice
         try {
-            matchService.cancelSeriesFromOccurrence(matchId, actingUser);
+            matchService.cancelSeriesFromOccurrence(matchId, user);
         } catch (final MatchCancellationException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }

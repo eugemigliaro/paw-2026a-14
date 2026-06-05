@@ -29,6 +29,7 @@ import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketForbiddenException;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloPoolFullException;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
@@ -77,6 +78,7 @@ class TournamentControllerTest {
                                         tournamentBracketService,
                                         messageSource(),
                                         Clock.fixed(NOW, ZoneId.of("UTC"))))
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
 

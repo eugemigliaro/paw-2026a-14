@@ -12,6 +12,7 @@ import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
 import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
 import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.io.IOException;
@@ -45,10 +46,8 @@ public class AccountController {
     }
 
     @GetMapping("/account")
-    public ModelAndView showAccount(final Model model, final Locale locale) {
-        final User user =
-                SecurityControllerUtils
-                        .requireAuthenticatedUser(); // TODO: controller advice for auth
+    public ModelAndView showAccount(
+            @AuthenticatedUser final User user, final Model model, final Locale locale) {
         return accountView(
                 user,
                 locale,
@@ -59,24 +58,22 @@ public class AccountController {
 
     @PostMapping("/account/edit")
     public ModelAndView updateAccount(
+            @AuthenticatedUser final User user,
             @Valid @ModelAttribute("accountProfileForm")
                     final AccountProfileForm accountProfileForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentUser =
-                SecurityControllerUtils
-                        .requireAuthenticatedUser(); // TODO: controller advice for auth
         String imageError = null;
 
         if (bindingResult.hasErrors()) {
-            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+            return accountView(user, locale, false, accountProfileForm, imageError);
         }
 
         try {
             final User updatedUser =
                     userService.updateProfile(
-                            currentUser,
+                            user,
                             accountProfileForm.getUsername(),
                             accountProfileForm.getName(),
                             accountProfileForm.getLastName(),
@@ -90,19 +87,19 @@ public class AccountController {
                         exception) { // TODO: these checks should be in AccountProfileForm. Do not
             // call updateProfile with invalid data.
             bindingResult.rejectValue("username", "auth.registration.error.usernameTaken");
-            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+            return accountView(user, locale, false, accountProfileForm, imageError);
         } catch (final UsernameInvalidException exception) {
             bindingResult.rejectValue("username", "auth.registration.error.usernameInvalid");
-            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+            return accountView(user, locale, false, accountProfileForm, imageError);
         } catch (final NameInvalidException exception) {
             bindingResult.rejectValue("name", "auth.registration.error.nameInvalid");
-            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+            return accountView(user, locale, false, accountProfileForm, imageError);
         } catch (final LastNameInvalidException exception) {
             bindingResult.rejectValue("lastName", "auth.registration.error.lastNameInvalid");
-            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+            return accountView(user, locale, false, accountProfileForm, imageError);
         } catch (final PhoneInvalidException exception) {
             bindingResult.rejectValue("phone", "auth.registration.error.phoneInvalid");
-            return accountView(currentUser, locale, false, accountProfileForm, imageError);
+            return accountView(user, locale, false, accountProfileForm, imageError);
         } catch (final UnsupportedImageFormatException e) {
             imageError =
                     msg(
@@ -126,7 +123,7 @@ public class AccountController {
                             locale);
         }
 
-        return accountView(currentUser, locale, false, accountProfileForm, imageError);
+        return accountView(user, locale, false, accountProfileForm, imageError);
     }
 
     private ModelAndView accountView(

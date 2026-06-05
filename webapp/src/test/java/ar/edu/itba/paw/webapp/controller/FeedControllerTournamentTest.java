@@ -27,6 +27,7 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
@@ -129,6 +130,7 @@ class FeedControllerTournamentTest {
                                         0))
                         .setViewResolvers(viewResolver)
                         .setConversionService(conversionService())
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .build();
     }
