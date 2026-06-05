@@ -23,6 +23,8 @@ public interface MatchService {
 
     boolean canViewMatch(Match match, User viewer);
 
+    MatchManagementPermissions getMatchManagementPermissions(Match match, User viewer);
+
     Optional<Match> findPublicMatchById(Long matchId);
 
     Match findEditableMatchForHost(Long matchId, User actingUser);

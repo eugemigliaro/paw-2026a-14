@@ -765,6 +765,29 @@ public class MatchServiceImpl implements MatchService {
         return EventVisibility.PUBLIC == match.getVisibility();
     }
 
+    @Override
+    public MatchManagementPermissions getMatchManagementPermissions(
+            final Match match, final User viewer) {
+        if (match == null || viewer == null) {
+            return MatchManagementPermissions.none();
+        }
+
+        final boolean hostViewer = isMatchHost(match, viewer);
+        final boolean canManage = hostViewer;
+        final boolean lifecycleAllowsManagement = isMatchManagementLifecycleOpen(match);
+        final boolean canManageCurrentMatch = canManage && lifecycleAllowsManagement;
+        final boolean recurringOccurrence = match.isRecurringOccurrence();
+
+        return new MatchManagementPermissions(
+                hostViewer,
+                canManage,
+                canManageCurrentMatch,
+                canManageCurrentMatch,
+                canManageCurrentMatch,
+                canManageCurrentMatch && recurringOccurrence,
+                canManageCurrentMatch && recurringOccurrence);
+    }
+
     private boolean hasMatchRelationship(final Match match, final User viewer) {
         return isMatchHost(match, viewer)
                 || (viewer != null
@@ -776,6 +799,17 @@ public class MatchServiceImpl implements MatchService {
         return viewer != null
                 && match.getHost() != null
                 && Objects.equals(viewer.getId(), match.getHost().getId());
+    }
+
+    private boolean isMatchManagementLifecycleOpen(final Match match) {
+        return EventStatus.COMPLETED != match.getStatus()
+                && EventStatus.CANCELLED != match.getStatus()
+                && !hasMatchEnded(match);
+    }
+
+    private boolean hasMatchEnded(final Match match) {
+        final Instant endsAt = match.getEndsAt() == null ? match.getStartsAt() : match.getEndsAt();
+        return !endsAt.isAfter(Instant.now(clock));
     }
 
     @Override

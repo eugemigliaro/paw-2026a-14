@@ -2560,6 +2560,149 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testGetMatchManagementPermissionsAllowsFutureHostActions() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        58L,
+                        "Future Host Match",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+        final User host = UserUtils.getUser(1L);
+
+        // Exercise
+        final MatchManagementPermissions result =
+                matchService.getMatchManagementPermissions(match, host);
+
+        // Assert
+        Assertions.assertTrue(result.isHostViewer());
+        Assertions.assertTrue(result.canManage());
+        Assertions.assertTrue(result.canManageParticipants());
+        Assertions.assertTrue(result.canEdit());
+        Assertions.assertTrue(result.canCancel());
+        Assertions.assertFalse(result.canEditSeries());
+        Assertions.assertFalse(result.canCancelSeries());
+    }
+
+    @Test
+    public void testGetMatchManagementPermissionsRejectsUnrelatedUser() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        59L,
+                        "Unrelated Match",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+        final User unrelatedUser = UserUtils.getUser(2L);
+
+        // Exercise
+        final MatchManagementPermissions result =
+                matchService.getMatchManagementPermissions(match, unrelatedUser);
+
+        // Assert
+        Assertions.assertFalse(result.isHostViewer());
+        Assertions.assertFalse(result.canManage());
+        Assertions.assertFalse(result.canManageParticipants());
+        Assertions.assertFalse(result.canEdit());
+        Assertions.assertFalse(result.canCancel());
+        Assertions.assertFalse(result.canEditSeries());
+        Assertions.assertFalse(result.canCancelSeries());
+    }
+
+    @Test
+    public void testGetMatchManagementPermissionsRejectsCompletedMatchForHost() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        60L,
+                        "Completed Host Match",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.COMPLETED,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+        final User host = UserUtils.getUser(1L);
+
+        // Exercise
+        final MatchManagementPermissions result =
+                matchService.getMatchManagementPermissions(match, host);
+
+        // Assert
+        Assertions.assertTrue(result.isHostViewer());
+        Assertions.assertTrue(result.canManage());
+        Assertions.assertFalse(result.canManageParticipants());
+        Assertions.assertFalse(result.canEdit());
+        Assertions.assertFalse(result.canCancel());
+        Assertions.assertFalse(result.canEditSeries());
+        Assertions.assertFalse(result.canCancelSeries());
+    }
+
+    @Test
+    public void testGetMatchManagementPermissionsRejectsEndedMatchForHost() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        61L,
+                        "Ended Host Match",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.OPEN,
+                        FIXED_NOW.minusSeconds(7200),
+                        FIXED_NOW.minusSeconds(3600));
+        final User host = UserUtils.getUser(1L);
+
+        // Exercise
+        final MatchManagementPermissions result =
+                matchService.getMatchManagementPermissions(match, host);
+
+        // Assert
+        Assertions.assertTrue(result.isHostViewer());
+        Assertions.assertTrue(result.canManage());
+        Assertions.assertFalse(result.canManageParticipants());
+        Assertions.assertFalse(result.canEdit());
+        Assertions.assertFalse(result.canCancel());
+        Assertions.assertFalse(result.canEditSeries());
+        Assertions.assertFalse(result.canCancelSeries());
+    }
+
+    @Test
+    public void testGetMatchManagementPermissionsAllowsFutureRecurringHostSeriesActions() {
+        // Arrange
+        final Match match =
+                recurringMatch(
+                        62L,
+                        "Recurring Host Match",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        EventStatus.OPEN,
+                        1);
+        final User host = UserUtils.getUser(1L);
+
+        // Exercise
+        final MatchManagementPermissions result =
+                matchService.getMatchManagementPermissions(match, host);
+
+        // Assert
+        Assertions.assertTrue(result.isHostViewer());
+        Assertions.assertTrue(result.canManage());
+        Assertions.assertTrue(result.canManageParticipants());
+        Assertions.assertTrue(result.canEdit());
+        Assertions.assertTrue(result.canCancel());
+        Assertions.assertTrue(result.canEditSeries());
+        Assertions.assertTrue(result.canCancelSeries());
+    }
+
+    @Test
     public void testFindConfirmedParticipantsDelegates() {
         final List<User> expectedParticipants =
                 List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));
@@ -2655,6 +2798,19 @@ public class MatchServiceImplTest {
             final String visibility,
             final String joinPolicy,
             final EventStatus status) {
+        return createTestMatch(
+                id, title, sport, visibility, joinPolicy, status, Instant.now(), null);
+    }
+
+    private Match createTestMatch(
+            final Long id,
+            final String title,
+            final String sport,
+            final String visibility,
+            final String joinPolicy,
+            final EventStatus status,
+            final Instant startsAt,
+            final Instant endsAt) {
         final EventVisibility parsedVisibility =
                 PersistableEnum.fromDbValue(EventVisibility.class, visibility)
                         .orElse(EventVisibility.PUBLIC);
@@ -2670,8 +2826,8 @@ public class MatchServiceImplTest {
                 null,
                 title,
                 "Test Description",
-                Instant.now(),
-                null,
+                startsAt,
+                endsAt,
                 10,
                 BigDecimal.ZERO,
                 parsedVisibility,

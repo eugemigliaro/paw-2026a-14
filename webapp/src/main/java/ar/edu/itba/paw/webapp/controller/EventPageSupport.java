@@ -13,6 +13,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.services.MatchManagementPermissions;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -168,8 +169,9 @@ final class EventPageSupport {
         final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
-        final boolean hostCanManage = isHost(match, currentUser);
-        final boolean hostCanManageParticipants = hostCanManage && canHostManageParticipants(match);
+        final MatchManagementPermissions managementPermissions =
+                matchService.getMatchManagementPermissions(match, currentUser);
+        final boolean hostCanManageParticipants = managementPermissions.canManageParticipants();
         final List<User> pendingHostRequests =
                 isHostViewer && isApprovalRequired
                         ? matchParticipationService.findPendingRequests(eventId, currentUser)
@@ -294,16 +296,12 @@ final class EventPageSupport {
 
         mav.addObject("hostViewer", isHostViewer);
         mav.addObject("isPrivateEvent", isPrivateEvent);
-        mav.addObject("hostCanManage", hostCanManage);
+        mav.addObject("hostCanManage", managementPermissions.canManage());
         mav.addObject("hostCanManageParticipants", hostCanManageParticipants);
-        mav.addObject("hostCanEdit", hostCanManage && canHostEdit(match));
-        mav.addObject("hostCanCancel", hostCanManage && canHostCancel(match));
-        mav.addObject(
-                "hostCanEditSeries",
-                hostCanManage && match.isRecurringOccurrence() && canHostEdit(match));
-        mav.addObject(
-                "hostCanCancelSeries",
-                hostCanManage && match.isRecurringOccurrence() && canHostCancel(match));
+        mav.addObject("hostCanEdit", managementPermissions.canEdit());
+        mav.addObject("hostCanCancel", managementPermissions.canCancel());
+        mav.addObject("hostCanEditSeries", managementPermissions.canEditSeries());
+        mav.addObject("hostCanCancelSeries", managementPermissions.canCancelSeries());
         mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
         mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
@@ -950,30 +948,6 @@ final class EventPageSupport {
     private static boolean isInviteHostAction(final String hostAction) {
         return "inviteSent".equalsIgnoreCase(hostAction)
                 || "seriesInviteSent".equalsIgnoreCase(hostAction);
-    }
-
-    private boolean isHost(final Match match, final User currentUser) {
-        return currentUser != null && currentUser.getId().equals(match.getHost().getId());
-    }
-
-    private boolean canHostEdit(final Match match) {
-        if (hasEventEnded(match)) {
-            return false;
-        }
-        return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
-    }
-
-    private boolean canHostCancel(final Match match) {
-        if (hasEventEnded(match)) {
-            return false;
-        }
-        return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
-    }
-
-    private boolean canHostManageParticipants(final Match match) {
-        return canHostEdit(match);
     }
 
     private boolean canReserveMatch(final Match match, final boolean isHostViewer) {

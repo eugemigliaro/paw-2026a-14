@@ -354,7 +354,7 @@ Target shape:
 
 Tests to add or update:
 
-- [ ] Host edit/cancel affordances follow event status and time rules.
+- [x] Host edit/cancel affordances follow event status and time rules.
 - [ ] Admin/mod edit/cancel affordances follow the same lifecycle limits while
   overriding ownership.
 - [ ] Reservation affordance follows visibility, join policy, capacity, event
@@ -371,6 +371,19 @@ Acceptance criteria:
   manually submitted.
 - [ ] Service tests cover host, unrelated user, and admin/mod paths for the
   moved management rules.
+
+Partial implementation notes:
+
+- Added `MatchManagementPermissions` and
+  `MatchService.getMatchManagementPermissions(Match match, User viewer)`.
+- Moved host detail-page management affordances from `EventPageSupport` to
+  `MatchServiceImpl`: manage panel, edit, cancel, participant management, and
+  recurring-series edit/cancel flags.
+- Covered host, unrelated user, completed match, ended match, and recurring
+  host paths in `MatchServiceImplTest`.
+- Admin/mod management override remains a separate Module 4 sub-step because
+  the current edit/cancel write path is still host-scoped at the DAO/service
+  boundary.
 
 ## Module 5: Tournament Detail Permissions
 
