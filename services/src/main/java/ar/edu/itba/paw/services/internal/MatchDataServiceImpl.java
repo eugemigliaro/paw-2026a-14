@@ -11,10 +11,12 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
+import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +30,41 @@ public class MatchDataServiceImpl implements MatchDataService {
 
     public MatchDataServiceImpl(final MatchDao matchDao) {
         this.matchDao = Objects.requireNonNull(matchDao);
+    }
+
+    @Override
+    public Match createMatch(
+            final User host,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
+            final ImageMetadata bannerImageMetadata,
+            final Double latitude,
+            final Double longitude) {
+        return matchDao.createMatch(
+                host,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageMetadata,
+                latitude,
+                longitude);
     }
 
     @Override
@@ -67,6 +104,61 @@ public class MatchDataServiceImpl implements MatchDataService {
                 longitude,
                 series,
                 seriesOccurrenceIndex);
+    }
+
+    @Override
+    public Long createMatchSeries(
+            final User host,
+            final RecurrenceFrequency frequency,
+            final Instant startsAt,
+            final Instant endsAt,
+            final String timezone,
+            final LocalDate untilDate,
+            final Integer occurrenceCount) {
+        return matchDao.createMatchSeries(
+                host, frequency, startsAt, endsAt, timezone, untilDate, occurrenceCount);
+    }
+
+    @Override
+    public boolean updateMatch(
+            final Long matchId,
+            final User host,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
+            final ImageMetadata bannerImageMetadata,
+            final Double latitude,
+            final Double longitude) {
+        return matchDao.updateMatch(
+                matchId,
+                host,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageMetadata,
+                latitude,
+                longitude);
+    }
+
+    @Override
+    public boolean cancelMatch(final Long matchId, final User host) {
+        return matchDao.cancelMatch(matchId, host);
     }
 
     @Override

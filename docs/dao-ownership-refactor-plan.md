@@ -52,16 +52,16 @@ relevant focused Maven test pass.
 14. [ ] Add `MatchDataService` / `MatchDataServiceImpl`.
     - [x] Start `MatchDataService` with the `findById` operation needed by
       `SecurityServiceImpl`.
-    - [ ] Expand `MatchDataService` to cover the remaining `MatchDao` operations
+    - [x] Expand `MatchDataService` to cover the remaining `MatchDao` operations
       as the larger match services move behind it.
 15. [ ] Move `MatchDao` access in `MatchServiceImpl`,
     `MatchReservationServiceImpl`, `MatchParticipationServiceImpl`,
     `ModerationServiceImpl`, `RecurringMatchAsyncService`, and
     `SecurityServiceImpl` behind `MatchDataService`.
     - [x] Move `SecurityServiceImpl` behind `MatchDataService`.
-    - [ ] Move `MatchServiceImpl` behind `MatchDataService`.
+    - [x] Move `MatchServiceImpl` behind `MatchDataService`.
       - [x] Move `MatchServiceImpl` read/query methods behind `MatchDataService`.
-      - [ ] Move `MatchServiceImpl` create/update/cancel helpers behind
+      - [x] Move `MatchServiceImpl` create/update/cancel helpers behind
         `MatchDataService`.
     - [x] Move `MatchReservationServiceImpl` behind `MatchDataService`.
     - [x] Move `MatchParticipationServiceImpl` behind `MatchDataService`.
@@ -72,6 +72,7 @@ relevant focused Maven test pass.
     - [x] Update `ModerationServiceImplTest`.
     - [x] Update recurring occurrence setup in `MatchServiceImplTest`.
     - [x] Update `MatchServiceImplTest` read/query stubs.
+    - [x] Update `MatchServiceImplTest` create/update/cancel stubs.
     - [x] Update `MatchReservationServiceImplTest`.
     - [x] Update `MatchParticipationServiceImplTest`.
 17. [ ] Add `MatchParticipantDataService` /

@@ -14,7 +14,6 @@ import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
@@ -50,7 +49,6 @@ public class MatchServiceImpl implements MatchService {
     private static final int MIN_RECURRING_OCCURRENCES = 2;
     private static final int MAX_RECURRING_OCCURRENCES = 52;
 
-    private final MatchDao matchDao;
     private final MatchDataService matchDataService;
     private final ImageService imageService;
     private final MatchParticipantDao matchParticipantDao;
@@ -62,7 +60,6 @@ public class MatchServiceImpl implements MatchService {
 
     @Autowired
     public MatchServiceImpl(
-            final MatchDao matchDao,
             final MatchDataService matchDataService,
             final ImageService imageService,
             final MatchParticipantDao matchParticipantDao,
@@ -71,7 +68,6 @@ public class MatchServiceImpl implements MatchService {
             final RecurringMatchAsyncService recurringMatchAsyncService,
             final MessageSource messageSource,
             final Clock clock) {
-        this.matchDao = matchDao;
         this.matchDataService = matchDataService;
         this.imageService = imageService;
         this.matchParticipantDao = matchParticipantDao;
@@ -105,7 +101,7 @@ public class MatchServiceImpl implements MatchService {
 
         Instant now = Instant.now(clock);
         final Long seriesId =
-                matchDao.createMatchSeries(
+                matchDataService.createMatchSeries(
                         request.getHost(),
                         recurrence.getFrequency(),
                         request.getStartsAt(),
@@ -186,7 +182,7 @@ public class MatchServiceImpl implements MatchService {
     private Match createSingleMatch(final CreateMatchRequest request) {
         ImageMetadata bannerImageMetadata =
                 imageService.resolveImageMetadata(request.getBannerImage());
-        return matchDao.createMatch(
+        return matchDataService.createMatch(
                 request.getHost(),
                 request.getAddress(),
                 request.getTitle(),
@@ -210,7 +206,7 @@ public class MatchServiceImpl implements MatchService {
             final MatchSeries series,
             final ImageMetadata bannerImageMetadata,
             final int seriesOccurrenceIndex) {
-        return matchDao.createMatch(
+        return matchDataService.createMatch(
                 request.getHost(),
                 request.getAddress(),
                 request.getTitle(),
@@ -237,7 +233,7 @@ public class MatchServiceImpl implements MatchService {
             final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
-        return matchDao.updateMatch(
+        return matchDataService.updateMatch(
                 matchId,
                 actingUser,
                 request.getAddress(),
@@ -317,7 +313,8 @@ public class MatchServiceImpl implements MatchService {
         }
 
         final Match updatedMatch =
-                matchDao.findById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchUpdateException(
@@ -331,7 +328,8 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public Match findEditableMatchForHost(final Long matchId, final User actingUser) {
         final Match match =
-                matchDao.findById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchUpdateException(
@@ -468,7 +466,8 @@ public class MatchServiceImpl implements MatchService {
     public List<Match> updateSeriesFromOccurrence(
             final Long matchId, final User actingUser, final UpdateMatchRequest request) {
         final Match pivot =
-                matchDao.findById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchUpdateException(
@@ -562,7 +561,8 @@ public class MatchServiceImpl implements MatchService {
             }
 
             final Match updatedMatch =
-                    matchDao.findById(target.getId())
+                    matchDataService
+                            .findById(target.getId())
                             .orElseThrow(
                                     () ->
                                             new MatchUpdateException(
@@ -579,7 +579,8 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public Match cancelMatch(final Long matchId, final User actingUser) {
         final Match match =
-                matchDao.findById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchCancellationException(
@@ -604,7 +605,7 @@ public class MatchServiceImpl implements MatchService {
             return match;
         }
 
-        final boolean updated = matchDao.cancelMatch(matchId, actingUser);
+        final boolean updated = matchDataService.cancelMatch(matchId, actingUser);
         if (!updated) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
@@ -612,7 +613,8 @@ public class MatchServiceImpl implements MatchService {
         }
 
         final Match cancelledMatch =
-                matchDao.findById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchCancellationException(
@@ -626,7 +628,8 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public List<Match> cancelSeriesFromOccurrence(final Long matchId, final User actingUser) {
         final Match pivot =
-                matchDao.findById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () ->
                                         new MatchCancellationException(
@@ -644,7 +647,7 @@ public class MatchServiceImpl implements MatchService {
 
         final List<Match> cancelledMatches = new ArrayList<>();
         for (final Match target : targets) {
-            final boolean updated = matchDao.cancelMatch(target.getId(), actingUser);
+            final boolean updated = matchDataService.cancelMatch(target.getId(), actingUser);
             if (!updated) {
                 throw new MatchCancellationException(
                         MatchCancellationFailureReason.FORBIDDEN,
@@ -652,7 +655,8 @@ public class MatchServiceImpl implements MatchService {
             }
 
             final Match cancelledMatch =
-                    matchDao.findById(target.getId())
+                    matchDataService
+                            .findById(target.getId())
                             .orElseThrow(
                                     () ->
                                             new MatchCancellationException(
@@ -716,7 +720,7 @@ public class MatchServiceImpl implements MatchService {
 
         final int pivotIndex = pivot.getSeriesOccurrenceIndex();
         final Instant now = Instant.now(clock);
-        return matchDao.findSeriesOccurrences(pivot.getSeries().getId()).stream()
+        return matchDataService.findSeriesOccurrences(pivot.getSeries().getId()).stream()
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() != null)
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() >= pivotIndex)
                 .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
@@ -730,7 +734,7 @@ public class MatchServiceImpl implements MatchService {
         }
 
         final Instant now = Instant.now(clock);
-        return matchDao.findSeriesOccurrences(pivot.getSeries().getId()).stream()
+        return matchDataService.findSeriesOccurrences(pivot.getSeries().getId()).stream()
                 .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
                 .filter(MatchServiceImpl::isEditableMatch)
                 .toList();
