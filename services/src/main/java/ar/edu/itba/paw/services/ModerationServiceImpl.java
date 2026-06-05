@@ -248,7 +248,9 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional
-    public ModerationReport appealReport(final Long reportId, final String appealReason) {
+    public ModerationReport appealReport(
+            final Long reportId, final User reporter, final String appealReason) {
+        nonNullUser(reporter);
         final ModerationReport report =
                 moderationReportDao
                         .findById(reportId)
@@ -256,6 +258,11 @@ public class ModerationServiceImpl implements ModerationService {
                                 () ->
                                         new ModerationException(
                                                 "report_not_found", "Report not found."));
+        if (report.getReporter() == null
+                || report.getReporter().getId() == null
+                || !report.getReporter().getId().equals(reporter.getId())) {
+            throw new ModerationException("report_not_found", "Report not found.");
+        }
         if (report.getAppealCount() >= 1) {
             throw new ModerationException("appeal_limit", "Report appeal limit reached.");
         }

@@ -50,7 +50,7 @@ public interface ModerationService {
             ReportStatus nextStatus,
             int banDurationDays);
 
-    ModerationReport appealReport(Long reportId, String appealReason);
+    ModerationReport appealReport(Long reportId, User reporter, String appealReason);
 
     ModerationReport finalizeReportAppeal(
             Long reportId, User adminUser, AppealDecision appealDecision);

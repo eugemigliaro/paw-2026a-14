@@ -148,8 +148,9 @@ public class UserModerationReportController {
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
+        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         try {
-            moderationService.appealReport(reportId, appealReason);
+            moderationService.appealReport(reportId, user, appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
         } catch (final ModerationException exception) {

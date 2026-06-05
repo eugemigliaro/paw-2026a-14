@@ -85,7 +85,8 @@ public class UserBanAppealController {
                         .findActiveBan(user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         try {
-            moderationService.appealReport(activeBan.getModerationReport().getId(), appealReason);
+            moderationService.appealReport(
+                    activeBan.getModerationReport().getId(), user, appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
         } catch (final ModerationException exception) {

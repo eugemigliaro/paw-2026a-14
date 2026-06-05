@@ -404,10 +404,31 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(77L), Mockito.eq("Please reconsider"), Mockito.any()))
                 .thenReturn(true);
 
-        final ModerationReport appealed = moderationService.appealReport(77L, "Please reconsider");
+        final ModerationReport appealed =
+                moderationService.appealReport(77L, UserUtils.getUser(50L), "Please reconsider");
 
         Assertions.assertEquals(
                 77L, appealed.getId(), "The appealed report must be returned after storage");
+    }
+
+    @Test
+    public void appealReport_throwsModerationException_whenUserDoesNotOwnReport() {
+        final ModerationReport report = sampleUserReport();
+
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
+
+        final ModerationException exception =
+                Assertions.assertThrows(
+                        ModerationException.class,
+                        () ->
+                                moderationService.appealReport(
+                                        77L, UserUtils.getUser(51L), "Please reconsider"),
+                        "A user must not be able to appeal another user's report");
+
+        Assertions.assertEquals(
+                "report_not_found",
+                exception.getCode(),
+                "Denied report ownership must not reveal that the report exists");
     }
 
     @Test
@@ -439,7 +460,9 @@ public class ModerationServiceImplTest {
 
         Assertions.assertThrows(
                 ModerationException.class,
-                () -> moderationService.appealReport(77L, "Second appeal attempt"),
+                () ->
+                        moderationService.appealReport(
+                                77L, UserUtils.getUser(50L), "Second appeal attempt"),
                 "A second appeal must be rejected regardless of its content");
     }
 
