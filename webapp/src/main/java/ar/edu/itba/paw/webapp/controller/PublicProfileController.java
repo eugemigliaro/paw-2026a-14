@@ -255,6 +255,7 @@ public class PublicProfileController {
                         : playerReviewService.findReviewByPair(currentUser, targetUser);
         final boolean reviewCanSubmit =
                 currentUser != null
+                        && targetUser != null
                         && !currentUser.getId().equals(targetUser.getId())
                         && playerReviewService.canReview(currentUser, targetUser);
         final String profilePath = "/users/" + targetUser.getUsername();
@@ -313,7 +314,9 @@ public class PublicProfileController {
                             locale));
         }
         final boolean isSelf =
-                currentUser != null && currentUser.getId().equals(targetUser.getId());
+                currentUser != null
+                        && targetUser != null
+                        && currentUser.getId().equals(targetUser.getId());
         if (!reviewCanSubmit && !isSelf) {
             final String lockedKey =
                     currentUser == null
