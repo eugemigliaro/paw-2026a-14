@@ -2426,6 +2426,140 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testFindVisibleMatchByIdReturnsPublicMatchForAnonymousViewer() {
+        // Arrange
+        final Match expectedMatch = createTestMatch(50L, "Public Football", "football");
+        Mockito.when(matchDao.findById(50L)).thenReturn(Optional.of(expectedMatch));
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(50L, null);
+
+        // Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("Public Football", result.get().getTitle());
+    }
+
+    @Test
+    public void testFindVisibleMatchByIdReturnsDraftMatchForHost() {
+        // Arrange
+        final Match expectedMatch =
+                createTestMatch(
+                        51L, "Draft Football", "football", "public", "direct", EventStatus.DRAFT);
+        final User host = UserUtils.getUser(1L);
+        Mockito.when(matchDao.findById(51L)).thenReturn(Optional.of(expectedMatch));
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(51L, host);
+
+        // Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("Draft Football", result.get().getTitle());
+    }
+
+    @Test
+    public void testFindVisibleMatchByIdReturnsDraftMatchForAdminMod() {
+        // Arrange
+        final Match expectedMatch =
+                createTestMatch(52L, "Draft Padel", "padel", "public", "direct", EventStatus.DRAFT);
+        final User admin = UserUtils.getUser(2L);
+        Mockito.when(matchDao.findById(52L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(securityService.canActAsAdminMod(admin)).thenReturn(true);
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(52L, admin);
+
+        // Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("Draft Padel", result.get().getTitle());
+    }
+
+    @Test
+    public void testFindVisibleMatchByIdHidesDraftMatchFromStranger() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        53L, "Hidden Draft", "football", "public", "direct", EventStatus.DRAFT);
+        final User stranger = UserUtils.getUser(2L);
+        Mockito.when(matchDao.findById(53L)).thenReturn(Optional.of(match));
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(53L, stranger);
+
+        // Assert
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testFindVisibleMatchByIdReturnsPrivateMatchForInvitee() {
+        // Arrange
+        final Match expectedMatch =
+                createTestMatch(54L, "Private Invite", "football", "private", "invite_only");
+        final User invitee = UserUtils.getUser(2L);
+        Mockito.when(matchDao.findById(54L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(matchParticipantDao.hasInvitation(54L, invitee)).thenReturn(true);
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(54L, invitee);
+
+        // Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("Private Invite", result.get().getTitle());
+    }
+
+    @Test
+    public void testFindVisibleMatchByIdReturnsPrivateMatchForConfirmedParticipant() {
+        // Arrange
+        final Match expectedMatch =
+                createTestMatch(55L, "Private Joined", "padel", "private", "invite_only");
+        final User player = UserUtils.getUser(2L);
+        Mockito.when(matchDao.findById(55L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(matchParticipantDao.hasActiveReservation(55L, player)).thenReturn(true);
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(55L, player);
+
+        // Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("Private Joined", result.get().getTitle());
+    }
+
+    @Test
+    public void testFindVisibleMatchByIdHidesPrivateMatchFromUnrelatedUser() {
+        // Arrange
+        final Match match =
+                createTestMatch(56L, "Private Hidden", "football", "private", "invite_only");
+        final User stranger = UserUtils.getUser(2L);
+        Mockito.when(matchDao.findById(56L)).thenReturn(Optional.of(match));
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(56L, stranger);
+
+        // Assert
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testFindVisibleMatchByIdHidesCancelledMatchFromUnrelatedUser() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        57L,
+                        "Cancelled Hidden",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.CANCELLED);
+        final User stranger = UserUtils.getUser(2L);
+        Mockito.when(matchDao.findById(57L)).thenReturn(Optional.of(match));
+
+        // Exercise
+        final Optional<Match> result = matchService.findVisibleMatchById(57L, stranger);
+
+        // Assert
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
     public void testFindConfirmedParticipantsDelegates() {
         final List<User> expectedParticipants =
                 List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));
@@ -2511,6 +2645,16 @@ public class MatchServiceImplTest {
             final String sport,
             final String visibility,
             final String joinPolicy) {
+        return createTestMatch(id, title, sport, visibility, joinPolicy, EventStatus.OPEN);
+    }
+
+    private Match createTestMatch(
+            final Long id,
+            final String title,
+            final String sport,
+            final String visibility,
+            final String joinPolicy,
+            final EventStatus status) {
         final EventVisibility parsedVisibility =
                 PersistableEnum.fromDbValue(EventVisibility.class, visibility)
                         .orElse(EventVisibility.PUBLIC);
@@ -2532,7 +2676,7 @@ public class MatchServiceImplTest {
                 BigDecimal.ZERO,
                 parsedVisibility,
                 parsedJoinPolicy,
-                EventStatus.OPEN,
+                status,
                 0,
                 null,
                 null,

@@ -141,16 +141,11 @@ final class EventPageSupport {
             final String inviteError,
             final int seriesPage,
             final Locale locale) {
+        final User currentUser = SecurityControllerUtils.currentUserOrNull();
         final Match match =
                 matchService
-                        .findMatchById(eventId)
+                        .findVisibleMatchById(eventId, currentUser)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
-
-        if (!isMatchVisibleToUser(match, currentUser)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
 
         final boolean isHostViewer =
                 currentUser != null && currentUser.getId().equals(match.getHost().getId());
@@ -540,7 +535,7 @@ final class EventPageSupport {
                         occurrence -> {
                             final EventDisplayState state = eventDisplayState(occurrence);
                             final String href =
-                                    isMatchVisibleToUser(occurrence, currentUser)
+                                    matchService.canViewMatch(occurrence, currentUser)
                                             ? "/matches/" + occurrence.getId()
                                             : null;
                             return new EventOccurrenceViewModel(
@@ -979,30 +974,6 @@ final class EventPageSupport {
 
     private boolean canHostManageParticipants(final Match match) {
         return canHostEdit(match);
-    }
-
-    private boolean isMatchVisibleToUser(final Match match, final User currentUser) {
-        if (EventStatus.DRAFT == match.getStatus()) {
-            return currentUser != null && currentUser.getId().equals(match.getHost().getId());
-        }
-
-        if (match.getVisibility() == EventVisibility.PRIVATE
-                || EventStatus.CANCELLED == match.getStatus()) {
-            if (currentUser != null && currentUser.getId().equals(match.getHost().getId())) {
-                return true;
-            }
-            if (currentUser != null
-                    && matchReservationService.hasActiveReservation(match.getId(), currentUser)) {
-                return true;
-            }
-            if (currentUser != null
-                    && matchParticipationService.hasInvitation(match.getId(), currentUser)) {
-                return true;
-            }
-            return false;
-        }
-
-        return match.getVisibility() == EventVisibility.PUBLIC;
     }
 
     private boolean canReserveMatch(final Match match, final boolean isHostViewer) {

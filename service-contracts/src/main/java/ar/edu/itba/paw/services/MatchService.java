@@ -19,6 +19,10 @@ public interface MatchService {
 
     Optional<Match> findMatchById(Long matchId);
 
+    Optional<Match> findVisibleMatchById(Long matchId, User viewer);
+
+    boolean canViewMatch(Match match, User viewer);
+
     Optional<Match> findPublicMatchById(Long matchId);
 
     Match findEditableMatchForHost(Long matchId, User actingUser);

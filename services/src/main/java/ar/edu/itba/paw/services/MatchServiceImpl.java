@@ -743,6 +743,42 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    public Optional<Match> findVisibleMatchById(final Long matchId, final User viewer) {
+        return matchDao.findById(matchId).filter(match -> canViewMatch(match, viewer));
+    }
+
+    @Override
+    public boolean canViewMatch(final Match match, final User viewer) {
+        if (match == null) {
+            return false;
+        }
+        if (securityService.canActAsAdminMod(viewer)) {
+            return true;
+        }
+        if (EventStatus.DRAFT == match.getStatus()) {
+            return isMatchHost(match, viewer);
+        }
+        if (EventVisibility.PRIVATE == match.getVisibility()
+                || EventStatus.CANCELLED == match.getStatus()) {
+            return hasMatchRelationship(match, viewer);
+        }
+        return EventVisibility.PUBLIC == match.getVisibility();
+    }
+
+    private boolean hasMatchRelationship(final Match match, final User viewer) {
+        return isMatchHost(match, viewer)
+                || (viewer != null
+                        && (matchParticipantDao.hasActiveReservation(match.getId(), viewer)
+                                || matchParticipantDao.hasInvitation(match.getId(), viewer)));
+    }
+
+    private static boolean isMatchHost(final Match match, final User viewer) {
+        return viewer != null
+                && match.getHost() != null
+                && Objects.equals(viewer.getId(), match.getHost().getId());
+    }
+
+    @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
         return matchDao.findPublicMatchById(matchId);
     }

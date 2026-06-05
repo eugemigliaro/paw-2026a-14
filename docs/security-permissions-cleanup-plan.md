@@ -25,7 +25,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 
 - [x] Module 1: Inventory controller permissions.
 - [x] Module 2: Establish shared authorization vocabulary.
-- [ ] Module 3: Match detail visibility.
+- [x] Module 3: Match detail visibility.
 - [ ] Module 4: Match detail action state.
 - [ ] Module 5: Tournament detail permissions.
 - [ ] Module 6: Tournament bracket permissions.
@@ -300,21 +300,32 @@ Optional<Match> findVisibleMatchById(Long matchId, User viewer);
 
 Tests to add or update:
 
-- [ ] Public match is visible to anonymous viewer.
-- [ ] Draft match is visible to host.
-- [ ] Draft match is visible to admin/mod when elevated reads are supported.
-- [ ] Draft match is not visible to stranger.
-- [ ] Private match is visible to invitee.
-- [ ] Private match is visible to confirmed participant.
-- [ ] Private match is not visible to unrelated user.
-- [ ] Cancelled match is hidden from unrelated user.
+- [x] Public match is visible to anonymous viewer.
+- [x] Draft match is visible to host.
+- [x] Draft match is visible to admin/mod when elevated reads are supported.
+- [x] Draft match is not visible to stranger.
+- [x] Private match is visible to invitee.
+- [x] Private match is visible to confirmed participant.
+- [x] Private match is not visible to unrelated user.
+- [x] Cancelled match is hidden from unrelated user.
 
 Acceptance criteria:
 
-- [ ] `isMatchVisibleToUser` no longer exists in `webapp`.
-- [ ] Controller support does not call multiple services to decide match
+- [x] `isMatchVisibleToUser` no longer exists in `webapp`.
+- [x] Controller support does not call multiple services to decide match
   visibility.
-- [ ] Match visibility is tested in the service layer.
+- [x] Match visibility is tested in the service layer.
+
+Implementation notes:
+
+- Added `MatchService.findVisibleMatchById(Long matchId, User viewer)` for
+  detail-page reads and `MatchService.canViewMatch(Match match, User viewer)`
+  for already-loaded recurring occurrences.
+- Moved draft/private/cancelled/public visibility decisions into
+  `MatchServiceImpl`, including admin/mod override through
+  `SecurityService.canActAsAdminMod(User actingUser)`.
+- Updated `EventPageSupport` to translate an empty visible read to `404` and to
+  ask `MatchService` for occurrence href visibility.
 
 ## Module 4: Match Detail Action State
 
