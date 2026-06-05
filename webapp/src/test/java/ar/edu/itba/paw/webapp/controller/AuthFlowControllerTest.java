@@ -19,6 +19,7 @@ import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
 import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
 import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureExpiredException;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
+import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -55,9 +56,11 @@ class AuthFlowControllerTest {
         accountAuthService = Mockito.mock(AccountAuthService.class);
         userService = Mockito.mock(UserService.class);
         UserEmailValidator userEmailValidator = new UserEmailValidator(userService);
+        UsernameValidator usernameValidator = new UsernameValidator(userService);
 
         final MessageSource messageSource = messageSource();
-        final LocalValidatorFactoryBean validator = validator(messageSource, userEmailValidator);
+        final LocalValidatorFactoryBean validator =
+                validator(messageSource, userEmailValidator, usernameValidator);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -304,13 +307,17 @@ class AuthFlowControllerTest {
     }
 
     private static LocalValidatorFactoryBean validator(
-            final MessageSource messageSource, final UserEmailValidator userEmailValidator) {
+            final MessageSource messageSource,
+            final UserEmailValidator userEmailValidator,
+            final UsernameValidator usernameValidator) {
         ConstraintValidatorFactory customConstraintFactory =
                 new ConstraintValidatorFactory() {
                     @Override
                     public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
                         if (key == UserEmailValidator.class) {
                             return (T) userEmailValidator;
+                        } else if (key == UsernameValidator.class) {
+                            return (T) usernameValidator;
                         }
                         try {
                             return key.getDeclaredConstructor().newInstance();

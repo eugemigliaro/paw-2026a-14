@@ -2,13 +2,13 @@ package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.webapp.validation.ValidRegisterForm;
 import ar.edu.itba.paw.webapp.validation.ValidUserEmail;
+import ar.edu.itba.paw.webapp.validation.ValidUsername;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
-@ValidRegisterForm // TODO: add validation for individual fields (e.g. unique username/email). Those
-// validators should use service methods.
+@ValidRegisterForm
 public class RegisterForm {
 
     @NotBlank(message = "{RegisterForm.email.NotBlank}")
@@ -19,6 +19,7 @@ public class RegisterForm {
 
     @NotBlank(message = "{RegisterForm.username.NotBlank}")
     @Pattern(regexp = "^[a-z0-9_]{3,50}$", message = "{RegisterForm.username.Pattern}")
+    @ValidUsername(message = "{auth.registration.error.usernameTaken}", mustExist = false)
     private String username = "";
 
     @NotBlank(message = "{RegisterForm.name.NotBlank}")

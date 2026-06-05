@@ -5,8 +5,6 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import org.springframework.web.multipart.MultipartFile;
 
-// Add parameterized validators for each field. Those then can be used in other forms as well
-// (RegisterForm for instance).
 public class AccountProfileForm {
 
     @NotBlank(message = "{AccountProfileForm.username.NotBlank}")
