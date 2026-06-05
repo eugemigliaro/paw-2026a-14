@@ -292,6 +292,7 @@ The TP1 correction PDF exposed repeated class-wide failure patterns. This sectio
 - date/time handling must preserve the intended wall-clock time; use explicit zones and test locale/time-zone sensitive flows
 - controllers must not use `PlatformTime` to convert domain timestamps for forms or views; use model getters that expose `OffsetDateTime`, such as `getStartsAtDateTime()`, when available
 - when controllers pass date and time inputs to services, pass the bound `LocalDate`/`LocalTime` values or request object fields through unchanged; services own conversion to persisted instants and enforcement of time-related business rules
+- form validators (Bean Validation `ConstraintValidator`s) may use `PlatformTime` to check that submitted wall-clock date/time inputs are in the future and ordered correctly relative to each other, giving inline field-level errors before the service call; this is pre-submit input validation, not the authoritative rule — the service still re-validates and owns time-related business-rule enforcement
 
 ### Views And View Models
 

@@ -29,7 +29,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.support.StaticMessageSource;
 
 @ExtendWith(MockitoExtension.class)
 public class MatchParticipationServiceImplTest {
@@ -48,7 +47,6 @@ public class MatchParticipationServiceImplTest {
     @BeforeEach
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
-        final StaticMessageSource messageSource = new StaticMessageSource();
         final MatchNotificationService matchNotificationService =
                 new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService);
         matchParticipationService =

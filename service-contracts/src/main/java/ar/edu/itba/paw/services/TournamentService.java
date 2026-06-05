@@ -6,7 +6,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,8 +21,8 @@ public interface TournamentService {
     PaginatedResult<Tournament> searchPublicTournaments(
             String query,
             List<Sport> sport,
-            Instant startDate,
-            Instant endDate,
+            LocalDate startDate,
+            LocalDate endDate,
             EventSort sort,
             int page,
             int pageSize,
@@ -37,8 +37,8 @@ public interface TournamentService {
             Boolean includeHosted,
             String query,
             List<Sport> sport,
-            Instant startDate,
-            Instant endDate,
+            LocalDate startDate,
+            LocalDate endDate,
             EventSort sort,
             int page,
             int pageSize,

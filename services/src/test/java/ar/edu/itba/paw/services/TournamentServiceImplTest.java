@@ -533,8 +533,8 @@ public class TournamentServiceImplTest {
                 tournamentService.searchPublicTournaments(
                         "cup",
                         List.of(Sport.PADEL),
-                        Instant.parse("2026-04-06T00:00:00Z"),
-                        Instant.parse("2026-04-10T00:00:00Z"),
+                        LocalDate.parse("2026-04-06"),
+                        LocalDate.parse("2026-04-10"),
                         EventSort.SOONEST,
                         9,
                         10,

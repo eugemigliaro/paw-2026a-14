@@ -166,18 +166,8 @@ public class FeedController {
                     tournamentService.searchPublicTournaments(
                             searchForm.getQ(),
                             searchForm.getSport(),
-                            selectedDateRange.startDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .startDate()
-                                            .atStartOfDay(PlatformTime.ZONE)
-                                            .toInstant(),
-                            selectedDateRange.endDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .endDate()
-                                            .atStartOfDay(PlatformTime.ZONE)
-                                            .toInstant(),
+                            selectedDateRange.startDate(),
+                            selectedDateRange.endDate(),
                             selectedSort,
                             searchForm.getPage(),
                             PAGE_SIZE,
@@ -205,18 +195,8 @@ public class FeedController {
                     matchService.searchPublicMatches(
                             searchForm.getQ(),
                             searchForm.getSport(),
-                            selectedDateRange.startDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .startDate()
-                                            .atStartOfDay(PlatformTime.ZONE)
-                                            .toInstant(),
-                            selectedDateRange.endDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .endDate()
-                                            .atStartOfDay(PlatformTime.ZONE)
-                                            .toInstant(),
+                            selectedDateRange.startDate(),
+                            selectedDateRange.endDate(),
                             selectedSort,
                             searchForm.getPage(),
                             PAGE_SIZE,

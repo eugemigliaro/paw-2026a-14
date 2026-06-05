@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
@@ -11,7 +10,6 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import java.time.Instant;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,18 +60,6 @@ public class MatchDashboardController {
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final SearchForm viewSearchForm = selection.searchForm();
-        final Instant startInstant =
-                viewSearchForm.getStartDate() == null
-                        ? null
-                        : viewSearchForm.getStartDate().atStartOfDay(PlatformTime.ZONE).toInstant();
-        final Instant endInstant =
-                viewSearchForm.getEndDate() == null
-                        ? null
-                        : viewSearchForm
-                                .getEndDate()
-                                .plusDays(1)
-                                .atStartOfDay(PlatformTime.ZONE)
-                                .toInstant();
 
         final PaginatedResult<Match> result =
                 selection.tournament()
@@ -85,8 +71,8 @@ public class MatchDashboardController {
                                 viewSearchForm.getQ(),
                                 viewSearchForm.getSport(),
                                 viewSearchForm.getStatus(),
-                                startInstant,
-                                endInstant,
+                                viewSearchForm.getStartDate(),
+                                viewSearchForm.getEndDate(),
                                 viewSearchForm.getMinPrice(),
                                 viewSearchForm.getMaxPrice(),
                                 viewSearchForm.getSort(),
@@ -101,8 +87,8 @@ public class MatchDashboardController {
                                 selection.includeHosted(),
                                 viewSearchForm.getQ(),
                                 viewSearchForm.getSport(),
-                                startInstant,
-                                endInstant,
+                                viewSearchForm.getStartDate(),
+                                viewSearchForm.getEndDate(),
                                 viewSearchForm.getSort(),
                                 viewSearchForm.getPage(),
                                 PAGE_SIZE,

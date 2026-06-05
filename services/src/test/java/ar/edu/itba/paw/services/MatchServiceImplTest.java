@@ -92,8 +92,11 @@ public class MatchServiceImplTest {
     @Test
     public void testSearchPublicMatchesWithValidInputs() {
         final Match match = createTestMatch(1L, "Football", "football");
-        final Instant expectedStart = Instant.parse("2026-04-10T00:00:00Z");
-        final Instant expectedEndExclusive = Instant.parse("2026-04-16T00:00:00Z");
+        final LocalDate searchStart = LocalDate.parse("2026-04-10");
+        final LocalDate searchEnd = LocalDate.parse("2026-04-15");
+        final Instant expectedStart = searchStart.atStartOfDay(PlatformTime.ZONE).toInstant();
+        final Instant expectedEndExclusive =
+                searchEnd.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant();
         Mockito.when(
                         matchDao.findPublicMatches(
                                 "football",
@@ -124,8 +127,8 @@ public class MatchServiceImplTest {
                 matchService.searchPublicMatches(
                         "football",
                         List.of(Sport.FOOTBALL),
-                        expectedStart,
-                        expectedEndExclusive,
+                        searchStart,
+                        searchEnd,
                         EventSort.SOONEST,
                         2,
                         10,

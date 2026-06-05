@@ -33,6 +33,7 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -73,9 +74,9 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         matchService.searchPublicMatches(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(List.class),
-                                ArgumentMatchers.nullable(Instant.class),
-                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.<List<Sport>>any(),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
                                 ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),
@@ -95,9 +96,9 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(List.class),
-                                ArgumentMatchers.nullable(Instant.class),
-                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.<List<Sport>>any(),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
                                 ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),

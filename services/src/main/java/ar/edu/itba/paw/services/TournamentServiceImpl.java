@@ -101,8 +101,8 @@ public class TournamentServiceImpl implements TournamentService {
     public PaginatedResult<Tournament> searchPublicTournaments(
             final String query,
             final List<Sport> sport,
-            final Instant startDate,
-            final Instant endDate,
+            final LocalDate startDate,
+            final LocalDate endDate,
             final EventSort sort,
             final int page,
             final int pageSize,
@@ -112,7 +112,7 @@ public class TournamentServiceImpl implements TournamentService {
             final Double longitude) {
         final EventSort sortFilter =
                 hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
-        final DateRange dateRange = new DateRange(startDate, endDate);
+        final DateRange dateRange = DateRange.of(startDate, endDate);
 
         return paginate(
                 page,
@@ -148,8 +148,8 @@ public class TournamentServiceImpl implements TournamentService {
             final Boolean includeHosted,
             final String query,
             final List<Sport> sport,
-            final Instant startDate,
-            final Instant endDate,
+            final LocalDate startDate,
+            final LocalDate endDate,
             final EventSort sort,
             final int page,
             final int pageSize,
@@ -157,6 +157,7 @@ public class TournamentServiceImpl implements TournamentService {
             final BigDecimal maxPrice,
             final Double latitude,
             final Double longitude) {
+        final DateRange dateRange = DateRange.of(startDate, endDate);
         return paginate(
                 page,
                 pageSize,
@@ -168,8 +169,8 @@ public class TournamentServiceImpl implements TournamentService {
                                 includeHosted,
                                 query,
                                 sport,
-                                startDate,
-                                endDate,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice),
                 (offset, safePageSize) ->
@@ -179,8 +180,8 @@ public class TournamentServiceImpl implements TournamentService {
                                 includeHosted,
                                 query,
                                 sport,
-                                startDate,
-                                endDate,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 sort,
@@ -523,5 +524,13 @@ public class TournamentServiceImpl implements TournamentService {
         List<Tournament> items(int offset, int safePageSize);
     }
 
-    private record DateRange(Instant start, Instant endExclusive) {}
+    private record DateRange(Instant start, Instant endExclusive) {
+        static DateRange of(final LocalDate start, final LocalDate end) {
+            return new DateRange(
+                    start == null ? null : start.atStartOfDay(PlatformTime.ZONE).toInstant(),
+                    end == null
+                            ? null
+                            : end.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
+        }
+    }
 }

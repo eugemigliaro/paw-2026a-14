@@ -776,8 +776,8 @@ public class MatchServiceImpl implements MatchService {
     public PaginatedResult<Match> searchPublicMatches(
             final String query,
             final List<Sport> sport,
-            final Instant startDate,
-            final Instant endDate,
+            final LocalDate startDate,
+            final LocalDate endDate,
             final EventSort sort,
             final int page,
             final int pageSize,
@@ -787,7 +787,7 @@ public class MatchServiceImpl implements MatchService {
             final Double longitude) {
         final EventSort sortFilter =
                 hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
-        final DateRange dateRange = new DateRange(startDate, endDate);
+        final DateRange dateRange = DateRange.of(startDate, endDate);
 
         return paginate(
                 page,
@@ -826,8 +826,8 @@ public class MatchServiceImpl implements MatchService {
             String query,
             List<Sport> sports,
             List<EventStatus> statuses,
-            Instant startDate,
-            Instant endDate,
+            LocalDate startDate,
+            LocalDate endDate,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
@@ -840,6 +840,8 @@ public class MatchServiceImpl implements MatchService {
         final int offset = (page - 1) * pageSize;
         final int limit = pageSize;
 
+        final DateRange dateRange = DateRange.of(startDate, endDate);
+
         final List<Match> paginatedItems =
                 matchDao.findDashboardMatches(
                         user,
@@ -848,8 +850,8 @@ public class MatchServiceImpl implements MatchService {
                         query,
                         sports,
                         statuses,
-                        startDate,
-                        endDate,
+                        dateRange.start(),
+                        dateRange.endExclusive(),
                         minPrice,
                         maxPrice,
                         sort,
@@ -865,8 +867,8 @@ public class MatchServiceImpl implements MatchService {
                         query,
                         sports,
                         statuses,
-                        startDate,
-                        endDate,
+                        dateRange.start(),
+                        dateRange.endExclusive(),
                         minPrice,
                         maxPrice,
                         sort,
@@ -1048,7 +1050,15 @@ public class MatchServiceImpl implements MatchService {
         List<Match> items(int offset, int safePageSize);
     }
 
-    private record DateRange(Instant start, Instant endExclusive) {}
+    private record DateRange(Instant start, Instant endExclusive) {
+        static DateRange of(final LocalDate start, final LocalDate end) {
+            return new DateRange(
+                    start == null ? null : start.atStartOfDay(PlatformTime.ZONE).toInstant(),
+                    end == null
+                            ? null
+                            : end.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
+        }
+    }
 
     private record OccurrenceWindow(Instant startsAt, Instant endsAt) {}
 }
