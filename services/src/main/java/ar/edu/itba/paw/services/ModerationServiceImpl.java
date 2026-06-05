@@ -17,8 +17,8 @@ import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.time.Clock;
 import java.time.Instant;
@@ -46,7 +46,7 @@ public class ModerationServiceImpl implements ModerationService {
 
     private final UserBanDao userBanDao;
     private final ModerationReportDao moderationReportDao;
-    private final UserDao userDao;
+    private final UserDataService userDataService;
     private final MatchDao matchDao;
     private final MatchParticipantDao matchParticipantDao;
     private final PlayerReviewDao playerReviewDao;
@@ -59,7 +59,7 @@ public class ModerationServiceImpl implements ModerationService {
     public ModerationServiceImpl(
             final UserBanDao userBanDao,
             final ModerationReportDao moderationReportDao,
-            final UserDao userDao,
+            final UserDataService userDataService,
             final MatchDao matchDao,
             final MatchParticipantDao matchParticipantDao,
             final PlayerReviewDao playerReviewDao,
@@ -69,7 +69,7 @@ public class ModerationServiceImpl implements ModerationService {
             final Clock clock) {
         this.userBanDao = userBanDao;
         this.moderationReportDao = moderationReportDao;
-        this.userDao = userDao;
+        this.userDataService = userDataService;
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.playerReviewDao = playerReviewDao;
@@ -419,7 +419,8 @@ public class ModerationServiceImpl implements ModerationService {
         final String name =
                 switch (targetType) {
                     case USER ->
-                            userDao.findById(targetId)
+                            userDataService
+                                    .findById(targetId)
                                     .map(User::getUsername)
                                     .orElseGet(
                                             () ->
@@ -495,7 +496,8 @@ public class ModerationServiceImpl implements ModerationService {
             final Instant bannedUntil =
                     Instant.now(clock).plusSeconds(banDurationDays * 24L * 3600L);
             final User user =
-                    userDao.findById(report.getTargetId())
+                    userDataService
+                            .findById(report.getTargetId())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(
@@ -545,7 +547,8 @@ public class ModerationServiceImpl implements ModerationService {
         }
         if (report.getTargetType() == ReportTargetType.USER) {
             final User user =
-                    userDao.findById(report.getTargetId())
+                    userDataService
+                            .findById(report.getTargetId())
                             .orElseThrow(
                                     () ->
                                             new ModerationException(

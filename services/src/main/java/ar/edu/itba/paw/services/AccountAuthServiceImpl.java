@@ -7,10 +7,10 @@ import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.PasswordResetException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import java.nio.charset.StandardCharsets;
@@ -42,7 +42,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private static final int MAX_PASSWORD_LENGTH = 72;
     private static final String EMPTY_PAYLOAD_JSON = "{}";
 
-    private final UserDao userDao;
+    private final UserDataService userDataService;
     private final EmailActionRequestDao emailActionRequestDao;
     private final MailProperties mailProperties;
     private final MailDispatchService mailDispatchService;
@@ -52,14 +52,14 @@ public class AccountAuthServiceImpl implements AccountAuthService {
 
     @Autowired
     public AccountAuthServiceImpl(
-            final UserDao userDao,
+            final UserDataService userDataService,
             final EmailActionRequestDao emailActionRequestDao,
             final MailProperties mailProperties,
             final MailDispatchService mailDispatchService,
             final MessageSource messageSource,
             final PasswordEncoder passwordEncoder,
             final Clock clock) {
-        this.userDao = Objects.requireNonNull(userDao);
+        this.userDataService = Objects.requireNonNull(userDataService);
         this.emailActionRequestDao = Objects.requireNonNull(emailActionRequestDao);
         this.mailProperties = Objects.requireNonNull(mailProperties);
         this.mailDispatchService = Objects.requireNonNull(mailDispatchService);
@@ -80,7 +80,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final String normalizedPhone = normalizeRequiredPhone(request.getPhone(), locale);
         validatePassword(request.getPassword(), locale);
 
-        final Optional<UserAccount> existingAccount = userDao.findAccountByEmail(normalizedEmail);
+        final Optional<UserAccount> existingAccount =
+                userDataService.findAccountByEmail(normalizedEmail);
         if (existingAccount.isPresent()) {
             if (existingAccount.get().isEmailVerified()) {
                 throw new AccountRegistrationException(
@@ -91,14 +92,14 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                     message("auth.registration.error.emailPending", locale));
         }
 
-        if (userDao.findByUsername(normalizedUsername).isPresent()) {
+        if (userDataService.findByUsername(normalizedUsername).isPresent()) {
             throw new AccountRegistrationException(
                     "username_taken", message("auth.registration.error.usernameTaken", locale));
         }
 
         try {
             final UserAccount createdAccount =
-                    userDao.createAccount(
+                    userDataService.createAccount(
                             normalizedEmail,
                             normalizedUsername,
                             normalizedName,
@@ -110,11 +111,11 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                             null);
             return createAccountVerificationRequest(createdAccount, locale);
         } catch (final DataIntegrityViolationException exception) {
-            if (userDao.findAccountByEmail(normalizedEmail).isPresent()) {
+            if (userDataService.findAccountByEmail(normalizedEmail).isPresent()) {
                 throw new AccountRegistrationException(
                         "email_taken", message("auth.registration.error.emailTaken", locale));
             }
-            if (userDao.findByUsername(normalizedUsername).isPresent()) {
+            if (userDataService.findByUsername(normalizedUsername).isPresent()) {
                 throw new AccountRegistrationException(
                         "username_taken", message("auth.registration.error.usernameTaken", locale));
             }
@@ -126,7 +127,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     @Transactional
     public Optional<VerificationRequestResult> resendVerification(final String email) {
         final Locale locale = currentLocale();
-        final Optional<UserAccount> account = userDao.findAccountByEmail(normalizeEmail(email));
+        final Optional<UserAccount> account =
+                userDataService.findAccountByEmail(normalizeEmail(email));
         if (account.isEmpty() || account.get().isEmailVerified()) {
             return Optional.empty();
         }
@@ -172,7 +174,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Instant now = Instant.now(clock);
 
         if (!account.isEmailVerified()) {
-            userDao.markEmailVerified(account.getId(), now);
+            userDataService.markEmailVerified(account.getId(), now);
         }
 
         emailActionRequestDao.updateStatus(
@@ -181,7 +183,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final UserAccount verifiedAccount =
                 account.isEmailVerified()
                         ? account
-                        : userDao.findAccountById(account.getId()).orElse(account);
+                        : userDataService.findAccountById(account.getId()).orElse(account);
         return new VerificationConfirmationResult(
                 verifiedAccount, message("verification.message.accountVerified", locale));
     }
@@ -190,7 +192,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     @Transactional
     public Optional<VerificationRequestResult> requestPasswordReset(final String email) {
         final Locale locale = currentLocale();
-        final Optional<UserAccount> account = userDao.findAccountByEmail(normalizeEmail(email));
+        final Optional<UserAccount> account =
+                userDataService.findAccountByEmail(normalizeEmail(email));
         if (account.isEmpty() || !account.get().isEmailVerified()) {
             return Optional.empty();
         }
@@ -231,7 +234,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 getRequiredAccount(request, locale, "passwordReset.message.unavailable", true);
         final Instant now = Instant.now(clock);
 
-        userDao.updatePasswordHash(account.getId(), passwordEncoder.encode(newPassword));
+        userDataService.updatePasswordHash(account.getId(), passwordEncoder.encode(newPassword));
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
@@ -242,7 +245,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     @Override
     @Transactional(readOnly = true)
     public Optional<UserAccount> findAccountByEmail(final String email) {
-        return userDao.findAccountByEmail(normalizeEmail(email));
+        return userDataService.findAccountByEmail(normalizeEmail(email));
     }
 
     private VerificationRequestResult createAccountVerificationRequest(
@@ -344,8 +347,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final boolean requireVerifiedAccount) {
         final Optional<UserAccount> account =
                 request.getUser().getId() == null
-                        ? userDao.findAccountByEmail(request.getEmail())
-                        : userDao.findAccountById(request.getUser().getId());
+                        ? userDataService.findAccountByEmail(request.getEmail())
+                        : userDataService.findAccountById(request.getUser().getId());
 
         if (account.isEmpty()) {
             throw invalidateRequest(request, message(invalidActionCode, locale));

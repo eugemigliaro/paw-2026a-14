@@ -18,8 +18,8 @@ import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
@@ -47,7 +47,7 @@ public class ModerationServiceImplTest {
 
     @Mock private UserBanDao userBanDao;
     @Mock private ModerationReportDao moderationReportDao;
-    @Mock private UserDao userDao;
+    @Mock private UserDataService userDataService;
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private PlayerReviewDao playerReviewDao;
@@ -63,7 +63,7 @@ public class ModerationServiceImplTest {
                 new ModerationServiceImpl(
                         userBanDao,
                         moderationReportDao,
-                        userDao,
+                        userDataService,
                         matchDao,
                         matchParticipantDao,
                         playerReviewDao,
@@ -78,7 +78,7 @@ public class ModerationServiceImplTest {
                 new ModerationServiceImpl(
                         userBanDao,
                         moderationReportDao,
-                        userDao,
+                        userDataService,
                         matchDao,
                         matchParticipantDao,
                         playerReviewDao,
@@ -93,7 +93,7 @@ public class ModerationServiceImplTest {
                 new ModerationServiceImpl(
                         userBanDao,
                         moderationReportDao,
-                        userDao,
+                        userDataService,
                         matchDao,
                         matchParticipantDao,
                         playerReviewDao,
@@ -153,7 +153,7 @@ public class ModerationServiceImplTest {
         Mockito.when(userBanDao.createBan(report, expectedBannedUntil))
                 .thenReturn(new UserBan(10L, report, expectedBannedUntil));
 
-        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
 
         final ModerationReport resolved =
                 moderationService.resolveReport(
@@ -209,7 +209,7 @@ public class ModerationServiceImplTest {
                 .thenReturn(true);
         Mockito.when(userBanDao.createBan(report, expectedBannedUntil))
                 .thenReturn(new UserBan(10L, report, expectedBannedUntil));
-        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
 
         moderationService.resolveReport(
                 77L,
@@ -261,7 +261,7 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(ReportStatus.RESOLVED)))
                 .thenReturn(true);
 
-        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
 
         moderationService.resolveReport(
                 77L,
@@ -517,7 +517,7 @@ public class ModerationServiceImplTest {
 
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         try {
-            Mockito.when(userDao.findById(userId)).thenReturn(Optional.of(user));
+            Mockito.when(userDataService.findById(userId)).thenReturn(Optional.of(user));
 
             final ModerationReport report =
                     new ModerationReport(
