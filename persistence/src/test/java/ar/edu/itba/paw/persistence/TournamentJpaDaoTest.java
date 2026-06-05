@@ -5,7 +5,7 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.query.TournamentSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
@@ -80,38 +80,6 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
-    public void shouldSaveManualSeedOrderWithoutViolatingUniqueConstraint() {
-        final Tournament tournament = createTournament(TournamentStatus.BRACKET_SETUP);
-        final TournamentTeam firstTeam =
-                tournamentTeamDao.create(tournament, "Team A", TournamentTeamOrigin.SOLO_POOL, 1);
-        final TournamentTeam secondTeam =
-                tournamentTeamDao.create(tournament, "Team B", TournamentTeamOrigin.SOLO_POOL, 2);
-
-        em.flush();
-        em.clear();
-
-        final TournamentTeam persistedFirst =
-                tournamentTeamDao.findById(firstTeam.getId()).orElseThrow();
-        final TournamentTeam persistedSecond =
-                tournamentTeamDao.findById(secondTeam.getId()).orElseThrow();
-
-        tournamentTeamDao.saveSeedOrder(
-                List.of(persistedFirst, persistedSecond),
-                List.of(persistedSecond.getId(), persistedFirst.getId()));
-
-        em.flush();
-        em.clear();
-
-        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournament.getId());
-
-        Assertions.assertEquals(
-                List.of(persistedSecond.getId(), persistedFirst.getId()),
-                teams.stream().map(TournamentTeam::getId).toList());
-        Assertions.assertEquals(1, teams.get(0).getSeedPosition());
-        Assertions.assertEquals(2, teams.get(1).getSeedPosition());
-    }
-
-    @Test
     public void shouldFindHostedAndPublicActiveTournaments() {
         final Tournament first = createTournament(TournamentStatus.REGISTRATION);
         final Tournament second = createTournament(TournamentStatus.IN_PROGRESS);
@@ -120,22 +88,7 @@ public class TournamentJpaDaoTest {
         em.flush();
         em.clear();
 
-        final List<Tournament> hosted =
-                tournamentDao.findDashboardTournaments(
-                        host,
-                        Boolean.TRUE,
-                        Boolean.TRUE,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        EventSort.SOONEST,
-                        null,
-                        null,
-                        0,
-                        10);
+        final List<Tournament> hosted = tournamentDao.findHostedByUser(host, 0, 10);
         final List<Tournament> publicActive = tournamentDao.findPublicRegistrationOrLive(0, 10);
 
         Assertions.assertEquals(3, hosted.size());
@@ -214,7 +167,7 @@ public class TournamentJpaDaoTest {
                         null,
                         null,
                         null,
-                        EventSort.SOONEST,
+                        TournamentSort.SOONEST,
                         null,
                         null,
                         0,
@@ -277,7 +230,7 @@ public class TournamentJpaDaoTest {
                         now.plusSeconds(259_200),
                         new BigDecimal("10"),
                         new BigDecimal("20"),
-                        EventSort.SOONEST,
+                        TournamentSort.SOONEST,
                         null,
                         null,
                         0,
@@ -337,7 +290,7 @@ public class TournamentJpaDaoTest {
                         null,
                         null,
                         null,
-                        EventSort.PRICE_LOW,
+                        TournamentSort.PRICE,
                         null,
                         null,
                         0,
@@ -350,7 +303,7 @@ public class TournamentJpaDaoTest {
                         null,
                         null,
                         null,
-                        EventSort.DISTANCE,
+                        TournamentSort.DISTANCE,
                         -34.601,
                         -58.381,
                         0,

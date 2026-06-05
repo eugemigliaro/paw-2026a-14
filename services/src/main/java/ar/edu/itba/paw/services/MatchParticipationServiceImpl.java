@@ -3,21 +3,28 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
+import ar.edu.itba.paw.services.mail.MatchLifecycleMailTemplateData;
+import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.StaticMessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +37,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private final UserService userService;
     private final Clock clock;
     private final MailDispatchService mailDispatchService;
+    private final ThymeleafMailTemplateRenderer templateRenderer;
+    private final MessageSource messageSource;
     private final MatchNotificationService matchNotificationService;
 
     public MatchParticipationServiceImpl(
@@ -37,7 +46,15 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             final MatchParticipantDao matchParticipantDao,
             final UserService userService,
             final Clock clock) {
-        this(matchDao, matchParticipantDao, userService, clock, new MailDispatchService() {}, null);
+        this(
+                matchDao,
+                matchParticipantDao,
+                userService,
+                clock,
+                (recipientEmail, content) -> {},
+                null,
+                new StaticMessageSource(),
+                null);
     }
 
     @Autowired
@@ -47,12 +64,16 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             final UserService userService,
             final Clock clock,
             final MailDispatchService mailDispatchService,
+            final ThymeleafMailTemplateRenderer templateRenderer,
+            final MessageSource messageSource,
             final MatchNotificationService matchNotificationService) {
         this.matchDao = matchDao;
         this.matchParticipantDao = matchParticipantDao;
         this.userService = userService;
         this.clock = clock;
         this.mailDispatchService = mailDispatchService;
+        this.templateRenderer = templateRenderer;
+        this.messageSource = messageSource;
         this.matchNotificationService = matchNotificationService;
     }
 
@@ -577,12 +598,53 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     private void dispatchMatchInvitation(final User target, final Match match) {
-        mailDispatchService.sendMatchInvitation(target, match);
+        if (templateRenderer == null) {
+            return;
+        }
+        final MatchLifecycleMailTemplateData templateData =
+                buildInvitationTemplateData(target, match);
+        final MailContent content =
+                templateRenderer.renderMatchInvitationNotification(templateData);
+        mailDispatchService.dispatch(target.getEmail(), content);
     }
 
     private void dispatchSeriesInvitation(
             final User target, final Match match, final int occurrenceCount) {
-        mailDispatchService.sendSeriesInvitation(target, match, occurrenceCount);
+        if (templateRenderer == null) {
+            return;
+        }
+        final MatchLifecycleMailTemplateData templateData =
+                buildInvitationTemplateData(target, match);
+        final MailContent content =
+                templateRenderer.renderSeriesInvitationNotification(templateData, occurrenceCount);
+        mailDispatchService.dispatch(target.getEmail(), content);
+    }
+
+    private MatchLifecycleMailTemplateData buildInvitationTemplateData(
+            final User recipient, final Match match) {
+        final Locale locale = UserLanguages.toLocale(recipient.getPreferredLanguage());
+        final String sportLabel =
+                messageSource.getMessage(
+                        "sport." + match.getSport().getDbValue(),
+                        null,
+                        match.getSport().getDisplayName(),
+                        locale);
+        final String statusLabel =
+                messageSource.getMessage(
+                        "match.status." + match.getStatus().getValue(),
+                        null,
+                        match.getStatus().getValue(),
+                        locale);
+
+        return new MatchLifecycleMailTemplateData(
+                recipient.getEmail(),
+                match.getTitle(),
+                match.getAddress(),
+                match.getStartsAt(),
+                match.getEndsAt(),
+                sportLabel,
+                statusLabel,
+                locale);
     }
 
     private void leaveMatch(final Match match, final User user) {

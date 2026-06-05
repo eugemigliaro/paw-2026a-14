@@ -1,12 +1,74 @@
 package ar.edu.itba.paw.webapp.viewmodel;
 
 import java.util.List;
-import java.util.Map;
 
 public final class UiViewModels {
 
     private UiViewModels() {
         // Utility holder for immutable UI-only view models.
+    }
+
+    public static final class ShellViewModel {
+        private final String brandLabel;
+        private final NavItemViewModel hostAction;
+        private final NavItemViewModel tournamentHostAction;
+        private final NavItemViewModel hostMatchNav;
+        private final List<NavItemViewModel> primaryNav;
+        private final List<NavItemViewModel> settingsMenuItems;
+
+        public ShellViewModel(
+                final String brandLabel,
+                final NavItemViewModel hostAction,
+                final List<NavItemViewModel> primaryNav) {
+            this(brandLabel, hostAction, null, null, primaryNav, List.of());
+        }
+
+        public ShellViewModel(
+                final String brandLabel,
+                final NavItemViewModel hostAction,
+                final NavItemViewModel hostMatchNav,
+                final List<NavItemViewModel> primaryNav) {
+            this(brandLabel, hostAction, null, hostMatchNav, primaryNav, List.of());
+        }
+
+        public ShellViewModel(
+                final String brandLabel,
+                final NavItemViewModel hostAction,
+                final NavItemViewModel tournamentHostAction,
+                final NavItemViewModel hostMatchNav,
+                final List<NavItemViewModel> primaryNav,
+                final List<NavItemViewModel> settingsMenuItems) {
+            this.brandLabel = brandLabel;
+            this.hostAction = hostAction;
+            this.tournamentHostAction = tournamentHostAction;
+            this.hostMatchNav = hostMatchNav;
+            this.primaryNav = primaryNav;
+            this.settingsMenuItems = settingsMenuItems;
+        }
+
+        public String getBrandLabel() {
+            return brandLabel;
+        }
+
+        public NavItemViewModel getHostAction() {
+            return hostAction;
+        }
+
+        public NavItemViewModel getTournamentHostAction() {
+            return tournamentHostAction;
+        }
+
+        public NavItemViewModel getHostMatchNav() {
+            return hostMatchNav;
+        }
+
+        public List<NavItemViewModel> getPrimaryNav() {
+            return primaryNav;
+        }
+
+        public List<NavItemViewModel> getSettingsMenuItems() {
+            return settingsMenuItems;
+        }
     }
 
     public static final class NavItemViewModel {
@@ -54,19 +116,13 @@ public final class UiViewModels {
     public static final class FilterOptionViewModel {
         private final String label;
         private final String href;
-        private final Map<String, String> params;
         private final String meta;
         private final boolean active;
 
         public FilterOptionViewModel(
-                final String label,
-                final String href,
-                final Map<String, String> params,
-                final String meta,
-                final boolean active) {
+                final String label, final String href, final String meta, final boolean active) {
             this.label = label;
             this.href = href;
-            this.params = params;
             this.meta = meta;
             this.active = active;
         }
@@ -77,10 +133,6 @@ public final class UiViewModels {
 
         public String getHref() {
             return href;
-        }
-
-        public Map<String, String> getParams() {
-            return params;
         }
 
         public String getMeta() {
@@ -95,17 +147,12 @@ public final class UiViewModels {
     public static final class SelectOptionViewModel {
         private final String label;
         private final String href;
-        private final Map<String, String> params;
         private final boolean selected;
 
         public SelectOptionViewModel(
-                final String label,
-                final String href,
-                final Map<String, String> params,
-                final boolean selected) {
+                final String label, final String href, final boolean selected) {
             this.label = label;
             this.href = href;
-            this.params = params;
             this.selected = selected;
         }
 
@@ -115,10 +162,6 @@ public final class UiViewModels {
 
         public String getHref() {
             return href;
-        }
-
-        public Map<String, String> getParams() {
-            return params;
         }
 
         public boolean isSelected() {

@@ -65,11 +65,6 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
-    public Optional<PlayerReview> findReviewById(final Long reviewId) {
-        return playerReviewDao.findById(reviewId);
-    }
-
-    @Override
     public PlayerReviewSummary findSummaryForUser(final User reviewed) {
         nonNullUser(reviewed);
         return playerReviewDao.getSummaryForUser(reviewed);

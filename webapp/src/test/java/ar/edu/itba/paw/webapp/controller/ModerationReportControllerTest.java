@@ -18,7 +18,6 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -29,7 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
-import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -58,7 +56,6 @@ class ModerationReportControllerTest {
                                         matchService,
                                         playerReviewService,
                                         messageSource))
-                        .setConversionService(conversionService())
                         .build();
     }
 
@@ -111,7 +108,8 @@ class ModerationReportControllerTest {
                         null,
                         null,
                         null);
-        Mockito.when(playerReviewService.findReviewById(12L)).thenReturn(Optional.of(review));
+        Mockito.when(playerReviewService.findReviewByIdIncludingDeleted(12L))
+                .thenReturn(Optional.of(review));
         Mockito.when(
                         moderationService.reportContent(
                                 Mockito.any(User.class),
@@ -144,12 +142,5 @@ class ModerationReportControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/reports/matches/42"))
                 .andExpect(flash().attribute("reportSent", true));
-    }
-
-    private static DefaultFormattingConversionService conversionService() {
-        final DefaultFormattingConversionService conversionService =
-                new DefaultFormattingConversionService();
-        conversionService.addConverter(new StringToReportReasonConverter());
-        return conversionService;
     }
 }

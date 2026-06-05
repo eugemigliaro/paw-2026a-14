@@ -10,7 +10,6 @@ import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -245,16 +244,8 @@ public class Tournament {
         return startsAt;
     }
 
-    public OffsetDateTime getStartsAtDateTime() {
-        return PlatformTime.toOffsetDateTime(startsAt);
-    }
-
     public Instant getEndsAt() {
         return endsAt;
-    }
-
-    public OffsetDateTime getEndsAtDateTime() {
-        return PlatformTime.toOffsetDateTime(endsAt);
     }
 
     public BigDecimal getPricePerPlayer() {
@@ -293,16 +284,8 @@ public class Tournament {
         return registrationOpensAt;
     }
 
-    public OffsetDateTime getRegistrationOpensAtDateTime() {
-        return PlatformTime.toOffsetDateTime(registrationOpensAt);
-    }
-
     public Instant getRegistrationClosesAt() {
         return registrationClosesAt;
-    }
-
-    public OffsetDateTime getRegistrationClosesAtDateTime() {
-        return PlatformTime.toOffsetDateTime(registrationClosesAt);
     }
 
     public TournamentStatus getStatus() {

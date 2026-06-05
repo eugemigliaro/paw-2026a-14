@@ -161,20 +161,6 @@ public class PlayerReviewJpaDaoTest {
     }
 
     @Test
-    public void testFindByIdExcludesDeletedReviews() {
-        joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
-        joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
-        final PlayerReview review =
-                playerReviewDao.upsertReview(
-                        user2, user3, PlayerReviewReaction.LIKE, "Good teammate");
-        Assertions.assertTrue(playerReviewDao.softDeleteReview(user2, user3));
-
-        final Optional<PlayerReview> found = playerReviewDao.findById(review.getId());
-
-        Assertions.assertTrue(found.isEmpty());
-    }
-
-    @Test
     public void testSoftDeleteReviewWithAdminDetails() {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);

@@ -3,7 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.query.TournamentSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -132,7 +132,7 @@ public class TournamentJpaDao implements TournamentDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final EventSort sort,
+            final TournamentSort sort,
             final Double latitude,
             final Double longitude,
             final int offset,
@@ -156,40 +156,17 @@ public class TournamentJpaDao implements TournamentDao {
     }
 
     @Override
-    public List<Tournament> findDashboardTournaments(
-            final User user,
-            final Boolean upcoming,
-            final Boolean includeHosted,
-            final String query,
-            final List<Sport> sports,
-            final Instant startsAtFrom,
-            final Instant startsAtTo,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final EventSort sort,
-            final Double latitude,
-            final Double longitude,
-            final int offset,
-            final int limit) {
-        final QueryParts parts = dashboardSearchParts(user, upcoming, includeHosted);
-        appendFilters(parts, query, sports, startsAtFrom, startsAtTo, minPrice, maxPrice);
-        return findPage(parts, sort, latitude, longitude, offset, limit);
-    }
-
-    @Override
-    public int countDashboardTournaments(
-            final User host,
-            final Boolean upcoming,
-            final Boolean includeHosted,
-            final String query,
-            final List<Sport> sports,
-            final Instant startsAtFrom,
-            final Instant startsAtTo,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
-        final QueryParts parts = dashboardSearchParts(host, upcoming, includeHosted);
-        appendFilters(parts, query, sports, startsAtFrom, startsAtTo, minPrice, maxPrice);
-        return countTournaments(parts);
+    public List<Tournament> findHostedByUser(final User host, final int offset, final int limit) {
+        return em.createQuery(
+                        "FROM Tournament t"
+                                + " WHERE t.host.id = :hostUserId"
+                                + " AND t.deleted = FALSE"
+                                + " ORDER BY t.createdAt DESC, t.id DESC",
+                        Tournament.class)
+                .setParameter("hostUserId", host.getId())
+                .setFirstResult(offset)
+                .setMaxResults(limit)
+                .getResultList();
     }
 
     @Override
@@ -224,7 +201,7 @@ public class TournamentJpaDao implements TournamentDao {
 
     private List<Tournament> findPage(
             final QueryParts parts,
-            final EventSort sort,
+            final TournamentSort sort,
             final Double latitude,
             final Double longitude,
             final int offset,
@@ -239,7 +216,7 @@ public class TournamentJpaDao implements TournamentDao {
                         .setFirstResult(Math.max(0, offset))
                         .setMaxResults(limit);
         setParams(idQuery, parts.params);
-        if (sort == EventSort.DISTANCE) {
+        if (sort == TournamentSort.DISTANCE) {
             setDistanceParams(idQuery, latitude, longitude);
         }
 
@@ -275,24 +252,6 @@ public class TournamentJpaDao implements TournamentDao {
         parts.where.add("t.deleted = FALSE");
         parts.where.add("t.status IN :statuses");
         parts.params.put("statuses", PUBLIC_ACTIVE_STATUSES);
-        return parts;
-    }
-
-    private static QueryParts dashboardSearchParts(
-            final User user, final Boolean upcoming, final Boolean includeHosted) {
-        final QueryParts parts = new QueryParts();
-        if (includeHosted != null && includeHosted) {
-            parts.where.add("t.host = :user");
-            parts.params.put("user", user);
-        }
-        if (upcoming != null) {
-            if (upcoming) {
-                parts.where.add("t.endsAt >= :now");
-            } else {
-                parts.where.add("t.endsAt < :now");
-            }
-            parts.params.put("now", Instant.now());
-        }
         return parts;
     }
 
@@ -344,15 +303,15 @@ public class TournamentJpaDao implements TournamentDao {
     }
 
     private static String orderBy(
-            final EventSort sort, final Double latitude, final Double longitude) {
-        final EventSort safeSort = sort == null ? EventSort.SOONEST : sort;
-        if (safeSort == EventSort.DISTANCE && latitude != null && longitude != null) {
+            final TournamentSort sort, final Double latitude, final Double longitude) {
+        final TournamentSort safeSort = sort == null ? TournamentSort.SOONEST : sort;
+        if (safeSort == TournamentSort.DISTANCE && latitude != null && longitude != null) {
             return " ORDER BY CASE WHEN t.latitude IS NULL OR t.longitude IS NULL THEN 1 ELSE 0 END ASC,"
                     + " ((t.latitude - :latitude) * (t.latitude - :latitude))"
                     + " + ((t.longitude - :longitude) * :cosLatitude * (t.longitude - :longitude) * :cosLatitude) ASC,"
                     + " t.startsAt ASC, t.id ASC";
         }
-        if (safeSort == EventSort.PRICE_LOW) {
+        if (safeSort == TournamentSort.PRICE) {
             return " ORDER BY COALESCE(t.pricePerPlayer, 0) ASC, t.startsAt ASC, t.id ASC";
         }
         return " ORDER BY t.startsAt ASC, t.id ASC";

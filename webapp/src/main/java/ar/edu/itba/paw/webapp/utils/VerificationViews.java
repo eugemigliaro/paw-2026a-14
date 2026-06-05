@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.utils;
 
 import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
@@ -38,6 +39,8 @@ public final class VerificationViews {
             final Locale locale,
             final String backHref) {
         final ModelAndView mav = new ModelAndView("verification/error");
+        mav.addObject(
+                "shell", ShellViewModelFactory.playerShell(ms, locale, "/verification/error"));
         mav.addObject("title", titleFor(ex.getReason(), ms, locale));
         mav.addObject("message", ex.getMessage());
         mav.addObject("backHref", backHref);

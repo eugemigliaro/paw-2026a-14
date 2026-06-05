@@ -13,8 +13,6 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
-import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
@@ -27,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
-import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -52,7 +49,6 @@ class UserModerationReportControllerTest {
                 MockMvcBuilders.standaloneSetup(
                                 new UserModerationReportController(
                                         moderationService, messageSource))
-                        .setConversionService(conversionService())
                         .build();
     }
 
@@ -157,13 +153,5 @@ class UserModerationReportControllerTest {
                 null,
                 Instant.now(),
                 Instant.now());
-    }
-
-    private static DefaultFormattingConversionService conversionService() {
-        final DefaultFormattingConversionService conversionService =
-                new DefaultFormattingConversionService();
-        conversionService.addConverter(new StringToReportStatusConverter());
-        conversionService.addConverter(new StringToReportTargetTypeConverter());
-        return conversionService;
     }
 }

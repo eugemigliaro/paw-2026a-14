@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Test;
 class ViewTemplateAssetsTest {
 
     @Test
-    void sharedHeadDoesNotLoadBrowserTimezoneScript() throws IOException {
+    void sharedHeadLoadsTimezoneFieldScript() throws IOException {
         final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
 
-        assertFalse(head.contains("/js/timezone-field.js"));
+        assertTrue(head.contains("/js/timezone-field.js"));
         assertTrue(head.contains("/css/auth.css"));
         assertTrue(head.contains("/js/overflow-menu.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
@@ -26,12 +26,11 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void hostCreateMatchUsesPlatformTimezoneInsteadOfBrowserTimezoneField() throws IOException {
+    void hostCreateMatchUsesSharedTimezoneScriptInsteadOfLegacyPageScript() throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
         final String buttonTag = read("src/main/webapp/WEB-INF/tags/button.tag");
 
-        assertFalse(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
-        assertFalse(hostCreateMatch.contains("name=\"tz\""));
+        assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
         assertTrue(
                 hostCreateMatch.contains(
@@ -105,11 +104,10 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void feedDoesNotSubmitBrowserTimezone() throws IOException {
+    void feedTimezoneInputsUseBrowserTimezoneFieldHook() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
 
-        assertEquals(0, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
-        assertFalse(feedIndex.contains("name=\"tz\""));
+        assertEquals(3, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
     }
 
     @Test
@@ -171,14 +169,16 @@ class ViewTemplateAssetsTest {
         assertTrue(eventsToggleScript.contains("optionCount === 2 && selectedIndex === 1"));
         assertTrue(toggleTag.contains("iconOnly"));
         assertTrue(toggleTag.contains("leftIcon"));
+        assertTrue(toggleTag.contains("events-toggle-icon.jspf"));
     }
 
     @Test
-    void sortSelectDoesNotMutateOptionUrlsWithBrowserTimezone() throws IOException {
+    void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
+        final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
 
-        assertFalse(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
+        assertTrue(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
         assertTrue(sortSelectTag.contains("data-close-on-select=\"true\""));
         assertTrue(sortSelectTag.contains("aria-expanded=\"false\""));
         assertTrue(sortSelectTag.contains("aria-current="));
@@ -187,13 +187,17 @@ class ViewTemplateAssetsTest {
         assertFalse(sortSelectTag.contains("aria-haspopup=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"option\""));
+        assertTrue(timezoneScript.contains("data-browser-timezone-url-link"));
+        assertFalse(timezoneScript.contains("data-browser-timezone-url-options"));
+        assertTrue(timezoneScript.contains("searchParams.set('tz', timezone)"));
     }
 
     @Test
-    void timezoneFieldScriptIsRemoved() {
+    void timezoneFieldScriptExistsAndTargetsBrowserTimezoneHook() throws IOException {
         final Path scriptPath = Path.of("src/main/webapp/js/timezone-field.js");
 
-        assertFalse(Files.exists(scriptPath));
+        assertTrue(Files.exists(scriptPath));
+        assertTrue(Files.readString(scriptPath).contains("data-browser-timezone-field"));
     }
 
     @Test
@@ -204,29 +208,6 @@ class ViewTemplateAssetsTest {
         assertTrue(
                 siteHeader.contains(
                         "queryParam.key ne 'lang' and queryParam.key ne 'persistLang'"));
-    }
-
-    @Test
-    void siteHeaderDecidesNavigationFromRequestAndSecurityContext() throws IOException {
-        final String siteHeader = read("src/main/webapp/WEB-INF/views/includes/site-header.jspf");
-
-        assertTrue(siteHeader.contains("requestScope['javax.servlet.forward.request_uri']"));
-        assertTrue(siteHeader.contains("pageContext.request.requestURI"));
-        assertTrue(siteHeader.contains("sec:authorize access=\"isAnonymous()\""));
-        assertTrue(siteHeader.contains("sec:authorize access=\"isAuthenticated()\""));
-        assertTrue(siteHeader.contains("sec:authorize access=\"hasRole('ADMIN_MOD')\""));
-        assertTrue(siteHeader.contains("nav.explore"));
-        assertTrue(siteHeader.contains("nav.player.events"));
-        assertTrue(siteHeader.contains("nav.hostAMatch"));
-        assertTrue(siteHeader.contains("nav.hostATournament"));
-        assertTrue(siteHeader.contains("nav.profile"));
-        assertTrue(siteHeader.contains("nav.player.reports"));
-        assertTrue(siteHeader.contains("nav.admin.reports"));
-        assertTrue(siteHeader.contains("nav.login"));
-        assertTrue(siteHeader.contains("nav.register"));
-        assertTrue(siteHeader.contains("nav.logout"));
-        assertFalse(siteHeader.contains("${shell."));
-        assertFalse(siteHeader.contains("ShellViewModelFactory"));
     }
 
     @Test

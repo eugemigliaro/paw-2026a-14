@@ -19,9 +19,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class ModerationReportJpaDao implements ModerationReportDao {
 
-    private static final List<ReportStatus> ACTIVE_STATUSES =
-            List.of(ReportStatus.PENDING, ReportStatus.UNDER_REVIEW, ReportStatus.APPEALED);
-
     @PersistenceContext private EntityManager em;
 
     @Override
@@ -65,20 +62,28 @@ public class ModerationReportJpaDao implements ModerationReportDao {
     }
 
     @Override
-    public boolean existsReportForTarget(
-            final User reporter, final ReportTargetType targetType, final Long targetId) {
-        final TypedQuery<Long> query =
-                em.createQuery(
-                        "SELECT COUNT(mr) FROM ModerationReport mr "
-                                + "WHERE mr.reporter.id = :reporterUserId "
-                                + "AND mr.targetType = :targetType "
-                                + "AND mr.targetId = :targetId",
-                        Long.class);
-        query.setParameter("reporterUserId", reporter.getId());
-        query.setParameter("targetType", targetType);
-        query.setParameter("targetId", targetId);
+    public List<ModerationReport> findReportsByReporter(final User reporter) {
+        return findReportsByReporter(reporter, List.of(), List.of());
+    }
 
-        return query.getSingleResult() > 0;
+    @Override
+    public List<ModerationReport> findReportsByReporter(
+            final User reporter,
+            final List<ReportTargetType> targetTypes,
+            final List<ReportStatus> statuses) {
+        return findReportsByReporter(reporter, targetTypes, statuses, 1, Integer.MAX_VALUE)
+                .getItems();
+    }
+
+    @Override
+    public List<ModerationReport> findReports() {
+        return findReports(List.of(), List.of());
+    }
+
+    @Override
+    public List<ModerationReport> findReports(
+            final List<ReportTargetType> targetTypes, final List<ReportStatus> statuses) {
+        return findReports(targetTypes, statuses, 1, Integer.MAX_VALUE).getItems();
     }
 
     @Override
@@ -117,7 +122,9 @@ public class ModerationReportJpaDao implements ModerationReportDao {
                                 + "AND mr.status IN (:statuses)",
                         Long.class);
         query.setParameter("reporterUserId", reporter.getId());
-        query.setParameter("statuses", ACTIVE_STATUSES);
+        query.setParameter(
+                "statuses",
+                List.of(ReportStatus.PENDING, ReportStatus.UNDER_REVIEW, ReportStatus.APPEALED));
 
         return query.getSingleResult().intValue();
     }

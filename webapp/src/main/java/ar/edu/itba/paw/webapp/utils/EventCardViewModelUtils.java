@@ -9,7 +9,6 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.sportLabel;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
@@ -17,6 +16,7 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventRelationshipBadgeViewModel;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -31,6 +31,7 @@ public final class EventCardViewModelUtils {
 
     public static EventCardViewModel toCard(
             final Match match,
+            final ZoneId zoneId,
             final Locale locale,
             final User currentUser,
             final String badge,
@@ -39,6 +40,7 @@ public final class EventCardViewModelUtils {
             final MatchReservationService matchReservationService) {
         return toCard(
                 match,
+                zoneId,
                 locale,
                 currentUser,
                 badge,
@@ -50,6 +52,7 @@ public final class EventCardViewModelUtils {
 
     public static EventCardViewModel toCard(
             final Match match,
+            final ZoneId zoneId,
             final Locale locale,
             final User currentUser,
             final String badge,
@@ -58,7 +61,7 @@ public final class EventCardViewModelUtils {
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService) {
         final Locale resolvedLocale = resolvedLocale(locale);
-        final ZonedDateTime startsAt = match.getStartsAt().atZone(PlatformTime.ZONE);
+        final ZonedDateTime startsAt = match.getStartsAt().atZone(zoneId);
         final List<EventRelationshipBadgeViewModel> relationshipBadges =
                 relationshipBadgesFor(
                         match,
@@ -92,6 +95,7 @@ public final class EventCardViewModelUtils {
 
     public static EventCardViewModel toCard(
             final Tournament tournament,
+            final ZoneId zoneId,
             final Locale locale,
             final User currentUser,
             final String badge,
@@ -121,7 +125,7 @@ public final class EventCardViewModelUtils {
         }
 
         final Instant scheduleInstant = tournament.getStartsAt();
-        final ZonedDateTime startsAt = scheduleInstant.atZone(PlatformTime.ZONE);
+        final ZonedDateTime startsAt = scheduleInstant.atZone(zoneId);
 
         return new EventCardViewModel(
                 String.valueOf(tournament.getId()),

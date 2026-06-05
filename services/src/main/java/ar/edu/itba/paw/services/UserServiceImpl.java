@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -73,7 +74,9 @@ public class UserServiceImpl implements UserService {
             final String name,
             final String lastName,
             final String phone,
-            final ImageUpload profileImage)
+            final String profileImageContentType,
+            final long profileImageContentLength,
+            final InputStream profileImageContentStream)
             throws IOException {
         final Locale locale = currentLocale();
         nonNullUser(user);
@@ -82,10 +85,12 @@ public class UserServiceImpl implements UserService {
         final String normalizedName = normalizeRequiredText(name, 150, "name", locale);
         final String normalizedLastName = normalizeRequiredText(lastName, 150, "lastName", locale);
         final String normalizedPhone = normalizePhone(phone, locale);
-        ImageMetadata profileImageMetadata = imageService.resolveImageMetadata(profileImage);
-        if (profileImageMetadata == null) {
-            profileImageMetadata = user.getProfileImageMetadata();
-        }
+        final ImageMetadata profileImageMetadata =
+                resolveProfileImageMetadata(
+                        user,
+                        profileImageContentType,
+                        profileImageContentLength,
+                        profileImageContentStream);
 
         final Optional<User> userWithUsername = userDao.findByUsername(normalizedUsername);
         if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(user.getId())) {
@@ -124,10 +129,55 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public User updateProfileImage(
+            final Long id,
+            final String contentType,
+            final long contentLength,
+            final InputStream contentStream)
+            throws IOException {
+        final User existingUser =
+                userDao.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        final Long profileImageId = imageService.store(contentType, contentLength, contentStream);
+        final ImageMetadata profileImageMetadata =
+                new ImageMetadata(profileImageId, contentType, contentLength);
+        userDao.updateProfileImage(id, profileImageMetadata);
+        return new User(
+                existingUser.getId(),
+                existingUser.getEmail(),
+                existingUser.getUsername(),
+                existingUser.getName(),
+                existingUser.getLastName(),
+                existingUser.getPhone(),
+                profileImageMetadata,
+                existingUser.getPreferredLanguage());
+    }
+
+    @Override
+    @Transactional
     public void updatePreferredLanguage(final User user, final String preferredLanguage) {
         nonNullUser(user);
         userDao.updatePreferredLanguage(
                 user.getId(), UserLanguages.normalizeLanguage(preferredLanguage));
+    }
+
+    private ImageMetadata resolveProfileImageMetadata(
+            final User existingUser,
+            final String profileImageContentType,
+            final long profileImageContentLength,
+            final InputStream profileImageContentStream)
+            throws IOException {
+        if (profileImageContentStream == null || profileImageContentLength <= 0) {
+            return existingUser.getProfileImageMetadata();
+        }
+
+        final Long profileImageId =
+                imageService.store(
+                        profileImageContentType,
+                        profileImageContentLength,
+                        profileImageContentStream);
+        return new ImageMetadata(
+                profileImageId, profileImageContentType, profileImageContentLength);
     }
 
     private String normalizeUsername(

@@ -1,21 +1,25 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
 import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
@@ -30,6 +34,7 @@ import java.util.Locale;
 import java.util.Optional;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,6 +56,7 @@ public class PublicProfileController {
     private final ModerationService moderationService;
     private final UserSportRatingService userSportRatingService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PublicProfileController(
@@ -58,25 +64,44 @@ public class PublicProfileController {
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
             final UserSportRatingService userSportRatingService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
         this.moderationService = moderationService;
         this.userSportRatingService = userSportRatingService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public PublicProfileController(
+            final UserService userService,
+            final PlayerReviewService playerReviewService,
+            final ModerationService moderationService,
+            final UserSportRatingService userSportRatingService,
+            final MessageSource messageSource) {
+        this(
+                userService,
+                playerReviewService,
+                moderationService,
+                userSportRatingService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/users/{username}")
     public ModelAndView showPublicProfile(
             @PathVariable("username") final String username,
             @RequestParam(value = "reviewForm", required = false) final String reviewForm,
-            @RequestParam(value = "reviewFilter", required = false, defaultValue = "both")
-                    final PlayerReviewFilter reviewFilter,
-            @RequestParam(value = "reviewPage", defaultValue = "1") final int reviewPage,
+            @RequestParam(value = "reviewFilter", required = false) final String reviewFilter,
+            @RequestParam(value = "reviewPage", defaultValue = "1") final String reviewPage,
             final Model model,
             final Locale locale) {
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
-        final User user = findUserByUsernameOrThrow(username);
+        final User user =
+                userService
+                        .findByUsername(username)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         final ModelAndView mav = new ModelAndView("users/profile");
         mav.addObject("reviewStatus", model.asMap().get("reviewStatus"));
@@ -89,6 +114,10 @@ public class PublicProfileController {
                         "Match Point | " + user.getUsername(),
                         resolvedLocale));
         mav.addObject(
+                "shell",
+                ShellViewModelFactory.playerShell(
+                        messageSource, resolvedLocale, "/users/" + username));
+        mav.addObject(
                 "profilePage",
                 new PublicProfilePageViewModel(
                         user.getUsername(),
@@ -97,7 +126,8 @@ public class PublicProfileController {
                         user.getEmail(),
                         user.getPhone(),
                         ImageUrlHelper.profileUrlFor(user)));
-        addReviewModel(mav, user, reviewForm, reviewFilter, reviewPage, resolvedLocale);
+        addReviewModel(
+                mav, user, reviewForm, reviewFilter, parseReviewPage(reviewPage), resolvedLocale);
         mav.addObject(
                 "profileImageAlt",
                 messageSource.getMessage(
@@ -111,17 +141,16 @@ public class PublicProfileController {
                         "profile.public.username", null, "Username", resolvedLocale));
         mav.addObject(
                 "profileFullNameLabel",
-                messageSource.getMessage("profile.public.fullName", null, "Name", resolvedLocale));
+                messageSource.getMessage("profile.public.fullName", null, "Name", locale));
         mav.addObject(
                 "profileEmailLabel",
-                messageSource.getMessage("profile.public.email", null, "Email", resolvedLocale));
+                messageSource.getMessage("profile.public.email", null, "Email", locale));
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
         final boolean reportUserCanSubmit =
-                currentUser != null
-                        && !currentUser.getId().equals(user.getId()); // TODO: remove business logic
+                currentUser != null && !currentUser.getId().equals(user.getId());
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
         final Optional<UserBan> activeBan = moderationService.findActiveBan(user);
         mav.addObject("profileBanned", activeBan.isPresent());
@@ -135,34 +164,46 @@ public class PublicProfileController {
                             "profileBannedUntil",
                             DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                                     .withLocale(resolvedLocale)
-                                    .format(ban.getBannedUntil().atZone(PlatformTime.ZONE)));
+                                    .format(
+                                            ban.getBannedUntil()
+                                                    .atZone(
+                                                            platformTimeZoneService
+                                                                    .defaultZone())));
                 });
-        if (currentUser != null && currentUser.equals(user)) {
-            mav.addObject("profileEditHref", "/account");
-            mav.addObject(
-                    "profileEditLabel",
-                    messageSource.getMessage(
-                            "profile.public.edit", null, "Edit profile", resolvedLocale));
-        }
+        CurrentAuthenticatedUser.get()
+                .filter(principal -> principal.getUser().getId().equals(user.getId()))
+                .ifPresent(
+                        principal -> {
+                            mav.addObject("profileEditHref", "/account");
+                            mav.addObject(
+                                    "profileEditLabel",
+                                    messageSource.getMessage(
+                                            "profile.public.edit",
+                                            null,
+                                            "Edit profile",
+                                            resolvedLocale));
+                        });
         addRatingsModel(mav, user, resolvedLocale);
         return mav;
     }
 
     @PostMapping("/users/{username}/reviews")
+    @PreAuthorize("isAuthenticated()")
     public ModelAndView submitReview(
             @PathVariable("username") final String username,
-            @RequestParam("reaction") final PlayerReviewReaction reaction,
+            @RequestParam("reaction") final String reactionValue,
             @RequestParam(value = "comment", required = false) final String comment,
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
-
-        if (reaction == null) {
+        final Optional<PlayerReviewReaction> reaction =
+                PersistableEnum.fromDbValue(PlayerReviewReaction.class, reactionValue);
+        if (reaction.isEmpty()) {
             return redirectToProfile(username, "invalid_reaction", null);
         }
 
         try {
-            playerReviewService.submitReview(currentUser, reviewedUser, reaction, comment);
+            playerReviewService.submitReview(currentUser, reviewedUser, reaction.get(), comment);
             return redirectToProfile(username, null, "saved", redirectAttributes);
         } catch (final PlayerReviewException e) {
             return redirectToProfile(username, e.getCode(), null);
@@ -170,6 +211,7 @@ public class PublicProfileController {
     }
 
     @PostMapping("/users/{username}/reviews/delete")
+    @PreAuthorize("isAuthenticated() and @securityService.hasReviewed(#username)")
     public ModelAndView deleteReview(
             @PathVariable("username") final String username,
             final RedirectAttributes redirectAttributes) {
@@ -212,14 +254,15 @@ public class PublicProfileController {
             final ModelAndView mav,
             final User user,
             final String reviewForm,
-            final PlayerReviewFilter reviewFilter,
+            final String reviewFilter,
             final int reviewPage,
             final Locale locale) {
-        // TODO: remove business logic from controller
         final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user);
+        final PlayerReviewFilter selectedFilter =
+                PlayerReviewFilter.fromQueryValueOrDefault(reviewFilter);
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
-                        user, reviewFilter, reviewPage, REVIEW_PAGE_SIZE);
+                        user, selectedFilter, reviewPage, REVIEW_PAGE_SIZE);
         final List<PlayerReviewViewModel> reviews =
                 reviewResult.getItems().stream()
                         .map(review -> toReviewViewModel(review, locale))
@@ -251,21 +294,21 @@ public class PublicProfileController {
                         "profile.reviews.dislikes",
                         locale));
         mav.addObject("profileReviews", reviews);
-        mav.addObject("reviewFilterOptions", reviewFilterOptions(user, reviewFilter, locale));
-        mav.addObject("selectedReviewFilter", reviewFilter.getQueryValue());
+        mav.addObject("reviewFilterOptions", reviewFilterOptions(user, selectedFilter, locale));
+        mav.addObject("selectedReviewFilter", selectedFilter.getQueryValue());
         mav.addObject("reviewTotalPages", reviewResult.getTotalPages());
         mav.addObject(
                 "reviewPaginationItems",
-                buildReviewPaginationItems(user, reviewFilter, reviewResult));
+                buildReviewPaginationItems(user, selectedFilter, reviewResult));
         mav.addObject(
                 "reviewPreviousPageHref",
                 reviewResult.hasPrevious()
-                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() - 1)
+                        ? buildReviewPageUrl(user, selectedFilter, reviewResult.getPage() - 1)
                         : null);
         mav.addObject(
                 "reviewNextPageHref",
                 reviewResult.hasNext()
-                        ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() + 1)
+                        ? buildReviewPageUrl(user, selectedFilter, reviewResult.getPage() + 1)
                         : null);
         mav.addObject("reviewCanSubmit", reviewCanSubmit);
         mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
@@ -274,10 +317,10 @@ public class PublicProfileController {
         mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
         mav.addObject(
                 "reviewFormPath",
-                buildReviewPageUrl(user, reviewFilter, reviewResult.getPage(), "open"));
+                buildReviewPageUrl(user, selectedFilter, reviewResult.getPage(), "open"));
         mav.addObject(
                 "reviewSectionPath",
-                buildReviewPageUrl(user, reviewFilter, reviewResult.getPage()));
+                buildReviewPageUrl(user, selectedFilter, reviewResult.getPage()));
         if (reviewCanSubmit) {
             mav.addObject(
                     "reviewCommentPromptLabel",
@@ -316,7 +359,7 @@ public class PublicProfileController {
                 messageSource.getMessage(
                         "profile.reviews.filter." + filter.getQueryValue(), null, locale);
         return new FilterOptionViewModel(
-                label, buildReviewPageUrl(user, filter, 1), null, null, filter == selectedFilter);
+                label, buildReviewPageUrl(user, filter, 1), null, filter == selectedFilter);
     }
 
     private static List<PaginationItemViewModel> buildReviewPaginationItems(
@@ -429,7 +472,16 @@ public class PublicProfileController {
         }
         return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
                 .withLocale(locale == null ? Locale.ENGLISH : locale)
-                .format(review.getUpdatedAt().atZone(PlatformTime.ZONE));
+                .format(review.getUpdatedAt().atZone(platformTimeZoneService.defaultZone()));
+    }
+
+    private static int parseReviewPage(final String reviewPage) {
+        try {
+            final int parsedPage = Integer.parseInt(reviewPage);
+            return parsedPage > 0 ? parsedPage : 1;
+        } catch (final NumberFormatException e) {
+            return 1;
+        }
     }
 
     private User findUserByUsernameOrThrow(final String username) {

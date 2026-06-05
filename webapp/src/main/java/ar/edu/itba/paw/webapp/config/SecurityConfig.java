@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.config;
 
+import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.AccountAuthService;
-import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.webapp.security.AccountAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.BannedAccountAuthorizationFilter;
 import ar.edu.itba.paw.webapp.security.ContinueFlagLoginEntryPoint;
@@ -10,6 +10,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +21,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Bean
@@ -101,12 +103,6 @@ public class SecurityConfig {
                                                         "/matches/*/join-requests/cancel",
                                                         HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
-                                                        "/matches/*/invites/accept",
-                                                        HttpMethod.POST.name()),
-                                                new AntPathRequestMatcher(
-                                                        "/matches/*/invites/decline",
-                                                        HttpMethod.POST.name()),
-                                                new AntPathRequestMatcher(
                                                         "/users/*/reviews", HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
                                                         "/users/*/reviews/delete",
@@ -170,7 +166,7 @@ public class SecurityConfig {
 
     @Bean
     public BannedAccountAuthorizationFilter bannedAccountAuthorizationFilter(
-            final ModerationService moderationService) {
-        return new BannedAccountAuthorizationFilter(moderationService);
+            final UserBanDao userBanDao) {
+        return new BannedAccountAuthorizationFilter(userBanDao);
     }
 }

@@ -13,7 +13,3 @@ Match Point
 [/]
 
 [[${notice}]]
-[# th:if="${eventUrl}"]
-[[${viewEventLabel}]]:
-[[${eventUrl}]]
-[/]

@@ -3,10 +3,9 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
+import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -18,14 +17,16 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
+import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,9 +51,8 @@ public class MatchServiceImplTest {
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
+    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
     @Mock private SecurityService securityService;
-    @Mock private MatchParticipationService matchParticipationService;
-    @Mock private ImageService imageService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchNotificationService matchNotificationService;
@@ -65,18 +65,20 @@ public class MatchServiceImplTest {
         mailDispatchService = new RecordingMailDispatchService();
         matchNotificationService =
                 Mockito.spy(
-                        new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService));
+                        new MatchNotificationServiceImpl(
+                                matchParticipantDao,
+                                mailDispatchService,
+                                templateRenderer,
+                                messageSource));
         matchService =
                 new MatchServiceImpl(
                         matchDao,
-                        imageService,
                         matchParticipantDao,
                         matchNotificationService,
                         securityService,
                         new RecurringMatchAsyncService(matchDao),
                         messageSource,
                         clock);
-        matchService = Mockito.spy(matchService);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
         Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Mockito.lenient()
@@ -92,11 +94,8 @@ public class MatchServiceImplTest {
     @Test
     public void testSearchPublicMatchesWithValidInputs() {
         final Match match = createTestMatch(1L, "Football", "football");
-        final LocalDate searchStart = LocalDate.parse("2026-04-10");
-        final LocalDate searchEnd = LocalDate.parse("2026-04-15");
-        final Instant expectedStart = searchStart.atStartOfDay(PlatformTime.ZONE).toInstant();
-        final Instant expectedEndExclusive =
-                searchEnd.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant();
+        final Instant expectedStart = Instant.parse("2026-04-10T00:00:00Z");
+        final Instant expectedEndExclusive = Instant.parse("2026-04-17T00:00:00Z");
         Mockito.when(
                         matchDao.findPublicMatches(
                                 "football",
@@ -106,7 +105,8 @@ public class MatchServiceImplTest {
                                 expectedEndExclusive,
                                 null,
                                 null,
-                                EventSort.SOONEST,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 10,
@@ -120,20 +120,20 @@ public class MatchServiceImplTest {
                                 expectedStart,
                                 expectedEndExclusive,
                                 null,
-                                null))
+                                null,
+                                ZoneId.of("UTC")))
                 .thenReturn(25);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
                         "football",
-                        List.of(Sport.FOOTBALL),
-                        searchStart,
-                        searchEnd,
-                        EventSort.SOONEST,
+                        "football",
+                        "2026-04-10",
+                        "2026-04-16",
+                        "soonest",
                         2,
                         10,
-                        null,
-                        null,
+                        "UTC",
                         null,
                         null);
 
@@ -156,7 +156,8 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -170,12 +171,13 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null))
+                                null,
+                                ZoneId.of("UTC")))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null, List.of(Sport.PADEL), null, null, null, 1, 0, null, null, null, null);
+                        null, "padel", null, null, null, 1, 0, "UTC", null, null);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Padel", result.getItems().get(0).getTitle());
@@ -189,13 +191,14 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDao.findPublicMatches(
                                 null,
-                                List.of(Sport.FOOTBALL, Sport.TENNIS, Sport.PADEL),
+                                List.of(Sport.FOOTBALL, Sport.TENNIS),
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
                                 null,
                                 null,
-                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -204,25 +207,25 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDao.countPublicMatches(
                                 null,
-                                List.of(Sport.FOOTBALL, Sport.TENNIS, Sport.PADEL),
+                                List.of(Sport.FOOTBALL, Sport.TENNIS),
                                 EventTimeFilter.ALL,
                                 null,
                                 null,
                                 null,
-                                null))
+                                null,
+                                ZoneId.of("UTC")))
                 .thenReturn(2);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
                         null,
-                        List.of(Sport.FOOTBALL, Sport.TENNIS, Sport.PADEL),
+                        "football,tennis,invalid,football",
                         null,
                         null,
                         null,
                         1,
                         12,
-                        null,
-                        null,
+                        "UTC",
                         null,
                         null);
 
@@ -245,7 +248,8 @@ public class MatchServiceImplTest {
                                 null,
                                 minPrice,
                                 maxPrice,
-                                EventSort.PRICE_LOW,
+                                MatchSort.PRICE_LOW,
+                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -259,22 +263,13 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 minPrice,
-                                maxPrice))
+                                maxPrice,
+                                ZoneId.of("UTC")))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null,
-                        List.of(Sport.PADEL),
-                        null,
-                        null,
-                        EventSort.PRICE_LOW,
-                        1,
-                        12,
-                        minPrice,
-                        maxPrice,
-                        null,
-                        null);
+                        null, "padel", null, null, "price", 1, 12, "UTC", minPrice, maxPrice);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Premium Padel", result.getItems().get(0).getTitle());
@@ -291,7 +286,8 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null))
+                                null,
+                                ZoneId.of("UTC")))
                 .thenReturn(13);
         Mockito.when(
                         matchDao.findPublicMatches(
@@ -302,7 +298,8 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                EventSort.SOONEST,
+                                MatchSort.SOONEST,
+                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 12,
@@ -311,17 +308,7 @@ public class MatchServiceImplTest {
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null,
-                        List.of(Sport.PADEL),
-                        null,
-                        null,
-                        EventSort.SOONEST,
-                        99,
-                        12,
-                        null,
-                        null,
-                        null,
-                        null);
+                        null, "padel", null, null, null, 99, 12, "UTC", null, null);
 
         Assertions.assertEquals(2, result.getPage());
         Assertions.assertEquals(2, result.getTotalPages());
@@ -359,10 +346,8 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Test Match",
                                 "Test Description",
-                                dateOf(now),
-                                timeOf(now),
-                                dateOf(null),
-                                timeOf(null),
+                                now,
+                                null,
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
@@ -373,56 +358,6 @@ public class MatchServiceImplTest {
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1L, result.getId());
         Assertions.assertEquals("Test Match", result.getTitle());
-    }
-
-    @Test
-    public void testCreateMatchConvertsArgentinaLocalDateTimeToUtcInstant() {
-        // 1. Arrange
-        final Instant expectedStartsAt = Instant.parse("2099-04-10T21:00:00Z");
-        final Instant expectedEndsAt = Instant.parse("2099-04-10T22:30:00Z");
-        final Match expectedMatch = createTestMatch(1L, "Argentina Match", "football");
-        Mockito.when(
-                        matchDao.createMatch(
-                                UserUtils.getUser(1L),
-                                "Test Address",
-                                "Argentina Match",
-                                "Test Description",
-                                expectedStartsAt,
-                                expectedEndsAt,
-                                10,
-                                BigDecimal.ZERO,
-                                Sport.FOOTBALL,
-                                EventVisibility.PUBLIC,
-                                EventJoinPolicy.DIRECT,
-                                EventStatus.OPEN,
-                                null,
-                                (Double) null,
-                                (Double) null))
-                .thenReturn(expectedMatch);
-
-        // 2. Exercise
-        final Match result =
-                matchService.createMatch(
-                        new CreateMatchRequest(
-                                UserUtils.getUser(1L),
-                                "Test Address",
-                                "Argentina Match",
-                                "Test Description",
-                                LocalDate.parse("2099-04-10"),
-                                LocalTime.parse("18:00"),
-                                LocalDate.parse("2099-04-10"),
-                                LocalTime.parse("19:30"),
-                                10,
-                                BigDecimal.ZERO,
-                                Sport.FOOTBALL,
-                                EventVisibility.PUBLIC,
-                                EventStatus.OPEN,
-                                null));
-
-        // 3. Assert
-        Assertions.assertNotNull(result);
-        Assertions.assertEquals(1L, result.getId());
-        Assertions.assertEquals("Argentina Match", result.getTitle());
     }
 
     @Test
@@ -509,13 +444,7 @@ public class MatchServiceImplTest {
                         null);
         Mockito.when(
                         matchDao.createMatchSeries(
-                                host,
-                                RecurrenceFrequency.WEEKLY,
-                                startsAt,
-                                endsAt,
-                                PlatformTime.ZONE.getId(),
-                                null,
-                                3))
+                                host, RecurrenceFrequency.WEEKLY, startsAt, endsAt, "UTC", null, 3))
                 .thenReturn(77L);
         Mockito.when(
                         matchDao.createMatch(
@@ -586,10 +515,8 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Weekly Padel",
                                 "Test Description",
-                                dateOf(startsAt),
-                                timeOf(startsAt),
-                                dateOf(endsAt),
-                                timeOf(endsAt),
+                                startsAt,
+                                endsAt,
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
@@ -601,7 +528,8 @@ public class MatchServiceImplTest {
                                         RecurrenceFrequency.WEEKLY,
                                         RecurrenceEndMode.OCCURRENCE_COUNT,
                                         null,
-                                        3)));
+                                        3,
+                                        ZoneId.of("UTC"))));
 
         // 3. Assert
         Assertions.assertNotNull(result);
@@ -674,7 +602,7 @@ public class MatchServiceImplTest {
                                 RecurrenceFrequency.WEEKLY,
                                 startsAt,
                                 endsAt,
-                                PlatformTime.ZONE.getId(),
+                                "UTC",
                                 untilDate,
                                 null))
                 .thenReturn(88L);
@@ -727,10 +655,8 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Weekly Padel",
                                 "Test Description",
-                                dateOf(startsAt),
-                                timeOf(startsAt),
-                                dateOf(endsAt),
-                                timeOf(endsAt),
+                                startsAt,
+                                endsAt,
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
@@ -742,7 +668,8 @@ public class MatchServiceImplTest {
                                         RecurrenceFrequency.WEEKLY,
                                         RecurrenceEndMode.UNTIL_DATE,
                                         untilDate,
-                                        null)));
+                                        null,
+                                        ZoneId.of("UTC"))));
 
         // 3. Assert
         Assertions.assertEquals(111L, result.getId());
@@ -767,10 +694,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Weekly Padel",
                                                 "Test Description",
-                                                dateOf(startsAt),
-                                                timeOf(startsAt),
-                                                dateOf(endsAt),
-                                                timeOf(endsAt),
+                                                startsAt,
+                                                endsAt,
                                                 8,
                                                 BigDecimal.ZERO,
                                                 Sport.PADEL,
@@ -782,7 +707,8 @@ public class MatchServiceImplTest {
                                                         RecurrenceFrequency.WEEKLY,
                                                         RecurrenceEndMode.UNTIL_DATE,
                                                         java.time.LocalDate.of(2026, 4, 12),
-                                                        null))));
+                                                        null,
+                                                        ZoneId.of("UTC")))));
 
         // 3. Assert
         Assertions.assertEquals("match.recurrence.error.tooFewOccurrences", exception.getMessage());
@@ -800,10 +726,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW),
-                                                timeOf(FIXED_NOW),
-                                                dateOf(null),
-                                                timeOf(null),
+                                                FIXED_NOW,
+                                                null,
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -823,10 +747,8 @@ public class MatchServiceImplTest {
                         "Test Address",
                         "Test Match",
                         "Test Description",
-                        dateOf(FIXED_NOW.plusSeconds(3600)),
-                        timeOf(FIXED_NOW.plusSeconds(3600)),
-                        dateOf(FIXED_NOW.plusSeconds(7200)),
-                        timeOf(FIXED_NOW.plusSeconds(7200)),
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
                         1001,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
@@ -858,10 +780,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -889,10 +809,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -944,65 +862,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Updated Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(5400)),
-                                                timeOf(FIXED_NOW.plusSeconds(5400)),
-                                                dateOf(FIXED_NOW.plusSeconds(9000)),
-                                                timeOf(FIXED_NOW.plusSeconds(9000)),
-                                                10,
-                                                BigDecimal.ZERO,
-                                                Sport.FOOTBALL,
-                                                EventVisibility.PUBLIC,
-                                                EventStatus.OPEN,
-                                                null)));
-
-        Assertions.assertEquals(MatchUpdateFailureReason.NOT_EDITABLE, exception.getReason());
-        Assertions.assertEquals("match.update.error.notEditable", exception.getMessage());
-    }
-
-    @Test
-    public void testUpdateMatchRejectsAlreadyStartedOpenMatch() {
-        final Match startedMatch =
-                new Match(
-                        17L,
-                        Sport.FOOTBALL,
-                        UserUtils.getUser(1L),
-                        "Test Address",
-                        null,
-                        null,
-                        "Started Match",
-                        "Test Description",
-                        FIXED_NOW.minusSeconds(60),
-                        FIXED_NOW.plusSeconds(3600),
-                        10,
-                        BigDecimal.ZERO,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        0,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
-        Mockito.when(matchDao.findById(17L)).thenReturn(Optional.of(startedMatch));
-
-        final MatchUpdateException exception =
-                Assertions.assertThrows(
-                        MatchUpdateException.class,
-                        () ->
-                                matchService.updateMatch(
-                                        17L,
-                                        UserUtils.getUser(1L),
-                                        new UpdateMatchRequest(
-                                                "Test Address",
-                                                "Updated Match",
-                                                "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(5400)),
-                                                timeOf(FIXED_NOW.plusSeconds(5400)),
-                                                dateOf(FIXED_NOW.plusSeconds(9000)),
-                                                timeOf(FIXED_NOW.plusSeconds(9000)),
+                                                FIXED_NOW.plusSeconds(5400),
+                                                FIXED_NOW.plusSeconds(9000),
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -1030,10 +891,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW),
-                                                timeOf(FIXED_NOW),
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
+                                                FIXED_NOW,
+                                                FIXED_NOW.plusSeconds(3600),
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -1061,10 +920,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                FIXED_NOW.plusSeconds(3600),
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -1094,10 +951,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
                                                 1,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -1129,10 +984,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
                                                 1001,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -1206,10 +1059,8 @@ public class MatchServiceImplTest {
                                 "Updated Address",
                                 "Updated Title",
                                 "Updated Description",
-                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
                                 12,
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
@@ -1282,10 +1133,8 @@ public class MatchServiceImplTest {
                         "Test Address",
                         "Private Match",
                         "Test Description",
-                        dateOf(FIXED_NOW.plusSeconds(3600)),
-                        timeOf(FIXED_NOW.plusSeconds(3600)),
-                        dateOf(FIXED_NOW.plusSeconds(7200)),
-                        timeOf(FIXED_NOW.plusSeconds(7200)),
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
                         10,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
@@ -1355,10 +1204,8 @@ public class MatchServiceImplTest {
                         "Test Address",
                         "Request Match",
                         "Test Description",
-                        dateOf(FIXED_NOW.plusSeconds(3600)),
-                        timeOf(FIXED_NOW.plusSeconds(3600)),
-                        dateOf(FIXED_NOW.plusSeconds(7200)),
-                        timeOf(FIXED_NOW.plusSeconds(7200)),
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
                         10,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
@@ -1394,10 +1241,8 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Request Match",
                                                 "Test Description",
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
                                                 3,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -1473,10 +1318,8 @@ public class MatchServiceImplTest {
                         "Test Address",
                         "Request Match",
                         "Test Description",
-                        dateOf(FIXED_NOW.plusSeconds(3600)),
-                        timeOf(FIXED_NOW.plusSeconds(3600)),
-                        dateOf(FIXED_NOW.plusSeconds(7200)),
-                        timeOf(FIXED_NOW.plusSeconds(7200)),
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
                         4,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
@@ -1526,10 +1369,8 @@ public class MatchServiceImplTest {
                                                 "Updated Address",
                                                 "Updated Title",
                                                 "Updated Description",
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
                                                 12,
                                                 BigDecimal.ONE,
                                                 Sport.TENNIS,
@@ -1717,132 +1558,6 @@ public class MatchServiceImplTest {
     }
 
     @Test
-    public void testFindDashboardMatchesDedupesAndPreservesOrder() {
-        final User user = UserUtils.getUser(1L);
-
-        createTestMatch(1L, "Pending Match", "football");
-        final Match invited = createTestMatch(2L, "Invited Match", "football");
-        final Match joined = createTestMatch(3L, "Joined Match", "football");
-        final Match hosted = createTestMatch(4L, "Hosted Match", "football");
-
-        final List<Match> expectedMatches = List.of(invited, joined, hosted);
-        Mockito.when(
-                        matchDao.findDashboardMatches(
-                                Mockito.eq(user),
-                                Mockito.eq(Boolean.TRUE),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(expectedMatches);
-        Mockito.when(
-                        matchDao.countDashboardMatches(
-                                Mockito.eq(user),
-                                Mockito.eq(Boolean.TRUE),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any()))
-                .thenReturn(3);
-
-        final PaginatedResult<Match> result =
-                matchService.findDashboardMatches(
-                        user,
-                        Boolean.TRUE,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        1,
-                        10);
-
-        Assertions.assertEquals(3, result.getTotalCount());
-        Assertions.assertEquals(1, result.getPage());
-        Assertions.assertEquals(10, result.getPageSize());
-
-        final List<Long> ids = result.getItems().stream().map(Match::getId).toList();
-        Assertions.assertEquals(List.of(2L, 3L, 4L), ids);
-    }
-
-    @Test
-    public void testFindDashboardMatchesPagination() {
-        final User user = UserUtils.getUser(1L);
-        final List<Match> expected = List.of(createTestMatch(2L, "M2", "football"));
-
-        Mockito.when(
-                        matchDao.findDashboardMatches(
-                                Mockito.eq(user),
-                                Mockito.eq(Boolean.TRUE),
-                                Mockito.eq(false),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.eq(5), // offset = (2-1)*5 = 5
-                                Mockito.eq(5))) // limit = 5
-                .thenReturn(expected);
-        Mockito.when(
-                        matchDao.countDashboardMatches(
-                                Mockito.eq(user),
-                                Mockito.eq(Boolean.TRUE),
-                                Mockito.eq(false),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull(),
-                                Mockito.isNull()))
-                .thenReturn(6);
-
-        final PaginatedResult<Match> result =
-                matchService.findDashboardMatches(
-                        user,
-                        Boolean.TRUE,
-                        false,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        2,
-                        5);
-
-        Assertions.assertEquals(expected, result.getItems());
-    }
-
-    @Test
     public void testUpdateSeriesFromOccurrenceUpdatesSelectedAndFutureOccurrences() {
         // 1. Arrange
         final Match pastOccurrence =
@@ -1898,10 +1613,8 @@ public class MatchServiceImplTest {
                         "Updated Address",
                         "Updated Weekly Padel",
                         "Updated Description",
-                        dateOf(FIXED_NOW.plusSeconds(5400)),
-                        timeOf(FIXED_NOW.plusSeconds(5400)),
-                        dateOf(FIXED_NOW.plusSeconds(9000)),
-                        timeOf(FIXED_NOW.plusSeconds(9000)),
+                        FIXED_NOW.plusSeconds(5400),
+                        FIXED_NOW.plusSeconds(9000),
                         8,
                         BigDecimal.ONE,
                         Sport.PADEL,
@@ -1997,10 +1710,8 @@ public class MatchServiceImplTest {
                         "Updated Address",
                         "Updated Weekly Padel",
                         "Updated Description",
-                        dateOf(FIXED_NOW.plusSeconds(30)),
-                        timeOf(FIXED_NOW.plusSeconds(30)),
-                        dateOf(FIXED_NOW.plusSeconds(3630)),
-                        timeOf(FIXED_NOW.plusSeconds(3630)),
+                        FIXED_NOW.plusSeconds(30),
+                        FIXED_NOW.plusSeconds(3630),
                         8,
                         BigDecimal.ONE,
                         Sport.PADEL,
@@ -2045,10 +1756,8 @@ public class MatchServiceImplTest {
                                                 "Updated Address",
                                                 "Updated Match",
                                                 "Updated Description",
-                                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
                                                 8,
                                                 BigDecimal.ONE,
                                                 Sport.PADEL,
@@ -2269,7 +1978,7 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(24L, result.getId());
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -2332,10 +2041,8 @@ public class MatchServiceImplTest {
                                 "Updated Address",
                                 "Updated Title",
                                 "Updated Description",
-                                dateOf(FIXED_NOW.plusSeconds(3600)),
-                                timeOf(FIXED_NOW.plusSeconds(3600)),
-                                dateOf(FIXED_NOW.plusSeconds(7200)),
-                                timeOf(FIXED_NOW.plusSeconds(7200)),
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
                                 12,
                                 BigDecimal.ONE,
                                 Sport.FOOTBALL,
@@ -2345,7 +2052,7 @@ public class MatchServiceImplTest {
                                 null));
 
         Assertions.assertEquals(25L, result.getId());
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -2384,7 +2091,7 @@ public class MatchServiceImplTest {
         final Match result = matchService.cancelMatch(26L, UserUtils.getUser(1L));
 
         Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -2401,10 +2108,8 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        dateOf(FIXED_NOW.plusSeconds(3600)),
-                                        timeOf(FIXED_NOW.plusSeconds(3600)),
-                                        dateOf(FIXED_NOW.plusSeconds(7200)),
-                                        timeOf(FIXED_NOW.plusSeconds(7200)),
+                                        FIXED_NOW.plusSeconds(3600),
+                                        FIXED_NOW.plusSeconds(7200),
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -2413,7 +2118,7 @@ public class MatchServiceImplTest {
                                         EventStatus.OPEN,
                                         null)));
 
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     @Test
@@ -2424,38 +2129,18 @@ public class MatchServiceImplTest {
                 MatchCancellationException.class,
                 () -> matchService.cancelMatch(28L, UserUtils.getUser(1L)));
 
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
     }
 
     private static class RecordingMailDispatchService implements MailDispatchService {
 
         private final List<String> recipients = new ArrayList<>();
-        private final List<String> actions = new ArrayList<>();
+        private final List<MailContent> contents = new ArrayList<>();
 
         @Override
-        public void sendMatchUpdated(final User recipient, final Match match) {
-            actions.add("match-updated");
-            recipients.add(recipient.getEmail());
-        }
-
-        @Override
-        public void sendMatchCancelled(final User recipient, final Match match) {
-            actions.add("match-cancelled");
-            recipients.add(recipient.getEmail());
-        }
-
-        @Override
-        public void sendRecurringMatchesUpdated(
-                final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
-            actions.add("recurring-matches-updated");
-            recipients.add(recipient.getEmail());
-        }
-
-        @Override
-        public void sendRecurringMatchesCancelled(
-                final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
-            actions.add("recurring-matches-cancelled");
-            recipients.add(recipient.getEmail());
+        public void dispatch(final String recipientEmail, final MailContent content) {
+            recipients.add(recipientEmail);
+            contents.add(content);
         }
     }
 
@@ -2496,62 +2181,253 @@ public class MatchServiceImplTest {
     }
 
     @Test
-    public void testFindHostedMatchesUsesDashboardPageSize() {
+    public void testFindHostedMatchesUsesDefaultDashboardPageSize() {
         final Match hosted = createTestMatch(10L, "Host Match", "padel");
         final User u = UserUtils.getUser(9L);
         Mockito.when(
-                        matchDao.findDashboardMatches(
+                        matchDao.countHostedMatches(
                                 u,
-                                true,
-                                true,
+                                null,
                                 null,
                                 List.of(),
                                 List.of(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                EventSort.SOONEST,
-                                null,
-                                0,
-                                9))
-                .thenReturn(List.of(hosted));
-        Mockito.when(
-                        matchDao.countDashboardMatches(
-                                u,
-                                true,
-                                true,
-                                null,
                                 List.of(),
-                                List.of(),
+                                EventTimeFilter.ALL,
                                 null,
                                 null,
                                 null,
                                 null,
-                                EventSort.SOONEST,
-                                null))
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
                 .thenReturn(1);
+        Mockito.when(
+                        matchDao.findHostedMatches(
+                                u,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
+                                0,
+                                12))
+                .thenReturn(List.of(hosted));
 
         final PaginatedResult<Match> result =
-                matchService.findDashboardMatches(
-                        u,
-                        true,
-                        true,
-                        null,
-                        List.of(),
-                        List.of(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        EventSort.SOONEST,
-                        null,
-                        1,
-                        9);
+                matchService.findHostedMatches(
+                        u, null, null, null, null, null, null, null, null, null, null, null, 1, 0);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals(1, result.getTotalCount());
-        Assertions.assertEquals(9, result.getPageSize());
+        Assertions.assertEquals(12, result.getPageSize());
+    }
+
+    @Test
+    public void testFindHostedMatchesParsesStatusCsv() {
+        final Match completed =
+                new Match(
+                        11L,
+                        Sport.PADEL,
+                        UserUtils.getUser(9L),
+                        "Club",
+                        null,
+                        null,
+                        "Completed",
+                        "desc",
+                        Instant.now(),
+                        null,
+                        8,
+                        BigDecimal.ZERO,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.COMPLETED,
+                        4,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null);
+
+        final User u = UserUtils.getUser(9L);
+        Mockito.when(
+                        matchDao.countHostedMatches(
+                                u,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(EventStatus.COMPLETED, EventStatus.CANCELLED),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
+                .thenReturn(1);
+        Mockito.when(
+                        matchDao.findHostedMatches(
+                                u,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(EventStatus.COMPLETED, EventStatus.CANCELLED),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
+                                0,
+                                10))
+                .thenReturn(List.of(completed));
+
+        final PaginatedResult<Match> result =
+                matchService.findHostedMatches(
+                        u,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "completed,cancelled,invalid,completed",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        1,
+                        10);
+
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals(EventStatus.COMPLETED, result.getItems().get(0).getStatus());
+    }
+
+    @Test
+    public void testFindJoinedMatchesPastPaginatesDescendingDataset() {
+        final Match first = createTestMatch(12L, "Past Match", "football");
+        Mockito.when(
+                        matchDao.countJoinedMatches(
+                                UserUtils.getUser(4L),
+                                Boolean.FALSE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
+                .thenReturn(11);
+        Mockito.when(
+                        matchDao.findJoinedMatches(
+                                UserUtils.getUser(4L),
+                                Boolean.FALSE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
+                                10,
+                                10))
+                .thenReturn(List.of(first));
+
+        final PaginatedResult<Match> result =
+                matchService.findJoinedMatches(
+                        UserUtils.getUser(4L),
+                        Boolean.FALSE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        2,
+                        10);
+
+        Assertions.assertEquals(2, result.getPage());
+        Assertions.assertEquals(2, result.getTotalPages());
+        Assertions.assertEquals(1, result.getItems().size());
+    }
+
+    @Test
+    public void testFindJoinedMatchesUpcomingClampsPageToLastAvailable() {
+        final Match first = createTestMatch(13L, "Upcoming Match", "tennis");
+        final User u = UserUtils.getUser(4L);
+        Mockito.when(
+                        matchDao.countJoinedMatches(
+                                u,
+                                Boolean.TRUE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE)))
+                .thenReturn(5);
+        Mockito.when(
+                        matchDao.findJoinedMatches(
+                                u,
+                                Boolean.TRUE,
+                                null,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                MatchSort.SOONEST,
+                                ZoneId.of(PlatformTimeZoneService.DEFAULT_TIMEZONE),
+                                0,
+                                5))
+                .thenReturn(List.of(first));
+
+        final PaginatedResult<Match> result =
+                matchService.findJoinedMatches(
+                        u,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        9,
+                        5);
+
+        Assertions.assertEquals(1, result.getPage());
+        Assertions.assertEquals(1, result.getTotalPages());
+        Assertions.assertEquals("Upcoming Match", result.getItems().get(0).getTitle());
     }
 
     private Match createTestMatch(final Long id, final String title, final String sport) {
@@ -2654,13 +2530,5 @@ public class MatchServiceImplTest {
                 null,
                 null,
                 null);
-    }
-
-    private static LocalDate dateOf(final Instant instant) {
-        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalDate();
-    }
-
-    private static LocalTime timeOf(final Instant instant) {
-        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalTime();
     }
 }

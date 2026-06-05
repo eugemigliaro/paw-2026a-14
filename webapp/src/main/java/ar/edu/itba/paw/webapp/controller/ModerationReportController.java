@@ -4,17 +4,21 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportReviewViewModel;
@@ -27,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
@@ -41,6 +46,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
+@PreAuthorize("isAuthenticated()")
 public class ModerationReportController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModerationReportController.class);
@@ -50,6 +56,7 @@ public class ModerationReportController {
     private final MatchService matchService;
     private final PlayerReviewService playerReviewService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public ModerationReportController(
@@ -57,12 +64,29 @@ public class ModerationReportController {
             final UserService userService,
             final MatchService matchService,
             final PlayerReviewService playerReviewService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.moderationService = moderationService;
         this.userService = userService;
         this.matchService = matchService;
         this.playerReviewService = playerReviewService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public ModerationReportController(
+            final ModerationService moderationService,
+            final UserService userService,
+            final MatchService matchService,
+            final PlayerReviewService playerReviewService,
+            final MessageSource messageSource) {
+        this(
+                moderationService,
+                userService,
+                matchService,
+                playerReviewService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/reports/users/{username}")
@@ -73,32 +97,29 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        final User reportedUser =
-                userService
-                        .findByUsername(username)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final User reportedUser = findUserByUsernameOrThrow(username);
         return baseReportView(
                 locale,
-                model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
+                Boolean.TRUE.equals(model.asMap().get("reportSent")) ? "sent" : reportStatus,
                 reportErrorCode,
                 messageOrDefault(
                         "page.title.reportUser", null, "Match Point | Report user", locale),
                 messageOrDefault(
                         "report.page.user.description",
-                        new Object[] {username},
-                        "You are reporting the user " + username + ".",
+                        new Object[] {reportedUser.getUsername()},
+                        "You are reporting the user " + reportedUser.getUsername() + ".",
                         locale),
                 messageOrDefault("report.page.user.title", null, "Report user", locale),
-                "/reports/users/" + username,
+                "/reports/users/" + reportedUser.getUsername(),
                 new ReportPageViewModel(
-                        ReportTargetType.USER.getDbValue(),
+                        "user",
                         new ReportUserViewModel(
-                                username,
+                                reportedUser.getUsername(),
                                 profileUrlFor(reportedUser),
                                 messageOrDefault(
                                         "report.page.user.avatarAlt",
-                                        new Object[] {username},
-                                        username + " profile picture",
+                                        new Object[] {reportedUser.getUsername()},
+                                        reportedUser.getUsername() + " profile picture",
                                         locale)),
                         null,
                         null));
@@ -112,15 +133,12 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        final PlayerReview review =
-                playerReviewService
-                        .findReviewById(reviewId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final PlayerReview review = findReviewByIdOrThrow(reviewId);
         final User author = review.getReviewer();
         final User reviewedUser = review.getReviewed();
         return baseReportView(
                 locale,
-                model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
+                Boolean.TRUE.equals(model.asMap().get("reportSent")) ? "sent" : reportStatus,
                 reportErrorCode,
                 messageOrDefault(
                         "page.title.reportReview", null, "Match Point | Report review", locale),
@@ -136,7 +154,7 @@ public class ModerationReportController {
                 messageOrDefault("report.page.review.title", null, "Report review", locale),
                 "/reports/reviews/" + review.getId(),
                 new ReportPageViewModel(
-                        ReportTargetType.REVIEW.getDbValue(),
+                        "review",
                         null,
                         new ReportReviewViewModel(
                                 author.getUsername(),
@@ -153,7 +171,7 @@ public class ModerationReportController {
                                                 ? review.getCreatedAt()
                                                 : review.getUpdatedAt(),
                                         locale,
-                                        PlatformTime.ZONE)),
+                                        platformTimeZoneService.defaultZone())),
                         null));
     }
 
@@ -165,14 +183,11 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final Match match = findMatchByIdOrThrow(matchId);
         final User host = match.getHost();
         return baseReportView(
                 locale,
-                model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
+                Boolean.TRUE.equals(model.asMap().get("reportSent")) ? "sent" : reportStatus,
                 reportErrorCode,
                 messageOrDefault(
                         "page.title.reportMatch", null, "Match Point | Report match", locale),
@@ -184,15 +199,18 @@ public class ModerationReportController {
                 messageOrDefault("report.page.match.title", null, "Report match", locale),
                 "/reports/matches/" + match.getId(),
                 new ReportPageViewModel(
-                        ReportTargetType.MATCH.getDbValue(),
+                        "match",
                         null,
                         null,
                         new ReportMatchViewModel(
                                 match.getTitle(),
-                                match.getDescription(),
+                                normalizedDescription(match.getDescription()),
                                 host.getUsername(),
                                 host.getUsername() == null ? null : "/users/" + host.getUsername(),
-                                formatInstant(match.getStartsAt(), locale, PlatformTime.ZONE),
+                                formatInstant(
+                                        match.getStartsAt(),
+                                        locale,
+                                        platformTimeZoneService.defaultZone()),
                                 match.getAddress(),
                                 priceLabel(match.getPricePerPlayer(), locale))));
     }
@@ -204,10 +222,7 @@ public class ModerationReportController {
             final BindingResult errors,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User reportedUser =
-                userService
-                        .findByUsername(username)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final User reportedUser = findUserByUsernameOrThrow(username);
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
@@ -230,7 +245,11 @@ public class ModerationReportController {
                     currentUser,
                     ReportTargetType.USER,
                     reportedUser.getId(),
-                    form.getReason(),
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
+                            .orElseThrow(
+                                    () ->
+                                            new ModerationException(
+                                                    "invalid_report", "Invalid report reason.")),
                     form.getDetails());
             return redirectToReportUser(username, null, "sent", redirectAttributes);
         } catch (final ModerationException exception) {
@@ -251,10 +270,7 @@ public class ModerationReportController {
             final BindingResult errors,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final PlayerReview review =
-                playerReviewService
-                        .findReviewById(reviewId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final PlayerReview review = findReviewByIdOrThrow(reviewId);
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
@@ -277,7 +293,11 @@ public class ModerationReportController {
                     currentUser,
                     ReportTargetType.REVIEW,
                     review.getId(),
-                    form.getReason(),
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
+                            .orElseThrow(
+                                    () ->
+                                            new ModerationException(
+                                                    "invalid_report", "Invalid report reason.")),
                     form.getDetails());
             return redirectToReportReview(review.getId(), null, "sent", redirectAttributes);
         } catch (final ModerationException exception) {
@@ -298,10 +318,7 @@ public class ModerationReportController {
             final BindingResult errors,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final Match match = findMatchByIdOrThrow(matchId);
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (errors.hasErrors()) {
@@ -324,7 +341,11 @@ public class ModerationReportController {
                     currentUser,
                     ReportTargetType.MATCH,
                     match.getId(),
-                    form.getReason(),
+                    PersistableEnum.fromDbValue(ReportReason.class, form.getReason())
+                            .orElseThrow(
+                                    () ->
+                                            new ModerationException(
+                                                    "invalid_report", "Invalid report reason.")),
                     form.getDetails());
             return redirectToReportMatch(match.getId(), null, "sent", redirectAttributes);
         } catch (final ModerationException exception) {
@@ -348,6 +369,7 @@ public class ModerationReportController {
             final String reportActionPath,
             final ReportPageViewModel reportPage) {
         final ModelAndView mav = new ModelAndView("reports/create");
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("pageTitle", pageTitle);
         mav.addObject("pageTitleLabel", pageTitleLabel);
         mav.addObject("pageDescription", pageDescription);
@@ -369,6 +391,25 @@ public class ModerationReportController {
             final Locale locale) {
         final String message = messageSource.getMessage(code, args, defaultMessage, locale);
         return message == null ? defaultMessage : message;
+    }
+
+    private User findUserByUsernameOrThrow(final String username) {
+        return userService
+                .findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    private PlayerReview findReviewByIdOrThrow(final Long reviewId) {
+        return playerReviewService
+                .findReviewByIdIncludingDeleted(reviewId)
+                .filter(review -> !review.isDeleted())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    private Match findMatchByIdOrThrow(final Long matchId) {
+        return matchService
+                .findMatchById(matchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     private ModelAndView redirectToReportUser(
@@ -520,6 +561,19 @@ public class ModerationReportController {
                         "We could not submit the report.",
                         locale);
         }
+    }
+
+    private static String normalizedDescription(final String description) {
+        if (description == null || description.isBlank()) {
+            return "";
+        }
+        return description
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\r\n", "\n")
+                .replace('\r', '\n')
+                .replaceAll("\\n{3,}", "\n\n")
+                .strip();
     }
 
     private String priceLabel(final BigDecimal pricePerPlayer, final Locale locale) {

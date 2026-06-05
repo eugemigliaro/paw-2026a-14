@@ -115,17 +115,6 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    public Optional<PlayerReview> findById(final Long reviewId) {
-        final TypedQuery<PlayerReview> query =
-                em.createQuery(
-                        "FROM PlayerReview pr"
-                                + " WHERE pr.id = :reviewId"
-                                + " AND pr.deleted = FALSE",
-                        PlayerReview.class);
-        return query.setParameter("reviewId", reviewId).getResultList().stream().findFirst();
-    }
-
-    @Override
     public PlayerReviewSummary getSummaryForUser(final User reviewed) {
         final Object[] counts =
                 em.createQuery(

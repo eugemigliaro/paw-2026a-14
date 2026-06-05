@@ -58,11 +58,7 @@ class EventControllerTest {
                                         matchParticipationService,
                                         playerReviewService,
                                         messageSource,
-                                        clock,
-                                        false,
-                                        "",
-                                        "",
-                                        0))
+                                        clock))
                         .build();
 
         host =

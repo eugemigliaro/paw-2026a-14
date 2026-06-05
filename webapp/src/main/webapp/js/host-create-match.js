@@ -82,12 +82,12 @@
 			}
 
 			var mode = recurrenceEndModeInput.value;
-			recurrenceUntilDateField.style.display = mode === "UNTIL_DATE" ? "" : "none";
-			recurrenceCountField.style.display = mode === "OCCURRENCE_COUNT" ? "" : "none";
-			if (mode === "UNTIL_DATE" && recurrenceCountInput) {
+			recurrenceUntilDateField.style.display = mode === "until_date" ? "" : "none";
+			recurrenceCountField.style.display = mode === "occurrence_count" ? "" : "none";
+			if (mode === "until_date" && recurrenceCountInput) {
 				recurrenceCountInput.value = "";
 			}
-			if (mode === "OCCURRENCE_COUNT" && recurrenceUntilDateInput) {
+			if (mode === "occurrence_count" && recurrenceUntilDateInput) {
 				recurrenceUntilDateInput.value = "";
 			}
 		}

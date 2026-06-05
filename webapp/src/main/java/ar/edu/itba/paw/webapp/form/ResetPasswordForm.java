@@ -1,10 +1,8 @@
 package ar.edu.itba.paw.webapp.form;
 
-import ar.edu.itba.paw.webapp.validation.ValidResetPasswordForm;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
-@ValidResetPasswordForm
 public class ResetPasswordForm {
 
     @NotBlank(message = "{ResetPasswordForm.password.NotBlank}")

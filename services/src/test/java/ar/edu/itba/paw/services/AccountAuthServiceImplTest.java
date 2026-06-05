@@ -10,15 +10,16 @@ import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
+import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
+import ar.edu.itba.paw.services.mail.VerificationMailTemplateData;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,15 +45,15 @@ public class AccountAuthServiceImplTest {
 
     @Mock private UserDao userDao;
     @Mock private EmailActionRequestDao emailActionRequestDao;
+    @Mock private MailDispatchService mailDispatchService;
+    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
 
-    private RecordingMailDispatchService mailDispatchService;
     private PasswordEncoder passwordEncoder;
     private AccountAuthServiceImpl accountAuthService;
 
     @BeforeEach
     public void setUp() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
-        mailDispatchService = new RecordingMailDispatchService();
         passwordEncoder = new BCryptPasswordEncoder();
         accountAuthService =
                 new AccountAuthServiceImpl(
@@ -70,6 +71,7 @@ public class AccountAuthServiceImplTest {
                                 true,
                                 24),
                         mailDispatchService,
+                        templateRenderer,
                         messageSource(),
                         passwordEncoder,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
@@ -83,6 +85,8 @@ public class AccountAuthServiceImplTest {
     @Test
     public void testRegisterCreatesUnverifiedAccountAndSendsVerificationMail() {
         final AtomicReference<String> capturedPasswordHash = new AtomicReference<>();
+        final AtomicReference<VerificationMailTemplateData> capturedTemplateData =
+                new AtomicReference<>();
         final UserAccount createdAccount =
                 new UserAccount(
                         9L,
@@ -136,6 +140,13 @@ public class AccountAuthServiceImplTest {
                                 null,
                                 FIXED_NOW,
                                 FIXED_NOW));
+        Mockito.when(templateRenderer.renderActionMail(ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedTemplateData.set(invocation.getArgument(0));
+                            return new MailContent("subject", "<p>html</p>", "text");
+                        });
+
         final VerificationRequestResult result =
                 accountAuthService.register(
                         new RegisterAccountRequest(
@@ -150,10 +161,10 @@ public class AccountAuthServiceImplTest {
         Assertions.assertEquals(FIXED_NOW.plusSeconds(24 * 3600L), result.getExpiresAt());
         Assertions.assertNotNull(capturedPasswordHash.get());
         Assertions.assertTrue(passwordEncoder.matches("Password123!", capturedPasswordHash.get()));
-        Assertions.assertEquals(List.of("account-verification"), mailDispatchService.actions);
-        Assertions.assertEquals(List.of("new@test.com"), mailDispatchService.recipients);
-        Assertions.assertTrue(mailDispatchService.urls.get(0).contains("/verifications/"));
-        Assertions.assertEquals(Locale.ENGLISH, mailDispatchService.locales.get(0));
+        Assertions.assertNotNull(capturedTemplateData.get());
+        Assertions.assertTrue(
+                capturedTemplateData.get().getConfirmationUrl().contains("/verifications/"));
+        Assertions.assertEquals(Locale.ENGLISH, capturedTemplateData.get().getLocale());
     }
 
     @Test
@@ -297,6 +308,9 @@ public class AccountAuthServiceImplTest {
                                 null,
                                 FIXED_NOW,
                                 FIXED_NOW));
+        Mockito.when(templateRenderer.renderActionMail(ArgumentMatchers.any()))
+                .thenReturn(new MailContent("subject", "<p>html</p>", "text"));
+
         final VerificationRequestResult result =
                 accountAuthService.register(
                         new RegisterAccountRequest(
@@ -331,6 +345,8 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testResendVerificationCreatesFreshTokenForUnverifiedAccount() {
+        final AtomicReference<VerificationMailTemplateData> capturedTemplateData =
+                new AtomicReference<>();
         final UserAccount pendingAccount =
                 new UserAccount(
                         4L,
@@ -367,15 +383,19 @@ public class AccountAuthServiceImplTest {
                                 null,
                                 FIXED_NOW,
                                 FIXED_NOW));
+        Mockito.when(templateRenderer.renderActionMail(ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedTemplateData.set(invocation.getArgument(0));
+                            return new MailContent("subject", "<p>html</p>", "text");
+                        });
+
         final Optional<VerificationRequestResult> result =
                 accountAuthService.resendVerification("pending@test.com");
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals("pending@test.com", result.orElseThrow().getEmail());
-        Assertions.assertEquals(List.of("account-verification"), mailDispatchService.actions);
-        Assertions.assertEquals(List.of("pending@test.com"), mailDispatchService.recipients);
-        Assertions.assertTrue(mailDispatchService.urls.get(0).contains("/verifications/"));
-        Assertions.assertEquals(Locale.of("es"), mailDispatchService.locales.get(0));
+        Assertions.assertEquals(Locale.of("es"), capturedTemplateData.get().getLocale());
     }
 
     @Test
@@ -436,6 +456,7 @@ public class AccountAuthServiceImplTest {
                 accountAuthService.confirmVerification("raw-token");
 
         Assertions.assertEquals(5L, result.getUserId());
+        Assertions.assertEquals("/", result.getRedirectUrl());
         Assertions.assertTrue(result.getAccount().isPresent());
         Assertions.assertEquals(5L, result.getAccount().orElseThrow().getId());
         Assertions.assertEquals(EmailActionStatus.COMPLETED, updatedStatus.get());
@@ -444,6 +465,8 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRequestPasswordResetCreatesPendingRequestForVerifiedAccount() {
+        final AtomicReference<VerificationMailTemplateData> capturedTemplateData =
+                new AtomicReference<>();
         final UserAccount account =
                 new UserAccount(
                         6L,
@@ -481,14 +504,21 @@ public class AccountAuthServiceImplTest {
                                 null,
                                 FIXED_NOW,
                                 FIXED_NOW));
+        Mockito.when(templateRenderer.renderActionMail(ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            capturedTemplateData.set(invocation.getArgument(0));
+                            return new MailContent("subject", "<p>html</p>", "text");
+                        });
+
         final Optional<VerificationRequestResult> result =
                 accountAuthService.requestPasswordReset("legacy@test.com");
 
         Assertions.assertTrue(result.isPresent());
-        Assertions.assertEquals(List.of("password-reset"), mailDispatchService.actions);
-        Assertions.assertEquals(List.of("legacy@test.com"), mailDispatchService.recipients);
-        Assertions.assertTrue(mailDispatchService.urls.get(0).contains("/password-reset/"));
-        Assertions.assertEquals(Locale.of("es"), mailDispatchService.locales.get(0));
+        Assertions.assertNotNull(capturedTemplateData.get());
+        Assertions.assertTrue(
+                capturedTemplateData.get().getConfirmationUrl().contains("/password-reset/"));
+        Assertions.assertEquals(Locale.of("es"), capturedTemplateData.get().getLocale());
     }
 
     @Test
@@ -614,6 +644,7 @@ public class AccountAuthServiceImplTest {
                 accountAuthService.resetPassword("raw-token", "EvenBetter123!");
 
         Assertions.assertEquals(9L, result.getUserId());
+        Assertions.assertEquals("/login?reset=1", result.getRedirectUrl());
         Assertions.assertEquals(EmailActionStatus.COMPLETED, updatedStatus.get());
         Assertions.assertNotNull(capturedPasswordHash.get());
         Assertions.assertTrue(
@@ -702,37 +733,5 @@ public class AccountAuthServiceImplTest {
                 Locale.ENGLISH,
                 "Your password was updated successfully.");
         return messageSource;
-    }
-
-    private static class RecordingMailDispatchService implements MailDispatchService {
-
-        private final List<String> actions = new ArrayList<>();
-        private final List<String> recipients = new ArrayList<>();
-        private final List<String> urls = new ArrayList<>();
-        private final List<Locale> locales = new ArrayList<>();
-
-        @Override
-        public void sendAccountVerification(
-                final UserAccount account,
-                final String confirmationUrl,
-                final Instant expiresAt,
-                final Locale locale) {
-            actions.add("account-verification");
-            recipients.add(account.getEmail());
-            urls.add(confirmationUrl);
-            locales.add(locale);
-        }
-
-        @Override
-        public void sendPasswordReset(
-                final UserAccount account,
-                final String resetUrl,
-                final Instant expiresAt,
-                final Locale locale) {
-            actions.add("password-reset");
-            recipients.add(account.getEmail());
-            urls.add(resetUrl);
-            locales.add(locale);
-        }
     }
 }

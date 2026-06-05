@@ -14,6 +14,4 @@ public interface ImageService {
     Optional<ImageMetadata> findMetadataById(Long imageId);
 
     boolean streamContentById(Long imageId, OutputStream outputStream) throws IOException;
-
-    ImageMetadata resolveImageMetadata(final ImageUpload image);
 }

@@ -3,7 +3,9 @@ package ar.edu.itba.paw.services.security;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchDao;
+import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.SecurityService;
+import ar.edu.itba.paw.services.UserService;
 import java.lang.reflect.Method;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -20,9 +22,16 @@ public class SecurityServiceImpl implements SecurityService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SecurityServiceImpl.class);
 
     private final MatchDao matchDao;
+    private final PlayerReviewService playerReviewService;
+    private final UserService userService;
 
-    public SecurityServiceImpl(final MatchDao matchDao) {
+    public SecurityServiceImpl(
+            final MatchDao matchDao,
+            final PlayerReviewService playerReviewService,
+            final UserService userService) {
         this.matchDao = matchDao;
+        this.playerReviewService = playerReviewService;
+        this.userService = userService;
     }
 
     @Override
@@ -70,5 +79,15 @@ public class SecurityServiceImpl implements SecurityService {
         }
         final Optional<Match> match = matchDao.findById(matchId);
         return match.map(m -> current.getId().equals(m.getHost().getId())).orElse(false);
+    }
+
+    @Override
+    public boolean hasReviewed(final String username) {
+        if (username == null) return false;
+        final User current = currentUser();
+        if (current == null) return false;
+        final Optional<User> reviewed = userService.findByUsername(username);
+        return reviewed.map(user -> playerReviewService.findReviewByPair(current, user).isPresent())
+                .orElse(false);
     }
 }

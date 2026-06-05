@@ -1,10 +1,10 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.Instant;
 
 public class CreateTournamentRequest {
 
@@ -14,21 +14,17 @@ public class CreateTournamentRequest {
     private final String address;
     private final Double latitude;
     private final Double longitude;
-    private final LocalDate startDate;
-    private final LocalTime startTime;
-    private final LocalDate endDate;
-    private final LocalTime endTime;
+    private final Instant startsAt;
+    private final Instant endsAt;
     private final BigDecimal pricePerPlayer;
-    private final ImageUpload bannerImage;
+    private final ImageMetadata bannerImageMetadata;
     private final TournamentFormat format;
     private final int bracketSize;
     private final int teamSize;
     private final boolean allowSoloSignup;
     private final boolean allowTeamDraft;
-    private final LocalDate registrationOpensDate;
-    private final LocalTime registrationOpensTime;
-    private final LocalDate registrationClosesDate;
-    private final LocalTime registrationClosesTime;
+    private final Instant registrationOpensAt;
+    private final Instant registrationClosesAt;
 
     public CreateTournamentRequest(
             final Sport sport,
@@ -37,42 +33,34 @@ public class CreateTournamentRequest {
             final String address,
             final Double latitude,
             final Double longitude,
-            final LocalDate startDate,
-            final LocalTime startTime,
-            final LocalDate endDate,
-            final LocalTime endTime,
+            final Instant startsAt,
+            final Instant endsAt,
             final BigDecimal pricePerPlayer,
-            final ImageUpload bannerImage,
+            final ImageMetadata bannerImageMetadata,
             final TournamentFormat format,
             final int bracketSize,
             final int teamSize,
             final boolean allowSoloSignup,
             final boolean allowTeamDraft,
-            final LocalDate registrationOpensDate,
-            final LocalTime registrationOpensTime,
-            final LocalDate registrationClosesDate,
-            final LocalTime registrationClosesTime) {
+            final Instant registrationOpensAt,
+            final Instant registrationClosesAt) {
         this.sport = sport;
         this.title = title;
         this.description = description;
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.startDate = startDate;
-        this.startTime = startTime;
-        this.endDate = endDate;
-        this.endTime = endTime;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
         this.pricePerPlayer = pricePerPlayer;
-        this.bannerImage = bannerImage;
+        this.bannerImageMetadata = bannerImageMetadata;
         this.format = format;
         this.bracketSize = bracketSize;
         this.teamSize = teamSize;
         this.allowSoloSignup = allowSoloSignup;
         this.allowTeamDraft = allowTeamDraft;
-        this.registrationOpensDate = registrationOpensDate;
-        this.registrationOpensTime = registrationOpensTime;
-        this.registrationClosesDate = registrationClosesDate;
-        this.registrationClosesTime = registrationClosesTime;
+        this.registrationOpensAt = registrationOpensAt;
+        this.registrationClosesAt = registrationClosesAt;
     }
 
     public Sport getSport() {
@@ -99,28 +87,20 @@ public class CreateTournamentRequest {
         return longitude;
     }
 
-    public LocalDate getStartDate() {
-        return startDate;
+    public Instant getStartsAt() {
+        return startsAt;
     }
 
-    public LocalTime getStartTime() {
-        return startTime;
-    }
-
-    public LocalDate getEndDate() {
-        return endDate;
-    }
-
-    public LocalTime getEndTime() {
-        return endTime;
+    public Instant getEndsAt() {
+        return endsAt;
     }
 
     public BigDecimal getPricePerPlayer() {
         return pricePerPlayer;
     }
 
-    public ImageUpload getBannerImage() {
-        return bannerImage;
+    public ImageMetadata getBannerImageMetadata() {
+        return bannerImageMetadata;
     }
 
     public TournamentFormat getFormat() {
@@ -143,19 +123,11 @@ public class CreateTournamentRequest {
         return allowTeamDraft;
     }
 
-    public LocalDate getRegistrationOpensDate() {
-        return registrationOpensDate;
+    public Instant getRegistrationOpensAt() {
+        return registrationOpensAt;
     }
 
-    public LocalTime getRegistrationOpensTime() {
-        return registrationOpensTime;
-    }
-
-    public LocalDate getRegistrationClosesDate() {
-        return registrationClosesDate;
-    }
-
-    public LocalTime getRegistrationClosesTime() {
-        return registrationClosesTime;
+    public Instant getRegistrationClosesAt() {
+        return registrationClosesAt;
     }
 }

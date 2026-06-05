@@ -18,7 +18,6 @@ import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
@@ -31,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
-import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -62,7 +60,6 @@ class ModerationAdminControllerTest {
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
-                        .setConversionService(conversionService())
                         .build();
     }
 
@@ -227,12 +224,5 @@ class ModerationAdminControllerTest {
         final LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
         return localeChangeInterceptor;
-    }
-
-    private static DefaultFormattingConversionService conversionService() {
-        final DefaultFormattingConversionService conversionService =
-                new DefaultFormattingConversionService();
-        conversionService.addConverter(new StringToAppealDecisionConverter());
-        return conversionService;
     }
 }

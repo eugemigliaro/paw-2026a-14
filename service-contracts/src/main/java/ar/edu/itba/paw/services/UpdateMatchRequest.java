@@ -1,12 +1,12 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.Instant;
 
 public class UpdateMatchRequest {
 
@@ -15,47 +15,41 @@ public class UpdateMatchRequest {
     private final Double longitude;
     private final String title;
     private final String description;
-    private final LocalDate startDate;
-    private final LocalTime startTime;
-    private final LocalDate endDate;
-    private final LocalTime endTime;
+    private final Instant startsAt;
+    private final Instant endsAt;
     private final int maxPlayers;
     private final BigDecimal pricePerPlayer;
     private final Sport sport;
     private final EventVisibility visibility;
     private final EventJoinPolicy joinPolicy;
     private final EventStatus status;
-    private final ImageUpload bannerImage;
+    private final ImageMetadata bannerImageMetadata;
 
     public UpdateMatchRequest(
             final String address,
             final String title,
             final String description,
-            final LocalDate startDate,
-            final LocalTime startTime,
-            final LocalDate endDate,
-            final LocalTime endTime,
+            final Instant startsAt,
+            final Instant endsAt,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final EventVisibility visibility,
             final EventStatus status,
-            final ImageUpload bannerImage) {
+            final ImageMetadata bannerImageMetadata) {
         this(
                 address,
                 title,
                 description,
-                startDate,
-                startTime,
-                endDate,
-                endTime,
+                startsAt,
+                endsAt,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
                 visibility,
                 defaultJoinPolicyForVisibility(visibility),
                 status,
-                bannerImage,
+                bannerImageMetadata,
                 null,
                 null);
     }
@@ -64,32 +58,28 @@ public class UpdateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final LocalDate startDate,
-            final LocalTime startTime,
-            final LocalDate endDate,
-            final LocalTime endTime,
+            final Instant startsAt,
+            final Instant endsAt,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageUpload bannerImage) {
+            final ImageMetadata bannerImageMetadata) {
         this(
                 address,
                 title,
                 description,
-                startDate,
-                startTime,
-                endDate,
-                endTime,
+                startsAt,
+                endsAt,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
                 visibility,
                 joinPolicy,
                 status,
-                bannerImage,
+                bannerImageMetadata,
                 null,
                 null);
     }
@@ -98,17 +88,15 @@ public class UpdateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final LocalDate startDate,
-            final LocalTime startTime,
-            final LocalDate endDate,
-            final LocalTime endTime,
+            final Instant startsAt,
+            final Instant endsAt,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageUpload bannerImage,
+            final ImageMetadata bannerImageMetadata,
             final Double latitude,
             final Double longitude) {
         this.address = address;
@@ -116,17 +104,15 @@ public class UpdateMatchRequest {
         this.longitude = longitude;
         this.title = title;
         this.description = description;
-        this.startDate = startDate;
-        this.startTime = startTime;
-        this.endDate = endDate;
-        this.endTime = endTime;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
         this.maxPlayers = maxPlayers;
         this.pricePerPlayer = pricePerPlayer;
         this.sport = sport;
         this.visibility = visibility;
         this.joinPolicy = joinPolicy;
         this.status = status;
-        this.bannerImage = bannerImage;
+        this.bannerImageMetadata = bannerImageMetadata;
     }
 
     private static EventJoinPolicy defaultJoinPolicyForVisibility(
@@ -156,20 +142,12 @@ public class UpdateMatchRequest {
         return description;
     }
 
-    public LocalDate getStartDate() {
-        return startDate;
+    public Instant getStartsAt() {
+        return startsAt;
     }
 
-    public LocalTime getStartTime() {
-        return startTime;
-    }
-
-    public LocalDate getEndDate() {
-        return endDate;
-    }
-
-    public LocalTime getEndTime() {
-        return endTime;
+    public Instant getEndsAt() {
+        return endsAt;
     }
 
     public int getMaxPlayers() {
@@ -196,7 +174,7 @@ public class UpdateMatchRequest {
         return status;
     }
 
-    public ImageUpload getBannerImage() {
-        return bannerImage;
+    public ImageMetadata getBannerImageMetadata() {
+        return bannerImageMetadata;
     }
 }

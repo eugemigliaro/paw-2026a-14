@@ -137,24 +137,6 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
     }
 
     @Override
-    public void saveSeedOrder(final List<TournamentTeam> teams, final List<Long> orderedTeamIds) {
-        final Map<Long, Integer> positionByTeamId = new HashMap<>();
-        for (int index = 0; index < orderedTeamIds.size(); index++) {
-            positionByTeamId.put(orderedTeamIds.get(index), index + 1);
-        }
-
-        final int temporaryOffset = orderedTeamIds.size();
-        for (int index = 0; index < teams.size(); index++) {
-            teams.get(index).setSeedPosition(temporaryOffset + index + 1);
-        }
-        em.flush();
-
-        for (final TournamentTeam team : teams) {
-            team.setSeedPosition(positionByTeamId.get(team.getId()));
-        }
-    }
-
-    @Override
     public long countByTournament(final long tournamentId) {
         return em.createQuery(
                         "SELECT COUNT(tt) FROM TournamentTeam tt"

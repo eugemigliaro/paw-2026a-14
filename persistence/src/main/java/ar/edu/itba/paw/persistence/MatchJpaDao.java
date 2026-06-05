@@ -4,10 +4,9 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
+import ar.edu.itba.paw.models.query.MatchSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -17,6 +16,7 @@ import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -330,7 +330,8 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final EventSort sort,
+            final MatchSort sort,
+            final ZoneId zoneId,
             final Double latitude,
             final Double longitude,
             final int offset,
@@ -348,6 +349,7 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
+                zoneId,
                 minPrice,
                 maxPrice,
                 Boolean.TRUE);
@@ -362,7 +364,8 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtFrom,
             final Instant startsAtTo,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
         final QueryParts parts = new QueryParts();
         parts.where.add("m.visibility IN :visibility");
         parts.params.put("visibility", List.of(EventVisibility.PUBLIC));
@@ -376,6 +379,7 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
+                zoneId,
                 minPrice,
                 maxPrice,
                 Boolean.TRUE);
@@ -395,7 +399,8 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final EventSort sort,
+            final MatchSort sort,
+            final ZoneId zoneId,
             final int offset,
             final int limit) {
         final QueryParts parts = new QueryParts();
@@ -410,6 +415,7 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
+                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -428,7 +434,8 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtFrom,
             final Instant startsAtTo,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
         final QueryParts parts = new QueryParts();
         parts.where.add("m.host.id = :hostUserId");
         parts.params.put("hostUserId", host.getId());
@@ -441,6 +448,7 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
+                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -460,7 +468,8 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtTo,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final EventSort sort,
+            final MatchSort sort,
+            final ZoneId zoneId,
             final int offset,
             final int limit) {
         final QueryParts parts = joinedParts(user.getId());
@@ -472,6 +481,7 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
+                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -490,7 +500,8 @@ public class MatchJpaDao implements MatchDao {
             final Instant startsAtFrom,
             final Instant startsAtTo,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice) {
+            final BigDecimal maxPrice,
+            final ZoneId zoneId) {
         final QueryParts parts = joinedParts(user.getId());
         appendManagedFilters(parts, visibility, statuses);
         appendFilters(
@@ -500,6 +511,7 @@ public class MatchJpaDao implements MatchDao {
                 timeFilter,
                 startsAtFrom,
                 startsAtTo,
+                zoneId,
                 minPrice,
                 maxPrice,
                 upcoming);
@@ -508,7 +520,7 @@ public class MatchJpaDao implements MatchDao {
 
     private List<Match> findPage(
             final QueryParts parts,
-            final EventSort sort,
+            final MatchSort sort,
             final Boolean upcoming,
             final Double latitude,
             final Double longitude,
@@ -525,7 +537,7 @@ public class MatchJpaDao implements MatchDao {
                         .setMaxResults(limit);
         setCommonParams(idQuery);
         setParams(idQuery, parts.params);
-        if (sort == EventSort.DISTANCE) {
+        if (sort == MatchSort.DISTANCE) {
             setDistanceParams(idQuery, latitude, longitude);
         }
 
@@ -653,6 +665,7 @@ public class MatchJpaDao implements MatchDao {
             final EventTimeFilter timeFilter,
             final Instant startsAtFrom,
             final Instant startsAtTo,
+            final ZoneId zoneId,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Boolean upcoming) {
@@ -663,7 +676,7 @@ public class MatchJpaDao implements MatchDao {
         }
         appendDateRangeFilter(parts, startsAtFrom, startsAtTo);
         if (startsAtFrom == null && startsAtTo == null) {
-            appendTimeFilter(parts, timeFilter, upcoming);
+            appendTimeFilter(parts, timeFilter, zoneId, upcoming);
         }
         if (minPrice != null) {
             parts.where.add("m.pricePerPlayer >= :minPrice");
@@ -718,22 +731,26 @@ public class MatchJpaDao implements MatchDao {
     }
 
     private static void appendTimeFilter(
-            final QueryParts parts, final EventTimeFilter timeFilter, final Boolean upcoming) {
+            final QueryParts parts,
+            final EventTimeFilter timeFilter,
+            final ZoneId zoneId,
+            final Boolean upcoming) {
         if (timeFilter == null || timeFilter == EventTimeFilter.ALL) {
             return;
         }
         if (Boolean.FALSE.equals(upcoming) && timeFilter == EventTimeFilter.TOMORROW) {
             return;
         }
+        final ZoneId safeZoneId = zoneId == null ? ZoneId.systemDefault() : zoneId;
         if (timeFilter == EventTimeFilter.FUTURE) {
             parts.where.add("m.startsAt >= :timeStart");
-            parts.params.put("timeStart", ZonedDateTime.now(PlatformTime.ZONE).toInstant());
+            parts.params.put("timeStart", ZonedDateTime.now(safeZoneId).toInstant());
             return;
         }
         final TimeRange range =
                 Boolean.FALSE.equals(upcoming)
-                        ? buildPastTimeRange(timeFilter)
-                        : buildTimeRange(timeFilter);
+                        ? buildPastTimeRange(timeFilter, safeZoneId)
+                        : buildTimeRange(timeFilter, safeZoneId);
         parts.where.add("m.startsAt >= :timeStart AND m.startsAt < :timeEnd");
         parts.params.put("timeStart", range.start());
         parts.params.put("timeEnd", range.end());
@@ -744,12 +761,12 @@ public class MatchJpaDao implements MatchDao {
     }
 
     private static String orderBy(
-            final EventSort sort,
+            final MatchSort sort,
             final Boolean upcoming,
             final Double latitude,
             final Double longitude) {
-        final EventSort safeSort = sort == null ? EventSort.SOONEST : sort;
-        if (safeSort == EventSort.DISTANCE && latitude != null && longitude != null) {
+        final MatchSort safeSort = sort == null ? MatchSort.SOONEST : sort;
+        if (safeSort == MatchSort.DISTANCE && latitude != null && longitude != null) {
             return " ORDER BY CASE WHEN m.latitude IS NULL OR m.longitude IS NULL THEN 1 ELSE 0 END ASC,"
                     + " ((m.latitude - :latitude) * (m.latitude - :latitude))"
                     + " + ((m.longitude - :longitude) * :cosLatitude * (m.longitude - :longitude) * :cosLatitude) ASC,"
@@ -801,119 +818,31 @@ public class MatchJpaDao implements MatchDao {
         }
     }
 
-    private static TimeRange buildTimeRange(final EventTimeFilter timeFilter) {
-        final ZonedDateTime now = ZonedDateTime.now(PlatformTime.ZONE);
+    private static TimeRange buildTimeRange(final EventTimeFilter timeFilter, final ZoneId zoneId) {
+        final ZonedDateTime now = ZonedDateTime.now(zoneId);
         if (timeFilter == EventTimeFilter.WEEK) {
             return new TimeRange(now.toInstant(), now.plusDays(7).toInstant());
         }
         final LocalDate today = now.toLocalDate();
         if (timeFilter == EventTimeFilter.TOMORROW) {
-            final ZonedDateTime start = today.plusDays(1).atStartOfDay(PlatformTime.ZONE);
+            final ZonedDateTime start = today.plusDays(1).atStartOfDay(zoneId);
             return new TimeRange(start.toInstant(), start.plusDays(1).toInstant());
         }
         if (timeFilter == EventTimeFilter.TODAY) {
             return new TimeRange(
-                    now.toInstant(), today.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
+                    now.toInstant(), today.plusDays(1).atStartOfDay(zoneId).toInstant());
         }
-        return new TimeRange(
-                now.toInstant(), today.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
+        return new TimeRange(now.toInstant(), today.plusDays(1).atStartOfDay(zoneId).toInstant());
     }
 
-    private static TimeRange buildPastTimeRange(final EventTimeFilter timeFilter) {
-        final ZonedDateTime now = ZonedDateTime.now(PlatformTime.ZONE);
+    private static TimeRange buildPastTimeRange(
+            final EventTimeFilter timeFilter, final ZoneId zoneId) {
+        final ZonedDateTime now = ZonedDateTime.now(zoneId);
         if (timeFilter == EventTimeFilter.TODAY) {
             return new TimeRange(
-                    now.toLocalDate().atStartOfDay(PlatformTime.ZONE).toInstant(), now.toInstant());
+                    now.toLocalDate().atStartOfDay(zoneId).toInstant(), now.toInstant());
         }
         return new TimeRange(now.minusDays(7).toInstant(), now.toInstant());
-    }
-
-    @Override
-    public List<Match> findDashboardMatches(
-            final User user,
-            final Boolean upcoming,
-            final Boolean includeHosted,
-            final String query,
-            final List<Sport> sports,
-            final List<EventStatus> statuses,
-            final Instant startsAtFrom,
-            final Instant startsAtTo,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final EventSort sort,
-            final List<ParticipantStatus> participantStatuses,
-            final int offset,
-            final int limit) {
-        final QueryParts parts = new QueryParts();
-        parts.where.add("m.deleted = FALSE");
-
-        final List<String> orClauses = new ArrayList<>();
-        if (participantStatuses != null && !participantStatuses.isEmpty()) {
-            orClauses.add(
-                    "EXISTS (SELECT 1 FROM MatchParticipant me"
-                            + " WHERE me.match = m"
-                            + " AND me.user.id = :dashboardUserId"
-                            + " AND me.status IN :dashboardStatuses)");
-            parts.params.put("dashboardUserId", user.getId());
-            parts.params.put("dashboardStatuses", participantStatuses);
-        }
-        if (includeHosted != null && includeHosted) {
-            orClauses.add("m.host.id = :dashboardUserId");
-            parts.params.put("dashboardUserId", user.getId());
-        }
-
-        if (!orClauses.isEmpty()) {
-            parts.where.add("(" + String.join(" OR ", orClauses) + ")");
-        }
-
-        appendManagedFilters(parts, null, statuses);
-        appendFilters(
-                parts, query, sports, null, startsAtFrom, startsAtTo, minPrice, maxPrice, upcoming);
-
-        return findPage(parts, sort, upcoming, null, null, offset, limit);
-    }
-
-    @Override
-    public int countDashboardMatches(
-            final User user,
-            final Boolean upcoming,
-            final Boolean includeHosted,
-            final String query,
-            final List<Sport> sports,
-            final List<EventStatus> statuses,
-            final Instant startsAtFrom,
-            final Instant startsAtTo,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final EventSort sort,
-            final List<ParticipantStatus> participantStatuses) {
-        final QueryParts parts = new QueryParts();
-        parts.where.add("m.deleted = FALSE");
-
-        final List<String> orClauses = new ArrayList<>();
-        if (participantStatuses != null && !participantStatuses.isEmpty()) {
-            orClauses.add(
-                    "EXISTS (SELECT 1 FROM MatchParticipant me"
-                            + " WHERE me.match = m"
-                            + " AND me.user.id = :dashboardUserId"
-                            + " AND me.status IN :dashboardStatuses)");
-            parts.params.put("dashboardUserId", user.getId());
-            parts.params.put("dashboardStatuses", participantStatuses);
-        }
-        if (includeHosted != null && includeHosted) {
-            orClauses.add("m.host.id = :dashboardUserId");
-            parts.params.put("dashboardUserId", user.getId());
-        }
-
-        if (!orClauses.isEmpty()) {
-            parts.where.add("(" + String.join(" OR ", orClauses) + ")");
-        }
-
-        appendManagedFilters(parts, null, statuses);
-        appendFilters(
-                parts, query, sports, null, startsAtFrom, startsAtTo, minPrice, maxPrice, upcoming);
-
-        return countMatches(parts);
     }
 
     private static final class QueryParts {

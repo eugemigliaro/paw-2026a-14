@@ -1,23 +1,27 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -26,6 +30,7 @@ import javax.validation.groups.Default;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -43,6 +48,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 @RequestMapping("/admin/reports")
+@PreAuthorize("hasRole('ADMIN_MOD')")
 public class ModerationAdminController {
     private static final int PAGE_SIZE = 4;
     private static final int DEFAULT_BAN_DURATION_DAYS = 7;
@@ -50,15 +56,29 @@ public class ModerationAdminController {
     private final ModerationService moderationService;
     private final UserService userService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public ModerationAdminController(
             final ModerationService moderationService,
             final UserService userService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.moderationService = moderationService;
         this.userService = userService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public ModerationAdminController(
+            final ModerationService moderationService,
+            final UserService userService,
+            final MessageSource messageSource) {
+        this(
+                moderationService,
+                userService,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @ModelAttribute("resolutionForm")
@@ -73,20 +93,30 @@ public class ModerationAdminController {
 
     @GetMapping
     public ModelAndView showReports(
-            @RequestParam(value = "type", required = false, defaultValue = "")
-                    final List<ReportTargetType> typeFilters,
-            @RequestParam(value = "status", required = false, defaultValue = "")
-                    final List<ReportStatus> statusFilters,
+            @RequestParam(value = "type", required = false) final List<String> typeFilters,
+            @RequestParam(value = "status", required = false) final List<String> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Model model,
             final Locale locale) {
 
+        final List<ReportTargetType> selectedTypes =
+                parseEnumFilters(
+                        typeFilters,
+                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
+        final List<ReportStatus> selectedStatuses =
+                parseEnumFilters(
+                        statusFilters,
+                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
+
         final PaginatedResult<ModerationReport> result =
-                moderationService.findReports(typeFilters, statusFilters, page, PAGE_SIZE);
+                moderationService.findReports(selectedTypes, selectedStatuses, page, PAGE_SIZE);
         final List<ModerationReportViewModel> reports =
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
+        mav.addObject(
+                "shell",
+                ShellViewModelFactory.playerShell(messageSource, locale, "/admin/reports"));
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.adminReports", null, locale));
         mav.addObject(
@@ -103,20 +133,21 @@ public class ModerationAdminController {
         mav.addObject("reports", reports);
         mav.addObject("action", model.asMap().get("action"));
         mav.addObject(
-                "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
+                "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
-                "selectedStatuses", statusFilters.stream().map(ReportStatus::getDbValue).toList());
+                "selectedStatuses",
+                selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
         mav.addObject("hasPreviousPage", result.hasPrevious());
         mav.addObject("hasNextPage", result.hasNext());
-        mav.addObject("previousPageHref", buildPageUrl(typeFilters, statusFilters, page - 1));
-        mav.addObject("nextPageHref", buildPageUrl(typeFilters, statusFilters, page + 1));
+        mav.addObject("previousPageHref", buildPageUrl(selectedTypes, selectedStatuses, page - 1));
+        mav.addObject("nextPageHref", buildPageUrl(selectedTypes, selectedStatuses, page + 1));
         mav.addObject(
                 "paginationItems",
                 PaginationUtils.buildPaginationItems(
                         result.getPage(),
                         result.getTotalPages(),
                         paginationPage ->
-                                buildPageUrl(typeFilters, statusFilters, paginationPage)));
+                                buildPageUrl(selectedTypes, selectedStatuses, paginationPage)));
         return mav;
     }
 
@@ -147,12 +178,15 @@ public class ModerationAdminController {
         return reportDetailModelAndView(report, reportVm, locale);
     }
 
-    private ModelAndView reportDetailModelAndView( // TODO: remove business logic
+    private ModelAndView reportDetailModelAndView(
             final ModerationReport report,
             final ModerationReportViewModel reportVm,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("admin/reports/detail");
 
+        mav.addObject(
+                "shell",
+                ShellViewModelFactory.playerShell(messageSource, locale, "/admin/reports"));
         mav.addObject(
                 "pageTitle",
                 messageSource.getMessage("page.title.adminReportDetail", null, locale));
@@ -198,8 +232,8 @@ public class ModerationAdminController {
             @PathVariable("reportId") final Long reportId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
         try {
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
             moderationService.markReportUnderReview(reportId, currentAdminUser);
             return redirectToReports("reviewed", redirectAttributes);
         } catch (final ModerationException ex) {
@@ -285,15 +319,23 @@ public class ModerationAdminController {
             return appealDetailWithErrors(reportId, locale, form, errors);
         }
 
-        final User admin = SecurityControllerUtils.requireAuthenticatedUser();
+        final AppealDecision parsedAppealDecision =
+                PersistableEnum.fromDbValue(AppealDecision.class, form.getAppealDecision())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
         try {
-            moderationService.finalizeReportAppeal(reportId, admin, form.getAppealDecision());
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+
+            moderationService.finalizeReportAppeal(
+                    reportId, currentAdminUser, parsedAppealDecision);
+
             final String action =
-                    form.getAppealDecision() == AppealDecision.UPHELD
+                    parsedAppealDecision == AppealDecision.UPHELD
                             ? "appeal_upheld"
                             : "appeal_lifted";
+
             return redirectToReports(action, redirectAttributes);
+
         } catch (final ModerationException ex) {
             return redirectToReportsError(ex.getCode());
         }
@@ -307,9 +349,9 @@ public class ModerationAdminController {
             final int banDurationDays,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
-
         try {
+            final User currentAdminUser = SecurityControllerUtils.requireAuthenticatedUser();
+
             final ModerationReport report =
                     moderationService.resolveReport(
                             reportId,
@@ -379,13 +421,18 @@ public class ModerationAdminController {
                 report.getAppealReason(),
                 report.getResolutionDetails(),
                 report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getUpdatedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getAppealedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getReviewedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getCreatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(report.getUpdatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getAppealedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getReviewedAt(), locale, platformTimeZoneService.defaultZone()),
                 report.getReviewer(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
-                formatInstant(report.getAppealResolvedAt(), locale, PlatformTime.ZONE),
+                formatInstant(
+                        report.getAppealResolvedAt(),
+                        locale,
+                        platformTimeZoneService.defaultZone()),
                 report.getAppealResolvedBy(),
                 isAppealed(report));
     }
@@ -414,7 +461,8 @@ public class ModerationAdminController {
 
         final UserBan ban = latestBanForUser.get();
         return new UserBanViewModel(
-                ban.getId(), formatInstant(ban.getBannedUntil(), locale, PlatformTime.ZONE));
+                ban.getId(),
+                formatInstant(ban.getBannedUntil(), locale, platformTimeZoneService.defaultZone()));
     }
 
     public static final class UserBanViewModel {

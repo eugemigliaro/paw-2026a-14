@@ -23,7 +23,15 @@ public interface ModerationReportDao {
 
     Optional<ModerationReport> findById(Long reportId);
 
-    boolean existsReportForTarget(User reporter, ReportTargetType targetType, Long targetId);
+    List<ModerationReport> findReportsByReporter(User reporter);
+
+    List<ModerationReport> findReportsByReporter(
+            User reporter, List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
+
+    List<ModerationReport> findReports();
+
+    List<ModerationReport> findReports(
+            List<ReportTargetType> targetTypes, List<ReportStatus> statuses);
 
     PaginatedResult<ModerationReport> findReports(
             List<ReportTargetType> targetTypes,

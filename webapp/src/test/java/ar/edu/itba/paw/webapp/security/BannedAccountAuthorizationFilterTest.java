@@ -9,7 +9,7 @@ import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
@@ -31,15 +31,16 @@ class BannedAccountAuthorizationFilterTest {
 
     @Test
     void redirectsBannedUserToBanPageForProtectedRoute() throws Exception {
-        final ModerationService moderationService = Mockito.mock(ModerationService.class);
+        final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
         final User u = UserUtils.getUser(7L);
-        Mockito.when(moderationService.findActiveBan(u)).thenReturn(Optional.of(sampleBan()));
+        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(u), Mockito.any()))
+                .thenReturn(Optional.of(sampleBan()));
         AuthenticationUtils.authenticateUser(7L);
 
         final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/account");
         final MockHttpServletResponse response = new MockHttpServletResponse();
 
-        new BannedAccountAuthorizationFilter(moderationService)
+        new BannedAccountAuthorizationFilter(userBanDao)
                 .doFilter(request, response, new MockFilterChain());
 
         assertEquals(302, response.getStatus());
@@ -48,16 +49,17 @@ class BannedAccountAuthorizationFilterTest {
 
     @Test
     void allowsBannedUserAppealRoute() throws Exception {
-        final ModerationService moderationService = Mockito.mock(ModerationService.class);
+        final UserBanDao userBanDao = Mockito.mock(UserBanDao.class);
         final User u = UserUtils.getUser(7L);
-        Mockito.when(moderationService.findActiveBan(u)).thenReturn(Optional.of(sampleBan()));
+        Mockito.when(userBanDao.findActiveBanForUser(Mockito.eq(u), Mockito.any()))
+                .thenReturn(Optional.of(sampleBan()));
         AuthenticationUtils.authenticateUser(7L);
 
         final MockHttpServletRequest request =
                 new MockHttpServletRequest("POST", "/account/ban/appeal");
         final MockHttpServletResponse response = new MockHttpServletResponse();
 
-        new BannedAccountAuthorizationFilter(moderationService)
+        new BannedAccountAuthorizationFilter(userBanDao)
                 .doFilter(request, response, new MockFilterChain());
 
         assertEquals(200, response.getStatus());

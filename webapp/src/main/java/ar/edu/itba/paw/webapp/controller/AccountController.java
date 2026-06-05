@@ -1,28 +1,34 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.ImageUploadException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
+import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.context.MessageSource;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
+@PreAuthorize("isAuthenticated()")
 public class AccountController {
 
     private final UserService userService;
@@ -56,22 +62,42 @@ public class AccountController {
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
+        final Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+        final AuthenticatedUserPrincipal principal =
+                SecurityControllerUtils.requireAuthenticatedPrincipal();
         final User currentUser = SecurityControllerUtils.requireAuthenticatedUser();
 
         if (bindingResult.hasErrors()) {
             return accountView(currentUser, locale, false, accountProfileForm, null);
         }
 
-        try {
+        try (InputStream profileImageStream =
+                accountProfileForm.getProfileImage() == null
+                                || accountProfileForm.getProfileImage().isEmpty()
+                        ? null
+                        : accountProfileForm.getProfileImage().getInputStream()) {
             final User updatedUser =
                     userService.updateProfile(
-                            currentUser,
+                            principal.getUser(),
                             accountProfileForm.getUsername(),
                             accountProfileForm.getName(),
                             accountProfileForm.getLastName(),
                             accountProfileForm.getPhone(),
-                            profileImageUpload(accountProfileForm.getProfileImage()));
-            SecurityControllerUtils.refreshAuthentication(updatedUser);
+                            accountProfileForm.getProfileImage() == null
+                                    ? null
+                                    : accountProfileForm.getProfileImage().getContentType(),
+                            accountProfileForm.getProfileImage() == null
+                                    ? 0L
+                                    : accountProfileForm.getProfileImage().getSize(),
+                            profileImageStream);
+            SecurityContextHolder.getContext()
+                    .setAuthentication(
+                            new UsernamePasswordAuthenticationToken(
+                                    new AuthenticatedUserPrincipal(
+                                            updatedUser, principal.getRole()),
+                                    authentication.getCredentials(),
+                                    authentication.getAuthorities()));
             redirectAttributes.addFlashAttribute("accountUpdated", true);
             return new ModelAndView("redirect:/account");
         } catch (final AccountRegistrationException exception) {
@@ -111,6 +137,8 @@ public class AccountController {
                 "pageTitle",
                 messageSource.getMessage(
                         "page.title.account", null, "Match Point | Account", locale));
+        mav.addObject(
+                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/account"));
         mav.addObject(
                 "accountTitle", messageSource.getMessage("account.title", null, "Account", locale));
         mav.addObject(
@@ -165,28 +193,6 @@ public class AccountController {
         form.setLastName(user.getLastName());
         form.setPhone(user.getPhone());
         return form;
-    }
-
-    private ImageUpload profileImageUpload(final MultipartFile profileImage) {
-        if (profileImage == null) {
-            return null;
-        }
-        return new ImageUpload() {
-            @Override
-            public String getContentType() {
-                return profileImage.getContentType();
-            }
-
-            @Override
-            public long getContentLength() {
-                return profileImage.getSize();
-            }
-
-            @Override
-            public java.io.InputStream getContentStream() throws java.io.IOException {
-                return profileImage.getInputStream();
-            }
-        };
     }
 
     private void applyProfileUpdateError(

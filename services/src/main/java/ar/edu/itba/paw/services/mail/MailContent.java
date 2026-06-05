@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.services.mail;
 
-class MailContent {
+public class MailContent {
 
     private final String subject;
     private final String htmlBody;

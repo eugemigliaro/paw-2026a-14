@@ -10,7 +10,6 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -220,16 +219,8 @@ public class Match {
         return startsAt;
     }
 
-    public OffsetDateTime getStartsAtDateTime() {
-        return PlatformTime.toOffsetDateTime(startsAt);
-    }
-
     public Instant getEndsAt() {
         return endsAt;
-    }
-
-    public OffsetDateTime getEndsAtDateTime() {
-        return PlatformTime.toOffsetDateTime(endsAt);
     }
 
     public int getMaxPlayers() {

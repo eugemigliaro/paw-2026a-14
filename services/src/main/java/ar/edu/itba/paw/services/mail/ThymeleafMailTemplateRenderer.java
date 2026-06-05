@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services.mail;
 
-import ar.edu.itba.paw.models.PlatformTime;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -15,20 +16,39 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 @Component
-class ThymeleafMailTemplateRenderer {
+public class ThymeleafMailTemplateRenderer {
 
     private final TemplateEngine htmlMailTemplateEngine;
     private final TemplateEngine textMailTemplateEngine;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public ThymeleafMailTemplateRenderer(
             final TemplateEngine htmlMailTemplateEngine,
             final TemplateEngine textMailTemplateEngine,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.htmlMailTemplateEngine = htmlMailTemplateEngine;
         this.textMailTemplateEngine = textMailTemplateEngine;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public ThymeleafMailTemplateRenderer(
+            final TemplateEngine htmlMailTemplateEngine,
+            final TemplateEngine textMailTemplateEngine,
+            final MessageSource messageSource) {
+        this(
+                htmlMailTemplateEngine,
+                textMailTemplateEngine,
+                messageSource,
+                PlatformTimeZoneServiceImpl.argentinaDefault());
+    }
+
+    public MailContent renderReservationConfirmation(
+            final VerificationMailTemplateData templateData) {
+        return renderActionMail(templateData);
     }
 
     public MailContent renderMatchUpdatedNotification(
@@ -435,7 +455,6 @@ class ThymeleafMailTemplateRenderer {
                         new Object[] {templateData.getTournamentTitle()},
                         locale));
         context.setVariable("summary", message("mail.tournament.bracketPublished.summary", locale));
-        context.setVariable("viewEventLabel", message("mail.cta.viewBracket", locale));
 
         return new MailContent(
                 message(
@@ -463,7 +482,6 @@ class ThymeleafMailTemplateRenderer {
                         "mail.tournament.result.summary",
                         new Object[] {templateData.getWinnerName(), templateData.getLoserName()},
                         locale));
-        context.setVariable("viewEventLabel", message("mail.cta.viewBracket", locale));
 
         return new MailContent(
                 message(
@@ -583,7 +601,10 @@ class ThymeleafMailTemplateRenderer {
                             DateTimeFormatter.ofLocalizedDateTime(
                                             FormatStyle.MEDIUM, FormatStyle.SHORT)
                                     .withLocale(locale)
-                                    .format(templateData.getExpiresAt().atZone(PlatformTime.ZONE))
+                                    .format(
+                                            templateData
+                                                    .getExpiresAt()
+                                                    .atZone(platformTimeZoneService.defaultZone()))
                         },
                         locale));
         context.setVariable("ignoreNotice", message("mail.verification.ignore", locale));
@@ -607,8 +628,6 @@ class ThymeleafMailTemplateRenderer {
         context.setVariable("detailsLabel", message("mail.matchLifecycle.details", locale));
         context.setVariable(
                 "details", buildMatchLifecycleDetails(templateData, locale, occurrenceCount));
-        context.setVariable("eventUrl", templateData.getEventUrl());
-        context.setVariable("viewEventLabel", message("mail.cta.viewEvent", locale));
         context.setVariable("lang", locale.getLanguage());
         return context;
     }
@@ -624,8 +643,6 @@ class ThymeleafMailTemplateRenderer {
         context.setVariable("detailsLabel", message("mail.matchInvitation.details", locale));
         context.setVariable(
                 "details", buildMatchInvitationDetails(templateData, locale, occurrenceCount));
-        context.setVariable("eventUrl", templateData.getEventUrl());
-        context.setVariable("viewEventLabel", message("mail.cta.viewEvent", locale));
         context.setVariable("lang", locale.getLanguage());
         return context;
     }
@@ -637,8 +654,6 @@ class ThymeleafMailTemplateRenderer {
         context.setVariable("requestedForLabel", message("mail.tournament.requestedFor", locale));
         context.setVariable("detailsLabel", message("mail.tournament.details", locale));
         context.setVariable("details", buildTournamentLifecycleDetails(templateData, locale));
-        context.setVariable("eventUrl", templateData.getEventUrl());
-        context.setVariable("viewEventLabel", message("mail.cta.viewTournament", locale));
         context.setVariable("lang", locale.getLanguage());
         return context;
     }
@@ -783,7 +798,7 @@ class ThymeleafMailTemplateRenderer {
     private String formatDateTime(final Instant instant, final Locale locale) {
         return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
                 .withLocale(locale)
-                .format(instant.atZone(PlatformTime.ZONE));
+                .format(instant.atZone(platformTimeZoneService.defaultZone()));
     }
 
     private String message(final String code, final Locale locale) {

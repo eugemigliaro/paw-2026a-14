@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services.mail;
 import java.time.Instant;
 import java.util.Locale;
 
-class BanMailTemplateData {
+public class BanMailTemplateData {
 
     private final String recipientEmail;
     private final String username;

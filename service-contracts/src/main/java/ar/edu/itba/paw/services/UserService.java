@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.User;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +25,13 @@ public interface UserService {
             String name,
             String lastName,
             String phone,
-            ImageUpload profileImage)
+            String profileImageContentType,
+            long profileImageContentLength,
+            InputStream profileImageContentStream)
+            throws IOException;
+
+    User updateProfileImage(
+            Long id, String contentType, long contentLength, InputStream contentStream)
             throws IOException;
 
     void updatePreferredLanguage(User user, String preferredLanguage);

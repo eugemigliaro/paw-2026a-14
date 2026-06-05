@@ -22,8 +22,6 @@ public interface PlayerReviewService {
 
     Optional<PlayerReview> findReviewByIdIncludingDeleted(Long reviewId);
 
-    Optional<PlayerReview> findReviewById(Long reviewId);
-
     PlayerReviewSummary findSummaryForUser(User reviewed);
 
     PaginatedResult<PlayerReview> findReviewsForUser(

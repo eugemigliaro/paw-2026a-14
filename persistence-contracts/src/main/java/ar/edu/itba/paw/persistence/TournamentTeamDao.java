@@ -29,7 +29,5 @@ public interface TournamentTeamDao {
 
     List<Tournament> findTournamentsByMember(User user);
 
-    void saveSeedOrder(List<TournamentTeam> teams, List<Long> orderedTeamIds);
-
     long countByTournament(long tournamentId);
 }

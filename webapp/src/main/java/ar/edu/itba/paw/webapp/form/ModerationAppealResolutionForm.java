@@ -1,18 +1,21 @@
 package ar.edu.itba.paw.webapp.form;
 
-import ar.edu.itba.paw.models.types.AppealDecision;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 
 public class ModerationAppealResolutionForm {
 
-    @NotNull(message = "{NotNull.moderationAppealResolutionForm.appealDecision}")
-    private AppealDecision appealDecision = AppealDecision.UPHELD;
+    @NotBlank(message = "{NotBlank.moderationAppealResolutionForm.appealDecision}")
+    @Pattern(
+            regexp = "upheld|lifted",
+            message = "{Pattern.moderationAppealResolutionForm.appealDecision}")
+    private String appealDecision = "upheld";
 
-    public AppealDecision getAppealDecision() {
+    public String getAppealDecision() {
         return appealDecision;
     }
 
-    public void setAppealDecision(final AppealDecision appealDecision) {
+    public void setAppealDecision(final String appealDecision) {
         this.appealDecision = appealDecision;
     }
 }

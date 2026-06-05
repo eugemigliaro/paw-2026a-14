@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 public class CreateRecurrenceRequest {
 
@@ -10,16 +11,19 @@ public class CreateRecurrenceRequest {
     private final RecurrenceEndMode endMode;
     private final LocalDate untilDate;
     private final Integer occurrenceCount;
+    private final ZoneId zoneId;
 
     public CreateRecurrenceRequest(
             final RecurrenceFrequency frequency,
             final RecurrenceEndMode endMode,
             final LocalDate untilDate,
-            final Integer occurrenceCount) {
+            final Integer occurrenceCount,
+            final ZoneId zoneId) {
         this.frequency = frequency;
         this.endMode = endMode;
         this.untilDate = untilDate;
         this.occurrenceCount = occurrenceCount;
+        this.zoneId = zoneId;
     }
 
     public RecurrenceFrequency getFrequency() {
@@ -36,5 +40,9 @@ public class CreateRecurrenceRequest {
 
     public Integer getOccurrenceCount() {
         return occurrenceCount;
+    }
+
+    public ZoneId getZoneId() {
+        return zoneId;
     }
 }

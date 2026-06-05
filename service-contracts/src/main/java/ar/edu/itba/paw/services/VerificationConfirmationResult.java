@@ -6,26 +6,37 @@ import java.util.Optional;
 public class VerificationConfirmationResult {
 
     private final Long userId;
+    private final String redirectUrl;
     private final String successMessage;
     private final UserAccount account;
 
-    public VerificationConfirmationResult(final Long userId, final String successMessage) {
-        this(userId, successMessage, null);
+    public VerificationConfirmationResult(
+            final Long userId, final String redirectUrl, final String successMessage) {
+        this(userId, redirectUrl, successMessage, null);
     }
 
-    public VerificationConfirmationResult(final UserAccount account, final String successMessage) {
-        this(account == null ? null : account.getId(), successMessage, account);
+    public VerificationConfirmationResult(
+            final UserAccount account, final String redirectUrl, final String successMessage) {
+        this(account == null ? null : account.getId(), redirectUrl, successMessage, account);
     }
 
     private VerificationConfirmationResult(
-            final Long userId, final String successMessage, final UserAccount account) {
+            final Long userId,
+            final String redirectUrl,
+            final String successMessage,
+            final UserAccount account) {
         this.userId = userId;
+        this.redirectUrl = redirectUrl;
         this.successMessage = successMessage;
         this.account = account;
     }
 
     public Long getUserId() {
         return userId;
+    }
+
+    public String getRedirectUrl() {
+        return redirectUrl;
     }
 
     public String getSuccessMessage() {

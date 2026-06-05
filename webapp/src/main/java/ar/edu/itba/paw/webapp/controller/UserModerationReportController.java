@@ -1,21 +1,26 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.EnumFilterUtils.parseEnumFilters;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlatformTimeZoneService;
+import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,35 +35,53 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 @RequestMapping("/reports/mine")
+@PreAuthorize("isAuthenticated()")
 public class UserModerationReportController {
     private static final int PAGE_SIZE = 4;
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
+    private final PlatformTimeZoneService platformTimeZoneService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public UserModerationReportController(
-            final ModerationService moderationService, final MessageSource messageSource) {
+            final ModerationService moderationService,
+            final MessageSource messageSource,
+            final PlatformTimeZoneService platformTimeZoneService) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
+        this.platformTimeZoneService = platformTimeZoneService;
+    }
+
+    public UserModerationReportController(
+            final ModerationService moderationService, final MessageSource messageSource) {
+        this(moderationService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping
     public ModelAndView showMyReports(
-            @RequestParam(value = "type", required = false, defaultValue = "")
-                    final List<ReportTargetType> typeFilters,
-            @RequestParam(value = "status", required = false, defaultValue = "")
-                    final List<ReportStatus> statusFilters,
+            @RequestParam(value = "type", required = false) final List<String> typeFilters,
+            @RequestParam(value = "status", required = false) final List<String> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
         final User user = SecurityControllerUtils.currentUserOrNull();
+        final List<ReportTargetType> selectedTypes =
+                parseEnumFilters(
+                        typeFilters,
+                        value -> PersistableEnum.fromDbValue(ReportTargetType.class, value));
+        final List<ReportStatus> selectedStatuses =
+                parseEnumFilters(
+                        statusFilters,
+                        value -> PersistableEnum.fromDbValue(ReportStatus.class, value));
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
-                        user, typeFilters, statusFilters, page, PAGE_SIZE);
+                        user, selectedTypes, selectedStatuses, page, PAGE_SIZE);
         final List<UserReportViewModel> reports =
                 result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
 
         final ModelAndView mav = new ModelAndView("reports/mine/list");
+        mav.addObject(
+                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/reports/mine"));
         mav.addObject("pageTitle", messageSource.getMessage("page.title.myReports", null, locale));
         mav.addObject(
                 "pageTitleLabel", messageSource.getMessage("reports.mine.title", null, locale));
@@ -72,20 +95,21 @@ public class UserModerationReportController {
                         "reports.mine.count", new Object[] {result.getTotalCount()}, locale));
         mav.addObject("reports", reports);
         mav.addObject(
-                "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
+                "selectedTypes", selectedTypes.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
-                "selectedStatuses", statusFilters.stream().map(ReportStatus::getDbValue).toList());
+                "selectedStatuses",
+                selectedStatuses.stream().map(ReportStatus::getDbValue).toList());
         mav.addObject("hasPreviousPage", result.hasPrevious());
         mav.addObject("hasNextPage", result.hasNext());
-        mav.addObject("previousPageHref", buildPageUrl(typeFilters, statusFilters, page - 1));
-        mav.addObject("nextPageHref", buildPageUrl(typeFilters, statusFilters, page + 1));
+        mav.addObject("previousPageHref", buildPageUrl(selectedTypes, selectedStatuses, page - 1));
+        mav.addObject("nextPageHref", buildPageUrl(selectedTypes, selectedStatuses, page + 1));
         mav.addObject(
                 "paginationItems",
                 PaginationUtils.buildPaginationItems(
                         result.getPage(),
                         result.getTotalPages(),
                         paginationPage ->
-                                buildPageUrl(typeFilters, statusFilters, paginationPage)));
+                                buildPageUrl(selectedTypes, selectedStatuses, paginationPage)));
         return mav;
     }
 
@@ -110,11 +134,13 @@ public class UserModerationReportController {
         final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final ModerationReport report =
                 moderationService
-                        .findReportById(reportId) // TODO: move to service/security.
+                        .findReportById(reportId)
                         .filter(found -> found.getReporter().getId().equals(user.getId()))
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
+        mav.addObject(
+                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/reports/mine"));
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.myReportDetail", null, locale));
         mav.addObject(
@@ -161,11 +187,16 @@ public class UserModerationReportController {
                 report.getAppealReason(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
                 report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getUpdatedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getReviewedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getAppealedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getAppealResolvedAt(), locale, PlatformTime.ZONE));
+                formatInstant(report.getCreatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(report.getUpdatedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getReviewedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getAppealedAt(), locale, platformTimeZoneService.defaultZone()),
+                formatInstant(
+                        report.getAppealResolvedAt(),
+                        locale,
+                        platformTimeZoneService.defaultZone()));
     }
 
     public static final class UserReportViewModel {

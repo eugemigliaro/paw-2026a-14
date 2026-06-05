@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -75,6 +76,7 @@ public class ErrorPageController {
             final String errorPageNumber,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("errors/error-page");
+        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("pageTitle", messageSource.getMessage(pageTitleKey, null, locale));
         mav.addObject("title", messageSource.getMessage(titleKey, null, locale));
         mav.addObject("eyebrow", messageSource.getMessage(eyebrowKey, null, locale));
