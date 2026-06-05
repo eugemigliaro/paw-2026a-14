@@ -347,6 +347,8 @@ public class HostController {
         mav.addObject("mapDefaultLatitude", mapDefaultLatitude);
         mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
         mav.addObject("mapDefaultZoom", mapDefaultZoom);
+        mav.addObject("visibilityKey", "host.form.visibility." + form.getVisibility().getDbValue());
+        mav.addObject("joinPolicyKey", "host.form.joinPolicy." + form.getJoinPolicy().getDbValue());
         return mav;
     }
 

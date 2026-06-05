@@ -26,7 +26,8 @@
 			<spring:message var="visibilityPrivate" code="host.form.visibility.private" />
 			<spring:message var="joinPolicyPlaceholder" code="host.form.joinPolicy.placeholder" />
 			<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
-			<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approvalRequired" />
+			<spring:message var="joinPolicyApproval" code="host.form.joinPolicy.approval_required" />
+			<spring:message var="joinPolicyInviteOnly" code="host.form.joinPolicy.invite_only" />
 			<spring:message var="sportOther" code="sport.other" />
 			<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
 			<spring:message var="durationNinetyMinutes" code="host.form.duration.ninetyMinutes" />
@@ -35,11 +36,11 @@
 			<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
 			<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
 			<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
-			<spring:message var="recurrenceEndUntilDate"
-				code="host.form.recurrence.endMode.untilDate" />
-			<spring:message var="recurrenceEndOccurrenceCount"
-				code="host.form.recurrence.endMode.occurrenceCount" />
-				<c:url var="resolvedFormAction" value="${formAction}" />
+			<spring:message var="recurrenceEndUntilDate" code="host.form.recurrence.endMode.untilDate" />
+			<spring:message var="recurrenceEndOccurrenceCount" code="host.form.recurrence.endMode.occurrenceCount" />
+			<spring:message var="recurrenceEndModePlaceholder" code="host.form.recurrence.endMode.placeholder" />
+			<spring:message var="recurrenceFrequencyPlaceholder" code="host.form.recurrence.frequency.placeholder" />
+			<c:url var="resolvedFormAction" value="${formAction}" />
 
 			<main class="page-shell">
 				<ui:returnButton />
@@ -53,42 +54,6 @@
 						</p>
 					</header>
 
-					<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
-					<spring:message var="descPlaceholder"
-						code="host.form.description.placeholder" />
-					<spring:message var="locationPlaceholder"
-						code="host.form.location.placeholder" />
-					<spring:message var="sportPadel" code="sport.padel" />
-					<spring:message var="sportFootball" code="sport.football" />
-					<spring:message var="sportTennis" code="sport.tennis" />
-					<spring:message var="sportBasketball" code="sport.basketball" />
-					<spring:message var="visibilityPlaceholder"
-						code="host.form.visibility.placeholder" />
-					<spring:message var="visibilityPublic" code="host.form.visibility.public" />
-					<spring:message var="visibilityPrivate" code="host.form.visibility.private" />
-					<spring:message var="joinPolicyPlaceholder"
-						code="host.form.joinPolicy.placeholder" />
-					<spring:message var="joinPolicyDirect" code="host.form.joinPolicy.direct" />
-					<spring:message var="joinPolicyApproval"
-						code="host.form.joinPolicy.approvalRequired" />
-					<spring:message var="sportOther" code="sport.other" />
-					<spring:message var="durationOneHour" code="host.form.duration.oneHour" />
-					<spring:message var="durationNinetyMinutes"
-						code="host.form.duration.ninetyMinutes" />
-					<spring:message var="durationCustom" code="host.form.duration.custom" />
-					<spring:message var="durationLabel" code="host.form.duration" />
-						<c:url var="resolvedFormAction" value="${formAction}" />
-					<spring:message var="recurrenceFrequencyPlaceholder"
-						code="host.form.recurrence.frequency.placeholder" />
-					<spring:message var="recurrenceDaily" code="host.form.recurrence.frequency.daily" />
-					<spring:message var="recurrenceWeekly" code="host.form.recurrence.frequency.weekly" />
-					<spring:message var="recurrenceMonthly" code="host.form.recurrence.frequency.monthly" />
-					<spring:message var="recurrenceEndModePlaceholder"
-						code="host.form.recurrence.endMode.placeholder" />
-					<spring:message var="recurrenceEndUntilDate"
-						code="host.form.recurrence.endMode.untilDate" />
-					<spring:message var="recurrenceEndOccurrenceCount"
-						code="host.form.recurrence.endMode.occurrenceCount" />
 					<spring:url value="${formAction}" var="resolvedFormAction" />
 
 					<form:form method="post" action="${resolvedFormAction}"
@@ -306,9 +271,10 @@
 									<c:choose>
 										<c:when test="${isSeriesEditMode}">
 											<div class="account-locked-field">
+												<spring:message code="${visibilityKey}" var="resolvedVisibility" />
 												<input type="text"
 													class="field__control account-readonly-control account-readonly-control--muted"
-													value="${createEventForm.visibility}"
+													value="${resolvedVisibility}"
 													readonly="readonly" aria-readonly="true" />
 												<span class="account-locked-field__icon" aria-hidden="true">
 													<icon:padlock />
@@ -336,10 +302,11 @@
 									</span>
 									<c:choose>
 										<c:when test="${isSeriesEditMode}">
+											<spring:message code="${joinPolicyKey}" var="resolvedJoinPolicy" />
 											<div class="account-locked-field">
 												<input type="text"
 													class="field__control account-readonly-control account-readonly-control--muted"
-													value="${createEventForm.joinPolicy}"
+													value="${resolvedJoinPolicy}"
 													readonly="readonly" aria-readonly="true" />
 												<span class="account-locked-field__icon"
 													aria-hidden="true">
