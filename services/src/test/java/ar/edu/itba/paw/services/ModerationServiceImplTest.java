@@ -13,11 +13,11 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
@@ -48,7 +48,7 @@ public class ModerationServiceImplTest {
     @Mock private UserBanDao userBanDao;
     @Mock private ModerationReportDao moderationReportDao;
     @Mock private UserDataService userDataService;
-    @Mock private MatchDao matchDao;
+    @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private PlayerReviewDataService playerReviewDataService;
     @Mock private MatchService matchService;
@@ -64,7 +64,7 @@ public class ModerationServiceImplTest {
                         userBanDao,
                         moderationReportDao,
                         userDataService,
-                        matchDao,
+                        matchDataService,
                         matchParticipantDao,
                         playerReviewDataService,
                         mailDispatchService,
@@ -79,7 +79,7 @@ public class ModerationServiceImplTest {
                         userBanDao,
                         moderationReportDao,
                         userDataService,
-                        matchDao,
+                        matchDataService,
                         matchParticipantDao,
                         playerReviewDataService,
                         mailDispatchService,
@@ -94,7 +94,7 @@ public class ModerationServiceImplTest {
                         userBanDao,
                         moderationReportDao,
                         userDataService,
-                        matchDao,
+                        matchDataService,
                         matchParticipantDao,
                         playerReviewDataService,
                         mailDispatchService,
@@ -501,7 +501,7 @@ public class ModerationServiceImplTest {
 
     @Test
     public void softDeleteMatch_returnsTrueForExistingMatchModerationAction() {
-        Mockito.when(matchDao.softDeleteMatch(10L, UserUtils.getUser(99L), "Reason"))
+        Mockito.when(matchDataService.softDeleteMatch(10L, UserUtils.getUser(99L), "Reason"))
                 .thenReturn(true);
 
         final boolean result =

@@ -12,11 +12,11 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
@@ -47,7 +47,7 @@ public class ModerationServiceImpl implements ModerationService {
     private final UserBanDao userBanDao;
     private final ModerationReportDao moderationReportDao;
     private final UserDataService userDataService;
-    private final MatchDao matchDao;
+    private final MatchDataService matchDataService;
     private final MatchParticipantDao matchParticipantDao;
     private final PlayerReviewDataService playerReviewDataService;
     private final MailDispatchService mailDispatchService;
@@ -60,7 +60,7 @@ public class ModerationServiceImpl implements ModerationService {
             final UserBanDao userBanDao,
             final ModerationReportDao moderationReportDao,
             final UserDataService userDataService,
-            final MatchDao matchDao,
+            final MatchDataService matchDataService,
             final MatchParticipantDao matchParticipantDao,
             final PlayerReviewDataService playerReviewDataService,
             final MailDispatchService mailDispatchService,
@@ -70,7 +70,7 @@ public class ModerationServiceImpl implements ModerationService {
         this.userBanDao = userBanDao;
         this.moderationReportDao = moderationReportDao;
         this.userDataService = userDataService;
-        this.matchDao = matchDao;
+        this.matchDataService = matchDataService;
         this.matchParticipantDao = matchParticipantDao;
         this.playerReviewDataService = playerReviewDataService;
         this.mailDispatchService = mailDispatchService;
@@ -309,13 +309,13 @@ public class ModerationServiceImpl implements ModerationService {
     @Transactional
     public boolean softDeleteMatch(
             final Long matchId, final User deletedBy, final String deleteReason) {
-        return matchDao.softDeleteMatch(matchId, deletedBy, deleteReason);
+        return matchDataService.softDeleteMatch(matchId, deletedBy, deleteReason);
     }
 
     @Override
     @Transactional
     public boolean restoreMatch(final Long matchId) {
-        return matchDao.restoreMatch(matchId);
+        return matchDataService.restoreMatch(matchId);
     }
 
     private void validateReportRequest(
@@ -429,7 +429,8 @@ public class ModerationServiceImpl implements ModerationService {
                                                             new Object[] {targetId},
                                                             locale));
                     case MATCH ->
-                            matchDao.findById(targetId)
+                            matchDataService
+                                    .findById(targetId)
                                     .map(Match::getTitle)
                                     .orElseGet(
                                             () ->
@@ -559,14 +560,14 @@ public class ModerationServiceImpl implements ModerationService {
             return;
         }
         if (report.getTargetType() == ReportTargetType.MATCH) {
-            final Optional<Match> match = matchDao.findById(report.getTargetId());
+            final Optional<Match> match = matchDataService.findById(report.getTargetId());
             if (match.isEmpty()) {
                 return;
             }
             if (!match.get().isDeleted()) {
                 throw new ModerationException("invalid_report", "Invalid match report target.");
             }
-            matchDao.restoreMatch(match.get().getId());
+            matchDataService.restoreMatch(match.get().getId());
             return;
         }
     }
