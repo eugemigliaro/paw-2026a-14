@@ -129,7 +129,7 @@ public class UserModerationReportController {
                         .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        if (report.getReporter() == null || !report.getReporter().equals(user)) {
+        if (report.getReporter() == null || !report.getReporter().getId().equals(user.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND); // TODO: shouldn't it be 403 instead?
         }

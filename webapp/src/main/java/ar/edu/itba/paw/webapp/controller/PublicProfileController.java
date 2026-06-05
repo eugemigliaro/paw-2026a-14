@@ -128,7 +128,8 @@ public class PublicProfileController {
         mav.addObject(
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
-        final boolean reportUserCanSubmit = user != null && !user.equals(targetUser);
+        final boolean reportUserCanSubmit =
+                user != null && !user.getId().equals(targetUser.getId());
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
         final Optional<UserBan> activeBan = moderationService.findActiveBan(targetUser);
         mav.addObject("profileBanned", activeBan.isPresent());
@@ -148,7 +149,7 @@ public class PublicProfileController {
                                                             platformTimeZoneService
                                                                     .defaultZone())));
                 });
-        if (user != null && user.equals(targetUser)) {
+        if (user != null && user.getId().equals(targetUser.getId())) {
             mav.addObject("profileEditHref", "/account");
             mav.addObject(
                     "profileEditLabel",
@@ -254,7 +255,7 @@ public class PublicProfileController {
                         : playerReviewService.findReviewByPair(currentUser, targetUser);
         final boolean reviewCanSubmit =
                 currentUser != null
-                        && !currentUser.equals(targetUser)
+                        && !currentUser.getId().equals(targetUser.getId())
                         && playerReviewService.canReview(currentUser, targetUser);
         final String profilePath = "/users/" + targetUser.getUsername();
 
@@ -311,7 +312,8 @@ public class PublicProfileController {
                             new Object[] {targetUser.getUsername()},
                             locale));
         }
-        final boolean isSelf = currentUser != null && currentUser.equals(targetUser);
+        final boolean isSelf =
+                currentUser != null && currentUser.getId().equals(targetUser.getId());
         if (!reviewCanSubmit && !isSelf) {
             final String lockedKey =
                     currentUser == null

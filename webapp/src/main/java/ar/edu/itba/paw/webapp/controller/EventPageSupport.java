@@ -962,7 +962,9 @@ final class EventPageSupport {
     }
 
     private boolean isHost(final Match match, final User currentUser) {
-        return currentUser != null && currentUser.equals(match.getHost());
+        return currentUser != null
+                && match.getHost() != null
+                && currentUser.getId().equals(match.getHost().getId());
     }
 
     private boolean canHostEdit(final Match match) {
