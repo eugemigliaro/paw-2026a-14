@@ -227,12 +227,31 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private boolean updateStoredMatch(
+            final Match match,
             final Long matchId,
             final User actingUser,
             final UpdateMatchRequest request,
             final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
+        if (!isMatchHost(match, actingUser)) {
+            return matchDao.updateMatch(
+                    matchId,
+                    request.getAddress(),
+                    request.getTitle(),
+                    request.getDescription(),
+                    request.getStartsAt(),
+                    request.getEndsAt(),
+                    request.getMaxPlayers(),
+                    request.getPricePerPlayer(),
+                    request.getSport(),
+                    request.getVisibility(),
+                    joinPolicy,
+                    status,
+                    bannerImageMetadata,
+                    request.getLatitude(),
+                    request.getLongitude());
+        }
         return matchDao.updateMatch(
                 matchId,
                 actingUser,
@@ -300,6 +319,7 @@ public class MatchServiceImpl implements MatchService {
         }
         final boolean updated =
                 updateStoredMatch(
+                        match,
                         matchId,
                         actingUser,
                         request,
@@ -544,6 +564,7 @@ public class MatchServiceImpl implements MatchService {
                             request.getLongitude());
             final boolean updated =
                     updateStoredMatch(
+                            target,
                             target.getId(),
                             actingUser,
                             targetRequest,
@@ -582,13 +603,7 @@ public class MatchServiceImpl implements MatchService {
                                                 MatchCancellationFailureReason.MATCH_NOT_FOUND,
                                                 message("match.cancel.error.notFound")));
 
-        final User currentUser = securityService.currentUser();
-        if (!match.getHost().getId().equals(actingUser.getId())
-                && (currentUser == null || !currentUser.getId().equals(actingUser.getId()))) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
-        }
+        validateMatchCancellationAccess(match, actingUser);
 
         if (EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchCancellationException(
@@ -600,7 +615,13 @@ public class MatchServiceImpl implements MatchService {
             return match;
         }
 
-        final boolean updated = matchDao.cancelMatch(matchId, actingUser);
+        if (hasMatchEnded(match)) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+
+        final boolean updated = cancelStoredMatch(match, actingUser);
         if (!updated) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
@@ -640,7 +661,7 @@ public class MatchServiceImpl implements MatchService {
 
         final List<Match> cancelledMatches = new ArrayList<>();
         for (final Match target : targets) {
-            final boolean updated = matchDao.cancelMatch(target.getId(), actingUser);
+            final boolean updated = cancelStoredMatch(target, actingUser);
             if (!updated) {
                 throw new MatchCancellationException(
                         MatchCancellationFailureReason.FORBIDDEN,
@@ -662,7 +683,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void validateSeriesUpdateAccess(final Match pivot, final User actingUser) {
-        validateMatchHostAccess(pivot, actingUser);
+        validateMatchManagementAccess(pivot, actingUser);
         if (!pivot.isRecurringOccurrence()) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_RECURRING,
@@ -672,27 +693,35 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void validateMatchUpdateAccess(final Match match, final User actingUser) {
-        validateMatchHostAccess(match, actingUser);
+        validateMatchManagementAccess(match, actingUser);
         validateEditableMatch(match);
     }
 
     private void validateEditableMatch(final Match match) {
-        if (!isEditableMatch(match)) {
+        if (!isMatchManagementLifecycleOpen(match)) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.NOT_EDITABLE,
                     message("match.update.error.notEditable"));
         }
     }
 
-    private void validateMatchHostAccess(final Match match, final User actingUser) {
-        if (!match.getHost().getId().equals(actingUser.getId())) {
+    private void validateMatchManagementAccess(final Match match, final User actingUser) {
+        if (!canManageMatch(match, actingUser)) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
         }
     }
 
+    private void validateMatchCancellationAccess(final Match match, final User actingUser) {
+        if (!canManageMatch(match, actingUser)) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+    }
+
     private void validateSeriesCancellationAccess(final Match pivot, final User actingUser) {
-        if (!pivot.getHost().getId().equals(actingUser.getId())) {
+        if (!canManageMatch(pivot, actingUser)) {
             throw new MatchCancellationException(
                     MatchCancellationFailureReason.FORBIDDEN,
                     message("match.cancel.error.forbidden"));
@@ -703,6 +732,23 @@ public class MatchServiceImpl implements MatchService {
                     MatchCancellationFailureReason.NOT_RECURRING,
                     message("match.cancel.error.notRecurring"));
         }
+
+        if (!isMatchManagementLifecycleOpen(pivot)) {
+            throw new MatchCancellationException(
+                    MatchCancellationFailureReason.FORBIDDEN,
+                    message("match.cancel.error.forbidden"));
+        }
+    }
+
+    private boolean cancelStoredMatch(final Match match, final User actingUser) {
+        if (isMatchHost(match, actingUser)) {
+            return matchDao.cancelMatch(match.getId(), actingUser);
+        }
+        return matchDao.cancelMatch(match.getId());
+    }
+
+    private boolean canManageMatch(final Match match, final User actingUser) {
+        return isMatchHost(match, actingUser) || securityService.canActAsAdminMod(actingUser);
     }
 
     private List<Match> editableFutureSeriesTargets(final Match pivot) {
@@ -773,7 +819,8 @@ public class MatchServiceImpl implements MatchService {
         }
 
         final boolean hostViewer = isMatchHost(match, viewer);
-        final boolean canManage = hostViewer;
+        final boolean elevatedViewer = securityService.canActAsAdminMod(viewer);
+        final boolean canManage = hostViewer || elevatedViewer;
         final boolean lifecycleAllowsManagement = isMatchManagementLifecycleOpen(match);
         final boolean canManageCurrentMatch = canManage && lifecycleAllowsManagement;
         final boolean recurringOccurrence = match.isRecurringOccurrence();
@@ -781,7 +828,7 @@ public class MatchServiceImpl implements MatchService {
         return new MatchManagementPermissions(
                 hostViewer,
                 canManage,
-                canManageCurrentMatch,
+                hostViewer && lifecycleAllowsManagement,
                 canManageCurrentMatch,
                 canManageCurrentMatch,
                 canManageCurrentMatch && recurringOccurrence,

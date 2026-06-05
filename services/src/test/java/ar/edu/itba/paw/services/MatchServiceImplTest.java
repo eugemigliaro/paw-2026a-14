@@ -923,6 +923,59 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateMatchRejectsEndedMatch() {
+        final Match endedMatch =
+                new Match(
+                        18L,
+                        Sport.FOOTBALL,
+                        UserUtils.getUser(1L),
+                        "Test Address",
+                        null,
+                        null,
+                        "Ended Match",
+                        "Test Description",
+                        FIXED_NOW.minusSeconds(7200),
+                        FIXED_NOW.minusSeconds(3600),
+                        10,
+                        BigDecimal.ZERO,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null);
+        Mockito.when(matchDao.findById(18L)).thenReturn(Optional.of(endedMatch));
+
+        final MatchUpdateException exception =
+                Assertions.assertThrows(
+                        MatchUpdateException.class,
+                        () ->
+                                matchService.updateMatch(
+                                        18L,
+                                        UserUtils.getUser(1L),
+                                        new UpdateMatchRequest(
+                                                "Test Address",
+                                                "Updated Match",
+                                                "Test Description",
+                                                FIXED_NOW.plusSeconds(3600),
+                                                FIXED_NOW.plusSeconds(7200),
+                                                10,
+                                                BigDecimal.ZERO,
+                                                Sport.FOOTBALL,
+                                                EventVisibility.PUBLIC,
+                                                EventStatus.OPEN,
+                                                null)));
+
+        Assertions.assertEquals(MatchUpdateFailureReason.NOT_EDITABLE, exception.getReason());
+        Assertions.assertEquals("match.update.error.notEditable", exception.getMessage());
+    }
+
+    @Test
     public void testUpdateMatchRejectsPastStartTime() {
         final Match existingMatch = createTestMatch(15L, "Test Match", "football");
         Mockito.when(matchDao.findById(15L)).thenReturn(Optional.of(existingMatch));
@@ -1409,6 +1462,56 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testUpdateMatchAllowsAdminModToOverrideOwnership() {
+        final Match existingMatch = createTestMatch(17L, "Old Admin Title", "football");
+        final Match updatedMatch =
+                createTestMatch(17L, "Admin Updated Title", "padel", "public", "direct");
+        final User admin = UserUtils.getUser(2L);
+        Mockito.when(matchDao.findById(17L))
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(updatedMatch));
+        Mockito.when(securityService.canActAsAdminMod(admin)).thenReturn(true);
+        Mockito.when(matchParticipantDao.findConfirmedParticipants(17L)).thenReturn(List.of());
+        Mockito.when(
+                        matchDao.updateMatch(
+                                17L,
+                                "Admin Address",
+                                "Admin Updated Title",
+                                "Admin Updated Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                12,
+                                BigDecimal.ONE,
+                                Sport.PADEL,
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                null,
+                                null))
+                .thenReturn(true);
+
+        final Match result =
+                matchService.updateMatch(
+                        17L,
+                        admin,
+                        new UpdateMatchRequest(
+                                "Admin Address",
+                                "Admin Updated Title",
+                                "Admin Updated Description",
+                                FIXED_NOW.plusSeconds(3600),
+                                FIXED_NOW.plusSeconds(7200),
+                                12,
+                                BigDecimal.ONE,
+                                Sport.PADEL,
+                                EventVisibility.PUBLIC,
+                                EventStatus.OPEN,
+                                null));
+
+        Assertions.assertEquals("Admin Updated Title", result.getTitle());
+    }
+
+    @Test
     public void testCancelMatchRejectsMissingMatch() {
         Mockito.when(matchDao.findById(21L)).thenReturn(Optional.empty());
 
@@ -1430,7 +1533,7 @@ public class MatchServiceImplTest {
         final MatchCancellationException exception =
                 Assertions.assertThrows(
                         MatchCancellationException.class,
-                        () -> matchService.cancelMatch(22L, UserUtils.getUser(1L)));
+                        () -> matchService.cancelMatch(22L, UserUtils.getUser(2L)));
 
         Assertions.assertEquals(MatchCancellationFailureReason.FORBIDDEN, exception.getReason());
         Assertions.assertEquals("match.cancel.error.forbidden", exception.getMessage());
@@ -1475,6 +1578,44 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testCancelMatchRejectsEndedMatch() {
+        final Match endedMatch =
+                new Match(
+                        30L,
+                        Sport.FOOTBALL,
+                        UserUtils.getUser(1L),
+                        "Test Address",
+                        null,
+                        null,
+                        "Ended Match",
+                        "Test Description",
+                        FIXED_NOW.minusSeconds(7200),
+                        FIXED_NOW.minusSeconds(3600),
+                        10,
+                        BigDecimal.ZERO,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null);
+        Mockito.when(matchDao.findById(30L)).thenReturn(Optional.of(endedMatch));
+
+        final MatchCancellationException exception =
+                Assertions.assertThrows(
+                        MatchCancellationException.class,
+                        () -> matchService.cancelMatch(30L, UserUtils.getUser(1L)));
+
+        Assertions.assertEquals(MatchCancellationFailureReason.FORBIDDEN, exception.getReason());
+        Assertions.assertEquals("match.cancel.error.forbidden", exception.getMessage());
+    }
+
+    @Test
     public void testCancelMatchPersistsAndReturnsCancelledMatch() {
         final Match existingMatch = createTestMatch(23L, "Test Match", "football");
         final User host = UserUtils.getUser(1L);
@@ -1512,6 +1653,47 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(23L, result.getId());
+    }
+
+    @Test
+    public void testCancelMatchAllowsAdminModToOverrideOwnership() {
+        final Match existingMatch = createTestMatch(27L, "Admin Cancellable", "football");
+        final User admin = UserUtils.getUser(2L);
+        final Match cancelledMatch =
+                new Match(
+                        27L,
+                        Sport.FOOTBALL,
+                        UserUtils.getUser(1L),
+                        "Test Address",
+                        null,
+                        null,
+                        "Admin Cancellable",
+                        "Test Description",
+                        FIXED_NOW.plusSeconds(3600),
+                        null,
+                        10,
+                        BigDecimal.ZERO,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
+                        0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null);
+        Mockito.when(matchDao.findById(27L))
+                .thenReturn(Optional.of(existingMatch))
+                .thenReturn(Optional.of(cancelledMatch));
+        Mockito.when(securityService.canActAsAdminMod(admin)).thenReturn(true);
+        Mockito.when(matchDao.cancelMatch(27L)).thenReturn(true);
+
+        final Match result = matchService.cancelMatch(27L, admin);
+
+        Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
+        Assertions.assertEquals(27L, result.getId());
     }
 
     @Test
@@ -2613,6 +2795,36 @@ public class MatchServiceImplTest {
         Assertions.assertFalse(result.canManageParticipants());
         Assertions.assertFalse(result.canEdit());
         Assertions.assertFalse(result.canCancel());
+        Assertions.assertFalse(result.canEditSeries());
+        Assertions.assertFalse(result.canCancelSeries());
+    }
+
+    @Test
+    public void testGetMatchManagementPermissionsAllowsAdminModActions() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        63L,
+                        "Admin Managed Match",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+        final User admin = UserUtils.getUser(2L);
+        Mockito.when(securityService.canActAsAdminMod(admin)).thenReturn(true);
+
+        // Exercise
+        final MatchManagementPermissions result =
+                matchService.getMatchManagementPermissions(match, admin);
+
+        // Assert
+        Assertions.assertFalse(result.isHostViewer());
+        Assertions.assertTrue(result.canManage());
+        Assertions.assertFalse(result.canManageParticipants());
+        Assertions.assertTrue(result.canEdit());
+        Assertions.assertTrue(result.canCancel());
         Assertions.assertFalse(result.canEditSeries());
         Assertions.assertFalse(result.canCancelSeries());
     }
