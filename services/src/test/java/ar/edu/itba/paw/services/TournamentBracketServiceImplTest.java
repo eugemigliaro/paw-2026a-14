@@ -1231,7 +1231,6 @@ public class TournamentBracketServiceImplTest {
                 tournamentMatchDao,
                 userSportRatingService,
                 tournamentMailService,
-                messageSource,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
