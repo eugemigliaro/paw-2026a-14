@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface MatchDataService {
@@ -34,6 +35,8 @@ public interface MatchDataService {
             Integer seriesOccurrenceIndex);
 
     Optional<Match> findById(Long matchId);
+
+    List<Match> findSeriesOccurrences(Long seriesId);
 
     boolean softDeleteMatch(Long matchId, User deletedBy, String deleteReason);
 

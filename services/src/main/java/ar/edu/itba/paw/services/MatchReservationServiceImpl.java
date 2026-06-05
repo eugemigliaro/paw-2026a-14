@@ -5,9 +5,9 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -23,18 +23,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class MatchReservationServiceImpl implements MatchReservationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MatchReservationServiceImpl.class);
-    private final MatchDao matchDao;
+    private final MatchDataService matchDataService;
     private final MatchParticipantDao matchParticipantDao;
     private final MatchNotificationService matchNotificationService;
     private final Clock clock;
 
     @Autowired
     public MatchReservationServiceImpl(
-            final MatchDao matchDao,
+            final MatchDataService matchDataService,
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
             final Clock clock) {
-        this.matchDao = matchDao;
+        this.matchDataService = matchDataService;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
         this.clock = clock;
@@ -63,7 +63,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         nonNullUser(user);
         LOGGER.info("Reservation requested matchId={} userId={}", matchId, user);
         final Match match =
-                matchDao.findMatchById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () -> {
                                     LOGGER.warn(
@@ -99,7 +100,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         nonNullUser(user);
         LOGGER.info("Recurring reservation requested matchId={} userId={}", matchId, user.getId());
         final Match match =
-                matchDao.findMatchById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () -> {
                                     LOGGER.warn(
@@ -119,7 +121,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "not_recurring", "The event is not a recurring event.");
         }
 
-        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeries().getId());
+        final List<Match> occurrences =
+                matchDataService.findSeriesOccurrences(match.getSeries().getId());
         final SeriesReservationEvaluation evaluation = evaluateSeriesOccurrences(occurrences, user);
         if (evaluation.reservableOccurrenceCount() == 0) {
             final MatchReservationException failure =
@@ -139,7 +142,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         if (reservedOccurrences <= 0) {
             final SeriesReservationEvaluation currentEvaluation =
                     evaluateSeriesOccurrences(
-                            matchDao.findSeriesOccurrences(match.getSeries().getId()), user);
+                            matchDataService.findSeriesOccurrences(match.getSeries().getId()),
+                            user);
             final MatchReservationException failure =
                     buildSeriesReservationFailure(matchId, user, currentEvaluation);
             LOGGER.warn(
@@ -172,7 +176,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 matchId,
                 user.getId());
         final Match match =
-                matchDao.findMatchById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () -> {
                                     LOGGER.warn(
@@ -192,7 +197,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "not_recurring", "The event is not a recurring event.");
         }
 
-        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeries().getId());
+        final List<Match> occurrences =
+                matchDataService.findSeriesOccurrences(match.getSeries().getId());
         final SeriesCancellationEvaluation evaluation =
                 evaluateSeriesCancellations(occurrences, user);
         if (evaluation.activeFutureReservationCount() == 0) {
@@ -212,7 +218,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         if (cancelledReservations <= 0) {
             final SeriesCancellationEvaluation currentEvaluation =
                     evaluateSeriesCancellations(
-                            matchDao.findSeriesOccurrences(match.getSeries().getId()), user);
+                            matchDataService.findSeriesOccurrences(match.getSeries().getId()),
+                            user);
             final MatchReservationException failure =
                     buildSeriesCancellationFailure(currentEvaluation);
             LOGGER.warn(
@@ -296,7 +303,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     }
 
     private MatchReservationException buildReservationFailure(final Long matchId, final User user) {
-        final Match currentMatch = matchDao.findMatchById(matchId).orElse(null);
+        final Match currentMatch = matchDataService.findById(matchId).orElse(null);
 
         if (currentMatch == null) {
             return new MatchReservationException("not_found", "The event does not exist.");

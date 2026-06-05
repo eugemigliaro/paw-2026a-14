@@ -60,7 +60,7 @@ relevant focused Maven test pass.
     `SecurityServiceImpl` behind `MatchDataService`.
     - [x] Move `SecurityServiceImpl` behind `MatchDataService`.
     - [ ] Move `MatchServiceImpl` behind `MatchDataService`.
-    - [ ] Move `MatchReservationServiceImpl` behind `MatchDataService`.
+    - [x] Move `MatchReservationServiceImpl` behind `MatchDataService`.
     - [ ] Move `MatchParticipationServiceImpl` behind `MatchDataService`.
     - [x] Move `ModerationServiceImpl` match access behind `MatchDataService`.
     - [x] Move `RecurringMatchAsyncService` behind `MatchDataService`.
@@ -68,6 +68,7 @@ relevant focused Maven test pass.
     - [x] Update `SecurityServiceImplTest`.
     - [x] Update `ModerationServiceImplTest`.
     - [x] Update recurring occurrence setup in `MatchServiceImplTest`.
+    - [x] Update `MatchReservationServiceImplTest`.
 17. [ ] Add `MatchParticipantDataService` /
     `MatchParticipantDataServiceImpl`.
 18. [ ] Move `MatchParticipantDao` access in `MatchServiceImpl`,

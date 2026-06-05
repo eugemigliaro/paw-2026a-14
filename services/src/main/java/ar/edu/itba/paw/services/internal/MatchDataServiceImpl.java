@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -66,6 +67,11 @@ public class MatchDataServiceImpl implements MatchDataService {
     @Override
     public Optional<Match> findById(final Long matchId) {
         return matchDao.findById(matchId);
+    }
+
+    @Override
+    public List<Match> findSeriesOccurrences(final Long seriesId) {
+        return matchDao.findSeriesOccurrences(seriesId);
     }
 
     @Override
