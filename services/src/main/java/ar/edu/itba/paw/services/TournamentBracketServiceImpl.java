@@ -10,9 +10,9 @@ import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentMatchDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDataService tournamentDataService;
-    private final TournamentTeamDao tournamentTeamDao;
+    private final TournamentTeamDataService tournamentTeamDataService;
     private final TournamentMatchDao tournamentMatchDao;
     private final UserSportRatingService userSportRatingService;
     private final TournamentMailService tournamentMailService;
@@ -59,14 +59,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
     public TournamentBracketServiceImpl(
             final TournamentDataService tournamentDataService,
-            final TournamentTeamDao tournamentTeamDao,
+            final TournamentTeamDataService tournamentTeamDataService,
             final TournamentMatchDao tournamentMatchDao,
             final UserSportRatingService userSportRatingService,
             final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
-        this.tournamentTeamDao = tournamentTeamDao;
+        this.tournamentTeamDataService = tournamentTeamDataService;
         this.tournamentMatchDao = tournamentMatchDao;
         this.userSportRatingService = userSportRatingService;
         this.tournamentMailService = tournamentMailService;
@@ -106,7 +106,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
         validateCanMutate(tournament, actingUser);
         requireBracketSetup(tournament);
-        return tournamentTeamDao.findByTournament(tournamentId);
+        return tournamentTeamDataService.findByTournament(tournamentId);
     }
 
     @Override
@@ -146,9 +146,9 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     "tournament.bracket.error.alreadyGenerated");
         }
         final List<TournamentTeam> teams =
-                tournamentTeamDao.findByTournamentUnordered(tournamentId);
+                tournamentTeamDataService.findByTournamentUnordered(tournamentId);
         validateManualPairings(teams, orderedTeamIds);
-        tournamentTeamDao.saveSeedOrder(teams, orderedTeamIds);
+        tournamentTeamDataService.saveSeedOrder(teams, orderedTeamIds);
         tournament.setUpdatedAt(Instant.now(clock));
     }
 
@@ -202,7 +202,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     TournamentBracketFailureReason.FORBIDDEN, "tournament.bracket.error.forbidden");
         }
 
-        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournamentId);
+        final List<TournamentTeam> teams = tournamentTeamDataService.findByTournament(tournamentId);
         final List<TournamentMatch> matches = tournamentMatchDao.findByTournament(tournamentId);
         if (matches.isEmpty()) {
             throw bracketException(
@@ -213,7 +213,9 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final TournamentTeam viewerTeam =
                 viewer == null || viewer.getId() == null
                         ? null
-                        : tournamentTeamDao.findUserTeam(tournamentId, viewer.getId()).orElse(null);
+                        : tournamentTeamDataService
+                                .findUserTeam(tournamentId, viewer.getId())
+                                .orElse(null);
 
         return new TournamentBracketView(
                 tournament,
@@ -221,7 +223,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                 matches,
                 viewerTeam,
                 focusedMatch(matches, viewerTeam),
-                tournamentTeamDao.findMembersByTournament(tournamentId));
+                tournamentTeamDataService.findMembersByTournament(tournamentId));
     }
 
     @Override
@@ -490,7 +492,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     }
 
     private List<TournamentTeam> orderedTeamsForStrategy(final Tournament tournament) {
-        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournament.getId());
+        final List<TournamentTeam> teams =
+                tournamentTeamDataService.findByTournament(tournament.getId());
         final TournamentPairingStrategy strategy =
                 tournament.getPairingStrategy() == null
                         ? TournamentPairingStrategy.RANDOM
@@ -518,7 +521,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             return seedOrder(teams);
         }
         final Map<Long, List<User>> membersByTeam =
-                tournamentTeamDao.findMembersByTournament(tournament.getId()).stream()
+                tournamentTeamDataService.findMembersByTournament(tournament.getId()).stream()
                         .collect(
                                 Collectors.groupingBy(
                                         member -> member.getTeam().getId(),
@@ -822,7 +825,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     }
 
     private Map<Long, List<User>> membersByTeam(final long tournamentId) {
-        return tournamentTeamDao.findMembersByTournament(tournamentId).stream()
+        return tournamentTeamDataService.findMembersByTournament(tournamentId).stream()
                 .collect(
                         Collectors.groupingBy(
                                 member -> member.getTeam().getId(),

@@ -44,11 +44,11 @@ relevant focused Maven test pass.
    `TournamentRegistrationServiceImpl`, and `TournamentBracketServiceImpl` behind
    `TournamentDataService`.
 10. [x] Update affected `TournamentDao`-based service tests.
-11. [ ] Add `TournamentTeamDataService` / `TournamentTeamDataServiceImpl`.
-12. [ ] Move `TournamentTeamDao` access in `TournamentRegistrationServiceImpl`,
+11. [x] Add `TournamentTeamDataService` / `TournamentTeamDataServiceImpl`.
+12. [x] Move `TournamentTeamDao` access in `TournamentRegistrationServiceImpl`,
     `TournamentBracketServiceImpl`, and `TournamentMailServiceImpl` behind
     `TournamentTeamDataService`.
-13. [ ] Update affected `TournamentTeamDao`-based service tests.
+13. [x] Update affected `TournamentTeamDao`-based service tests.
 14. [ ] Add `MatchDataService` / `MatchDataServiceImpl`.
 15. [ ] Move `MatchDao` access in `MatchServiceImpl`,
     `MatchReservationServiceImpl`, `MatchParticipationServiceImpl`,

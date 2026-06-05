@@ -12,9 +12,9 @@ import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -43,7 +43,7 @@ public class TournamentRegistrationServiceImplTest {
 
     @Mock private TournamentDataService tournamentDataService;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
-    @Mock private TournamentTeamDao tournamentTeamDao;
+    @Mock private TournamentTeamDataService tournamentTeamDataService;
     @Mock private MessageSource messageSource;
 
     private TournamentRegistrationServiceImpl registrationService;
@@ -54,7 +54,7 @@ public class TournamentRegistrationServiceImplTest {
                 new TournamentRegistrationServiceImpl(
                         tournamentDataService,
                         tournamentSoloEntryDao,
-                        tournamentTeamDao,
+                        tournamentTeamDataService,
                         messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -87,7 +87,7 @@ public class TournamentRegistrationServiceImplTest {
         final TournamentSoloEntry created =
                 soloEntry(20L, tournament, user, TournamentSoloEntryStatus.IN_POOL);
         Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+        Mockito.when(tournamentTeamDataService.findUserTeam(10L, user.getId()))
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
                 .thenReturn(Optional.empty());
@@ -138,7 +138,7 @@ public class TournamentRegistrationServiceImplTest {
         final TournamentSoloEntry existing =
                 soloEntry(20L, tournament, user, TournamentSoloEntryStatus.IN_POOL);
         Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+        Mockito.when(tournamentTeamDataService.findUserTeam(10L, user.getId()))
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
                 .thenReturn(Optional.of(existing));
@@ -157,7 +157,7 @@ public class TournamentRegistrationServiceImplTest {
         final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 2, 2);
         final User user = UserUtils.getUser(2L);
         Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+        Mockito.when(tournamentTeamDataService.findUserTeam(10L, user.getId()))
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
                 .thenReturn(Optional.empty());
@@ -225,7 +225,7 @@ public class TournamentRegistrationServiceImplTest {
                         new TournamentTeamMember(
                                 30L, team, UserUtils.getUser(2L), false, FIXED_NOW));
         Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentTeamDao.findMembersByTournament(10L)).thenReturn(members);
+        Mockito.when(tournamentTeamDataService.findMembersByTournament(10L)).thenReturn(members);
 
         // 2. Exercise
         final List<TournamentTeamMember> result = registrationService.listTeamMembers(10L);
@@ -361,7 +361,7 @@ public class TournamentRegistrationServiceImplTest {
                         null,
                         FIXED_NOW);
         Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+        Mockito.when(tournamentTeamDataService.findUserTeam(10L, user.getId()))
                 .thenReturn(Optional.of(team));
 
         // 2. Exercise
@@ -395,7 +395,7 @@ public class TournamentRegistrationServiceImplTest {
         configureCloseRegistration(tournament, activeEntries);
         final List<TournamentTeam> createdTeams = new ArrayList<>();
         Mockito.when(
-                        tournamentTeamDao.create(
+                        tournamentTeamDataService.create(
                                 ArgumentMatchers.eq(tournament),
                                 ArgumentMatchers.isNull(),
                                 ArgumentMatchers.eq(TournamentTeamOrigin.SOLO_POOL),
@@ -422,7 +422,8 @@ public class TournamentRegistrationServiceImplTest {
                 .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentSoloEntryDao.findActiveByTournament(tournament.getId()))
                 .thenReturn(activeEntries);
-        Mockito.when(tournamentTeamDao.countByTournament(tournament.getId())).thenReturn(0L);
+        Mockito.when(tournamentTeamDataService.countByTournament(tournament.getId()))
+                .thenReturn(0L);
     }
 
     private static List<TournamentSoloEntry> activeEntries(
