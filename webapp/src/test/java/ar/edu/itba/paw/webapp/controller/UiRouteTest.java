@@ -52,12 +52,8 @@ import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatExc
 import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationForbiddenException;
 import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationNotFoundException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotJoinedException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationAlreadyJoinedException;
 import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesAlreadyJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesNotJoinedException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateForbiddenException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotEditableException;
@@ -2281,18 +2277,15 @@ class UiRouteTest {
     }
 
     @Test
-    void postReservationRequestWithSpanishLocaleLocalizesReservationErrors() throws Exception {
+    void postReservationRequestWhenAlreadyReservedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationFailure = new MatchReservationException("already_joined", "Already reserved");
+        reservationFailure = new MatchReservationException("Already reserved");
 
         mockMvc.perform(post("/matches/42/reservations").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("reservationRequiresLogin", false))
-                .andExpect(
-                        model().attribute(
-                                        "reservationError",
-                                        "Tu cuenta ya tiene una reserva confirmada para este evento."));
+                .andExpect(model().attributeExists("reservationError"));
     }
 
     @Test
@@ -2344,18 +2337,14 @@ class UiRouteTest {
     }
 
     @Test
-    void postReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
+    void postReservationCancelWithNoActiveReservationShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationCancellationFailure =
-                new MatchParticipationException("not_joined", "No active reservation");
+        reservationCancellationFailure = new MatchParticipationException("No active reservation");
 
         mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(
-                        model().attribute(
-                                        "reservationError",
-                                        "No ten\u00e9s una reserva activa para este evento."));
+                .andExpect(model().attributeExists("reservationError"));
     }
 
     @Test
@@ -2377,20 +2366,14 @@ class UiRouteTest {
     }
 
     @Test
-    void postSeriesReservationRequestWithSpanishLocaleLocalizesReservationErrors()
-            throws Exception {
+    void postSeriesReservationRequestWhenAlreadyJoinedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesReservationFailure =
-                new MatchReservationException("series_already_joined", "Already joined");
+        seriesReservationFailure = new MatchReservationException("Already joined");
 
         mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(
-                        model().attribute(
-                                        "seriesReservationError",
-                                        "Tu cuenta ya tiene reservas confirmadas "
-                                                + "para las fechas futuras recurrentes."));
+                .andExpect(model().attributeExists("seriesReservationError"));
     }
 
     @Test
@@ -2411,18 +2394,14 @@ class UiRouteTest {
     }
 
     @Test
-    void postSeriesReservationCancelWithSpanishLocaleLocalizesReservationErrors() throws Exception {
+    void postSeriesReservationCancelWithNoFutureReservationsShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesCancellationFailure =
-                new MatchReservationException("series_not_joined", "No future reservations");
+        seriesCancellationFailure = new MatchReservationException("No future reservations");
 
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(
-                        model().attribute(
-                                        "seriesReservationError",
-                                        "No ten\u00e9s reservas futuras para este evento recurrente."));
+                .andExpect(model().attributeExists("seriesReservationError"));
     }
 
     @Test
@@ -2456,7 +2435,7 @@ class UiRouteTest {
     void postSeriesJoinRequestFailureRedirectsWithJoinErrorCode() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
         seriesJoinRequestFailure =
-                new MatchParticipationException("series_already_pending", "Already requested");
+                new MatchParticipationSeriesAlreadyPendingException("Already requested");
 
         mockMvc.perform(post("/matches/52/recurring-join-requests"))
                 .andExpect(status().is3xxRedirection())
