@@ -139,7 +139,7 @@ class FeedControllerTournamentTest {
                 .when(tournamentService)
                 .searchPublicTournaments(
                         ArgumentMatchers.anyString(),
-                        ArgumentMatchers.nullable(List.class),
+                        ArgumentMatchers.<List<Sport>>any(),
                         ArgumentMatchers.nullable(Instant.class),
                         ArgumentMatchers.nullable(Instant.class),
                         ArgumentMatchers.nullable(EventSort.class),
