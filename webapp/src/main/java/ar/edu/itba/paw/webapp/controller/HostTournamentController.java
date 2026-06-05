@@ -36,6 +36,7 @@ import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -141,10 +142,10 @@ public class HostTournamentController {
                         createTournamentForm.getAddress(),
                         createTournamentForm.getLatitude(),
                         createTournamentForm.getLongitude(),
-                        null, // TODO: add this field
-                        null, // TODO: add this field
-                        null, // TODO: add this field
-                        null, // TODO: add this field
+                        createTournamentForm.getStartDate(),
+                        createTournamentForm.getStartTime(),
+                        createTournamentForm.getEndDate(),
+                        createTournamentForm.getEndTime(),
                         createTournamentForm.getPricePerPlayer(),
                         bannerUpload(createTournamentForm.getBannerImage()),
                         TournamentFormat.SINGLE_ELIMINATION,
@@ -211,10 +212,10 @@ public class HostTournamentController {
                         createTournamentForm.getAddress(),
                         createTournamentForm.getLatitude(),
                         createTournamentForm.getLongitude(),
-                        null, // TODO: add this field
-                        null, // TODO: add this field
-                        null, // TODO: add this field
-                        null, // TODO: add this field
+                        createTournamentForm.getStartDate(),
+                        createTournamentForm.getStartTime(),
+                        createTournamentForm.getEndDate(),
+                        createTournamentForm.getEndTime(),
                         createTournamentForm.getPricePerPlayer(),
                         bannerUpload(createTournamentForm.getBannerImage()),
                         createTournamentForm.getBracketSize(),
@@ -650,6 +651,10 @@ public class HostTournamentController {
 
     private CreateTournamentForm toForm(final Tournament tournament) {
         final CreateTournamentForm form = new CreateTournamentForm();
+        form.setStartDate(null);
+        form.setStartTime(null);
+        form.setEndDate(null);
+        form.setEndTime(null);
         form.setTitle(tournament.getTitle());
         form.setDescription(tournament.getDescription());
         form.setAddress(tournament.getAddress());
@@ -665,6 +670,16 @@ public class HostTournamentController {
         form.setRegistrationOpensTime(tournament.getRegistrationOpensAtDateTime().toLocalTime());
         form.setRegistrationClosesDate(tournament.getRegistrationClosesAtDateTime().toLocalDate());
         form.setRegistrationClosesTime(tournament.getRegistrationClosesAtDateTime().toLocalTime());
+        final OffsetDateTime startsAt = tournament.getStartsAtDateTime();
+        if (startsAt != null) {
+            form.setStartDate(startsAt.toLocalDate());
+            form.setStartTime(startsAt.toLocalTime());
+        }
+        final OffsetDateTime endsAt = tournament.getEndsAtDateTime();
+        if (endsAt != null) {
+            form.setEndDate(endsAt.toLocalDate());
+            form.setEndTime(endsAt.toLocalTime());
+        }
         return form;
     }
 
@@ -711,7 +726,7 @@ public class HostTournamentController {
                 bindingResult.rejectValue("registrationClosesTime", code, message);
                 break;
             case INVALID_SCHEDULE:
-                bindingResult.reject("CreateTournamentForm.global", message);
+                bindingResult.rejectValue("startTime", code, message);
                 break;
             case INVALID_JOIN_MODE:
                 bindingResult.rejectValue("allowSoloSignup", code, message);

@@ -335,6 +335,10 @@ public class TournamentServiceImpl implements TournamentService {
                 toInstant(request.getRegistrationClosesDate(), request.getRegistrationClosesTime());
         validateRegistrationWindow(registrationOpensAt, registrationClosesAt);
         validateFutureRegistrationClose(registrationClosesAt);
+        validateSchedule(
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
+                registrationClosesAt);
     }
 
     private void validateUpdateRequest(final UpdateTournamentRequest request) {
@@ -356,6 +360,11 @@ public class TournamentServiceImpl implements TournamentService {
         validateTeamSize(request.getTeamSize());
         validateRegistrationWindow(
                 toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
+        validateSchedule(
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 toInstant(
                         request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
     }
@@ -441,6 +450,25 @@ public class TournamentServiceImpl implements TournamentService {
             throw lifecycleException(
                     TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
                     "tournament.lifecycle.error.invalidRegistrationWindow");
+        }
+    }
+
+    private void validateSchedule(
+            final Instant startsAt, final Instant endsAt, final Instant registrationClosesAt) {
+        if (startsAt == null || endsAt == null) {
+            throw lifecycleException(
+                    TournamentLifecycleFailureReason.INVALID_SCHEDULE,
+                    "tournament.lifecycle.error.invalidSchedule");
+        }
+        if (!endsAt.isAfter(startsAt)) {
+            throw lifecycleException(
+                    TournamentLifecycleFailureReason.INVALID_SCHEDULE,
+                    "tournament.lifecycle.error.invalidSchedule");
+        }
+        if (registrationClosesAt != null && !startsAt.isAfter(registrationClosesAt)) {
+            throw lifecycleException(
+                    TournamentLifecycleFailureReason.INVALID_SCHEDULE,
+                    "tournament.lifecycle.error.invalidSchedule");
         }
     }
 

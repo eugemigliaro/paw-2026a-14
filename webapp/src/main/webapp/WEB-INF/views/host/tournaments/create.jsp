@@ -230,6 +230,37 @@
 						</article>
 
 						<article class="panel form-card">
+							<span class="detail-label"><spring:message code="tournament.create.section.schedule" /></span>
+							<h2 class="form-card__title"><spring:message code="tournament.create.section.schedule.subtitle" /></h2>
+							<div class="create-stack">
+								<div class="form-card__grid form-card__grid--datetime">
+									<label class="field" for="tournament-start-date">
+										<span class="field__label"><spring:message code="tournament.form.startDate.label" /></span>
+										<form:input path="startDate" id="tournament-start-date" type="date" cssClass="field__control" required="required" />
+										<form:errors path="startDate" cssClass="field__error" element="span" />
+									</label>
+									<label class="field" for="tournament-start-time">
+										<span class="field__label"><spring:message code="tournament.form.startTime.label" /></span>
+										<form:input path="startTime" id="tournament-start-time" type="time" cssClass="field__control" required="required" />
+										<form:errors path="startTime" cssClass="field__error" element="span" />
+									</label>
+								</div>
+								<div class="form-card__grid form-card__grid--datetime">
+									<label class="field" for="tournament-end-date">
+										<span class="field__label"><spring:message code="tournament.form.endDate.label" /></span>
+										<form:input path="endDate" id="tournament-end-date" type="date" cssClass="field__control" required="required" />
+										<form:errors path="endDate" cssClass="field__error" element="span" />
+									</label>
+									<label class="field" for="tournament-end-time">
+										<span class="field__label"><spring:message code="tournament.form.endTime.label" /></span>
+										<form:input path="endTime" id="tournament-end-time" type="time" cssClass="field__control" required="required" />
+										<form:errors path="endTime" cssClass="field__error" element="span" />
+									</label>
+								</div>
+							</div>
+						</article>
+
+						<article class="panel form-card">
 							<span class="detail-label"><spring:message code="tournament.create.section.structure" /></span>
 							<h2 class="form-card__title"><spring:message code="tournament.create.section.structure.subtitle" /></h2>
 							<div class="form-card__grid">
