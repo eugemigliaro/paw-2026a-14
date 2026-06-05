@@ -13,10 +13,10 @@ import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentMatchDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -49,7 +49,7 @@ public class TournamentBracketServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
-    @Mock private TournamentDao tournamentDao;
+    @Mock private TournamentDataService tournamentDataService;
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMatchDao tournamentMatchDao;
     @Mock private UserSportRatingService userSportRatingService;
@@ -62,7 +62,7 @@ public class TournamentBracketServiceImplTest {
     public void setUp() {
         bracketService =
                 new TournamentBracketServiceImpl(
-                        tournamentDao,
+                        tournamentDataService,
                         tournamentTeamDao,
                         tournamentMatchDao,
                         userSportRatingService,
@@ -78,7 +78,7 @@ public class TournamentBracketServiceImplTest {
                                 ArgumentMatchers.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(2));
         Mockito.lenient()
-                .when(tournamentDao.update(ArgumentMatchers.any()))
+                .when(tournamentDataService.update(ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         Mockito.lenient()
                 .when(tournamentMatchDao.update(ArgumentMatchers.any()))
@@ -270,7 +270,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.REGISTRATION);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
 
         // 2. Exercise
         final TournamentBracketException exception =
@@ -288,7 +288,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L))
                 .thenReturn(List.of(match(1000L, tournament, 1, 0, null, null, null, null)));
 
@@ -308,7 +308,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
 
         // 2. Exercise
         final TournamentBracketException exception =
@@ -342,7 +342,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
 
         // 2. Exercise
         final TournamentBracketException exception =
@@ -361,7 +361,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
         // 2. Exercise
@@ -393,7 +393,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
 
         // 2. Exercise
         final TournamentBracketException exception =
@@ -418,7 +418,7 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final TournamentMatch firstRoundMatch = matches.get(0);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
                 .thenReturn(Optional.of(firstRoundMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -445,7 +445,7 @@ public class TournamentBracketServiceImplTest {
         final TournamentMatch firstRoundMatch = matches.get(0);
         final User winningPlayer = createUser(11L);
         final User losingPlayer = createUser(12L);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
                 .thenReturn(Optional.of(firstRoundMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -479,7 +479,7 @@ public class TournamentBracketServiceImplTest {
         tournament.setSport(Sport.OTHER);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final TournamentMatch firstRoundMatch = matches.get(0);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
                 .thenReturn(Optional.of(firstRoundMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -515,7 +515,7 @@ public class TournamentBracketServiceImplTest {
         tournament.setSport(Sport.OTHER);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final TournamentMatch firstRoundMatch = matches.get(0);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
                 .thenReturn(Optional.of(firstRoundMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -551,7 +551,7 @@ public class TournamentBracketServiceImplTest {
         finalMatch.setTeamA(firstRoundMatch.getTeamA());
         finalMatch.setTeamB(secondRoundMatch.getTeamA());
         finalMatch.setStatus(TournamentMatchStatus.SCHEDULED);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, finalMatch.getId()))
                 .thenReturn(Optional.of(finalMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -572,7 +572,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
 
         // 2. Exercise
         final TournamentBracketException exception =
@@ -591,7 +591,7 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final List<TournamentTeam> teams = bracketTeams(matches);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(10L)).thenReturn(teams);
         Mockito.when(tournamentTeamDao.findUserTeam(10L, tournament.getHost().getId()))
                 .thenReturn(Optional.empty());
@@ -615,7 +615,7 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final List<TournamentTeam> teams = bracketTeams(matches);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(10L)).thenReturn(teams);
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
@@ -638,7 +638,7 @@ public class TournamentBracketServiceImplTest {
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final List<TournamentTeam> teams = bracketTeams(matches);
         final TournamentTeam viewerTeam = matches.get(1).getTeamA();
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(10L)).thenReturn(teams);
         Mockito.when(tournamentTeamDao.findUserTeam(10L, viewer.getId()))
                 .thenReturn(Optional.of(viewerTeam));
@@ -659,7 +659,7 @@ public class TournamentBracketServiceImplTest {
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.COMPLETED);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final List<TournamentTeam> teams = bracketTeams(matches);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(10L)).thenReturn(teams);
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
@@ -677,7 +677,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
         // 2. Exercise
@@ -701,7 +701,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
         // 2. Exercise
@@ -738,7 +738,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
         // 2. Exercise
@@ -774,7 +774,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
         // 2. Exercise
@@ -810,7 +810,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
 
         // 2. Exercise
@@ -841,7 +841,7 @@ public class TournamentBracketServiceImplTest {
         // 1. Arrange
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.BRACKET_SETUP);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
 
         // 2. Exercise
         final TournamentBracketException exception =
@@ -865,7 +865,7 @@ public class TournamentBracketServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), 4, TournamentStatus.IN_PROGRESS);
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, matches.get(0).getId()))
                 .thenReturn(Optional.of(matches.get(0)));
 
@@ -893,7 +893,7 @@ public class TournamentBracketServiceImplTest {
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final TournamentMatch firstRoundMatch = matches.get(0);
         final TournamentMatch finalMatch = matches.get(2);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
                 .thenReturn(Optional.of(firstRoundMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -919,7 +919,7 @@ public class TournamentBracketServiceImplTest {
         final List<TournamentMatch> matches = fourTeamBracket(tournament);
         final TournamentMatch secondRoundMatch = matches.get(1);
         final TournamentMatch finalMatch = matches.get(2);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, secondRoundMatch.getId()))
                 .thenReturn(Optional.of(secondRoundMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -946,7 +946,7 @@ public class TournamentBracketServiceImplTest {
         final TournamentMatch firstRoundMatch = matches.get(0);
         final TournamentMatch secondRoundMatch = matches.get(1);
         final TournamentMatch finalMatch = matches.get(2);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, firstRoundMatch.getId()))
                 .thenReturn(Optional.of(firstRoundMatch));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, secondRoundMatch.getId()))
@@ -980,7 +980,7 @@ public class TournamentBracketServiceImplTest {
         final TournamentMatch finalMatch = matches.get(2);
         finalMatch.setTeamA(matches.get(0).getTeamA());
         finalMatch.setTeamB(matches.get(1).getTeamA());
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
         Mockito.when(tournamentMatchDao.findByTournamentAndId(10L, finalMatch.getId()))
                 .thenReturn(Optional.of(finalMatch));
         Mockito.when(tournamentMatchDao.findByTournament(10L)).thenReturn(matches);
@@ -1065,7 +1065,7 @@ public class TournamentBracketServiceImplTest {
             final List<TournamentTeam> teams,
             final boolean configureMatchCreation) {
         tournament.setPairingStrategy(TournamentPairingStrategy.RANDOM);
-        Mockito.when(tournamentDao.findById(tournament.getId()))
+        Mockito.when(tournamentDataService.findById(tournament.getId()))
                 .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(tournament.getId())).thenReturn(teams);
         Mockito.when(tournamentMatchDao.findByTournament(tournament.getId())).thenReturn(List.of());
@@ -1114,7 +1114,7 @@ public class TournamentBracketServiceImplTest {
             final List<TournamentTeam> teams,
             final List<TournamentMatch> persistedMatches) {
         tournament.setPairingStrategy(TournamentPairingStrategy.RANDOM);
-        Mockito.when(tournamentDao.findById(tournament.getId()))
+        Mockito.when(tournamentDataService.findById(tournament.getId()))
                 .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentTeamDao.findByTournament(tournament.getId())).thenReturn(teams);
         Mockito.when(tournamentMatchDao.findByTournament(tournament.getId()))
@@ -1283,7 +1283,7 @@ public class TournamentBracketServiceImplTest {
     private TournamentBracketServiceImpl bracketService(
             final TournamentMailService tournamentMailService) {
         return new TournamentBracketServiceImpl(
-                tournamentDao,
+                tournamentDataService,
                 tournamentTeamDao,
                 tournamentMatchDao,
                 userSportRatingService,
@@ -1295,7 +1295,7 @@ public class TournamentBracketServiceImplTest {
     private TournamentBracketServiceImpl bracketService(
             final UserSportRatingService userSportRatingService) {
         return new TournamentBracketServiceImpl(
-                tournamentDao,
+                tournamentDataService,
                 tournamentTeamDao,
                 tournamentMatchDao,
                 userSportRatingService,

@@ -9,10 +9,10 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentMatchDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     TournamentStatus.CANCELLED);
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
-    private final TournamentDao tournamentDao;
+    private final TournamentDataService tournamentDataService;
     private final TournamentTeamDao tournamentTeamDao;
     private final TournamentMatchDao tournamentMatchDao;
     private final UserSportRatingService userSportRatingService;
@@ -58,14 +58,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     private final Clock clock;
 
     public TournamentBracketServiceImpl(
-            final TournamentDao tournamentDao,
+            final TournamentDataService tournamentDataService,
             final TournamentTeamDao tournamentTeamDao,
             final TournamentMatchDao tournamentMatchDao,
             final UserSportRatingService userSportRatingService,
             final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
+        this.tournamentDataService = tournamentDataService;
         this.tournamentTeamDao = tournamentTeamDao;
         this.tournamentMatchDao = tournamentMatchDao;
         this.userSportRatingService = userSportRatingService;
@@ -398,7 +398,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     }
 
     private Tournament findTournamentOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .orElseThrow(

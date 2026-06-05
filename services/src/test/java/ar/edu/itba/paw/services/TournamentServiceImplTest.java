@@ -7,10 +7,10 @@ import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -39,7 +39,7 @@ public class TournamentServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
-    @Mock private TournamentDao tournamentDao;
+    @Mock private TournamentDataService tournamentDataService;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMailService tournamentMailService;
@@ -52,7 +52,7 @@ public class TournamentServiceImplTest {
     public void setUp() {
         tournamentService =
                 new TournamentServiceImpl(
-                        tournamentDao,
+                        tournamentDataService,
                         tournamentMailService,
                         imageService,
                         messageSource,
@@ -80,7 +80,7 @@ public class TournamentServiceImplTest {
         final CreateTournamentRequest request = validCreateRequest();
         final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
         Mockito.when(
-                        tournamentDao.create(
+                        tournamentDataService.create(
                                 host,
                                 request.getSport(),
                                 request.getTitle(),
@@ -197,7 +197,7 @@ public class TournamentServiceImplTest {
     @Test
     public void nonHostCannotUpdateTournament() {
         // 1. Arrange
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(
                         Optional.of(
                                 tournament(
@@ -223,8 +223,8 @@ public class TournamentServiceImplTest {
         final User host = UserUtils.getUser(1L);
         final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
         final UpdateTournamentRequest request = validUpdateRequest();
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentDao.update(tournament))
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.update(tournament))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // 2. Exercise
@@ -249,8 +249,8 @@ public class TournamentServiceImplTest {
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
         final UpdateTournamentRequest request = validUpdateRequest();
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentDao.update(tournament))
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.update(tournament))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // 2. Exercise
@@ -265,7 +265,7 @@ public class TournamentServiceImplTest {
     public void updateFailsWhenTournamentIsCompleted() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
         // 2. Exercise
@@ -283,7 +283,7 @@ public class TournamentServiceImplTest {
     public void updateFailsAfterRegistrationState() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.BRACKET_SETUP)));
 
         // 2. Exercise
@@ -301,7 +301,7 @@ public class TournamentServiceImplTest {
     public void cancelFailsWhenTournamentIsCompleted() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
         // 2. Exercise
@@ -320,8 +320,8 @@ public class TournamentServiceImplTest {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
         final Tournament tournament = tournament(10L, host, TournamentStatus.IN_PROGRESS);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentDao.update(tournament))
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.update(tournament))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // 2. Exercise
@@ -339,7 +339,7 @@ public class TournamentServiceImplTest {
         final Tournament expectedTournament =
                 tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
         Mockito.when(
-                        tournamentDao.countPublicTournaments(
+                        tournamentDataService.countPublicTournaments(
                                 "cup",
                                 List.of(Sport.PADEL),
                                 Instant.parse("2026-04-06T00:00:00Z"),
@@ -348,7 +348,7 @@ public class TournamentServiceImplTest {
                                 BigDecimal.TEN))
                 .thenReturn(25);
         Mockito.when(
-                        tournamentDao.findPublicTournaments(
+                        tournamentDataService.findPublicTournaments(
                                 "cup",
                                 List.of(Sport.PADEL),
                                 Instant.parse("2026-04-06T00:00:00Z"),
@@ -390,10 +390,12 @@ public class TournamentServiceImplTest {
         // 1. Arrange
         final Tournament expectedTournament =
                 tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
-        Mockito.when(tournamentDao.countPublicTournaments("", List.of(), null, null, null, null))
+        Mockito.when(
+                        tournamentDataService.countPublicTournaments(
+                                "", List.of(), null, null, null, null))
                 .thenReturn(1);
         Mockito.when(
-                        tournamentDao.findPublicTournaments(
+                        tournamentDataService.findPublicTournaments(
                                 "",
                                 List.of(),
                                 null,
@@ -436,7 +438,7 @@ public class TournamentServiceImplTest {
         tournament(11L, UserUtils.getUser(2L), TournamentStatus.REGISTRATION);
         tournament(12L, UserUtils.getUser(3L), TournamentStatus.IN_PROGRESS);
         Mockito.when(
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -453,7 +455,7 @@ public class TournamentServiceImplTest {
                                 12))
                 .thenReturn(List.of(hosted));
         Mockito.when(
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -498,7 +500,7 @@ public class TournamentServiceImplTest {
         final Tournament completed =
                 tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
         Mockito.when(
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -515,7 +517,7 @@ public class TournamentServiceImplTest {
                                 12))
                 .thenReturn(List.of(unscheduled, completed));
         Mockito.when(
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -559,7 +561,7 @@ public class TournamentServiceImplTest {
         final Tournament completed =
                 tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
         Mockito.when(
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 user,
                                 Boolean.TRUE,
                                 Boolean.TRUE,
@@ -576,7 +578,7 @@ public class TournamentServiceImplTest {
                                 12))
                 .thenReturn(List.of(completed));
         Mockito.when(
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 user, Boolean.TRUE, Boolean.TRUE, "", null, null, null, null, null))
                 .thenReturn(1);
 

@@ -9,10 +9,10 @@ import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -33,19 +33,19 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
-    private final TournamentDao tournamentDao;
+    private final TournamentDataService tournamentDataService;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
     private final TournamentTeamDao tournamentTeamDao;
     private final MessageSource messageSource;
     private final Clock clock;
 
     public TournamentRegistrationServiceImpl(
-            final TournamentDao tournamentDao,
+            final TournamentDataService tournamentDataService,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
             final TournamentTeamDao tournamentTeamDao,
             final MessageSource messageSource,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
+        this.tournamentDataService = tournamentDataService;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
         this.tournamentTeamDao = tournamentTeamDao;
         this.messageSource = messageSource;
@@ -231,11 +231,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         tournament.setStatus(TournamentStatus.BRACKET_SETUP);
         tournament.setRegistrationClosedAt(now);
         tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+        return tournamentDataService.update(tournament);
     }
 
     private Tournament findTournamentOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .orElseThrow(
