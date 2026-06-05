@@ -50,11 +50,22 @@ relevant focused Maven test pass.
     `TournamentTeamDataService`.
 13. [x] Update affected `TournamentTeamDao`-based service tests.
 14. [ ] Add `MatchDataService` / `MatchDataServiceImpl`.
+    - [x] Start `MatchDataService` with the `findById` operation needed by
+      `SecurityServiceImpl`.
+    - [ ] Expand `MatchDataService` to cover the remaining `MatchDao` operations
+      as the larger match services move behind it.
 15. [ ] Move `MatchDao` access in `MatchServiceImpl`,
     `MatchReservationServiceImpl`, `MatchParticipationServiceImpl`,
     `ModerationServiceImpl`, `RecurringMatchAsyncService`, and
     `SecurityServiceImpl` behind `MatchDataService`.
+    - [x] Move `SecurityServiceImpl` behind `MatchDataService`.
+    - [ ] Move `MatchServiceImpl` behind `MatchDataService`.
+    - [ ] Move `MatchReservationServiceImpl` behind `MatchDataService`.
+    - [ ] Move `MatchParticipationServiceImpl` behind `MatchDataService`.
+    - [ ] Move `ModerationServiceImpl` match access behind `MatchDataService`.
+    - [ ] Move `RecurringMatchAsyncService` behind `MatchDataService`.
 16. [ ] Update affected `MatchDao`-based service tests.
+    - [x] Update `SecurityServiceImplTest`.
 17. [ ] Add `MatchParticipantDataService` /
     `MatchParticipantDataServiceImpl`.
 18. [ ] Move `MatchParticipantDao` access in `MatchServiceImpl`,
