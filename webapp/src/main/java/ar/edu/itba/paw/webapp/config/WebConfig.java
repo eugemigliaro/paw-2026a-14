@@ -17,7 +17,6 @@ import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
-import ar.edu.itba.paw.webapp.config.converters.StringToZoneIdConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import java.util.List;
 import java.util.Locale;
@@ -199,7 +198,6 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventStatusConverter());
         registry.addConverter(new StringToEventVisibilityConverter());
         registry.addConverter(new StringToMatchSortConverter());
-        registry.addConverter(new StringToZoneIdConverter());
         registry.addConverter(new StringToEventTypeConverter());
         registry.addConverter(new StringToTournamentPairingStrategyConverter());
         registry.addConverter(new StringToReportTargetTypeConverter());

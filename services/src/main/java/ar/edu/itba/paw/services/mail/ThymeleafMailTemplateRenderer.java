@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.services.mail;
 
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -21,29 +20,15 @@ class ThymeleafMailTemplateRenderer {
     private final TemplateEngine htmlMailTemplateEngine;
     private final TemplateEngine textMailTemplateEngine;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public ThymeleafMailTemplateRenderer(
             final TemplateEngine htmlMailTemplateEngine,
             final TemplateEngine textMailTemplateEngine,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final MessageSource messageSource) {
         this.htmlMailTemplateEngine = htmlMailTemplateEngine;
         this.textMailTemplateEngine = textMailTemplateEngine;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
-    public ThymeleafMailTemplateRenderer(
-            final TemplateEngine htmlMailTemplateEngine,
-            final TemplateEngine textMailTemplateEngine,
-            final MessageSource messageSource) {
-        this(
-                htmlMailTemplateEngine,
-                textMailTemplateEngine,
-                messageSource,
-                PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     public MailContent renderMatchUpdatedNotification(
@@ -598,10 +583,7 @@ class ThymeleafMailTemplateRenderer {
                             DateTimeFormatter.ofLocalizedDateTime(
                                             FormatStyle.MEDIUM, FormatStyle.SHORT)
                                     .withLocale(locale)
-                                    .format(
-                                            templateData
-                                                    .getExpiresAt()
-                                                    .atZone(platformTimeZoneService.defaultZone()))
+                                    .format(templateData.getExpiresAt().atZone(PlatformTime.ZONE))
                         },
                         locale));
         context.setVariable("ignoreNotice", message("mail.verification.ignore", locale));
@@ -801,7 +783,7 @@ class ThymeleafMailTemplateRenderer {
     private String formatDateTime(final Instant instant, final Locale locale) {
         return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
                 .withLocale(locale)
-                .format(instant.atZone(platformTimeZoneService.defaultZone()));
+                .format(instant.atZone(PlatformTime.ZONE));
     }
 
     private String message(final String code, final Locale locale) {

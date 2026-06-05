@@ -53,11 +53,6 @@
 								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-								<input
-									type="hidden"
-									name="tz"
-									value="<c:out value='${selectedTimezone}' />"
-									data-browser-timezone-field="true" />
 								<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 								<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 								<div class="search-panel__row">
@@ -205,7 +200,6 @@
 											<input type="hidden" name="type" value="tournament" />
 										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 										<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 
@@ -227,7 +221,6 @@
 												<c:param name="type" value="tournament" />
 											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
-											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="minPrice" value="${selectedMinPriceValue}" />
 											<c:param name="maxPrice" value="${selectedMaxPriceValue}" />
 										</c:url>
@@ -279,7 +272,6 @@
 											<input type="hidden" name="type" value="tournament" />
 										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 										<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 
@@ -307,7 +299,6 @@
 												<c:param name="type" value="tournament" />
 											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
-											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="startDate" value="${selectedStartDateValue}" />
 											<c:param name="endDate" value="${selectedEndDateValue}" />
 											<c:param name="minPrice" value="" />

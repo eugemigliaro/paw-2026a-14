@@ -26,7 +26,6 @@
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
 <c:url var="accountEditFormHref" value="/js/account-edit-form.js" />
 <c:url var="passwordToggleHref" value="/js/password-visibility-toggle.js" />
-<c:url var="timezoneFieldHref" value="/js/timezone-field.js" />
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
 <c:url var="overflowMenuHref" value="/js/overflow-menu.js" />
 <c:url var="filterDropdownsHref" value="/js/filter-dropdowns.js" />
@@ -64,7 +63,6 @@
 <script defer src="${formSubmitGuardHref}"></script>
 <script defer src="${accountEditFormHref}"></script>
 <script defer src="${passwordToggleHref}"></script>
-<script defer src="${timezoneFieldHref}"></script>
 <script defer src="${hostJoinPolicyGuardHref}"></script>
 <script defer src="${overflowMenuHref}"></script>
 <script defer src="${filterDropdownsHref}"></script>

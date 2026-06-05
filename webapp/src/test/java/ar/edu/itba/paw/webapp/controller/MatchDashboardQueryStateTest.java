@@ -2,17 +2,16 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -51,9 +50,8 @@ class MatchDashboardQueryStateTest {
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
 
-        final ZoneId zoneId = ZoneId.systemDefault();
         assertFalse(selection.tournament());
-        assertEquals(LocalDate.now(zoneId), selection.searchForm().getEndDate());
+        assertEquals(LocalDate.now(PlatformTime.ZONE), selection.searchForm().getEndDate());
         assertNull(selection.searchForm().getStartDate());
         assertEquals(Boolean.TRUE, selection.includeHosted());
         assertEquals(
@@ -62,6 +60,5 @@ class MatchDashboardQueryStateTest {
                         ParticipantStatus.CHECKED_IN,
                         ParticipantStatus.PENDING_APPROVAL),
                 selection.participantStatuses());
-        assertNotNull(selection.selectedTimezone());
     }
 }

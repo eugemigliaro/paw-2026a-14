@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
@@ -13,7 +14,6 @@ import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import javax.persistence.EntityManager;
@@ -99,7 +99,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
 
@@ -110,7 +110,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -253,7 +253,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
 
@@ -264,7 +264,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -369,7 +369,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -401,7 +400,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -432,7 +430,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -453,33 +450,15 @@ public class MatchJpaDaoTest {
 
         final List<Match> firstPage =
                 matchDao.findPublicMatches(
-                        null,
-                        List.of(),
-                        EventTimeFilter.WEEK,
-                        null,
-                        null,
-                        EventSort.SOONEST,
-                        ZoneId.systemDefault(),
-                        0,
-                        2);
+                        null, List.of(), EventTimeFilter.WEEK, null, null, EventSort.SOONEST, 0, 2);
         final List<Match> secondPage =
                 matchDao.findPublicMatches(
-                        null,
-                        List.of(),
-                        EventTimeFilter.WEEK,
-                        null,
-                        null,
-                        EventSort.SOONEST,
-                        ZoneId.systemDefault(),
-                        2,
-                        2);
+                        null, List.of(), EventTimeFilter.WEEK, null, null, EventSort.SOONEST, 2, 2);
 
         Assertions.assertEquals(2, firstPage.size());
         Assertions.assertEquals(1, secondPage.size());
         Assertions.assertEquals(
-                3,
-                matchDao.countPublicMatches(
-                        null, List.of(), EventTimeFilter.WEEK, null, null, ZoneId.systemDefault()));
+                3, matchDao.countPublicMatches(null, List.of(), EventTimeFilter.WEEK, null, null));
     }
 
     @Test
@@ -501,15 +480,7 @@ public class MatchJpaDaoTest {
 
         final List<Match> result =
                 matchDao.findPublicMatches(
-                        null,
-                        List.of(),
-                        EventTimeFilter.ALL,
-                        null,
-                        null,
-                        EventSort.SOONEST,
-                        ZoneId.systemDefault(),
-                        0,
-                        20);
+                        null, List.of(), EventTimeFilter.ALL, null, null, EventSort.SOONEST, 0, 20);
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals("Upcoming Match", result.get(0).getTitle());
@@ -542,7 +513,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -582,7 +552,6 @@ public class MatchJpaDaoTest {
                         new BigDecimal("20"),
                         new BigDecimal("30"),
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -595,8 +564,7 @@ public class MatchJpaDaoTest {
                         List.of(),
                         EventTimeFilter.WEEK,
                         new BigDecimal("20"),
-                        new BigDecimal("30"),
-                        ZoneId.systemDefault()));
+                        new BigDecimal("30")));
     }
 
     @Test
@@ -637,7 +605,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -712,7 +679,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.DISTANCE,
-                        ZoneId.systemDefault(),
                         -34.6,
                         -58.4,
                         0,
@@ -1078,7 +1044,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
 
@@ -1089,7 +1055,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -1288,7 +1254,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -1299,16 +1264,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(
                 3,
                 matchDao.countHostedMatches(
-                        host,
-                        null,
-                        null,
-                        List.of(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        ZoneId.systemDefault()));
+                        host, null, null, List.of(), null, null, null, null, null));
     }
 
     @Test
@@ -1356,7 +1312,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         null,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -1380,8 +1335,7 @@ public class MatchJpaDaoTest {
                         List.of(EventStatus.COMPLETED, EventStatus.CANCELLED),
                         null,
                         null,
-                        null,
-                        ZoneId.systemDefault()));
+                        null));
     }
 
     @Test
@@ -1417,7 +1371,6 @@ public class MatchJpaDaoTest {
                         new BigDecimal("20"),
                         new BigDecimal("40"),
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -1461,7 +1414,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -1471,16 +1423,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(
-                        player,
-                        Boolean.TRUE,
-                        null,
-                        List.of(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        ZoneId.systemDefault()));
+                        player, Boolean.TRUE, null, List.of(), null, null, null, null, null));
     }
 
     @Test
@@ -1534,7 +1477,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -1545,16 +1487,7 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(
                 2,
                 matchDao.countJoinedMatches(
-                        player,
-                        Boolean.FALSE,
-                        null,
-                        List.of(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        ZoneId.systemDefault()));
+                        player, Boolean.FALSE, null, List.of(), null, null, null, null, null));
     }
 
     @Test
@@ -1595,7 +1528,6 @@ public class MatchJpaDaoTest {
                         new BigDecimal("20"),
                         new BigDecimal("30"),
                         EventSort.SOONEST,
-                        ZoneId.systemDefault(),
                         0,
                         20);
 
@@ -1624,7 +1556,6 @@ public class MatchJpaDaoTest {
                         null,
                         null,
                         EventSort.SPOTS_DESC,
-                        ZoneId.systemDefault(),
                         0,
                         3);
 
@@ -1709,7 +1640,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3);
         final MatchSeries matchSeries =
@@ -1719,7 +1650,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3,
                         null,
@@ -1798,7 +1729,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3);
         final MatchSeries matchSeries =
@@ -1808,7 +1739,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         3,
                         null,
@@ -1885,7 +1816,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
         final MatchSeries matchSeries =
@@ -1895,7 +1826,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -1955,7 +1886,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2);
         final MatchSeries matchSeries =
@@ -1965,7 +1896,7 @@ public class MatchJpaDaoTest {
                         RecurrenceFrequency.WEEKLY,
                         startsAt.toInstant(),
                         endsAt.toInstant(),
-                        ZoneId.systemDefault().getId(),
+                        PlatformTime.ZONE.getId(),
                         null,
                         2,
                         null,
@@ -2093,15 +2024,7 @@ public class MatchJpaDaoTest {
 
     private List<Match> findPublicMatchesByQuery(final String query) {
         return matchDao.findPublicMatches(
-                query,
-                List.of(),
-                EventTimeFilter.WEEK,
-                null,
-                null,
-                EventSort.SOONEST,
-                ZoneId.systemDefault(),
-                0,
-                20);
+                query, List.of(), EventTimeFilter.WEEK, null, null, EventSort.SOONEST, 0, 20);
     }
 
     private int countMatches() {

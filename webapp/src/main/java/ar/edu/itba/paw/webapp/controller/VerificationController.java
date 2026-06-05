@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
@@ -10,7 +11,6 @@ import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailu
 import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureNotFoundException;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import java.time.ZoneId;
 import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -47,7 +47,7 @@ public class VerificationController {
             mav.addObject(
                     "expiresAtLabel",
                     VerificationViews.expiryFormatter(locale)
-                            .format(preview.getExpiresAt().atZone(ZoneId.systemDefault())));
+                            .format(preview.getExpiresAt().atZone(PlatformTime.ZONE)));
             return mav;
         } catch (
                 final VerificationFailureNotFoundException

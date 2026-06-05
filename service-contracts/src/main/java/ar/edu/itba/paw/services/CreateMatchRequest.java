@@ -6,7 +6,8 @@ import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 public class CreateMatchRequest {
 
@@ -16,8 +17,10 @@ public class CreateMatchRequest {
     private final Double longitude;
     private final String title;
     private final String description;
-    private final Instant startsAt;
-    private final Instant endsAt;
+    private final LocalDate startDate;
+    private final LocalTime startTime;
+    private final LocalDate endDate;
+    private final LocalTime endTime;
     private final int maxPlayers;
     private final BigDecimal pricePerPlayer;
     private final Sport sport;
@@ -32,8 +35,10 @@ public class CreateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
@@ -45,8 +50,10 @@ public class CreateMatchRequest {
                 address,
                 title,
                 description,
-                startsAt,
-                endsAt,
+                startDate,
+                startTime,
+                endDate,
+                endTime,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
@@ -64,8 +71,10 @@ public class CreateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
@@ -78,8 +87,10 @@ public class CreateMatchRequest {
                 address,
                 title,
                 description,
-                startsAt,
-                endsAt,
+                startDate,
+                startTime,
+                endDate,
+                endTime,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
@@ -95,8 +106,10 @@ public class CreateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
@@ -112,8 +125,10 @@ public class CreateMatchRequest {
                 null,
                 title,
                 description,
-                startsAt,
-                endsAt,
+                startDate,
+                startTime,
+                endDate,
+                endTime,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
@@ -131,8 +146,10 @@ public class CreateMatchRequest {
             final Double longitude,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
@@ -147,8 +164,10 @@ public class CreateMatchRequest {
         this.longitude = longitude;
         this.title = title;
         this.description = description;
-        this.startsAt = startsAt;
-        this.endsAt = endsAt;
+        this.startDate = startDate;
+        this.startTime = startTime;
+        this.endDate = endDate;
+        this.endTime = endTime;
         this.maxPlayers = maxPlayers;
         this.pricePerPlayer = pricePerPlayer;
         this.sport = sport;
@@ -183,12 +202,20 @@ public class CreateMatchRequest {
         return description;
     }
 
-    public Instant getStartsAt() {
-        return startsAt;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public Instant getEndsAt() {
-        return endsAt;
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
     }
 
     public int getMaxPlayers() {

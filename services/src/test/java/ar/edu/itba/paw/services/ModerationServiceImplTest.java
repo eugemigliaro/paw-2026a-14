@@ -134,7 +134,6 @@ public class ModerationServiceImplTest {
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.any(),
                                 Mockito.anyInt(),
                                 Mockito.anyInt()))
                 .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
@@ -192,7 +191,6 @@ public class ModerationServiceImplTest {
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.any(),
                                 Mockito.anyInt(),
                                 Mockito.anyInt()))
                 .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
@@ -236,7 +234,6 @@ public class ModerationServiceImplTest {
                                 Mockito.any(User.class),
                                 Mockito.anyBoolean(),
                                 Mockito.anyBoolean(),
-                                Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
