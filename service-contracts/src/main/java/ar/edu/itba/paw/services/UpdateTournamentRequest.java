@@ -2,7 +2,6 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -14,8 +13,10 @@ public class UpdateTournamentRequest {
     private final String address;
     private final Double latitude;
     private final Double longitude;
-    private final Instant startsAt;
-    private final Instant endsAt;
+    private final LocalDate startDate;
+    private final LocalTime startTime;
+    private final LocalDate endDate;
+    private final LocalTime endTime;
     private final BigDecimal pricePerPlayer;
     private final ImageUpload bannerImage;
     private final int bracketSize;
@@ -32,8 +33,10 @@ public class UpdateTournamentRequest {
             final String address,
             final Double latitude,
             final Double longitude,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final BigDecimal pricePerPlayer,
             final ImageUpload bannerImage,
             final int bracketSize,
@@ -48,8 +51,10 @@ public class UpdateTournamentRequest {
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.startsAt = startsAt;
-        this.endsAt = endsAt;
+        this.startDate = startDate;
+        this.startTime = startTime;
+        this.endDate = endDate;
+        this.endTime = endTime;
         this.pricePerPlayer = pricePerPlayer;
         this.bannerImage = bannerImage;
         this.bracketSize = bracketSize;
@@ -84,12 +89,20 @@ public class UpdateTournamentRequest {
         return longitude;
     }
 
-    public Instant getStartsAt() {
-        return startsAt;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public Instant getEndsAt() {
-        return endsAt;
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
     }
 
     public BigDecimal getPricePerPlayer() {

@@ -242,7 +242,9 @@ public class TournamentServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(request.getTitle(), result.getTitle());
         Assertions.assertEquals(request.getAddress(), result.getAddress());
-        Assertions.assertEquals(request.getStartsAt(), result.getStartsAt());
+        Assertions.assertEquals(
+                PlatformTime.toInstant(request.getStartDate(), request.getStartTime()),
+                result.getStartsAt());
         Assertions.assertEquals(request.getBracketSize(), result.getBracketSize());
         Assertions.assertEquals(request.getTeamSize(), result.getTeamSize());
         Assertions.assertEquals(
@@ -679,8 +681,10 @@ public class TournamentServiceImplTest {
                 "Updated Street 456",
                 -34.61,
                 -58.39,
-                FIXED_NOW.plusSeconds(172800),
-                FIXED_NOW.plusSeconds(176400),
+                dateOf(FIXED_NOW.plusSeconds(172800)),
+                timeOf(FIXED_NOW.plusSeconds(172800)),
+                dateOf(FIXED_NOW.plusSeconds(176400)),
+                timeOf(FIXED_NOW.plusSeconds(176400)),
                 BigDecimal.TEN,
                 null,
                 8,

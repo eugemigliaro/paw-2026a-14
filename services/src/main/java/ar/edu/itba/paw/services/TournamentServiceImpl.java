@@ -211,8 +211,8 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setAddress(request.getAddress());
         tournament.setLatitude(request.getLatitude());
         tournament.setLongitude(request.getLongitude());
-        tournament.setStartsAt(request.getStartsAt());
-        tournament.setEndsAt(request.getEndsAt());
+        tournament.setStartsAt(toInstant(request.getStartDate(), request.getStartTime()));
+        tournament.setEndsAt(toInstant(request.getEndDate(), request.getEndTime()));
         tournament.setPricePerPlayer(request.getPricePerPlayer());
         if (!(request.getBannerImage() == null
                 || request.getBannerImage().getContentLength() <= 0)) {
@@ -347,8 +347,8 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getSport(),
                 request.getTitle(),
                 request.getAddress(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 request.getPricePerPlayer(),
                 request.getLatitude(),
                 request.getLongitude());

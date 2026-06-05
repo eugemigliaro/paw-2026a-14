@@ -211,8 +211,10 @@ public class HostTournamentController {
                         createTournamentForm.getAddress(),
                         createTournamentForm.getLatitude(),
                         createTournamentForm.getLongitude(),
-                        tournament.getStartsAt(),
-                        tournament.getEndsAt(),
+                        null, // TODO: add this field
+                        null, // TODO: add this field
+                        null, // TODO: add this field
+                        null, // TODO: add this field
                         createTournamentForm.getPricePerPlayer(),
                         bannerUpload(createTournamentForm.getBannerImage()),
                         createTournamentForm.getBracketSize(),
