@@ -6,9 +6,9 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.time.Clock;
 import java.time.Instant;
@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class MatchParticipationServiceImpl implements MatchParticipationService {
 
-    private final MatchDao matchDao;
+    private final MatchDataService matchDataService;
     private final MatchParticipantDao matchParticipantDao;
     private final UserService userService;
     private final Clock clock;
@@ -33,22 +33,28 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private final MatchNotificationService matchNotificationService;
 
     public MatchParticipationServiceImpl(
-            final MatchDao matchDao,
+            final MatchDataService matchDataService,
             final MatchParticipantDao matchParticipantDao,
             final UserService userService,
             final Clock clock) {
-        this(matchDao, matchParticipantDao, userService, clock, new MailDispatchService() {}, null);
+        this(
+                matchDataService,
+                matchParticipantDao,
+                userService,
+                clock,
+                new MailDispatchService() {},
+                null);
     }
 
     @Autowired
     public MatchParticipationServiceImpl(
-            final MatchDao matchDao,
+            final MatchDataService matchDataService,
             final MatchParticipantDao matchParticipantDao,
             final UserService userService,
             final Clock clock,
             final MailDispatchService mailDispatchService,
             final MatchNotificationService matchNotificationService) {
-        this.matchDao = matchDao;
+        this.matchDataService = matchDataService;
         this.matchParticipantDao = matchParticipantDao;
         this.userService = userService;
         this.clock = clock;
@@ -132,7 +138,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     "not_recurring", "The event is not a recurring event.");
         }
 
-        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeries().getId());
+        final List<Match> occurrences =
+                matchDataService.findSeriesOccurrences(match.getSeries().getId());
         final Instant now = Instant.now(clock);
         final Set<Long> activeFutureReservationMatchIds =
                 Set.copyOf(
@@ -163,7 +170,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             final Instant currentNow = Instant.now(clock);
             final SeriesJoinRequestEvaluation currentEvaluation =
                     evaluateSeriesJoinRequestTargets(
-                            matchDao.findSeriesOccurrences(match.getSeries().getId()),
+                            matchDataService.findSeriesOccurrences(match.getSeries().getId()),
                             Set.copyOf(
                                     matchParticipantDao
                                             .findActiveFutureReservationMatchIdsForSeries(
@@ -329,7 +336,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         }
         final Long userId = user.getId();
         return matchParticipantDao.findPendingMatchIds(user).stream()
-                .map(matchDao::findMatchById)
+                .map(matchDataService::findById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .filter(match -> !isHost(match, userId))
@@ -404,7 +411,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     private void inviteUserToSeries(final Match match, final User target) {
-        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeries().getId());
+        final List<Match> occurrences =
+                matchDataService.findSeriesOccurrences(match.getSeries().getId());
         final SeriesInvitationEvaluation evaluation =
                 evaluateSeriesInvitationTargets(occurrences, target);
         if (evaluation.invitableOccurrenceCount() == 0) {
@@ -533,7 +541,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public List<Match> findInvitedMatches(final User user) {
         nonNullUser(user);
         return matchParticipantDao.findInvitedMatchIds(user).stream()
-                .map(matchDao::findMatchById)
+                .map(matchDataService::findById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .filter(match -> !isHost(match, user.getId()))
@@ -545,7 +553,8 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     // -------------------------------------------------------------------------
 
     private Match requireMatch(final Long matchId) {
-        return matchDao.findMatchById(matchId)
+        return matchDataService
+                .findById(matchId)
                 .orElseThrow(
                         () ->
                                 new MatchParticipationException(
