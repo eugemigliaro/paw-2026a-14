@@ -65,6 +65,7 @@ Important product rules:
 - reservation cannot exceed capacity
 - cancelling a reservation releases the spot
 - a user can reserve their own event
+- match editability and "already started" checks must be based on `startsAt` compared to the current clock, not on `EventStatus.COMPLETED`; for standalone matches, `COMPLETED` is a persisted-or-derived ended/display status and must not be used as a proxy for whether a match has already started
 
 Moving beyond the MVP does not mean implementing the whole roadmap at once. Build the smallest coherent slice that satisfies the current request, and call out product-rule conflicts before coding.
 
@@ -84,6 +85,8 @@ Rules:
 - the elevated admin/mod role can intervene across ownership boundaries, including editing or deleting any event and handling moderation/reporting flows
 - regular users should only manage their own profile, reservations, and hosted content unless an explicit business rule expands access
 - keep authentication and authorization logic centralized in Spring Security configuration or dedicated security/policy helpers; services may defensively enforce domain invariants, but controllers and JSPs must not own access rules
+- do not use `@PreAuthorize` for controller route protection; prefer `SecurityConfig` for route-level authentication and role rules
+- ownership and domain authorization rules, such as whether a user can manage a hosted match, belong in the service method that performs the read or write; controllers may translate service denial outcomes to HTTP status or redirects, but must not implement ownership checks themselves
 - when changing access control, add or update tests for both allowed and denied paths
 
 The existing mail-validation placeholder flow should be treated as legacy MVP infrastructure. Reuse or migrate it only when it helps a requested transition, not as a reason to avoid proper auth.
@@ -102,8 +105,11 @@ Respect the existing layered structure:
 Rules:
 
 - controllers stay thin
+- controllers own presentation decisions such as view names, redirect targets, URL fragments, flash/model attributes, and JSP-facing view data
 - business rules go in services
+- services return domain outcomes and service result data; they must not return or define view names, redirect URLs, JSP paths, or navigation destinations
 - database access, query logic, and entity mapping stay in `persistence`
+- `webapp` code depends on service contracts, not DAOs or persistence contracts
 - models stay simple and framework-light
 - use Spring-managed beans and constructor injection
 - do not instantiate services or DAOs with `new` inside managed classes
@@ -284,6 +290,9 @@ The TP1 correction PDF exposed repeated class-wide failure patterns. This sectio
 - mail services should own standardized business emails and templates; callers should request a specific email action, not assemble arbitrary `MailContent`
 - emails that require user action need clear CTAs back into the app with context-correct URLs
 - date/time handling must preserve the intended wall-clock time; use explicit zones and test locale/time-zone sensitive flows
+- controllers must not use `PlatformTime` to convert domain timestamps for forms or views; use model getters that expose `OffsetDateTime`, such as `getStartsAtDateTime()`, when available
+- when controllers pass date and time inputs to services, pass the bound `LocalDate`/`LocalTime` values or request object fields through unchanged; services own conversion to persisted instants and enforcement of time-related business rules
+- form validators (Bean Validation `ConstraintValidator`s) may use `PlatformTime` to check that submitted wall-clock date/time inputs are in the future and ordered correctly relative to each other, giving inline field-level errors before the service call; this is pre-submit input validation, not the authoritative rule — the service still re-validates and owns time-related business-rule enforcement
 
 ### Views And View Models
 

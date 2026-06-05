@@ -7,6 +7,7 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.sportLabel;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
@@ -15,10 +16,7 @@ import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
@@ -31,12 +29,11 @@ import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -50,7 +47,6 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -69,22 +65,6 @@ public class TournamentController {
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
     private final Clock clock;
-    private final PlatformTimeZoneService platformTimeZoneService;
-
-    public TournamentController(
-            final TournamentService tournamentService,
-            final TournamentRegistrationService tournamentRegistrationService,
-            final TournamentBracketService tournamentBracketService,
-            final MessageSource messageSource,
-            final Clock clock) {
-        this(
-                tournamentService,
-                tournamentRegistrationService,
-                tournamentBracketService,
-                messageSource,
-                clock,
-                PlatformTimeZoneServiceImpl.argentinaDefault());
-    }
 
     @Autowired
     public TournamentController(
@@ -92,14 +72,12 @@ public class TournamentController {
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource,
-            final Clock clock,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final Clock clock) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
         this.clock = clock;
-        this.platformTimeZoneService = platformTimeZoneService;
     }
 
     @GetMapping("/tournaments/{tournamentId:\\d+}")
@@ -125,7 +103,6 @@ public class TournamentController {
                         "page.title.tournamentDetail",
                         new Object[] {tournament.getTitle()},
                         locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject(
                 "tournamentPage",
                 buildTournamentPage(tournament, currentUser, soloEntry, userTeam, locale));
@@ -144,7 +121,6 @@ public class TournamentController {
     }
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView joinSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
@@ -185,7 +161,6 @@ public class TournamentController {
                         "page.title.tournamentBracket",
                         new Object[] {bracketView.getTournament().getTitle()},
                         locale));
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale));
         mav.addObject("bracketPage", buildBracketPage(bracketView, locale));
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
@@ -201,7 +176,6 @@ public class TournamentController {
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/matches/{matchId:\\d+}/winner")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView declareWinner(
             @PathVariable("tournamentId") final Long tournamentId,
             @PathVariable("matchId") final Long matchId,
@@ -223,7 +197,6 @@ public class TournamentController {
     }
 
     @PostMapping("/tournaments/{tournamentId:\\d+}/solo-entry/leave")
-    @PreAuthorize("isAuthenticated()")
     public ModelAndView leaveSolo(
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
@@ -241,7 +214,7 @@ public class TournamentController {
             final User currentUser,
             final Optional<TournamentSoloEntry> soloEntry,
             final Optional<TournamentTeam> userTeam,
-            final Locale locale) {
+            final Locale locale) { // TODO: remove business logic
         final Instant now = Instant.now(clock);
         final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
         final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
@@ -355,8 +328,7 @@ public class TournamentController {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
             return List.of();
         }
-        final List<TournamentDetailViewModel.ParticipantViewModel> rows =
-                new java.util.ArrayList<>();
+        final List<TournamentDetailViewModel.ParticipantViewModel> rows = new ArrayList<>();
         for (final TournamentTeamMember member : teamMembers) {
             rows.add(
                     new TournamentDetailViewModel.ParticipantViewModel(
@@ -397,14 +369,11 @@ public class TournamentController {
             return messageSource.getMessage("tournament.detail.schedule.tbd", null, locale);
         }
         if (tournament.getEndsAt() == null) {
-            return formatInstant(
-                    tournament.getStartsAt(), locale, platformTimeZoneService.defaultZone());
+            return formatInstant(tournament.getStartsAt(), locale, PlatformTime.ZONE);
         }
 
-        final LocalDateTime startsAt =
-                platformTimeZoneService.toLocalDateTime(tournament.getStartsAt());
-        final LocalDateTime endsAt =
-                platformTimeZoneService.toLocalDateTime(tournament.getEndsAt());
+        final OffsetDateTime startsAt = tournament.getStartsAtDateTime();
+        final OffsetDateTime endsAt = tournament.getEndsAtDateTime();
         if (startsAt.toLocalDate().equals(endsAt.toLocalDate())) {
             return messageSource.getMessage(
                     "tournament.detail.schedule.sameDay",
@@ -418,26 +387,18 @@ public class TournamentController {
         return messageSource.getMessage(
                 "tournament.detail.schedule.range",
                 new Object[] {
-                    formatInstant(
-                            tournament.getStartsAt(),
-                            locale,
-                            platformTimeZoneService.defaultZone()),
-                    formatInstant(
-                            tournament.getEndsAt(), locale, platformTimeZoneService.defaultZone())
+                    formatInstant(tournament.getStartsAt(), locale, PlatformTime.ZONE),
+                    formatInstant(tournament.getEndsAt(), locale, PlatformTime.ZONE)
                 },
                 locale);
     }
 
     private String registrationWindowStartLabel(final Tournament tournament, final Locale locale) {
-        return formatInstant(
-                tournament.getRegistrationOpensAt(), locale, platformTimeZoneService.defaultZone());
+        return formatInstant(tournament.getRegistrationOpensAt(), locale, PlatformTime.ZONE);
     }
 
     private String registrationWindowEndLabel(final Tournament tournament, final Locale locale) {
-        return formatInstant(
-                tournament.getRegistrationClosesAt(),
-                locale,
-                platformTimeZoneService.defaultZone());
+        return formatInstant(tournament.getRegistrationClosesAt(), locale, PlatformTime.ZONE);
     }
 
     private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
@@ -808,9 +769,7 @@ public class TournamentController {
         if (team == null) {
             return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
         }
-        if (team.getName() != null
-                && !team.getName().isBlank()
-                && !isLegacyGeneratedSoloTeamName(team)) {
+        if (team.getName() != null && !team.getName().isBlank()) {
             return team.getName();
         }
         if (team.getId() == null) {
@@ -853,15 +812,6 @@ public class TournamentController {
         return displayNumbers;
     }
 
-    private static boolean isLegacyGeneratedSoloTeamName(final TournamentTeam team) {
-        if (team.getOrigin() != TournamentTeamOrigin.SOLO_POOL || team.getName() == null) {
-            return false;
-        }
-        final String normalized = team.getName().trim();
-        return normalized.matches("(?i)Solo squad #\\d+")
-                || normalized.matches("Equipo individual #\\d+");
-    }
-
     private static Long teamId(final TournamentTeam team) {
         return team == null ? null : team.getId();
     }
@@ -886,20 +836,13 @@ public class TournamentController {
             return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
         }
         if (match.getScheduledEndsAt() == null) {
-            return formatInstant(
-                    match.getScheduledStartsAt(), locale, platformTimeZoneService.defaultZone());
+            return formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE);
         }
         return messageSource.getMessage(
                 "tournament.bracket.schedule.range",
                 new Object[] {
-                    formatInstant(
-                            match.getScheduledStartsAt(),
-                            locale,
-                            platformTimeZoneService.defaultZone()),
-                    formatInstant(
-                            match.getScheduledEndsAt(),
-                            locale,
-                            platformTimeZoneService.defaultZone())
+                    formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE),
+                    formatInstant(match.getScheduledEndsAt(), locale, PlatformTime.ZONE)
                 },
                 locale);
     }

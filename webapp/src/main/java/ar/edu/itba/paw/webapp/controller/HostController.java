@@ -2,54 +2,45 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 
-import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
-import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.CreateRecurrenceRequest;
-import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
-import java.io.IOException;
-import java.io.InputStream;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
-@PreAuthorize("isAuthenticated()")
 public class HostController {
 
     private static final double DEFAULT_MAP_LATITUDE = -34.6037;
@@ -57,10 +48,7 @@ public class HostController {
     private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final MatchService matchService;
-    private final ImageService imageService;
-    private final Clock clock;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -71,10 +59,7 @@ public class HostController {
     @Autowired
     public HostController(
             final MatchService matchService,
-            final ImageService imageService,
-            final Clock clock,
             final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -84,35 +69,13 @@ public class HostController {
                     final double mapDefaultLongitude,
             @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
-        this.imageService = imageService;
-        this.clock = clock;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
         this.mapDefaultLatitude = mapDefaultLatitude;
         this.mapDefaultLongitude = mapDefaultLongitude;
         this.mapDefaultZoom = mapDefaultZoom;
-    }
-
-    public HostController(
-            final MatchService matchService,
-            final ImageService imageService,
-            final Clock clock,
-            final MessageSource messageSource) {
-        this(
-                matchService,
-                imageService,
-                clock,
-                messageSource,
-                PlatformTimeZoneServiceImpl.argentinaDefault(),
-                false,
-                "",
-                "",
-                DEFAULT_MAP_LATITUDE,
-                DEFAULT_MAP_LONGITUDE,
-                DEFAULT_MAP_ZOOM);
     }
 
     @ModelAttribute("createEventForm")
@@ -134,88 +97,50 @@ public class HostController {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
         final HostFormConfig formConfig = createFormConfig(locale);
 
-        applyScheduleValidation(createEventForm, bindingResult, locale);
-        validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
-        validateCoordinates(createEventForm, bindingResult, locale);
-
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
-
-        final Instant startsAt =
-                toInstant(
-                        createEventForm.getEventDate(),
-                        createEventForm.getEventTime(),
-                        createEventForm.getTz());
-        final Instant endsAt =
-                toInstant(
-                        createEventForm.getEndDate(),
-                        createEventForm.getEndTime(),
-                        createEventForm.getTz());
-
-        final ImageMetadata bannerImageMetadata;
-        try {
-            bannerImageMetadata = storeBannerIfPresent(createEventForm, null);
-        } catch (final IllegalArgumentException exception) {
-            return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
-        } catch (final IOException exception) {
-            return hostFormView(
-                    createEventForm,
-                    messageSource.getMessage("host.imageError", null, locale),
-                    locale,
-                    formConfig);
-        }
-
-        final EventVisibility visibility =
-                PersistableEnum.fromDbValue(
-                                EventVisibility.class, normalize(createEventForm.getVisibility()))
-                        .orElse(null);
-        final EventJoinPolicy joinPolicy =
-                PersistableEnum.fromDbValue(
-                                EventJoinPolicy.class, normalize(createEventForm.getJoinPolicy()))
-                        .orElse(null);
 
         final CreateMatchRequest request =
                 new CreateMatchRequest(
                         actingUser,
                         createEventForm.getAddress(),
-                        parseCoordinate(createEventForm.getLatitude()),
-                        parseCoordinate(createEventForm.getLongitude()),
+                        createEventForm.getLatitude(),
+                        createEventForm.getLongitude(),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
-                        startsAt,
-                        endsAt,
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getEndDate(),
+                        createEventForm.getEndTime(),
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
-                        PersistableEnum.fromDbValue(Sport.class, createEventForm.getSport())
-                                .orElse(Sport.PADEL),
-                        visibility,
-                        joinPolicy,
+                        createEventForm.getSport() == null
+                                ? Sport.PADEL
+                                : createEventForm.getSport(),
+                        createEventForm.getVisibility(),
+                        createEventForm.getJoinPolicy(),
                         EventStatus.OPEN,
-                        bannerImageMetadata,
+                        bannerUpload(createEventForm.getBannerImage()),
                         toRecurrenceRequest(createEventForm));
 
-        final Match createdMatch;
         try {
-            createdMatch = matchService.createMatch(request);
+            final Match createdMatch = matchService.createMatch(request);
+            return new ModelAndView("redirect:/matches/" + createdMatch.getId());
         } catch (final IllegalArgumentException exception) {
             return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
         }
-
-        return new ModelAndView("redirect:/matches/" + createdMatch.getId());
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditEvent(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match = findOwnedEditableMatchOrThrowNotFound(matchId, actingUser.getId());
+        final Match match = findEditableMatchOrThrowNotFound(matchId, actingUser);
         return hostFormView(toForm(match), null, locale, editFormConfig(match, locale));
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateEvent(
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
@@ -223,68 +148,33 @@ public class HostController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match existingMatch =
-                findOwnedEditableMatchOrThrowNotFound(matchId, actingUser.getId());
+        final Match existingMatch = findEditableMatchOrThrowNotFound(matchId, actingUser);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
-        applyScheduleValidation(createEventForm, bindingResult, locale);
-        validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
-        validateCoordinates(createEventForm, bindingResult, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
-
-        final Instant startsAt =
-                toInstant(
-                        createEventForm.getEventDate(),
-                        createEventForm.getEventTime(),
-                        createEventForm.getTz());
-        final Instant endsAt =
-                toInstant(
-                        createEventForm.getEndDate(),
-                        createEventForm.getEndTime(),
-                        createEventForm.getTz());
-
-        final ImageMetadata bannerImageMetadata;
-        try {
-            bannerImageMetadata =
-                    storeBannerIfPresent(createEventForm, existingMatch.getBannerImageMetadata());
-        } catch (final IllegalArgumentException exception) {
-            return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
-        } catch (final IOException exception) {
-            return hostFormView(
-                    createEventForm,
-                    messageSource.getMessage("host.imageError", null, locale),
-                    locale,
-                    formConfig);
-        }
-
-        final EventVisibility visibility =
-                PersistableEnum.fromDbValue(
-                                EventVisibility.class, normalize(createEventForm.getVisibility()))
-                        .orElse(null);
-        final EventJoinPolicy joinPolicy =
-                PersistableEnum.fromDbValue(
-                                EventJoinPolicy.class, normalize(createEventForm.getJoinPolicy()))
-                        .orElse(null);
 
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
                         createEventForm.getAddress(),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
-                        startsAt,
-                        endsAt,
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getEndDate(),
+                        createEventForm.getEndTime(),
                         createEventForm.getMaxPlayers().intValue(),
                         createEventForm.getPricePerPlayer(),
-                        PersistableEnum.fromDbValue(Sport.class, createEventForm.getSport())
-                                .orElse(Sport.PADEL),
-                        visibility,
-                        joinPolicy,
+                        createEventForm.getSport() == null
+                                ? Sport.PADEL
+                                : createEventForm.getSport(),
+                        createEventForm.getVisibility(),
+                        createEventForm.getJoinPolicy(),
                         existingMatch.getStatus(),
-                        bannerImageMetadata,
-                        parseCoordinate(createEventForm.getLatitude()),
-                        parseCoordinate(createEventForm.getLongitude()));
+                        bannerUpload(createEventForm.getBannerImage()),
+                        createEventForm.getLatitude(),
+                        createEventForm.getLongitude());
 
         try {
             matchService.updateMatch(matchId, actingUser, request);
@@ -312,19 +202,8 @@ public class HostController {
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
             } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
-                if (!isEndAfterStart(createEventForm)) {
-                    bindingResult.rejectValue(
-                            "endTime",
-                            "match.schedule.error.endBeforeStart",
-                            messageSource.getMessage(
-                                    "match.schedule.error.endBeforeStart", null, locale));
-                } else {
-                    bindingResult.rejectValue(
-                            "eventTime",
-                            "match.schedule.error.startsAtPast",
-                            messageSource.getMessage(
-                                    "match.schedule.error.startsAtPast", null, locale));
-                }
+                bindingResult.rejectValue(
+                        "eventTime", "match.schedule.error.invalid", exception.getMessage());
             } else {
                 bindingResult.rejectValue(
                         "eventTime", "match.schedule.error.startsAtPast", exception.getMessage());
@@ -337,17 +216,14 @@ public class HostController {
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView showEditSeries(
             @PathVariable("matchId") final Long matchId, final Locale locale) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match match =
-                findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUser.getId());
+        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
         return hostFormView(toForm(match), null, locale, seriesEditFormConfig(match, locale));
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/series/edit")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView updateSeries(
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
@@ -355,33 +231,14 @@ public class HostController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        final Match existingMatch =
-                findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUser.getId());
-        final HostFormConfig formConfig = seriesEditFormConfig(existingMatch, locale);
-        applyScheduleValidation(createEventForm, bindingResult, locale);
-        validateVisibilityAndJoinPolicy(createEventForm, bindingResult, locale);
-        validateCoordinates(createEventForm, bindingResult, locale);
+        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, actingUser);
+        final HostFormConfig formConfig = seriesEditFormConfig(match, locale);
 
         if (bindingResult.hasErrors()) {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        final ImageMetadata bannerImageMetadata;
-        try {
-            bannerImageMetadata =
-                    storeBannerIfPresent(createEventForm, existingMatch.getBannerImageMetadata());
-        } catch (final IllegalArgumentException exception) {
-            return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
-        } catch (final IOException exception) {
-            return hostFormView(
-                    createEventForm,
-                    messageSource.getMessage("host.imageError", null, locale),
-                    locale,
-                    formConfig);
-        }
-
-        final UpdateMatchRequest request =
-                toUpdateRequest(createEventForm, existingMatch.getStatus(), bannerImageMetadata);
+        final UpdateMatchRequest request = toUpdateRequest(createEventForm, match.getStatus());
 
         try {
             matchService.updateSeriesFromOccurrence(matchId, actingUser, request);
@@ -410,19 +267,8 @@ public class HostController {
             } else if (exception.getReason() == MatchUpdateFailureReason.NOT_EDITABLE) {
                 return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
             } else if (exception.getReason() == MatchUpdateFailureReason.INVALID_SCHEDULE) {
-                if (!isEndAfterStart(createEventForm)) {
-                    bindingResult.rejectValue(
-                            "endTime",
-                            "match.schedule.error.endBeforeStart",
-                            messageSource.getMessage(
-                                    "match.schedule.error.endBeforeStart", null, locale));
-                } else {
-                    bindingResult.rejectValue(
-                            "eventTime",
-                            "match.schedule.error.startsAtPast",
-                            messageSource.getMessage(
-                                    "match.schedule.error.startsAtPast", null, locale));
-                }
+                bindingResult.rejectValue(
+                        "eventTime", "match.schedule.error.invalid", exception.getMessage());
             } else {
                 bindingResult.rejectValue(
                         "eventTime", "match.schedule.error.startsAtPast", exception.getMessage());
@@ -435,12 +281,10 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/cancel")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView cancelEvent(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        findOwnedMatchOrThrowNotFound(matchId, actingUser.getId());
         try {
             matchService.cancelMatch(matchId, actingUser);
         } catch (final MatchCancellationException exception) {
@@ -451,13 +295,11 @@ public class HostController {
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/series/cancel")
-    @PreAuthorize("@securityService.isHost(#matchId)")
     public ModelAndView cancelSeries(
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
 
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
-        findOwnedEditableRecurringMatchOrThrowNotFound(matchId, actingUser.getId());
         try {
             matchService.cancelSeriesFromOccurrence(matchId, actingUser);
         } catch (final MatchCancellationException exception) {
@@ -474,9 +316,6 @@ public class HostController {
             final HostFormConfig formConfig) {
         final ModelAndView mav = new ModelAndView("host/create-match");
         mav.addObject("pageTitle", formConfig.pageTitle());
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/host/matches/new"));
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
         mav.addObject("formEyebrow", formConfig.eyebrow());
@@ -496,58 +335,6 @@ public class HostController {
         mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
         mav.addObject("mapDefaultZoom", mapDefaultZoom);
         return mav;
-    }
-
-    private ImageMetadata storeBannerIfPresent(
-            final CreateEventForm form, final ImageMetadata fallbackBannerImage)
-            throws IOException {
-        if (form.getBannerImage() == null || form.getBannerImage().isEmpty()) {
-            return fallbackBannerImage;
-        }
-
-        Long imageId;
-        try (InputStream inputStream = form.getBannerImage().getInputStream()) {
-            imageId =
-                    imageService.store(
-                            form.getBannerImage().getContentType(),
-                            form.getBannerImage().getSize(),
-                            inputStream);
-        }
-        return new ImageMetadata(
-                imageId, form.getBannerImage().getContentType(), form.getBannerImage().getSize());
-    }
-
-    private void applyScheduleValidation(
-            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
-        if (!bindingResult.hasFieldErrors("eventDate")
-                && !bindingResult.hasFieldErrors("eventTime")
-                && !isScheduledInFuture(form)) {
-            bindingResult.rejectValue(
-                    "eventTime",
-                    "match.schedule.error.startsAtPast",
-                    messageSource.getMessage("match.schedule.error.startsAtPast", null, locale));
-        }
-        if (!bindingResult.hasFieldErrors("eventDate")
-                && !bindingResult.hasFieldErrors("eventTime")
-                && !bindingResult.hasFieldErrors("endDate")
-                && !bindingResult.hasFieldErrors("endTime")
-                && !isEndAfterStart(form)) {
-            bindingResult.rejectValue(
-                    "endTime",
-                    "match.schedule.error.endBeforeStart",
-                    messageSource.getMessage("match.schedule.error.endBeforeStart", null, locale));
-        }
-    }
-
-    private boolean isScheduledInFuture(final CreateEventForm form) {
-        final Instant startsAt = toInstant(form.getEventDate(), form.getEventTime(), form.getTz());
-        return startsAt.isAfter(Instant.now(clock));
-    }
-
-    private boolean isEndAfterStart(final CreateEventForm form) {
-        final Instant startsAt = toInstant(form.getEventDate(), form.getEventTime(), form.getTz());
-        final Instant endsAt = toInstant(form.getEndDate(), form.getEndTime(), form.getTz());
-        return endsAt.isAfter(startsAt);
     }
 
     private HostFormConfig createFormConfig(final Locale locale) {
@@ -599,51 +386,46 @@ public class HostController {
 
     private CreateEventForm toForm(final Match match) {
         final CreateEventForm form = new CreateEventForm();
-        final LocalDateTime startsAt = platformTimeZoneService.toLocalDateTime(match.getStartsAt());
+        final OffsetDateTime startsAt = match.getStartsAtDateTime();
         form.setTitle(match.getTitle());
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
-        form.setLatitude(match.getLatitude() == null ? "" : match.getLatitude().toString());
-        form.setLongitude(match.getLongitude() == null ? "" : match.getLongitude().toString());
-        form.setSport(match.getSport().getDbValue());
-        form.setVisibility(match.getVisibility().getValue());
-        form.setJoinPolicy(match.getJoinPolicy().getValue());
+        form.setLatitude(match.getLatitude());
+        form.setLongitude(match.getLongitude());
+        form.setSport(match.getSport());
+        form.setVisibility(match.getVisibility());
+        form.setJoinPolicy(match.getJoinPolicy());
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
-        final LocalDateTime endsAt = platformTimeZoneService.toLocalDateTime(resolveEndsAt(match));
+        final OffsetDateTime endsAt = PlatformTime.toOffsetDateTime(resolveEndsAt(match));
         form.setEndDate(endsAt.toLocalDate());
         form.setEndTime(endsAt.toLocalTime());
         form.setMaxPlayers(match.getMaxPlayers());
         form.setPricePerPlayer(match.getPricePerPlayer());
-        form.setTz(platformTimeZoneService.defaultZone().getId());
         return form;
     }
 
     private UpdateMatchRequest toUpdateRequest(
-            final CreateEventForm form,
-            final EventStatus status,
-            final ImageMetadata bannerImageMetadata) {
-        final EventVisibility visibility =
-                PersistableEnum.fromDbValue(EventVisibility.class, normalize(form.getVisibility()))
-                        .orElse(null);
-        final EventJoinPolicy joinPolicy =
-                PersistableEnum.fromDbValue(EventJoinPolicy.class, normalize(form.getJoinPolicy()))
-                        .orElse(null);
+            final CreateEventForm form, final EventStatus status) {
+        final EventVisibility visibility = form.getVisibility();
+        final EventJoinPolicy joinPolicy = form.getJoinPolicy();
         return new UpdateMatchRequest(
                 form.getAddress(),
                 form.getTitle(),
                 form.getDescription(),
-                toInstant(form.getEventDate(), form.getEventTime(), form.getTz()),
-                toInstant(form.getEndDate(), form.getEndTime(), form.getTz()),
+                form.getEventDate(),
+                form.getEventTime(),
+                form.getEndDate(),
+                form.getEndTime(),
                 form.getMaxPlayers().intValue(),
                 form.getPricePerPlayer(),
-                PersistableEnum.fromDbValue(Sport.class, form.getSport()).orElse(Sport.PADEL),
+                form.getSport() == null ? Sport.PADEL : form.getSport(),
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageMetadata,
-                parseCoordinate(form.getLatitude()),
-                parseCoordinate(form.getLongitude()));
+                bannerUpload(form.getBannerImage()),
+                form.getLatitude(),
+                form.getLongitude());
     }
 
     private Instant resolveEndsAt(final Match match) {
@@ -653,161 +435,59 @@ public class HostController {
         return match.getStartsAt().plus(Duration.ofMinutes(90));
     }
 
-    private Match findOwnedMatchOrThrowNotFound(final Long matchId, final Long actingUserId) {
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!match.getHost().getId().equals(actingUserId)) {
+    private Match findEditableMatchOrThrowNotFound(final Long matchId, final User actingUser) {
+        try {
+            return matchService.findEditableMatchForHost(matchId, actingUser);
+        } catch (final MatchUpdateException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return match;
     }
 
-    private Match findOwnedEditableMatchOrThrowNotFound(
-            final Long matchId, final Long actingUserId) {
-        final Match match = findOwnedMatchOrThrowNotFound(matchId, actingUserId);
-        final EventStatus status = match.getStatus();
-        if (status == EventStatus.COMPLETED || status == EventStatus.CANCELLED) {
+    private Match findEditableRecurringMatchOrThrowNotFound(
+            final Long matchId, final User actingUser) {
+        try {
+            return matchService.findEditableRecurringMatchForHost(matchId, actingUser);
+        } catch (final MatchUpdateException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return match;
     }
 
-    private Match findOwnedEditableRecurringMatchOrThrowNotFound(
-            final Long matchId, final Long actingUserId) {
-        final Match match = findOwnedEditableMatchOrThrowNotFound(matchId, actingUserId);
-        if (!match.isRecurringOccurrence()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        return match;
-    }
-
-    private Instant toInstant(
-            final java.time.LocalDate eventDate,
-            final java.time.LocalTime eventTime,
-            final String timezone) {
-        return platformTimeZoneService.toInstant(eventDate, eventTime, timezone);
-    }
-
-    private CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {
+    private static CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {
         if (!form.isRecurring()) {
             return null;
         }
 
-        final RecurrenceFrequency frequency =
-                PersistableEnum.fromDbValue(
-                                RecurrenceFrequency.class, form.getRecurrenceFrequency())
-                        .orElseThrow();
-        final RecurrenceEndMode endMode =
-                PersistableEnum.fromDbValue(RecurrenceEndMode.class, form.getRecurrenceEndMode())
-                        .orElseThrow();
         return new CreateRecurrenceRequest(
-                frequency,
-                endMode,
-                endMode == RecurrenceEndMode.UNTIL_DATE ? form.getRecurrenceUntilDate() : null,
-                endMode == RecurrenceEndMode.OCCURRENCE_COUNT
-                        ? form.getRecurrenceOccurrenceCount()
+                form.getRecurrenceFrequency(),
+                form.getRecurrenceEndMode(),
+                form.getRecurrenceEndMode() == RecurrenceEndMode.UNTIL_DATE
+                        ? form.getRecurrenceUntilDate()
                         : null,
-                platformTimeZoneService.resolveOrDefault(form.getTz()));
+                form.getRecurrenceEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
+                        ? form.getRecurrenceOccurrenceCount()
+                        : null);
     }
 
-    private void validateVisibilityAndJoinPolicy(
-            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
-        if (bindingResult.hasFieldErrors("visibility")) {
-            return;
-        }
-
-        final String normalizedVisibility = normalize(form.getVisibility());
-        final EventVisibility visibility =
-                PersistableEnum.fromDbValue(EventVisibility.class, normalizedVisibility)
-                        .orElse(null);
-
-        if (visibility == null) {
-            bindingResult.rejectValue(
-                    "visibility",
-                    "host.validation.visibility.invalid",
-                    messageSource.getMessage("host.validation.visibility.invalid", null, locale));
-            return;
-        }
-
-        if (EventVisibility.PRIVATE == visibility) {
-            // Private events are always invite_only; no join policy selection needed.
-            return;
-        }
-
-        if (bindingResult.hasFieldErrors("joinPolicy")) {
-            return;
-        }
-
-        final String normalizedJoinPolicy = normalize(form.getJoinPolicy());
-
-        if (normalizedJoinPolicy.isEmpty()) {
-            bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.required");
-            return;
-        }
-
-        final boolean validJoinPolicy =
-                PersistableEnum.fromDbValue(EventJoinPolicy.class, normalizedJoinPolicy)
-                        .isPresent();
-
-        if (!validJoinPolicy) {
-            bindingResult.rejectValue("joinPolicy", "host.validation.joinPolicy.invalid");
-        }
-    }
-
-    private void validateCoordinates(
-            final CreateEventForm form, final BindingResult bindingResult, final Locale locale) {
-        final String latitude = normalizeBlank(form.getLatitude());
-        final String longitude = normalizeBlank(form.getLongitude());
-        final boolean hasLatitude = !latitude.isEmpty();
-        final boolean hasLongitude = !longitude.isEmpty();
-
-        if (hasLatitude != hasLongitude) {
-            bindingResult.rejectValue(
-                    hasLatitude ? "longitude" : "latitude",
-                    "CreateEventForm.coordinates.Pair",
-                    messageSource.getMessage("CreateEventForm.coordinates.Pair", null, locale));
-            return;
-        }
-        if (!hasLatitude) {
-            return;
-        }
-
-        final Double parsedLatitude = parseCoordinate(latitude);
-        final Double parsedLongitude = parseCoordinate(longitude);
-        if (parsedLatitude == null || parsedLatitude < -90 || parsedLatitude > 90) {
-            bindingResult.rejectValue(
-                    "latitude",
-                    "CreateEventForm.coordinates.Invalid",
-                    messageSource.getMessage("CreateEventForm.coordinates.Invalid", null, locale));
-        }
-        if (parsedLongitude == null || parsedLongitude < -180 || parsedLongitude > 180) {
-            bindingResult.rejectValue(
-                    "longitude",
-                    "CreateEventForm.coordinates.Invalid",
-                    messageSource.getMessage("CreateEventForm.coordinates.Invalid", null, locale));
-        }
-    }
-
-    private static Double parseCoordinate(final String value) {
-        final String normalized = normalizeBlank(value);
-        if (normalized.isEmpty()) {
+    private ImageUpload bannerUpload(final MultipartFile bannerImage) {
+        if (bannerImage == null) {
             return null;
         }
-        try {
-            return Double.valueOf(normalized);
-        } catch (final NumberFormatException exception) {
-            return null;
-        }
-    }
+        return new ImageUpload() {
+            @Override
+            public String getContentType() {
+                return bannerImage.getContentType();
+            }
 
-    private static String normalizeBlank(final String value) {
-        return value == null ? "" : value.trim();
-    }
+            @Override
+            public long getContentLength() {
+                return bannerImage.getSize();
+            }
 
-    private static String normalize(final String value) {
-        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+            @Override
+            public java.io.InputStream getContentStream() throws java.io.IOException {
+                return bannerImage.getInputStream();
+            }
+        };
     }
 
     private record HostFormConfig(

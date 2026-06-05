@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportReason;
@@ -101,22 +102,6 @@ public class ModerationReportJpaDaoTest {
     }
 
     @Test
-    public void testFindReportsByReporter() {
-        moderationReportDao.createReport(
-                reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "First");
-        moderationReportDao.createReport(
-                reporter, ReportTargetType.USER, admin.getId(), ReportReason.HARASSMENT, "Second");
-
-        final List<ModerationReport> reports = moderationReportDao.findReportsByReporter(reporter);
-
-        Assertions.assertEquals(2, reports.size());
-        Assertions.assertEquals(reporter.getId(), reports.get(0).getReporter().getId());
-        Assertions.assertEquals(reporter.getId(), reports.get(1).getReporter().getId());
-        assertPersistedStatus(reports.get(0).getId(), ReportStatus.PENDING);
-        assertPersistedStatus(reports.get(1).getId(), ReportStatus.PENDING);
-    }
-
-    @Test
     public void testFindActiveReportsAndCount() {
         moderationReportDao.createReport(
                 reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Pending");
@@ -137,14 +122,80 @@ public class ModerationReportJpaDaoTest {
                 NOW,
                 ReportStatus.RESOLVED);
 
-        final List<ModerationReport> activeReports =
-                moderationReportDao.findReports(List.of(), List.of(ReportStatus.PENDING));
+        final PaginatedResult<ModerationReport> activeReports =
+                moderationReportDao.findReports(List.of(), List.of(ReportStatus.PENDING), 1, 50);
         final int activeCount = moderationReportDao.countActiveReportsByReporter(reporter);
 
-        Assertions.assertEquals(1, activeReports.size());
-        Assertions.assertEquals("Pending", activeReports.get(0).getDetails());
+        Assertions.assertEquals(1, activeReports.getItems().size());
+        Assertions.assertEquals("Pending", activeReports.getItems().get(0).getDetails());
         Assertions.assertEquals(1, activeCount);
-        assertPersistedStatus(activeReports.get(0).getId(), ReportStatus.PENDING);
+        assertPersistedStatus(activeReports.getItems().get(0).getId(), ReportStatus.PENDING);
+    }
+
+    @Test
+    public void existsReportForTarget_trueWhenActiveReportExists() {
+        moderationReportDao.createReport(
+                reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Pending");
+
+        final boolean exists =
+                moderationReportDao.existsReportForTarget(
+                        reporter, ReportTargetType.USER, target.getId());
+
+        Assertions.assertTrue(exists);
+    }
+
+    @Test
+    public void existsReportForTarget_trueWhenResolvedReportExists() {
+        final ModerationReport report =
+                moderationReportDao.createReport(
+                        reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Done");
+        moderationReportDao.markUnderReview(report.getId(), admin, NOW);
+        moderationReportDao.resolveReport(
+                report.getId(),
+                admin,
+                ReportResolution.DISMISSED,
+                "Nothing",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final boolean exists =
+                moderationReportDao.existsReportForTarget(
+                        reporter, ReportTargetType.USER, target.getId());
+
+        Assertions.assertTrue(exists);
+    }
+
+    @Test
+    public void existsReportForTarget_falseWhenNoReportExists() {
+        final boolean exists =
+                moderationReportDao.existsReportForTarget(
+                        reporter, ReportTargetType.USER, target.getId());
+
+        Assertions.assertFalse(exists);
+    }
+
+    @Test
+    public void existsReportForTarget_falseForDifferentReporter() {
+        moderationReportDao.createReport(
+                reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Pending");
+
+        final boolean exists =
+                moderationReportDao.existsReportForTarget(
+                        reporter2, ReportTargetType.USER, target.getId());
+
+        Assertions.assertFalse(exists);
+    }
+
+    @Test
+    public void existsReportForTarget_falseForDifferentTarget() {
+        moderationReportDao.createReport(
+                reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Pending");
+
+        final boolean exists =
+                moderationReportDao.existsReportForTarget(
+                        reporter, ReportTargetType.USER, admin.getId());
+
+        Assertions.assertFalse(exists);
     }
 
     @Test

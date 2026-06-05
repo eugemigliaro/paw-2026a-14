@@ -3,6 +3,7 @@
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <spring:message var="pageTitle" code="page.title.eventDetail" arguments="${eventPage.event.title}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -68,9 +69,7 @@
 											<spring:message code="event.host.requests.title" arguments="${hostPendingRequestCount}" />
 										</h2>
 										<span class="host-detail-accordion__chevron" aria-hidden="true">
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-												<polyline points="6 15 12 9 18 15" />
-											</svg>
+											<icon:chevron fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 										</span>
 									</summary>
 									<c:if test="${hostActionTarget eq 'requests' && not empty hostActionErrorNotice}">
@@ -149,9 +148,7 @@
 											<spring:message code="event.host.invites.title" arguments="${hostPendingInviteCount}" />
 										</h2>
 										<span class="host-detail-accordion__chevron" aria-hidden="true">
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-												<polyline points="6 15 12 9 18 15" />
-											</svg>
+											<icon:chevron fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 										</span>
 									</summary>
 									<c:if test="${hostActionTarget eq 'invites' && not empty hostActionErrorNotice}">
@@ -273,13 +270,7 @@
 								<c:when test="${empty eventPage.participants}">
 									<div class="panel participant-empty-state">
 										<span class="participant-empty-state__icon" aria-hidden="true">
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-												<circle cx="9" cy="7" r="4" />
-												<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-												<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-												<line x1="3" y1="3" x2="21" y2="21" />
-											</svg>
+											<icon:noParticipants fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 										</span>
 										<p class="participant-empty-state__title">
 											<spring:message code="event.detail.noPlayers" />
@@ -359,10 +350,7 @@
 													<c:when test="${hostCanEdit}">
 														<a class="host-action-card__button" href="${hostEditHref}">
 															<span class="host-action-card__icon" aria-hidden="true">
-																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																	<path d="M12 20h9" />
-																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-																</svg>
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditOccurrenceLabel}" /></span>
 														</a>
@@ -370,10 +358,7 @@
 													<c:otherwise>
 														<span class="host-action-card__button is-disabled" aria-disabled="true">
 															<span class="host-action-card__icon" aria-hidden="true">
-																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																	<path d="M12 20h9" />
-																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-																</svg>
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditOccurrenceLabel}" /></span>
 														</span>
@@ -383,10 +368,7 @@
 													<c:when test="${hostCanEditSeries}">
 														<a class="host-action-card__button" href="${hostSeriesEditHref}">
 															<span class="host-action-card__icon" aria-hidden="true">
-																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																	<path d="M12 20h9" />
-																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-																</svg>
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditSeriesLabel}" /></span>
 														</a>
@@ -394,10 +376,7 @@
 													<c:otherwise>
 														<span class="host-action-card__button is-disabled" aria-disabled="true">
 															<span class="host-action-card__icon" aria-hidden="true">
-																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																	<path d="M12 20h9" />
-																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-																</svg>
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditSeriesLabel}" /></span>
 														</span>
@@ -407,12 +386,7 @@
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not hostCanCancel}">disabled="disabled" aria-disabled="true"</c:if>>
 														<span class="host-action-card__icon" aria-hidden="true">
-															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																<rect x="3" y="4" width="18" height="18" rx="2" />
-																<path d="M16 2v4" />
-																<path d="M8 2v4" />
-																<path d="M3 10h18" />
-															</svg>
+															<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 														</span>
 														<span><c:out value="${hostCancelOccurrenceLabel}" /></span>
 													</button>
@@ -421,12 +395,7 @@
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not hostCanCancelSeries}">disabled="disabled" aria-disabled="true"</c:if>>
 														<span class="host-action-card__icon" aria-hidden="true">
-															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																<rect x="3" y="4" width="18" height="18" rx="2" />
-																<path d="M16 2v4" />
-																<path d="M8 2v4" />
-																<path d="M3 10h18" />
-															</svg>
+															<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 														</span>
 														<span><c:out value="${hostCancelSeriesLabel}" /></span>
 													</button>
@@ -439,10 +408,7 @@
 													<c:when test="${hostCanEdit}">
 														<a class="host-action-card__button" href="${hostEditHref}">
 															<span class="host-action-card__icon" aria-hidden="true">
-																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																	<path d="M12 20h9" />
-																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-																</svg>
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditLabel}" /></span>
 														</a>
@@ -450,10 +416,7 @@
 													<c:otherwise>
 														<span class="host-action-card__button is-disabled" aria-disabled="true">
 															<span class="host-action-card__icon" aria-hidden="true">
-																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																	<path d="M12 20h9" />
-																	<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-																</svg>
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditLabel}" /></span>
 														</span>
@@ -463,12 +426,7 @@
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not hostCanCancel}">disabled="disabled" aria-disabled="true"</c:if>>
 														<span class="host-action-card__icon" aria-hidden="true">
-															<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																<rect x="3" y="4" width="18" height="18" rx="2" />
-																<path d="M16 2v4" />
-																<path d="M8 2v4" />
-																<path d="M3 10h18" />
-															</svg>
+															<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 														</span>
 														<span><c:out value="${hostCancelLabel}" /></span>
 													</button>
@@ -479,12 +437,7 @@
 														<c:when test="${hostCanManageParticipants}">
 															<a class="host-action-card__button" href="#pending-invitations" data-host-invite-trigger="true">
 																<span class="host-action-card__icon" aria-hidden="true">
-																	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																		<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-																		<circle cx="9" cy="7" r="4" />
-																		<path d="M19 8v6" />
-																		<path d="M22 11h-6" />
-																	</svg>
+																	<icon:profilePlus fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 																</span>
 																<span><c:out value="${hostInviteLabel}" /></span>
 															</a>
@@ -492,12 +445,7 @@
 														<c:otherwise>
 															<span class="host-action-card__button is-disabled" aria-disabled="true">
 																<span class="host-action-card__icon" aria-hidden="true">
-																	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-																		<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-																		<circle cx="9" cy="7" r="4" />
-																		<path d="M19 8v6" />
-																		<path d="M22 11h-6" />
-																	</svg>
+																	<icon:profilePlus fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 																</span>
 																<span><c:out value="${hostInviteLabel}" /></span>
 															</span>
@@ -514,10 +462,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<line x1="12" y1="1" x2="12" y2="23" />
-														<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-													</svg>
+													<icon:moneySign fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.reserveSpot" />
 											</dt>
@@ -531,12 +476,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-														<line x1="16" y1="2" x2="16" y2="6" />
-														<line x1="8" y1="2" x2="8" y2="6" />
-														<line x1="3" y1="10" x2="21" y2="10" />
-													</svg>
+													<icon:calendar fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.date" />
 											</dt>
@@ -545,10 +485,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<circle cx="12" cy="12" r="10" />
-														<polyline points="12 6 12 12 16 14" />
-													</svg>
+													<icon:clock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.time" />
 											</dt>
@@ -562,10 +499,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M12 22s8-4.35 8-11a8 8 0 1 0-16 0c0 6.65 8 11 8 11z" />
-														<circle cx="12" cy="11" r="3" />
-													</svg>
+													<icon:locationPin fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.venue" />
 											</dt>
@@ -599,10 +533,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-														<circle cx="12" cy="7" r="4" />
-													</svg>
+													<icon:profile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 												</span>
 												<spring:message code="event.detail.hostedBy" />
 											</dt>
@@ -630,12 +561,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-														<circle cx="9" cy="7" r="4" />
-														<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-														<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-													</svg>
+													<icon:doubleProfile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.availability" />
 											</dt>
@@ -898,10 +824,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<line x1="12" y1="1" x2="12" y2="23" />
-														<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-													</svg>
+													<icon:moneySign fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.reserveSpot" />
 											</dt>
@@ -915,12 +838,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-														<line x1="16" y1="2" x2="16" y2="6" />
-														<line x1="8" y1="2" x2="8" y2="6" />
-														<line x1="3" y1="10" x2="21" y2="10" />
-													</svg>
+													<icon:calendar fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.date" />
 											</dt>
@@ -929,10 +847,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<circle cx="12" cy="12" r="10" />
-														<polyline points="12 6 12 12 16 14" />
-													</svg>
+													<icon:clock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.time" />
 											</dt>
@@ -946,10 +861,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M12 22s8-4.35 8-11a8 8 0 1 0-16 0c0 6.65 8 11 8 11z" />
-														<circle cx="12" cy="11" r="3" />
-													</svg>
+													<icon:locationPin fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.venue" />
 											</dt>
@@ -983,10 +895,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-														<circle cx="12" cy="7" r="4" />
-													</svg>
+													<icon:profile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 												</span>
 												<spring:message code="event.detail.hostedBy" />
 											</dt>
@@ -1014,12 +923,7 @@
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
 												<span class="event-info-panel__icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-														<circle cx="9" cy="7" r="4" />
-														<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-														<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-													</svg>
+													<icon:doubleProfile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<spring:message code="event.booking.availability" />
 											</dt>
@@ -1465,10 +1369,7 @@
 									<div class="event-card__meta">
 										<span class="event-card__meta-item">
 											<span class="event-card__meta-icon" aria-hidden="true">
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-													<path d="M12 22s8-4.35 8-11a8 8 0 1 0-16 0c0 6.65 8 11 8 11z" />
-													<circle cx="12" cy="11" r="3" />
-												</svg>
+												<icon:locationPin fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 											</span>
 											<span class="event-card__meta-text">
 												<c:out value="${event.venue}" />
@@ -1477,22 +1378,14 @@
 										</span>
 										<span class="event-card__meta-item">
 											<span class="event-card__meta-icon" aria-hidden="true">
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-													<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-													<line x1="16" y1="2" x2="16" y2="6" />
-													<line x1="8" y1="2" x2="8" y2="6" />
-													<line x1="3" y1="10" x2="21" y2="10" />
-												</svg>
+												<icon:calendar fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 											</span>
 											<c:out value="${empty event.dateLabel ? event.schedule : event.dateLabel}" />
 										</span>
 										<c:if test="${not empty event.timeLabel}">
 											<span class="event-card__meta-item">
 												<span class="event-card__meta-icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<circle cx="12" cy="12" r="10" />
-														<polyline points="12 6 12 12 16 14" />
-													</svg>
+													<icon:clock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 												</span>
 												<c:out value="${event.timeLabel}" />
 											</span>
@@ -1500,10 +1393,7 @@
 										<c:if test="${not empty event.hostLabel}">
 											<span class="event-card__meta-item">
 												<span class="event-card__meta-icon" aria-hidden="true">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-														<circle cx="12" cy="7" r="4" />
-													</svg>
+													<icon:profile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 												</span>
 												<span class="event-card__meta-text">
 													<spring:message code="event.card.hostedBy" />

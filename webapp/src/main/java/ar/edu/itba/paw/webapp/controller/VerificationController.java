@@ -1,16 +1,14 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.List;
 import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
@@ -35,23 +33,14 @@ public class VerificationController {
 
     private final AccountAuthService accountAuthService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
     @Autowired
     public VerificationController(
-            final AccountAuthService accountAuthService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final AccountAuthService accountAuthService, final MessageSource messageSource) {
         this.accountAuthService = accountAuthService;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
-    public VerificationController(
-            final AccountAuthService accountAuthService, final MessageSource messageSource) {
-        this(accountAuthService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @GetMapping("/verifications/{token}")
@@ -60,17 +49,12 @@ public class VerificationController {
         try {
             final VerificationPreview preview = accountAuthService.getVerificationPreview(token);
             final ModelAndView mav = new ModelAndView("verification/confirm");
-            mav.addObject(
-                    "shell",
-                    ShellViewModelFactory.playerShell(messageSource, locale, "/verifications"));
             mav.addObject("preview", preview);
             mav.addObject("confirmPath", "/verifications/" + token + "/confirm");
             mav.addObject(
                     "expiresAtLabel",
                     VerificationViews.expiryFormatter(locale)
-                            .format(
-                                    preview.getExpiresAt()
-                                            .atZone(platformTimeZoneService.defaultZone())));
+                            .format(preview.getExpiresAt().atZone(PlatformTime.ZONE)));
             return mav;
         } catch (final VerificationFailureException exception) {
             return buildErrorView(exception, locale);
@@ -88,7 +72,7 @@ public class VerificationController {
                     accountAuthService.confirmVerification(token);
             result.getAccount()
                     .ifPresent(account -> authenticateVerifiedAccount(account, request, response));
-            return new ModelAndView("redirect:" + result.getRedirectUrl());
+            return new ModelAndView("redirect:/");
         } catch (final VerificationFailureException exception) {
             return buildErrorView(exception, locale);
         }

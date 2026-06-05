@@ -1,8 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.AccountAuthService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
@@ -10,7 +9,6 @@ import ar.edu.itba.paw.webapp.form.ForgotPasswordForm;
 import ar.edu.itba.paw.webapp.form.RegisterForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
@@ -33,21 +31,12 @@ public class AuthController {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
     private final AccountAuthService accountAuthService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public AuthController(
-            final AccountAuthService accountAuthService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final AccountAuthService accountAuthService, final MessageSource messageSource) {
         this.accountAuthService = accountAuthService;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
-    public AuthController(
-            final AccountAuthService accountAuthService, final MessageSource messageSource) {
-        this(accountAuthService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @ModelAttribute("registerForm")
@@ -75,7 +64,6 @@ public class AuthController {
         }
 
         final ModelAndView mav = new ModelAndView("auth/login");
-        mav.addObject("shell", ShellViewModelFactory.playerShell(messageSource, locale, "/login"));
         mav.addObject("loginEmail", email == null ? "" : email);
         mav.addObject("loginError", loginErrorMessage(error, locale));
         mav.addObject("showResendVerification", "verify".equalsIgnoreCase(error));
@@ -100,15 +88,6 @@ public class AuthController {
             @Valid @ModelAttribute("registerForm") final RegisterForm registerForm,
             final BindingResult bindingResult,
             final Locale locale) {
-        if (!bindingResult.hasFieldErrors("password")
-                && !bindingResult.hasFieldErrors("confirmPassword")
-                && !registerForm.getPassword().equals(registerForm.getConfirmPassword())) {
-            bindingResult.rejectValue(
-                    "confirmPassword",
-                    "auth.validation.passwordMismatch",
-                    messageSource.getMessage("auth.validation.passwordMismatch", null, locale));
-        }
-
         if (bindingResult.hasErrors()) {
             return registerView(registerForm, locale);
         }
@@ -136,7 +115,7 @@ public class AuthController {
                     result.getExpiresAt());
         } catch (final AccountRegistrationException exception) {
             LOGGER.warn("Registration rejected code={}", exception.getCode());
-            applyRegistrationError(bindingResult, exception);
+            applyRegistrationError(bindingResult, exception); // TODO: fix error handling
             return registerView(registerForm, locale);
         }
     }
@@ -198,8 +177,6 @@ public class AuthController {
 
     private ModelAndView registerView(final RegisterForm registerForm, final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/register");
-        mav.addObject(
-                "shell", ShellViewModelFactory.playerShell(messageSource, locale, "/register"));
         mav.addObject("registerForm", registerForm);
         return mav;
     }
@@ -207,9 +184,6 @@ public class AuthController {
     private ModelAndView forgotPasswordView(
             final ForgotPasswordForm forgotPasswordForm, final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/forgot-password");
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/forgot-password"));
         mav.addObject("forgotPasswordForm", forgotPasswordForm);
         return mav;
     }
@@ -222,10 +196,6 @@ public class AuthController {
             final String eyebrow,
             final Instant expiresAt) {
         final ModelAndView mav = new ModelAndView("verification/check-email");
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(
-                        messageSource, locale, "/verification/check-email"));
         mav.addObject("title", messageSource.getMessage("verification.checkEmail", null, locale));
         mav.addObject("summary", summary);
         mav.addObject("backHref", backHref);
@@ -235,7 +205,7 @@ public class AuthController {
             mav.addObject(
                     "expiresAtLabel",
                     VerificationViews.expiryFormatter(locale)
-                            .format(expiresAt.atZone(platformTimeZoneService.defaultZone())));
+                            .format(expiresAt.atZone(PlatformTime.ZONE)));
         }
         return mav;
     }

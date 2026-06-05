@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -105,6 +106,25 @@ class HostParticipationControllerTest {
     }
 
     @Test
+    void approveRequestByNonHostReturnsForbiddenFromService() throws Exception {
+        AuthenticationUtils.authenticateUser(9L);
+
+        final User requestedUser = Mockito.mock(User.class);
+        final Match mockMatch = Mockito.mock(Match.class);
+
+        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
+        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
+        when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
+        Mockito.doThrow(new MatchParticipationException("forbidden", "Only the host can approve."))
+                .when(matchParticipationService)
+                .approveRequest(
+                        Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
+
+        mockMvc.perform(post("/host/matches/42/requests/9/approve"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void rejectRequestRedirectsWithSuccess() throws Exception {
         AuthenticationUtils.authenticateUser(1L);
 
@@ -183,5 +203,16 @@ class HostParticipationControllerTest {
                 .andExpect(redirectedUrl("/matches/42"))
                 .andExpect(flash().attribute("hostActionTarget", "participants"))
                 .andExpect(flash().attribute("hostActionError", "This event has already started."));
+    }
+
+    @Test
+    void showRosterByNonHostReturnsForbiddenFromService() throws Exception {
+        AuthenticationUtils.authenticateUser(9L);
+        Mockito.when(
+                        matchParticipationService.findConfirmedParticipants(
+                                Mockito.eq(42L), Mockito.any(User.class)))
+                .thenThrow(new MatchParticipationException("forbidden", "Only the host can view."));
+
+        mockMvc.perform(get("/host/matches/42/participants")).andExpect(status().isForbidden());
     }
 }

@@ -4,6 +4,7 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -42,12 +43,6 @@
 						cssClass="create-form"
 						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-						<input
-							type="hidden"
-							name="tz"
-							id="tournament-timezone"
-							value="<c:out value='${createTournamentForm.tz}' />"
-							data-browser-timezone-field="true" />
 
 						<c:if test="${not empty formError}">
 							<p class="field__error create-form__global-error"><c:out value="${formError}" /></p>
@@ -157,12 +152,7 @@
 								<span class="field__label"><spring:message code="host.form.bannerImage" /></span>
 								<span class="upload-card__dropzone">
 									<span class="upload-card__dropzone-icon" aria-hidden="true">
-										<svg viewBox="0 0 24 24" focusable="false">
-											<path d="M4 17.5V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5Z" />
-											<path d="m8 14 2.2-2.2a1.2 1.2 0 0 1 1.7 0L16 16" />
-											<path d="m13.5 13.5 1.1-1.1a1.2 1.2 0 0 1 1.7 0L20 16" />
-											<circle cx="8.5" cy="8.5" r="1.2" />
-										</svg>
+										<icon:photoFrame />
 									</span>
 									<span class="upload-card__dropzone-copy">
 										<span class="upload-card__dropzone-title">
@@ -236,6 +226,37 @@
 								--%>
 								<form:errors path="allowSoloSignup" cssClass="field__error" element="span" />
 								<form:errors path="allowTeamDraft" cssClass="field__error" element="span" />
+							</div>
+						</article>
+
+						<article class="panel form-card">
+							<span class="detail-label"><spring:message code="tournament.create.section.schedule" /></span>
+							<h2 class="form-card__title"><spring:message code="tournament.create.section.schedule.subtitle" /></h2>
+							<div class="create-stack">
+								<div class="form-card__grid form-card__grid--datetime">
+									<label class="field" for="tournament-start-date">
+										<span class="field__label"><spring:message code="tournament.form.startDate.label" /></span>
+										<form:input path="startDate" id="tournament-start-date" type="date" cssClass="field__control" required="required" />
+										<form:errors path="startDate" cssClass="field__error" element="span" />
+									</label>
+									<label class="field" for="tournament-start-time">
+										<span class="field__label"><spring:message code="tournament.form.startTime.label" /></span>
+										<form:input path="startTime" id="tournament-start-time" type="time" cssClass="field__control" required="required" />
+										<form:errors path="startTime" cssClass="field__error" element="span" />
+									</label>
+								</div>
+								<div class="form-card__grid form-card__grid--datetime">
+									<label class="field" for="tournament-end-date">
+										<span class="field__label"><spring:message code="tournament.form.endDate.label" /></span>
+										<form:input path="endDate" id="tournament-end-date" type="date" cssClass="field__control" required="required" />
+										<form:errors path="endDate" cssClass="field__error" element="span" />
+									</label>
+									<label class="field" for="tournament-end-time">
+										<span class="field__label"><spring:message code="tournament.form.endTime.label" /></span>
+										<form:input path="endTime" id="tournament-end-time" type="time" cssClass="field__control" required="required" />
+										<form:errors path="endTime" cssClass="field__error" element="span" />
+									</label>
+								</div>
 							</div>
 						</article>
 

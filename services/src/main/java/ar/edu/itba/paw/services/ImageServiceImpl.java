@@ -50,6 +50,23 @@ public class ImageServiceImpl implements ImageService {
         return imageDao.streamContentById(imageId, outputStream);
     }
 
+    @Override
+    public ImageMetadata resolveImageMetadata(final ImageUpload image) {
+        if (image == null || image.getContentLength() <= 0) {
+            return null;
+        }
+        try {
+            final Long imageId =
+                    store(
+                            image.getContentType(),
+                            image.getContentLength(),
+                            image.getContentStream());
+            return new ImageMetadata(imageId, image.getContentType(), image.getContentLength());
+        } catch (final IOException exception) {
+            throw new IllegalStateException("Unable to store tournament banner image", exception);
+        }
+    }
+
     private static String normalizeContentType(final String contentType) {
         return contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
     }

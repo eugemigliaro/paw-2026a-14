@@ -11,10 +11,7 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
-import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
-import ar.edu.itba.paw.services.mail.MatchLifecycleMailTemplateData;
-import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
@@ -25,7 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +29,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.support.StaticMessageSource;
 
 @ExtendWith(MockitoExtension.class)
 public class MatchParticipationServiceImplTest {
@@ -43,7 +38,6 @@ public class MatchParticipationServiceImplTest {
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
-    @Mock private ThymeleafMailTemplateRenderer templateRenderer;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchParticipationServiceImpl matchParticipationService;
@@ -53,10 +47,8 @@ public class MatchParticipationServiceImplTest {
     @BeforeEach
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
-        final StaticMessageSource messageSource = new StaticMessageSource();
         final MatchNotificationService matchNotificationService =
-                new MatchNotificationServiceImpl(
-                        matchParticipantDao, mailDispatchService, templateRenderer, messageSource);
+                new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService);
         matchParticipationService =
                 new MatchParticipationServiceImpl(
                         matchDao,
@@ -64,8 +56,6 @@ public class MatchParticipationServiceImplTest {
                         userService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
                         mailDispatchService,
-                        templateRenderer,
-                        messageSource,
                         matchNotificationService);
     }
 
@@ -160,7 +150,7 @@ public class MatchParticipationServiceImplTest {
 
         // Assert
         Assertions.assertEquals("is_host", exception.getCode());
-        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
     }
 
     @Test
@@ -241,17 +231,15 @@ public class MatchParticipationServiceImplTest {
                                         FIXED_NOW.plusSeconds(3600))));
         final User player = UserUtils.getUser(20L);
         final User host = UserUtils.getUser(1L);
-        final MailContent mail = new MailContent("player-left", "<p>left</p>", "left");
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, player)).thenReturn(true);
         Mockito.when(matchParticipantDao.removeParticipant(10L, player)).thenReturn(true);
-        Mockito.when(templateRenderer.renderPlayerLeftNotification(Mockito.any())).thenReturn(mail);
 
         // Exercise
         matchParticipationService.removeParticipant(10L, player, player);
 
         // Assert
         Assertions.assertEquals(List.of(host.getEmail()), mailDispatchService.recipients);
-        Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
+        Assertions.assertEquals(List.of("player-left"), mailDispatchService.actions);
     }
 
     @Test
@@ -363,17 +351,14 @@ public class MatchParticipationServiceImplTest {
                                         EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         final User player = UserUtils.getUser(30L);
-        final MailContent mail = new MailContent("removed", "<p>removed</p>", "removed");
         Mockito.when(matchParticipantDao.removeParticipant(10L, player)).thenReturn(true);
-        Mockito.when(templateRenderer.renderParticipantRemovedNotification(Mockito.any()))
-                .thenReturn(mail);
 
         // Exercise
         matchParticipationService.removeParticipant(10L, UserUtils.getUser(1L), player);
 
         // Assert
         Assertions.assertEquals(List.of(player.getEmail()), mailDispatchService.recipients);
-        Assertions.assertEquals(List.of(mail), mailDispatchService.contents);
+        Assertions.assertEquals(List.of("player-removed"), mailDispatchService.actions);
     }
 
     @Test
@@ -613,7 +598,6 @@ public class MatchParticipationServiceImplTest {
                         100L,
                         6);
         final List<Long> invitedMatchIds = new ArrayList<>();
-        final AtomicInteger mailOccurrenceCount = new AtomicInteger();
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
         Mockito.when(matchDao.findSeriesOccurrences(100L))
                 .thenReturn(
@@ -638,29 +622,19 @@ public class MatchParticipationServiceImplTest {
                             invitedMatchIds.add(invocation.getArgument(0));
                             return true;
                         });
-        Mockito.when(
-                        templateRenderer.renderSeriesInvitationNotification(
-                                Mockito.any(), Mockito.anyInt()))
-                .thenAnswer(
-                        invocation -> {
-                            mailOccurrenceCount.set(invocation.getArgument(1, Integer.class));
-                            return new MailContent("Series invitation", "<p>series</p>", "series");
-                        });
-
         // Exercise
         matchParticipationService.inviteUser(10L, UserUtils.getUser(1L), "player@test.com", true);
 
         // Assert
         Assertions.assertEquals(List.of(10L, 11L), invitedMatchIds);
-        Assertions.assertEquals(1, mailDispatchService.contents.size());
+        Assertions.assertEquals(1, mailDispatchService.actions.size());
+        Assertions.assertEquals("series-invitation", mailDispatchService.actions.get(0));
         Assertions.assertEquals(u.getEmail(), mailDispatchService.recipients.get(0));
-        Assertions.assertEquals(
-                "Series invitation", mailDispatchService.contents.get(0).getSubject());
-        Assertions.assertEquals(2, mailOccurrenceCount.get());
+        Assertions.assertEquals(2, mailDispatchService.occurrenceCounts.get(0));
     }
 
     @Test
-    public void testInviteUserUsesRecipientPreferredLanguageForMail() {
+    public void testInviteUserSendsInvitationToTarget() {
         final Match match =
                 createMatch(
                         10L,
@@ -678,25 +652,16 @@ public class MatchParticipationServiceImplTest {
                         null,
                         null,
                         UserLanguages.SPANISH);
-        final AtomicReference<java.util.Locale> capturedLocale = new AtomicReference<>();
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
         Mockito.when(userService.findByEmail("player@test.com")).thenReturn(Optional.of(target));
         Mockito.when(matchParticipantDao.hasActiveReservation(10L, target)).thenReturn(false);
         Mockito.when(matchParticipantDao.hasInvitation(10L, target)).thenReturn(false);
         Mockito.when(matchParticipantDao.inviteUser(10L, target)).thenReturn(true);
-        Mockito.when(templateRenderer.renderMatchInvitationNotification(Mockito.any()))
-                .thenAnswer(
-                        invocation -> {
-                            capturedLocale.set(
-                                    invocation
-                                            .<MatchLifecycleMailTemplateData>getArgument(0)
-                                            .getLocale());
-                            return new MailContent("invitation", "<p>invite</p>", "invite");
-                        });
 
         matchParticipationService.inviteUser(10L, UserUtils.getUser(1L), "player@test.com");
 
-        Assertions.assertEquals(java.util.Locale.of("es"), capturedLocale.get());
+        Assertions.assertEquals(List.of("match-invitation"), mailDispatchService.actions);
+        Assertions.assertEquals(List.of(target.getEmail()), mailDispatchService.recipients);
     }
 
     @Test
@@ -744,7 +709,7 @@ public class MatchParticipationServiceImplTest {
 
         // Assert
         Assertions.assertEquals("series_already_covered", exception.getCode());
-        Assertions.assertTrue(mailDispatchService.contents.isEmpty());
+        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
     }
 
     @Test
@@ -979,12 +944,33 @@ public class MatchParticipationServiceImplTest {
     private static class RecordingMailDispatchService implements MailDispatchService {
 
         private final List<String> recipients = new ArrayList<>();
-        private final List<MailContent> contents = new ArrayList<>();
+        private final List<String> actions = new ArrayList<>();
+        private final List<Integer> occurrenceCounts = new ArrayList<>();
 
         @Override
-        public void dispatch(final String recipientEmail, final MailContent content) {
-            recipients.add(recipientEmail);
-            contents.add(content);
+        public void sendMatchInvitation(final User recipient, final Match match) {
+            actions.add("match-invitation");
+            recipients.add(recipient.getEmail());
+        }
+
+        @Override
+        public void sendSeriesInvitation(
+                final User recipient, final Match match, final int occurrenceCount) {
+            actions.add("series-invitation");
+            recipients.add(recipient.getEmail());
+            occurrenceCounts.add(occurrenceCount);
+        }
+
+        @Override
+        public void sendPlayerLeft(final User host, final Match match, final User player) {
+            actions.add("player-left");
+            recipients.add(host.getEmail());
+        }
+
+        @Override
+        public void sendPlayerRemoved(final User player, final Match match) {
+            actions.add("player-removed");
+            recipients.add(player.getEmail());
         }
     }
 

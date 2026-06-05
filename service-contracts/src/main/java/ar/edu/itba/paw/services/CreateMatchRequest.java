@@ -1,13 +1,13 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 public class CreateMatchRequest {
 
@@ -17,15 +17,17 @@ public class CreateMatchRequest {
     private final Double longitude;
     private final String title;
     private final String description;
-    private final Instant startsAt;
-    private final Instant endsAt;
+    private final LocalDate startDate;
+    private final LocalTime startTime;
+    private final LocalDate endDate;
+    private final LocalTime endTime;
     private final int maxPlayers;
     private final BigDecimal pricePerPlayer;
     private final Sport sport;
     private final EventVisibility visibility;
     private final EventJoinPolicy joinPolicy;
     private final EventStatus status;
-    private final ImageMetadata bannerImageMetadata;
+    private final ImageUpload bannerImage;
     private final CreateRecurrenceRequest recurrence;
 
     public CreateMatchRequest(
@@ -33,21 +35,25 @@ public class CreateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final EventVisibility visibility,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata) {
+            final ImageUpload bannerImage) {
         this(
                 host,
                 address,
                 title,
                 description,
-                startsAt,
-                endsAt,
+                startDate,
+                startTime,
+                endDate,
+                endTime,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
@@ -56,7 +62,7 @@ public class CreateMatchRequest {
                         ? EventJoinPolicy.DIRECT
                         : EventJoinPolicy.INVITE_ONLY,
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 null);
     }
 
@@ -65,29 +71,33 @@ public class CreateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata) {
+            final ImageUpload bannerImage) {
         this(
                 host,
                 address,
                 title,
                 description,
-                startsAt,
-                endsAt,
+                startDate,
+                startTime,
+                endDate,
+                endTime,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 null);
     }
 
@@ -96,15 +106,17 @@ public class CreateMatchRequest {
             final String address,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata,
+            final ImageUpload bannerImage,
             final CreateRecurrenceRequest recurrence) {
         this(
                 host,
@@ -113,15 +125,17 @@ public class CreateMatchRequest {
                 null,
                 title,
                 description,
-                startsAt,
-                endsAt,
+                startDate,
+                startTime,
+                endDate,
+                endTime,
                 maxPlayers,
                 pricePerPlayer,
                 sport,
                 visibility,
                 joinPolicy,
                 status,
-                bannerImageMetadata,
+                bannerImage,
                 recurrence);
     }
 
@@ -132,15 +146,17 @@ public class CreateMatchRequest {
             final Double longitude,
             final String title,
             final String description,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final int maxPlayers,
             final BigDecimal pricePerPlayer,
             final Sport sport,
             final EventVisibility visibility,
             final EventJoinPolicy joinPolicy,
             final EventStatus status,
-            final ImageMetadata bannerImageMetadata,
+            final ImageUpload bannerImage,
             final CreateRecurrenceRequest recurrence) {
         this.host = host;
         this.address = address;
@@ -148,15 +164,17 @@ public class CreateMatchRequest {
         this.longitude = longitude;
         this.title = title;
         this.description = description;
-        this.startsAt = startsAt;
-        this.endsAt = endsAt;
+        this.startDate = startDate;
+        this.startTime = startTime;
+        this.endDate = endDate;
+        this.endTime = endTime;
         this.maxPlayers = maxPlayers;
         this.pricePerPlayer = pricePerPlayer;
         this.sport = sport;
         this.visibility = visibility;
         this.joinPolicy = joinPolicy;
         this.status = status;
-        this.bannerImageMetadata = bannerImageMetadata;
+        this.bannerImage = bannerImage;
         this.recurrence = recurrence;
     }
 
@@ -184,12 +202,20 @@ public class CreateMatchRequest {
         return description;
     }
 
-    public Instant getStartsAt() {
-        return startsAt;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public Instant getEndsAt() {
-        return endsAt;
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
     }
 
     public int getMaxPlayers() {
@@ -216,8 +242,8 @@ public class CreateMatchRequest {
         return status;
     }
 
-    public ImageMetadata getBannerImageMetadata() {
-        return bannerImageMetadata;
+    public ImageUpload getBannerImage() {
+        return bannerImage;
     }
 
     public CreateRecurrenceRequest getRecurrence() {

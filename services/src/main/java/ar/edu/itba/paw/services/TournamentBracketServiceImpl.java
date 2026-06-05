@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -15,6 +16,8 @@ import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -148,13 +151,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final List<TournamentTeam> teams =
                 tournamentTeamDao.findByTournamentUnordered(tournamentId);
         validateManualPairings(teams, orderedTeamIds);
-        final Map<Long, Integer> positionByTeamId = new HashMap<>();
-        for (int index = 0; index < orderedTeamIds.size(); index++) {
-            positionByTeamId.put(orderedTeamIds.get(index), index + 1);
-        }
-        for (final TournamentTeam team : teams) {
-            team.setSeedPosition(positionByTeamId.get(team.getId()));
-        }
+        tournamentTeamDao.saveSeedOrder(teams, orderedTeamIds);
+        tournament.setUpdatedAt(Instant.now(clock));
     }
 
     @Override
@@ -255,10 +253,11 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         }
 
         final boolean completed = propagateWinner(tournament, updatedMatch, winner, now);
-        tournamentMailService.sendMatchResultEmail(
-                tournament, updatedMatch, winner, losingTeam(updatedMatch, winner));
         if (completed) {
             tournamentMailService.sendTournamentCompletedEmail(tournament, winner);
+        } else {
+            tournamentMailService.sendMatchResultEmail(
+                    tournament, updatedMatch, winner, losingTeam(updatedMatch, winner));
         }
         return updatedMatch;
     }
@@ -624,6 +623,18 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         }
     }
 
+    private static Instant resolveStartsAt(final TournamentMatchScheduleRequest schedule) {
+        return toInstant(schedule.getStartDate(), schedule.getStartTime());
+    }
+
+    private static Instant resolveEndsAt(final TournamentMatchScheduleRequest schedule) {
+        return toInstant(schedule.getEndDate(), schedule.getEndTime());
+    }
+
+    private static Instant toInstant(final LocalDate date, final LocalTime time) {
+        return date == null || time == null ? null : PlatformTime.toInstant(date, time);
+    }
+
     private Map<Long, TournamentMatchScheduleRequest> schedulesByMatchId(
             final List<TournamentMatchScheduleRequest> schedules) {
         if (schedules == null) {
@@ -664,15 +675,15 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
     private void validateSchedule(
             final TournamentMatchScheduleRequest schedule, final Instant now) {
-        if (schedule.getStartsAt() == null
-                || schedule.getEndsAt() == null
-                || !schedule.getEndsAt().isAfter(schedule.getStartsAt())
+        if (resolveStartsAt(schedule) == null
+                || resolveEndsAt(schedule) == null
+                || !resolveEndsAt(schedule).isAfter(resolveStartsAt(schedule))
                 || isBlank(schedule.getAddress())) {
             throw bracketException(
                     TournamentBracketFailureReason.INVALID_SCHEDULE,
                     "tournament.bracket.error.invalidSchedule");
         }
-        if (schedule.getStartsAt().isBefore(now)) {
+        if (resolveStartsAt(schedule).isBefore(now)) {
             throw bracketException(
                     TournamentBracketFailureReason.SCHEDULE_BEFORE_NOW,
                     "tournament.bracket.error.beforeNow");
@@ -702,14 +713,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final Map<Integer, Instant> latestRoundEnd = new HashMap<>();
         for (final TournamentMatch match : matches) {
             final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
-            if (schedule == null || schedule.getEndsAt() == null) {
+            if (schedule == null || resolveEndsAt(schedule) == null) {
                 continue;
             }
             latestRoundEnd.compute(
                     match.getRoundNumber(),
                     (round, existingEnd) ->
-                            existingEnd == null || schedule.getEndsAt().isAfter(existingEnd)
-                                    ? schedule.getEndsAt()
+                            existingEnd == null || resolveEndsAt(schedule).isAfter(existingEnd)
+                                    ? resolveEndsAt(schedule)
                                     : existingEnd);
         }
 
@@ -724,8 +735,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             }
             final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
             if (schedule != null
-                    && schedule.getStartsAt() != null
-                    && schedule.getStartsAt().isBefore(previousRoundLatestEnd)) {
+                    && resolveStartsAt(schedule) != null
+                    && resolveStartsAt(schedule).isBefore(previousRoundLatestEnd)) {
                 throw bracketException(
                         TournamentBracketFailureReason.INVALID_ROUND_ORDER,
                         "tournament.bracket.error.invalidRoundOrder");
@@ -737,8 +748,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             final TournamentMatch match,
             final TournamentMatchScheduleRequest schedule,
             final Instant now) {
-        match.setScheduledStartsAt(schedule.getStartsAt());
-        match.setScheduledEndsAt(schedule.getEndsAt());
+        match.setScheduledStartsAt(resolveStartsAt(schedule));
+        match.setScheduledEndsAt(resolveEndsAt(schedule));
         match.setAddress(schedule.getAddress());
         match.setLatitude(schedule.getLatitude());
         match.setLongitude(schedule.getLongitude());

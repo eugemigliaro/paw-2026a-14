@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -89,20 +90,10 @@
 												<c:if test="${match.teamAIsWinner}">
 													<c:choose>
 														<c:when test="${match.finalRound}">
-															<%-- Trophy icon for the champion --%>
-															<svg class="bracket-team-icon bracket-team-icon--trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
-																<path d="M6 9H4a2 2 0 0 1-2-2V5h4"/>
-																<path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/>
-																<path d="M6 9a6 6 0 0 0 12 0V3H6z"/>
-																<path d="M12 15v4"/>
-																<path d="M8 19h8"/>
-															</svg>
+															<icon:trophy cssClass="bracket-team-icon bracket-team-icon--trophy" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 														</c:when>
 														<c:otherwise>
-															<%-- Checkmark icon for regular round winner --%>
-															<svg class="bracket-team-icon bracket-team-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
-																<polyline points="20 6 9 17 4 12"/>
-															</svg>
+															<icon:checkmark cssClass="bracket-team-icon bracket-team-icon--check" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 														</c:otherwise>
 													</c:choose>
 												</c:if>
@@ -116,18 +107,10 @@
 												<c:if test="${match.teamBIsWinner}">
 													<c:choose>
 														<c:when test="${match.finalRound}">
-															<svg class="bracket-team-icon bracket-team-icon--trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
-																<path d="M6 9H4a2 2 0 0 1-2-2V5h4"/>
-																<path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/>
-																<path d="M6 9a6 6 0 0 0 12 0V3H6z"/>
-																<path d="M12 15v4"/>
-																<path d="M8 19h8"/>
-															</svg>
+															<icon:trophy cssClass="bracket-team-icon bracket-team-icon--trophy" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 														</c:when>
 														<c:otherwise>
-															<svg class="bracket-team-icon bracket-team-icon--check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
-																<polyline points="20 6 9 17 4 12"/>
-															</svg>
+															<icon:checkmark cssClass="bracket-team-icon bracket-team-icon--check" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 														</c:otherwise>
 													</c:choose>
 												</c:if>

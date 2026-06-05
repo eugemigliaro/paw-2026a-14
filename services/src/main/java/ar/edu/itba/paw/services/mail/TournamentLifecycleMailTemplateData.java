@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services.mail;
 import java.time.Instant;
 import java.util.Locale;
 
-public class TournamentLifecycleMailTemplateData {
+class TournamentLifecycleMailTemplateData {
 
     private final String recipientEmail;
     private final String tournamentTitle;
@@ -15,6 +15,7 @@ public class TournamentLifecycleMailTemplateData {
     private final String championName;
     private final String address;
     private final Instant startsAt;
+    private final String eventUrl;
     private final Locale locale;
 
     public TournamentLifecycleMailTemplateData(
@@ -28,6 +29,7 @@ public class TournamentLifecycleMailTemplateData {
             final String championName,
             final String address,
             final Instant startsAt,
+            final String eventUrl,
             final Locale locale) {
         this.recipientEmail = recipientEmail;
         this.tournamentTitle = tournamentTitle;
@@ -39,6 +41,7 @@ public class TournamentLifecycleMailTemplateData {
         this.championName = championName;
         this.address = address;
         this.startsAt = startsAt;
+        this.eventUrl = eventUrl;
         this.locale = locale;
     }
 
@@ -80,6 +83,10 @@ public class TournamentLifecycleMailTemplateData {
 
     public Instant getStartsAt() {
         return startsAt;
+    }
+
+    public String getEventUrl() {
+        return eventUrl;
     }
 
     public Locale getLocale() {

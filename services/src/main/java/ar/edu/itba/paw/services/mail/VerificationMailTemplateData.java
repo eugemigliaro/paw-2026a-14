@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
-public class VerificationMailTemplateData {
+class VerificationMailTemplateData {
 
     private final String title;
     private final String summary;

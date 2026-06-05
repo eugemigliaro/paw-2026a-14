@@ -6,7 +6,7 @@ import javax.validation.constraints.Size;
 
 public class InviteForm {
 
-    @NotBlank
+    @NotBlank(message = "{InviteForm.email.NotBlank}")
     @Email
     @Size(max = 255)
     private String email;

@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
@@ -16,12 +17,6 @@
 			<c:url var="updateStrategyAction" value="${updateBracketStrategyPath}" />
 			<c:url var="publishAction" value="${publishBracketPath}" />
 			<c:url var="saveManualPairingsAction" value="${saveManualPairingsPath}" />
-			<spring:message var="summaryTitle" code="tournament.bracket.schedule.validationItem" />
-			<spring:message var="validationTitle" code="tournament.bracket.schedule.validationTitle" />
-			<spring:message var="validationEmpty" code="tournament.bracket.schedule.validationEmpty" />
-			<spring:message var="invalidRangeError" code="tournament.bracket.schedule.validation.invalidRange" />
-			<spring:message var="beforeNowError" code="tournament.bracket.schedule.validation.beforeNow" />
-			<spring:message var="invalidRoundOrderError" code="tournament.bracket.schedule.validation.roundOrder" />
 
 			<main class="page-shell tournament-bracket-page">
 				<ui:returnButton href="${detailHref}" />
@@ -124,74 +119,43 @@
 							<spring:message var="publishingLabel" code="tournament.bracket.publishing" />
 							<form method="post" action="${publishAction}" class="tournament-schedule-form" data-submit-guard="true" data-submit-loading-label="${publishingLabel}">
 								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-								<input type="hidden" name="tz" data-browser-timezone-field="true" />
-
-								<section class="tournament-schedule-validation" aria-live="polite">
-									<h3 class="tournament-schedule-validation__title"><c:out value="${validationTitle}" /></h3>
-									<p class="tournament-schedule-validation__empty" data-validation-empty="true"><c:out value="${validationEmpty}" /></p>
-									<ul class="tournament-schedule-validation__list" data-validation-summary="true" hidden="hidden"></ul>
-								</section>
 
 								<spring:message var="bracketGridLabel" code="tournament.bracket.grid.label" />
-								<section class="panel tournament-bracket-shell" aria-label="${bracketGridLabel}" data-bracket-schedule-editor="true" data-summary-title="${summaryTitle}" data-error-before-now="${beforeNowError}" data-error-invalid-range="${invalidRangeError}" data-error-round-order="${invalidRoundOrderError}">
+								<section class="panel tournament-bracket-shell" aria-label="${bracketGridLabel}">
+									<form:errors path="bracketPublishForm" element="div" cssClass="booking-panel__notice booking-panel__notice--error tournament-notice" />
 									<div class="tournament-bracket-layout">
-										<c:forEach var="round" items="${bracketPage.rounds}">
-											<section class="tournament-round-row" data-round-number="${round.roundNumber}">
-												<header class="tournament-round-schedule__head">
-													<h2 class="tournament-bracket-round__title"><c:out value="${round.label}" /></h2>
-													<c:if test="${round.roundNumber > 1}">
-														<p class="tournament-round-schedule__helper" data-round-helper="true">
-															<spring:message code="tournament.bracket.schedule.roundHelper" arguments="${round.label}" />
-														</p>
-													</c:if>
-												</header>
-												<div class="tournament-round-row__matches">
-													<c:forEach var="match" items="${round.matches}">
-														<div class="tournament-match-row">
-
-															<article class="tournament-bracket-match">
-																<div class="tournament-bracket-match__header">
-																	<p class="tournament-bracket-match__label"><c:out value="${match.label}" /></p>
-																	<span class="tournament-bracket-match__round"><c:out value="${round.label}" /></span>
-																</div>
-																<div class="tournament-bracket-match__teams">
-																	<span><c:out value="${match.teamA}" /></span>
-																	<span><c:out value="${match.teamB}" /></span>
-																</div>
-															</article>
-
-															<article class="tournament-schedule-match" data-match-schedule="true" data-round-number="${round.roundNumber}" data-round-label="${round.label}" data-match-label="${match.label}">
-																<div class="tournament-schedule-match__grid tournament-schedule-match__date-time-grid">
-																	<label class="field" for="match-start-date-${match.id}" data-start-field="true">
-																		<span class="field__label"><spring:message code="tournament.bracket.schedule.startDate" /></span>
-																		<input class="field__control" id="match-start-date-${match.id}" data-start-date="true" name="startDate_${match.id}" type="date" value="<c:out value='${match.startDate}' />" required="required" />
-																		<span class="field__error" data-field-error="true"></span>
-																	</label>
-																	<label class="field" for="match-start-time-${match.id}">
-																		<span class="field__label"><spring:message code="tournament.bracket.schedule.startTime" /></span>
-																		<input class="field__control" id="match-start-time-${match.id}" data-start-time="true" name="startTime_${match.id}" type="time" value="<c:out value='${match.startTime}' />" required="required" />
-																		<span class="field__error" data-field-error="true"></span>
-																	</label>
-																	<label class="field" for="match-end-date-${match.id}" data-end-field="true">
-																		<span class="field__label"><spring:message code="tournament.bracket.schedule.endDate" /></span>
-																		<input class="field__control" id="match-end-date-${match.id}" data-end-date="true" name="endDate_${match.id}" type="date" value="<c:out value='${match.endDate}' />" required="required" />
-																		<span class="field__error" data-field-error="true"></span>
-																	</label>
-																	<label class="field" for="match-end-time-${match.id}">
-																		<span class="field__label"><spring:message code="tournament.bracket.schedule.endTime" /></span>
-																		<input class="field__control" id="match-end-time-${match.id}" data-end-time="true" name="endTime_${match.id}" type="time" value="<c:out value='${match.endTime}' />" required="required" />
-																		<span class="field__error" data-field-error="true"></span>
-																	</label>
-																</div>
-																<input type="hidden" name="address_${match.id}" value="<c:out value='${match.address}' />" />
-																<input type="hidden" name="latitude_${match.id}" value="<c:out value='${match.latitude}' />" />
-																<input type="hidden" name="longitude_${match.id}" value="<c:out value='${match.longitude}' />" />
-															</article>
-
-														</div>
-													</c:forEach>
+										<c:forEach var="schedule" items="${bracketPublishForm.schedules}" varStatus="scheduleStatus">
+											<article class="tournament-schedule-match">
+												<div class="tournament-bracket-match__header">
+													<p class="tournament-bracket-match__label"><c:out value="${schedule.matchLabel}" /></p>
+													<span class="tournament-bracket-match__round"><c:out value="${schedule.roundLabel}" /></span>
 												</div>
-											</section>
+												<div class="tournament-schedule-match__grid tournament-schedule-match__date-time-grid">
+													<label class="field" for="match-start-date-${scheduleStatus.index}">
+														<span class="field__label"><spring:message code="tournament.bracket.schedule.startDate" /></span>
+														<input class="field__control" id="match-start-date-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].startDate" type="date" value="${schedule.startDate}" required="required" />
+													</label>
+													<label class="field" for="match-start-time-${scheduleStatus.index}">
+														<span class="field__label"><spring:message code="tournament.bracket.schedule.startTime" /></span>
+														<input class="field__control" id="match-start-time-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].startTime" type="time" value="${schedule.startTime}" required="required" />
+													</label>
+													<label class="field" for="match-end-date-${scheduleStatus.index}">
+														<span class="field__label"><spring:message code="tournament.bracket.schedule.endDate" /></span>
+														<input class="field__control" id="match-end-date-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].endDate" type="date" value="${schedule.endDate}" required="required" />
+													</label>
+													<label class="field" for="match-end-time-${scheduleStatus.index}">
+														<span class="field__label"><spring:message code="tournament.bracket.schedule.endTime" /></span>
+														<input class="field__control" id="match-end-time-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].endTime" type="time" value="${schedule.endTime}" required="required" />
+													</label>
+												</div>
+												<input type="hidden" name="schedules[${scheduleStatus.index}].matchId" value="${schedule.matchId}" />
+												<input type="hidden" name="schedules[${scheduleStatus.index}].roundNumber" value="${schedule.roundNumber}" />
+												<input type="hidden" name="schedules[${scheduleStatus.index}].roundLabel" value="${schedule.roundLabel}" />
+												<input type="hidden" name="schedules[${scheduleStatus.index}].matchLabel" value="${schedule.matchLabel}" />
+												<input type="hidden" name="schedules[${scheduleStatus.index}].address" value="${schedule.address}" />
+												<input type="hidden" name="schedules[${scheduleStatus.index}].latitude" value="${schedule.latitude}" />
+												<input type="hidden" name="schedules[${scheduleStatus.index}].longitude" value="${schedule.longitude}" />
+											</article>
 										</c:forEach>
 									</div>
 								</section>
@@ -242,12 +206,14 @@
 								</p>
 								<form method="post" action="${saveManualPairingsAction}" class="tournament-schedule-form" data-submit-guard="true">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<form:errors path="manualPairingsForm" element="div" cssClass="booking-panel__notice booking-panel__notice--error tournament-notice" />
+									<input type="hidden" name="expectedTeamCount" value="${manualPairingsForm.expectedTeamCount}" />
 									<c:forEach var="slotIndex" begin="1" end="${fn:length(manualPairingTeams)}">
 										<label class="field" for="manual-team-slot-${slotIndex}">
 											<span class="field__label"><spring:message code="tournament.bracket.manualPairings.slot" arguments="${slotIndex}" /></span>
-											<select class="field__control field__control--select" id="manual-team-slot-${slotIndex}" name="teamIds" required="required">
+											<select class="field__control field__control--select" id="manual-team-slot-${slotIndex}" name="teamIds[${slotIndex - 1}]" required="required">
 												<c:forEach var="team" items="${manualPairingTeams}" varStatus="teamStatus">
-													<option value="${team.id}" ${teamStatus.index + 1 == slotIndex ? 'selected="selected"' : ''}>
+													<option value="${team.id}" ${manualPairingsForm.teamIds[slotIndex - 1] == team.id ? 'selected="selected"' : ''}>
 														<c:choose>
 															<c:when test="${not empty team.name and not empty fn:trim(team.name) and team.origin.dbValue ne 'solo_pool'}">
 																<c:out value="${team.name}" />

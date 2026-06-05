@@ -19,12 +19,7 @@ import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.services.mail.BanMailTemplateData;
-import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
-import ar.edu.itba.paw.services.mail.MailProperties;
-import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
-import ar.edu.itba.paw.services.mail.UnbanMailTemplateData;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -56,8 +51,6 @@ public class ModerationServiceImpl implements ModerationService {
     private final MatchParticipantDao matchParticipantDao;
     private final PlayerReviewDao playerReviewDao;
     private final MailDispatchService mailDispatchService;
-    private final MailProperties mailProperties;
-    private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MatchService matchService;
     private final MessageSource messageSource;
     private final Clock clock;
@@ -71,8 +64,6 @@ public class ModerationServiceImpl implements ModerationService {
             final MatchParticipantDao matchParticipantDao,
             final PlayerReviewDao playerReviewDao,
             final MailDispatchService mailDispatchService,
-            final MailProperties mailProperties,
-            final ThymeleafMailTemplateRenderer templateRenderer,
             final MatchService matchService,
             final MessageSource messageSource,
             final Clock clock) {
@@ -83,8 +74,6 @@ public class ModerationServiceImpl implements ModerationService {
         this.matchParticipantDao = matchParticipantDao;
         this.playerReviewDao = playerReviewDao;
         this.mailDispatchService = mailDispatchService;
-        this.mailProperties = mailProperties;
-        this.templateRenderer = templateRenderer;
         this.matchService = matchService;
         this.messageSource = messageSource;
         this.clock = clock;
@@ -122,14 +111,7 @@ public class ModerationServiceImpl implements ModerationService {
             throw new ModerationException("report_limit", "Report limit reached.");
         }
 
-        final boolean duplicateReport =
-                moderationReportDao.findReportsByReporter(reporter).stream()
-                        .anyMatch(
-                                report ->
-                                        report.getTargetType() == targetType
-                                                && report.getTargetId().equals(targetId)
-                                                && isActiveReport(report.getStatus()));
-        if (duplicateReport) {
+        if (moderationReportDao.existsReportForTarget(reporter, targetType, targetId)) {
             LOGGER.warn(
                     "Duplicate report attempt by userId={} targetType={} targetId={}",
                     reporter.getId(),
@@ -187,19 +169,6 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ModerationReport> findReports() {
-        return moderationReportDao.findReports();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ModerationReport> findReports(
-            List<ReportTargetType> targetTypes, List<ReportStatus> statuses) {
-        return moderationReportDao.findReports(targetTypes, statuses);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PaginatedResult<ModerationReport> findReports(
             final List<ReportTargetType> targetTypes,
             final List<ReportStatus> statuses,
@@ -207,22 +176,6 @@ public class ModerationServiceImpl implements ModerationService {
             final int pageSize) {
         return moderationReportDao.findReports(
                 targetTypes, statuses, normalizePage(page), normalizePageSize(pageSize));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ModerationReport> findReportsByReporter(final User reporter) {
-        return findReportsByReporter(reporter, List.of(), List.of());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ModerationReport> findReportsByReporter(
-            final User reporter,
-            final List<ReportTargetType> targetTypes,
-            final List<ReportStatus> statuses) {
-        nonNullUser(reporter);
-        return moderationReportDao.findReportsByReporter(reporter, targetTypes, statuses);
     }
 
     @Override
@@ -378,8 +331,9 @@ public class ModerationServiceImpl implements ModerationService {
     private void cancelFutureContentForUser(final User user) {
         final List<Long> participantMatchIds =
                 matchService
-                        .findJoinedMatches(
+                        .findDashboardMatches(
                                 user,
+                                true,
                                 true,
                                 null,
                                 null,
@@ -390,8 +344,7 @@ public class ModerationServiceImpl implements ModerationService {
                                 null,
                                 null,
                                 null,
-                                null,
-                                0,
+                                1,
                                 DEFAULT_REPORT_PAGE_SIZE)
                         .getItems()
                         .stream()
@@ -403,8 +356,9 @@ public class ModerationServiceImpl implements ModerationService {
 
         final List<Long> hostedMatchIds =
                 matchService
-                        .findHostedMatches(
+                        .findDashboardMatches(
                                 user,
+                                true,
                                 true,
                                 null,
                                 null,
@@ -415,8 +369,7 @@ public class ModerationServiceImpl implements ModerationService {
                                 null,
                                 null,
                                 null,
-                                null,
-                                0,
+                                1,
                                 DEFAULT_REPORT_PAGE_SIZE)
                         .getItems()
                         .stream()
@@ -441,35 +394,12 @@ public class ModerationServiceImpl implements ModerationService {
                                 new Object[] {moderationReportId},
                                 locale)
                         : reason;
-        final MailContent content =
-                templateRenderer.renderBanNotification(
-                        new BanMailTemplateData(
-                                user.getEmail(),
-                                user.getUsername(),
-                                bannedUntil,
-                                localizedReason,
-                                stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
-                                locale));
-        mailDispatchService.dispatch(user.getEmail(), content);
+        mailDispatchService.sendBanNotice(user, bannedUntil, localizedReason);
     }
 
     private void sendUnbanEmail(final User user) {
         nonNullUser(user);
-        final Locale locale = UserLanguages.toLocale(user.getPreferredLanguage());
-        final MailContent content =
-                templateRenderer.renderUnbanNotification(
-                        new UnbanMailTemplateData(
-                                user.getEmail(),
-                                user.getUsername(),
-                                stripTrailingSlash(mailProperties.getBaseUrl()) + "/login",
-                                locale));
-        mailDispatchService.dispatch(user.getEmail(), content);
-    }
-
-    private static boolean isActiveReport(final ReportStatus status) {
-        return status == ReportStatus.PENDING
-                || status == ReportStatus.UNDER_REVIEW
-                || status == ReportStatus.APPEALED;
+        mailDispatchService.sendUnbanNotice(user);
     }
 
     private static int normalizePage(final int page) {
@@ -545,13 +475,6 @@ public class ModerationServiceImpl implements ModerationService {
     private static Locale currentLocale() {
         final Locale locale = LocaleContextHolder.getLocale();
         return locale == null ? Locale.ENGLISH : locale;
-    }
-
-    private static String stripTrailingSlash(final String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
     private void applyResolutionEffect(

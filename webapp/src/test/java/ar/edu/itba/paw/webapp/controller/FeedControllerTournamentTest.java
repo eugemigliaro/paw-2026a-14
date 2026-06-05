@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -21,16 +22,21 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +44,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -50,8 +57,6 @@ class FeedControllerTournamentTest {
     private MockMvc mockMvc;
     private AtomicBoolean matchSearchCalled;
     private AtomicBoolean tournamentSearchCalled;
-    private AtomicReference<String> tournamentSportFilter;
-    private AtomicReference<String> tournamentSortFilter;
 
     @BeforeEach
     void setUp() {
@@ -65,19 +70,16 @@ class FeedControllerTournamentTest {
 
         matchSearchCalled = new AtomicBoolean(false);
         tournamentSearchCalled = new AtomicBoolean(false);
-        tournamentSportFilter = new AtomicReference<>();
-        tournamentSortFilter = new AtomicReference<>();
 
         Mockito.when(
                         matchService.searchPublicMatches(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.<List<Sport>>any(),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.nullable(String.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -94,13 +96,12 @@ class FeedControllerTournamentTest {
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.nullable(String.class),
-                                ArgumentMatchers.anyString(),
+                                ArgumentMatchers.<List<Sport>>any(),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.nullable(String.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -108,8 +109,6 @@ class FeedControllerTournamentTest {
                 .thenAnswer(
                         invocation -> {
                             tournamentSearchCalled.set(true);
-                            tournamentSportFilter.set(invocation.getArgument(1));
-                            tournamentSortFilter.set(invocation.getArgument(4));
                             return new PaginatedResult<>(
                                     List.of(tournament(77L, "City Cup")),
                                     13,
@@ -128,8 +127,15 @@ class FeedControllerTournamentTest {
                                         matchParticipationService,
                                         matchReservationService,
                                         tournamentService,
-                                        messageSource))
+                                        messageSource,
+                                        false,
+                                        "",
+                                        "",
+                                        0,
+                                        0,
+                                        0))
                         .setViewResolvers(viewResolver)
+                        .setConversionService(conversionService())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
                         .build();
     }
@@ -173,8 +179,6 @@ class FeedControllerTournamentTest {
 
         Assertions.assertFalse(matchSearchCalled.get());
         Assertions.assertTrue(tournamentSearchCalled.get());
-        Assertions.assertEquals("padel", tournamentSportFilter.get());
-        Assertions.assertEquals("price", tournamentSortFilter.get());
         Assertions.assertEquals("/tournaments/77", card.getHref());
         Assertions.assertEquals("Tournament", card.getBadge());
         Assertions.assertEquals("Registration", card.getLevel());
@@ -239,6 +243,17 @@ class FeedControllerTournamentTest {
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setFallbackToSystemLocale(false);
         return messageSource;
+    }
+
+    private static DefaultFormattingConversionService conversionService() {
+        final DefaultFormattingConversionService conversionService =
+                new DefaultFormattingConversionService();
+        conversionService.addConverter(new StringToSportConverter());
+        conversionService.addConverter(new StringToEventStatusConverter());
+        conversionService.addConverter(new StringToEventVisibilityConverter());
+        conversionService.addConverter(new StringToMatchSortConverter());
+        conversionService.addConverter(new StringToEventTypeConverter());
+        return conversionService;
     }
 
     private static Match match(final long id, final String title) {

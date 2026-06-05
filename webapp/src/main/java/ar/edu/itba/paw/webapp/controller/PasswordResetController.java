@@ -1,17 +1,13 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
-import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.exceptions.PasswordResetException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.form.ResetPasswordForm;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import ar.edu.itba.paw.webapp.viewmodel.ShellViewModelFactory;
 import java.util.Locale;
-import java.util.Objects;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -28,21 +24,12 @@ public class PasswordResetController {
 
     private final AccountAuthService accountAuthService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public PasswordResetController(
-            final AccountAuthService accountAuthService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
-        this.accountAuthService = Objects.requireNonNull(accountAuthService);
-        this.messageSource = Objects.requireNonNull(messageSource);
-        this.platformTimeZoneService = Objects.requireNonNull(platformTimeZoneService);
-    }
-
-    public PasswordResetController(
             final AccountAuthService accountAuthService, final MessageSource messageSource) {
-        this(accountAuthService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
+        this.accountAuthService = accountAuthService;
+        this.messageSource = messageSource;
     }
 
     @ModelAttribute("resetPasswordForm")
@@ -70,19 +57,6 @@ public class PasswordResetController {
             @Valid @ModelAttribute("resetPasswordForm") final ResetPasswordForm resetPasswordForm,
             final BindingResult bindingResult,
             final Locale locale) {
-        if (!bindingResult.hasFieldErrors("password")
-                && !bindingResult.hasFieldErrors("confirmPassword")
-                && !resetPasswordForm
-                        .getPassword()
-                        .equals(resetPasswordForm.getConfirmPassword())) {
-            bindingResult.rejectValue(
-                    "confirmPassword",
-                    "auth.validation.passwordMismatch",
-                    messageSource.getMessage(
-                            "auth.validation.passwordMismatch",
-                            null,
-                            Objects.requireNonNull(locale)));
-        }
 
         if (bindingResult.hasErrors()) {
             try {
@@ -97,9 +71,8 @@ public class PasswordResetController {
         }
 
         try {
-            final VerificationConfirmationResult result =
-                    accountAuthService.resetPassword(token, resetPasswordForm.getPassword());
-            return new ModelAndView("redirect:" + result.getRedirectUrl());
+            accountAuthService.resetPassword(token, resetPasswordForm.getPassword());
+            return new ModelAndView("redirect:/login?reset=1");
         } catch (final PasswordResetException exception) {
             bindingResult.rejectValue("password", exception.getCode(), exception.getMessage());
             try {
@@ -122,17 +95,12 @@ public class PasswordResetController {
             final ResetPasswordForm resetPasswordForm,
             final Locale locale) {
         final ModelAndView mav = new ModelAndView("auth/reset-password");
-        mav.addObject(
-                "shell",
-                ShellViewModelFactory.playerShell(messageSource, locale, "/password-reset"));
         mav.addObject("resetPath", "/password-reset/" + token);
         mav.addObject("resetPreview", preview);
         mav.addObject(
                 "expiresAtLabel",
                 VerificationViews.expiryFormatter(locale)
-                        .format(
-                                preview.getExpiresAt()
-                                        .atZone(platformTimeZoneService.defaultZone())));
+                        .format(preview.getExpiresAt().atZone(PlatformTime.ZONE)));
         mav.addObject("resetPasswordForm", resetPasswordForm);
         return mav;
     }

@@ -11,11 +11,8 @@ import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.PasswordResetException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
-import ar.edu.itba.paw.services.mail.MailContent;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
-import ar.edu.itba.paw.services.mail.ThymeleafMailTemplateRenderer;
-import ar.edu.itba.paw.services.mail.VerificationMailTemplateData;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -49,7 +46,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private final EmailActionRequestDao emailActionRequestDao;
     private final MailProperties mailProperties;
     private final MailDispatchService mailDispatchService;
-    private final ThymeleafMailTemplateRenderer templateRenderer;
     private final MessageSource messageSource;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
@@ -60,7 +56,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final EmailActionRequestDao emailActionRequestDao,
             final MailProperties mailProperties,
             final MailDispatchService mailDispatchService,
-            final ThymeleafMailTemplateRenderer templateRenderer,
             final MessageSource messageSource,
             final PasswordEncoder passwordEncoder,
             final Clock clock) {
@@ -68,7 +63,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         this.emailActionRequestDao = Objects.requireNonNull(emailActionRequestDao);
         this.mailProperties = Objects.requireNonNull(mailProperties);
         this.mailDispatchService = Objects.requireNonNull(mailDispatchService);
-        this.templateRenderer = Objects.requireNonNull(templateRenderer);
         this.messageSource = Objects.requireNonNull(messageSource);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.clock = Objects.requireNonNull(clock);
@@ -158,7 +152,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 request.getEmail(),
                 request.getExpiresAt(),
                 message("verification.preview.account.confirm", locale),
-                "/login?verified=1",
                 List.of());
     }
 
@@ -190,7 +183,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                         ? account
                         : userDao.findAccountById(account.getId()).orElse(account);
         return new VerificationConfirmationResult(
-                verifiedAccount, "/", message("verification.message.accountVerified", locale));
+                verifiedAccount, message("verification.message.accountVerified", locale));
     }
 
     @Override
@@ -243,9 +236,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
         return new VerificationConfirmationResult(
-                account.getId(),
-                "/login?reset=1",
-                message("passwordReset.message.completed", locale));
+                account.getId(), message("passwordReset.message.completed", locale));
     }
 
     @Override
@@ -262,8 +253,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 EmailActionType.ACCOUNT_VERIFICATION,
                 rawToken,
                 buildVerificationUrl(rawToken, locale),
-                message("verification.preview.account.title", locale),
-                message("verification.preview.account.summary", locale),
                 locale);
     }
 
@@ -275,8 +264,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 EmailActionType.PASSWORD_RESET,
                 rawToken,
                 buildPasswordResetUrl(rawToken, locale),
-                message("passwordReset.mail.title", locale),
-                message("passwordReset.mail.summary", locale),
                 locale);
     }
 
@@ -285,8 +272,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final EmailActionType actionType,
             final String rawToken,
             final String confirmationUrl,
-            final String title,
-            final String summary,
             final Locale locale) {
         final Instant now = Instant.now(clock);
         final Instant expiresAt = now.plusSeconds(mailProperties.getVerificationTtlHours() * 3600L);
@@ -302,17 +287,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 EMPTY_PAYLOAD_JSON,
                 expiresAt);
 
-        final MailContent mailContent =
-                templateRenderer.renderActionMail(
-                        new VerificationMailTemplateData(
-                                title,
-                                summary,
-                                account.getEmail(),
-                                confirmationUrl,
-                                expiresAt,
-                                List.of(),
-                                locale));
-        mailDispatchService.dispatch(account.getEmail(), mailContent);
+        if (actionType == EmailActionType.PASSWORD_RESET) {
+            mailDispatchService.sendPasswordReset(account, confirmationUrl, expiresAt, locale);
+        } else {
+            mailDispatchService.sendAccountVerification(
+                    account, confirmationUrl, expiresAt, locale);
+        }
         return new VerificationRequestResult(account.getEmail(), expiresAt);
     }
 

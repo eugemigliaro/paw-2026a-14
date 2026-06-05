@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.utils;
 
-import ar.edu.itba.paw.models.query.MatchSort;
+import ar.edu.itba.paw.models.query.EventSort;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -11,12 +11,12 @@ public final class MatchFilterQueryUtils {
 
     public static String normalizeSort(final String sort) {
         if (sort == null || sort.isBlank()) {
-            return MatchSort.SOONEST.getQueryValue();
+            return EventSort.SOONEST.getQueryValue();
         }
 
-        return MatchSort.fromQueryValue(sort)
-                .map(MatchSort::getQueryValue)
-                .orElse(MatchSort.SOONEST.getQueryValue());
+        return EventSort.fromQueryValue(sort)
+                .map(EventSort::getQueryValue)
+                .orElse(EventSort.SOONEST.getQueryValue());
     }
 
     public static List<String> normalizeCsvValues(final List<String> rawValues) {
