@@ -64,6 +64,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
 
 @Controller
 public class HostTournamentController {
@@ -161,7 +162,7 @@ public class HostTournamentController {
         try {
             final Tournament createdTournament =
                     tournamentService.createTournament(actingUser, request);
-            return new ModelAndView("redirect:/tournaments/" + createdTournament.getId());
+            return seeOther("/tournaments/" + createdTournament.getId());
         } catch (final TournamentLifecycleException exception) {
             applyServiceError(exception, bindingResult, locale);
             return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
@@ -240,7 +241,7 @@ public class HostTournamentController {
 
         redirectAttributes.addFlashAttribute(
                 "tournamentNoticeCode", "tournament.host.edit.success");
-        return new ModelAndView("redirect:/tournaments/" + tournamentId);
+        return seeOther("/tournaments/" + tournamentId);
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/close-registration")
@@ -703,6 +704,12 @@ public class HostTournamentController {
                 return bannerImage.getInputStream();
             }
         };
+    }
+
+    private static ModelAndView seeOther(final String targetUrl) {
+        final RedirectView redirectView = new RedirectView(targetUrl, true);
+        redirectView.setStatusCode(HttpStatus.SEE_OTHER);
+        return new ModelAndView(redirectView);
     }
 
     private boolean isEditable(final Tournament tournament) {

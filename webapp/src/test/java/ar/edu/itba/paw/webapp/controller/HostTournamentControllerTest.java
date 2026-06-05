@@ -138,7 +138,7 @@ class HostTournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(validCreatePost())
-                .andExpect(status().is3xxRedirection())
+                .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/tournaments/99"));
         Assertions.assertNotNull(createdRequest.get());
         Assertions.assertEquals(Sport.PADEL, createdRequest.get().getSport());
@@ -169,7 +169,7 @@ class HostTournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(createPost("City Padel Cup", false, true))
-                .andExpect(status().is3xxRedirection())
+                .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/tournaments/99"));
         Assertions.assertNotNull(createdRequest.get());
         Assertions.assertFalse(createdRequest.get().isAllowSoloSignup());
@@ -323,7 +323,7 @@ class HostTournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(editPost(77L, "Updated City Cup"))
-                .andExpect(status().is3xxRedirection())
+                .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/tournaments/77"));
         Assertions.assertNotNull(updatedRequest.get());
         Assertions.assertEquals("Updated City Cup", updatedRequest.get().getTitle());
