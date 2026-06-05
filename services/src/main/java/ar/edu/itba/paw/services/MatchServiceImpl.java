@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -82,8 +83,8 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public Match createMatch(final CreateMatchRequest request) {
         validateScheduleOrThrow(
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 new IllegalArgumentException(message("match.schedule.error.startsAtPast")),
                 new IllegalArgumentException(message("match.schedule.error.endBeforeStart")));
         validateCreateCapacityOrThrow(request.getMaxPlayers());
@@ -104,8 +105,8 @@ public class MatchServiceImpl implements MatchService {
                 matchDao.createMatchSeries(
                         request.getHost(),
                         recurrence.getFrequency(),
-                        request.getStartsAt(),
-                        request.getEndsAt(),
+                        toInstant(request.getStartDate(), request.getStartTime()),
+                        toInstant(request.getEndDate(), request.getEndTime()),
                         PlatformTime.ZONE.getId(),
                         recurrence.getEndMode() == RecurrenceEndMode.UNTIL_DATE
                                 ? recurrence.getUntilDate()
@@ -119,8 +120,8 @@ public class MatchServiceImpl implements MatchService {
                         seriesId,
                         request.getHost(),
                         recurrence.getFrequency(),
-                        request.getStartsAt(),
-                        request.getEndsAt(),
+                        toInstant(request.getStartDate(), request.getStartTime()),
+                        toInstant(request.getEndDate(), request.getEndTime()),
                         PlatformTime.ZONE.getId(),
                         recurrence.getEndMode() == RecurrenceEndMode.UNTIL_DATE
                                 ? recurrence.getUntilDate()
@@ -187,8 +188,8 @@ public class MatchServiceImpl implements MatchService {
                 request.getAddress(),
                 request.getTitle(),
                 request.getDescription(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 request.getMaxPlayers(),
                 request.getPricePerPlayer(),
                 request.getSport(),
@@ -230,6 +231,8 @@ public class MatchServiceImpl implements MatchService {
             final Long matchId,
             final User actingUser,
             final UpdateMatchRequest request,
+            final Instant startsAt,
+            final Instant endsAt,
             final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
@@ -239,8 +242,8 @@ public class MatchServiceImpl implements MatchService {
                 request.getAddress(),
                 request.getTitle(),
                 request.getDescription(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                startsAt,
+                endsAt,
                 request.getMaxPlayers(),
                 request.getPricePerPlayer(),
                 request.getSport(),
@@ -257,6 +260,10 @@ public class MatchServiceImpl implements MatchService {
         return EventVisibility.PRIVATE == visibility ? EventJoinPolicy.INVITE_ONLY : joinPolicy;
     }
 
+    private static Instant toInstant(final LocalDate date, final LocalTime time) {
+        return date == null || time == null ? null : PlatformTime.toInstant(date, time);
+    }
+
     private static boolean hasCoordinates(final Double latitude, final Double longitude) {
         return latitude != null && longitude != null;
     }
@@ -267,9 +274,12 @@ public class MatchServiceImpl implements MatchService {
             final Long matchId, final User actingUser, final UpdateMatchRequest request) {
         final Match match = findEditableMatchForHost(matchId, actingUser);
 
+        final Instant startsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant endsAt = toInstant(request.getEndDate(), request.getEndTime());
+
         validateScheduleOrThrow(
-                request.getStartsAt(),
-                request.getEndsAt(),
+                startsAt,
+                endsAt,
                 new MatchUpdateException(
                         MatchUpdateFailureReason.INVALID_SCHEDULE,
                         message("match.schedule.error.startsAtPast")),
@@ -303,6 +313,8 @@ public class MatchServiceImpl implements MatchService {
                         matchId,
                         actingUser,
                         request,
+                        startsAt,
+                        endsAt,
                         bannerImageMetadata,
                         joinPolicy,
                         request.getStatus());
@@ -472,9 +484,13 @@ public class MatchServiceImpl implements MatchService {
                                                 message("match.update.error.notFound")));
 
         validateSeriesUpdateAccess(pivot, actingUser);
+
+        final Instant requestStartsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant requestEndsAt = toInstant(request.getEndDate(), request.getEndTime());
+
         validateScheduleOrThrow(
-                request.getStartsAt(),
-                request.getEndsAt(),
+                requestStartsAt,
+                requestEndsAt,
                 new MatchUpdateException(
                         MatchUpdateFailureReason.INVALID_SCHEDULE,
                         message("match.schedule.error.startsAtPast")),
@@ -500,11 +516,9 @@ public class MatchServiceImpl implements MatchService {
             }
         }
 
-        final Duration startOffset = Duration.between(pivot.getStartsAt(), request.getStartsAt());
+        final Duration startOffset = Duration.between(pivot.getStartsAt(), requestStartsAt);
         final Duration requestedDuration =
-                request.getEndsAt() == null
-                        ? null
-                        : Duration.between(request.getStartsAt(), request.getEndsAt());
+                requestEndsAt == null ? null : Duration.between(requestStartsAt, requestEndsAt);
         final List<Match> updatedMatches = new ArrayList<>();
 
         ImageMetadata bannerImageMetadata =
@@ -526,30 +540,15 @@ public class MatchServiceImpl implements MatchService {
                     new MatchUpdateException(
                             MatchUpdateFailureReason.INVALID_SCHEDULE,
                             message("match.schedule.error.endBeforeStart")));
-            final UpdateMatchRequest targetRequest =
-                    new UpdateMatchRequest(
-                            request.getAddress(),
-                            request.getTitle(),
-                            request.getDescription(),
-                            targetStartsAt,
-                            targetEndsAt,
-                            request.getMaxPlayers(),
-                            request.getPricePerPlayer(),
-                            request.getSport(),
-                            request.getVisibility(),
-                            request.getJoinPolicy(),
-                            target.getStatus(),
-                            request.getBannerImage(),
-                            request.getLatitude(),
-                            request.getLongitude());
             final boolean updated =
                     updateStoredMatch(
                             target.getId(),
                             actingUser,
-                            targetRequest,
+                            request,
+                            targetStartsAt,
+                            targetEndsAt,
                             bannerImageMetadata,
-                            resolveJoinPolicy(
-                                    targetRequest.getVisibility(), targetRequest.getJoinPolicy()),
+                            resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                             target.getStatus());
             if (!updated) {
                 throw new MatchUpdateException(
@@ -898,11 +897,11 @@ public class MatchServiceImpl implements MatchService {
         }
 
         final LocalDateTime firstLocalStart =
-                LocalDateTime.ofInstant(request.getStartsAt(), PlatformTime.ZONE);
+                LocalDateTime.of(request.getStartDate(), request.getStartTime());
+        final Instant requestStartsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant requestEndsAt = toInstant(request.getEndDate(), request.getEndTime());
         final Duration duration =
-                request.getEndsAt() == null
-                        ? null
-                        : Duration.between(request.getStartsAt(), request.getEndsAt());
+                requestEndsAt == null ? null : Duration.between(requestStartsAt, requestEndsAt);
         final int occurrenceCount = resolveOccurrenceCount(firstLocalStart, recurrence);
 
         return IntStream.range(0, occurrenceCount)

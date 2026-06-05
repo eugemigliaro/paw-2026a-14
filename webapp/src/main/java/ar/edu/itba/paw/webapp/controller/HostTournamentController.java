@@ -143,6 +143,8 @@ public class HostTournamentController {
                         createTournamentForm.getLongitude(),
                         null, // TODO: add this field
                         null, // TODO: add this field
+                        null, // TODO: add this field
+                        null, // TODO: add this field
                         createTournamentForm.getPricePerPlayer(),
                         bannerUpload(createTournamentForm.getBannerImage()),
                         TournamentFormat.SINGLE_ELIMINATION,
@@ -150,12 +152,10 @@ public class HostTournamentController {
                         createTournamentForm.getTeamSize(),
                         createTournamentForm.isAllowSoloSignup(),
                         createTournamentForm.isAllowTeamDraft(),
-                        PlatformTime.toInstant(
-                                createTournamentForm.getRegistrationOpensDate(),
-                                createTournamentForm.getRegistrationOpensTime()),
-                        PlatformTime.toInstant(
-                                createTournamentForm.getRegistrationClosesDate(),
-                                createTournamentForm.getRegistrationClosesTime()));
+                        createTournamentForm.getRegistrationOpensDate(),
+                        createTournamentForm.getRegistrationOpensTime(),
+                        createTournamentForm.getRegistrationClosesDate(),
+                        createTournamentForm.getRegistrationClosesTime());
 
         try {
             final Tournament createdTournament =
@@ -217,12 +217,10 @@ public class HostTournamentController {
                         bannerUpload(createTournamentForm.getBannerImage()),
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
-                        PlatformTime.toInstant(
-                                createTournamentForm.getRegistrationOpensDate(),
-                                createTournamentForm.getRegistrationOpensTime()),
-                        PlatformTime.toInstant(
-                                createTournamentForm.getRegistrationClosesDate(),
-                                createTournamentForm.getRegistrationClosesTime()));
+                        createTournamentForm.getRegistrationOpensDate(),
+                        createTournamentForm.getRegistrationOpensTime(),
+                        createTournamentForm.getRegistrationClosesDate(),
+                        createTournamentForm.getRegistrationClosesTime());
 
         try {
             tournamentService.update(tournamentId, actingUser, request);
@@ -610,9 +608,10 @@ public class HostTournamentController {
             schedules.add(
                     new TournamentMatchScheduleRequest(
                             schedule.getMatchId(),
-                            PlatformTime.toInstant(
-                                    schedule.getStartDate(), schedule.getStartTime()),
-                            PlatformTime.toInstant(schedule.getEndDate(), schedule.getEndTime()),
+                            schedule.getStartDate(),
+                            schedule.getStartTime(),
+                            schedule.getEndDate(),
+                            schedule.getEndTime(),
                             schedule.getAddress(),
                             schedule.getLatitude(),
                             schedule.getLongitude()));

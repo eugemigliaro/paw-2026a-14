@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
@@ -15,6 +16,8 @@ import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
@@ -89,8 +92,9 @@ public class TournamentServiceImplTest {
                                 request.getAddress(),
                                 request.getLatitude(),
                                 request.getLongitude(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
+                                PlatformTime.toInstant(
+                                        request.getStartDate(), request.getStartTime()),
+                                PlatformTime.toInstant(request.getEndDate(), request.getEndTime()),
                                 request.getPricePerPlayer(),
                                 null,
                                 request.getFormat(),
@@ -98,8 +102,12 @@ public class TournamentServiceImplTest {
                                 request.getTeamSize(),
                                 request.isAllowSoloSignup(),
                                 request.isAllowTeamDraft(),
-                                request.getRegistrationOpensAt(),
-                                request.getRegistrationClosesAt(),
+                                PlatformTime.toInstant(
+                                        request.getRegistrationOpensDate(),
+                                        request.getRegistrationOpensTime()),
+                                PlatformTime.toInstant(
+                                        request.getRegistrationClosesDate(),
+                                        request.getRegistrationClosesTime()),
                                 TournamentStatus.REGISTRATION))
                 .thenReturn(tournament);
 
@@ -237,9 +245,14 @@ public class TournamentServiceImplTest {
         Assertions.assertEquals(request.getStartsAt(), result.getStartsAt());
         Assertions.assertEquals(request.getBracketSize(), result.getBracketSize());
         Assertions.assertEquals(request.getTeamSize(), result.getTeamSize());
-        Assertions.assertEquals(request.getRegistrationOpensAt(), result.getRegistrationOpensAt());
         Assertions.assertEquals(
-                request.getRegistrationClosesAt(), result.getRegistrationClosesAt());
+                PlatformTime.toInstant(
+                        request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                result.getRegistrationOpensAt());
+        Assertions.assertEquals(
+                PlatformTime.toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()),
+                result.getRegistrationClosesAt());
         Assertions.assertEquals(FIXED_NOW, result.getUpdatedAt());
     }
 
@@ -633,8 +646,10 @@ public class TournamentServiceImplTest {
                 "Club Street 123",
                 -34.60,
                 -58.38,
-                FIXED_NOW.plusSeconds(86400),
-                FIXED_NOW.plusSeconds(90000),
+                dateOf(FIXED_NOW.plusSeconds(86400)),
+                timeOf(FIXED_NOW.plusSeconds(86400)),
+                dateOf(FIXED_NOW.plusSeconds(90000)),
+                timeOf(FIXED_NOW.plusSeconds(90000)),
                 BigDecimal.ZERO,
                 null,
                 TournamentFormat.SINGLE_ELIMINATION,
@@ -642,8 +657,18 @@ public class TournamentServiceImplTest {
                 teamSize,
                 allowSoloSignup,
                 allowTeamDraft,
-                registrationOpensAt,
-                registrationClosesAt);
+                dateOf(registrationOpensAt),
+                timeOf(registrationOpensAt),
+                dateOf(registrationClosesAt),
+                timeOf(registrationClosesAt));
+    }
+
+    private static LocalDate dateOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalDate();
+    }
+
+    private static LocalTime timeOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalTime();
     }
 
     private static UpdateTournamentRequest validUpdateRequest() {
@@ -660,8 +685,10 @@ public class TournamentServiceImplTest {
                 null,
                 8,
                 2,
-                FIXED_NOW.plusSeconds(3600),
-                FIXED_NOW.plusSeconds(7200));
+                dateOf(FIXED_NOW.plusSeconds(3600)),
+                timeOf(FIXED_NOW.plusSeconds(3600)),
+                dateOf(FIXED_NOW.plusSeconds(7200)),
+                timeOf(FIXED_NOW.plusSeconds(7200)));
     }
 
     private static Tournament tournament(

@@ -13,6 +13,7 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.Tournament;
@@ -579,8 +580,9 @@ class UiRouteTest {
                                 null,
                                 request.getTitle(),
                                 request.getDescription(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
+                                PlatformTime.toInstant(
+                                        request.getStartDate(), request.getStartTime()),
+                                PlatformTime.toInstant(request.getEndDate(), request.getEndTime()),
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
@@ -760,8 +762,10 @@ class UiRouteTest {
                                         null,
                                         request.getTitle(),
                                         request.getDescription(),
-                                        request.getStartsAt(),
-                                        request.getEndsAt(),
+                                        PlatformTime.toInstant(
+                                                request.getStartDate(), request.getStartTime()),
+                                        PlatformTime.toInstant(
+                                                request.getEndDate(), request.getEndTime()),
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
@@ -814,8 +818,10 @@ class UiRouteTest {
                                         null,
                                         request.getTitle(),
                                         request.getDescription(),
-                                        request.getStartsAt(),
-                                        request.getEndsAt(),
+                                        PlatformTime.toInstant(
+                                                request.getStartDate(), request.getStartTime()),
+                                        PlatformTime.toInstant(
+                                                request.getEndDate(), request.getEndTime()),
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
@@ -2689,9 +2695,13 @@ class UiRouteTest {
         Assertions.assertNotNull(lastCreateMatchRequest.get());
         Assertions.assertFalse(lastCreateMatchRequest.get().isRecurring());
         Assertions.assertEquals(
-                Instant.parse("2099-04-10T21:00:00Z"), lastCreateMatchRequest.get().getStartsAt());
+                LocalDate.parse("2099-04-10"), lastCreateMatchRequest.get().getStartDate());
         Assertions.assertEquals(
-                Instant.parse("2099-04-10T22:30:00Z"), lastCreateMatchRequest.get().getEndsAt());
+                LocalTime.parse("18:00"), lastCreateMatchRequest.get().getStartTime());
+        Assertions.assertEquals(
+                LocalDate.parse("2099-04-10"), lastCreateMatchRequest.get().getEndDate());
+        Assertions.assertEquals(
+                LocalTime.parse("19:30"), lastCreateMatchRequest.get().getEndTime());
     }
 
     @Test

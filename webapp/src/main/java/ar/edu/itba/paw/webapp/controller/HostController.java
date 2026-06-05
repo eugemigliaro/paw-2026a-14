@@ -22,8 +22,6 @@ import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -103,11 +101,6 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        final Instant startsAt =
-                toInstant(createEventForm.getEventDate(), createEventForm.getEventTime());
-        final Instant endsAt =
-                toInstant(createEventForm.getEndDate(), createEventForm.getEndTime());
-
         final CreateMatchRequest request =
                 new CreateMatchRequest(
                         actingUser,
@@ -116,8 +109,10 @@ public class HostController {
                         createEventForm.getLongitude(),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
-                        startsAt,
-                        endsAt,
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getEndDate(),
+                        createEventForm.getEndTime(),
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         createEventForm.getSport() == null
@@ -160,18 +155,15 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        final Instant startsAt =
-                toInstant(createEventForm.getEventDate(), createEventForm.getEventTime());
-        final Instant endsAt =
-                toInstant(createEventForm.getEndDate(), createEventForm.getEndTime());
-
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
                         createEventForm.getAddress(),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
-                        startsAt,
-                        endsAt,
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getEndDate(),
+                        createEventForm.getEndTime(),
                         createEventForm.getMaxPlayers().intValue(),
                         createEventForm.getPricePerPlayer(),
                         createEventForm.getSport() == null
@@ -421,8 +413,10 @@ public class HostController {
                 form.getAddress(),
                 form.getTitle(),
                 form.getDescription(),
-                toInstant(form.getEventDate(), form.getEventTime()),
-                toInstant(form.getEndDate(), form.getEndTime()),
+                form.getEventDate(),
+                form.getEventTime(),
+                form.getEndDate(),
+                form.getEndTime(),
                 form.getMaxPlayers().intValue(),
                 form.getPricePerPlayer(),
                 form.getSport() == null ? Sport.PADEL : form.getSport(),
@@ -456,10 +450,6 @@ public class HostController {
         } catch (final MatchUpdateException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-    }
-
-    private static Instant toInstant(final LocalDate eventDate, final LocalTime eventTime) {
-        return PlatformTime.toInstant(eventDate, eventTime);
     }
 
     private static CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {

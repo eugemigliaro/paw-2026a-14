@@ -139,8 +139,10 @@ class HostTournamentControllerTest {
                 .andExpect(redirectedUrl("/tournaments/99"));
         Assertions.assertNotNull(createdRequest.get());
         Assertions.assertEquals(Sport.PADEL, createdRequest.get().getSport());
-        Assertions.assertNull(createdRequest.get().getStartsAt());
-        Assertions.assertNull(createdRequest.get().getEndsAt());
+        Assertions.assertNull(createdRequest.get().getStartDate());
+        Assertions.assertNull(createdRequest.get().getStartTime());
+        Assertions.assertNull(createdRequest.get().getEndDate());
+        Assertions.assertNull(createdRequest.get().getEndTime());
         Assertions.assertEquals(8, createdRequest.get().getBracketSize());
         Assertions.assertEquals(1, createdRequest.get().getTeamSize());
         Assertions.assertTrue(createdRequest.get().isAllowSoloSignup());

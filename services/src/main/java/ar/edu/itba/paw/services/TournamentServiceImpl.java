@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
@@ -12,6 +13,8 @@ import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -56,6 +59,8 @@ public class TournamentServiceImpl implements TournamentService {
     public Tournament createTournament(final User host, final CreateTournamentRequest request) {
         validateHost(host);
         validateRequest(request);
+        final Instant startsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant endsAt = toInstant(request.getEndDate(), request.getEndTime());
 
         return tournamentDao.create(
                 host,
@@ -65,8 +70,8 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getAddress(),
                 request.getLatitude(),
                 request.getLongitude(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                startsAt,
+                endsAt,
                 request.getPricePerPlayer(),
                 imageService.resolveImageMetadata(request.getBannerImage()),
                 request.getFormat(),
@@ -74,8 +79,8 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getTeamSize(),
                 request.isAllowSoloSignup(),
                 request.isAllowTeamDraft(),
-                request.getRegistrationOpensAt(),
-                request.getRegistrationClosesAt(),
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                toInstant(request.getRegistrationClosesDate(), request.getRegistrationClosesTime()),
                 TournamentStatus.REGISTRATION);
     }
 
@@ -216,8 +221,11 @@ public class TournamentServiceImpl implements TournamentService {
         }
         tournament.setBracketSize(request.getBracketSize());
         tournament.setTeamSize(request.getTeamSize());
-        tournament.setRegistrationOpensAt(request.getRegistrationOpensAt());
-        tournament.setRegistrationClosesAt(request.getRegistrationClosesAt());
+        tournament.setRegistrationOpensAt(
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime()));
+        tournament.setRegistrationClosesAt(
+                toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
         tournament.setUpdatedAt(Instant.now(clock));
         return tournamentDao.update(tournament);
     }
@@ -290,6 +298,10 @@ public class TournamentServiceImpl implements TournamentService {
         return latitude != null && longitude != null;
     }
 
+    private static Instant toInstant(final LocalDate date, final LocalTime time) {
+        return date == null || time == null ? null : PlatformTime.toInstant(date, time);
+    }
+
     private static EventSort withoutDistance(final EventSort sort) {
         return sort == EventSort.DISTANCE ? EventSort.SOONEST : sort;
     }
@@ -308,8 +320,8 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getSport(),
                 request.getTitle(),
                 request.getAddress(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 request.getPricePerPlayer(),
                 request.getLatitude(),
                 request.getLongitude());
@@ -317,9 +329,12 @@ public class TournamentServiceImpl implements TournamentService {
         validateBracketSize(request.getBracketSize());
         validateTeamSize(request.getTeamSize());
         validateJoinMode(request.isAllowSoloSignup(), request.isAllowTeamDraft());
-        validateRegistrationWindow(
-                request.getRegistrationOpensAt(), request.getRegistrationClosesAt());
-        validateFutureRegistrationClose(request.getRegistrationClosesAt());
+        final Instant registrationOpensAt =
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime());
+        final Instant registrationClosesAt =
+                toInstant(request.getRegistrationClosesDate(), request.getRegistrationClosesTime());
+        validateRegistrationWindow(registrationOpensAt, registrationClosesAt);
+        validateFutureRegistrationClose(registrationClosesAt);
     }
 
     private void validateUpdateRequest(final UpdateTournamentRequest request) {
@@ -340,7 +355,9 @@ public class TournamentServiceImpl implements TournamentService {
         validateBracketSize(request.getBracketSize());
         validateTeamSize(request.getTeamSize());
         validateRegistrationWindow(
-                request.getRegistrationOpensAt(), request.getRegistrationClosesAt());
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
     }
 
     private void validateCommonFields(
