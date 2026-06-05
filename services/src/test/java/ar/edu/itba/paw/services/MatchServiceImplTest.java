@@ -68,6 +68,7 @@ public class MatchServiceImplTest {
         matchService =
                 new MatchServiceImpl(
                         matchDao,
+                        matchDataService,
                         imageService,
                         matchParticipantDao,
                         matchNotificationService,
@@ -94,6 +95,7 @@ public class MatchServiceImplTest {
         matchService =
                 new MatchServiceImpl(
                         matchDao,
+                        matchDataService,
                         imageService,
                         matchParticipantDao,
                         matchNotificationService,
@@ -109,7 +111,7 @@ public class MatchServiceImplTest {
         final Instant expectedStart = Instant.parse("2026-04-10T00:00:00Z");
         final Instant expectedEndExclusive = Instant.parse("2026-04-16T00:00:00Z");
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 "football",
                                 List.of(Sport.FOOTBALL),
                                 EventTimeFilter.ALL,
@@ -125,7 +127,7 @@ public class MatchServiceImplTest {
                                 10))
                 .thenReturn(List.of(match));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 "football",
                                 List.of(Sport.FOOTBALL),
                                 EventTimeFilter.ALL,
@@ -162,7 +164,7 @@ public class MatchServiceImplTest {
     public void testSearchPublicMatchesWithNullQuery() {
         final Match match = createTestMatch(1L, "Padel", "padel");
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -178,7 +180,7 @@ public class MatchServiceImplTest {
                                 12))
                 .thenReturn(List.of(match));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -214,7 +216,7 @@ public class MatchServiceImplTest {
         final Match footballMatch = createTestMatch(1L, "Football", "football");
         final Match tennisMatch = createTestMatch(2L, "Tennis", "tennis");
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.FOOTBALL, Sport.TENNIS, Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -230,7 +232,7 @@ public class MatchServiceImplTest {
                                 12))
                 .thenReturn(List.of(footballMatch, tennisMatch));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.FOOTBALL, Sport.TENNIS, Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -267,7 +269,7 @@ public class MatchServiceImplTest {
         final BigDecimal minPrice = new BigDecimal("10");
         final BigDecimal maxPrice = new BigDecimal("25");
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -283,7 +285,7 @@ public class MatchServiceImplTest {
                                 12))
                 .thenReturn(List.of(match));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -317,7 +319,7 @@ public class MatchServiceImplTest {
     public void testSearchPublicMatchesClampsOutOfRangePageToLastAvailablePage() {
         final Match match = createTestMatch(4L, "Last Page Match", "padel");
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -328,7 +330,7 @@ public class MatchServiceImplTest {
                                 ZoneId.of("UTC")))
                 .thenReturn(13);
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -1596,7 +1598,7 @@ public class MatchServiceImplTest {
 
         final List<Match> expectedMatches = List.of(invited, joined, hosted);
         Mockito.when(
-                        matchDao.findDashboardMatches(
+                        matchDataService.findDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.any(),
@@ -1614,7 +1616,7 @@ public class MatchServiceImplTest {
                                 Mockito.anyInt()))
                 .thenReturn(expectedMatches);
         Mockito.when(
-                        matchDao.countDashboardMatches(
+                        matchDataService.countDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.any(),
@@ -1662,7 +1664,7 @@ public class MatchServiceImplTest {
         final List<Match> expected = List.of(createTestMatch(2L, "M2", "football"));
 
         Mockito.when(
-                        matchDao.findDashboardMatches(
+                        matchDataService.findDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.eq(false),
@@ -1680,7 +1682,7 @@ public class MatchServiceImplTest {
                                 Mockito.eq(5))) // limit = 5
                 .thenReturn(expected);
         Mockito.when(
-                        matchDao.countDashboardMatches(
+                        matchDataService.countDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.eq(false),
@@ -2408,7 +2410,8 @@ public class MatchServiceImplTest {
     @Test
     public void testFindPublicMatchByIdDelegates() {
         final Match expectedMatch = createTestMatch(8L, "Late Football", "football");
-        Mockito.when(matchDao.findPublicMatchById(8L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(matchDataService.findPublicMatchById(8L))
+                .thenReturn(Optional.of(expectedMatch));
 
         final Optional<Match> result = matchService.findPublicMatchById(8L);
 
@@ -2419,7 +2422,7 @@ public class MatchServiceImplTest {
     @Test
     public void testFindMatchByIdDelegates() {
         final Match expectedMatch = createTestMatch(9L, "Private Football", "football");
-        Mockito.when(matchDao.findById(9L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(matchDataService.findById(9L)).thenReturn(Optional.of(expectedMatch));
 
         final Optional<Match> result = matchService.findMatchById(9L);
 
@@ -2446,7 +2449,7 @@ public class MatchServiceImplTest {
         final Match hosted = createTestMatch(10L, "Host Match", "padel");
         final User u = UserUtils.getUser(9L);
         Mockito.when(
-                        matchDao.findDashboardMatches(
+                        matchDataService.findDashboardMatches(
                                 u,
                                 true,
                                 true,
@@ -2464,7 +2467,7 @@ public class MatchServiceImplTest {
                                 9))
                 .thenReturn(List.of(hosted));
         Mockito.when(
-                        matchDao.countDashboardMatches(
+                        matchDataService.countDashboardMatches(
                                 u,
                                 true,
                                 true,
@@ -2548,7 +2551,7 @@ public class MatchServiceImplTest {
     @Test
     public void findSeriesOccurrencesPageDelegatesToDao() {
         final PaginatedResult<Match> expected = new PaginatedResult<>(List.of(), 0, 1, 5);
-        Mockito.when(matchDao.findSeriesOccurrencesPage(600L, 1, 5)).thenReturn(expected);
+        Mockito.when(matchDataService.findSeriesOccurrencesPage(600L, 1, 5)).thenReturn(expected);
 
         final PaginatedResult<Match> result = matchService.findSeriesOccurrencesPage(600L, 1, 5);
 

@@ -18,6 +18,7 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -50,6 +51,7 @@ public class MatchServiceImpl implements MatchService {
     private static final int MAX_RECURRING_OCCURRENCES = 52;
 
     private final MatchDao matchDao;
+    private final MatchDataService matchDataService;
     private final ImageService imageService;
     private final MatchParticipantDao matchParticipantDao;
     private final SecurityService securityService;
@@ -61,6 +63,7 @@ public class MatchServiceImpl implements MatchService {
     @Autowired
     public MatchServiceImpl(
             final MatchDao matchDao,
+            final MatchDataService matchDataService,
             final ImageService imageService,
             final MatchParticipantDao matchParticipantDao,
             final MatchNotificationService matchNotificationService,
@@ -69,6 +72,7 @@ public class MatchServiceImpl implements MatchService {
             final MessageSource messageSource,
             final Clock clock) {
         this.matchDao = matchDao;
+        this.matchDataService = matchDataService;
         this.imageService = imageService;
         this.matchParticipantDao = matchParticipantDao;
         this.matchNotificationService = matchNotificationService;
@@ -739,12 +743,12 @@ public class MatchServiceImpl implements MatchService {
 
     @Override
     public Optional<Match> findMatchById(final Long matchId) {
-        return matchDao.findById(matchId);
+        return matchDataService.findById(matchId);
     }
 
     @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
-        return matchDao.findPublicMatchById(matchId);
+        return matchDataService.findPublicMatchById(matchId);
     }
 
     @Override
@@ -752,7 +756,7 @@ public class MatchServiceImpl implements MatchService {
         if (seriesId == null) {
             return List.of();
         }
-        return matchDao.findSeriesOccurrences(seriesId);
+        return matchDataService.findSeriesOccurrences(seriesId);
     }
 
     @Override
@@ -762,7 +766,7 @@ public class MatchServiceImpl implements MatchService {
             final int safePageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
             return new PaginatedResult<>(List.of(), 0, 1, safePageSize);
         }
-        return matchDao.findSeriesOccurrencesPage(seriesId, page, pageSize);
+        return matchDataService.findSeriesOccurrencesPage(seriesId, page, pageSize);
     }
 
     @Override
@@ -793,7 +797,7 @@ public class MatchServiceImpl implements MatchService {
                 pageSize,
                 DEFAULT_PAGE_SIZE,
                 safePageSize ->
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 query,
                                 sport,
                                 EventTimeFilter.ALL,
@@ -803,7 +807,7 @@ public class MatchServiceImpl implements MatchService {
                                 maxPrice,
                                 timezone),
                 (offset, safePageSize) ->
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 query,
                                 sport,
                                 EventTimeFilter.ALL,
@@ -843,7 +847,7 @@ public class MatchServiceImpl implements MatchService {
         final int limit = pageSize;
 
         final List<Match> paginatedItems =
-                matchDao.findDashboardMatches(
+                matchDataService.findDashboardMatches(
                         user,
                         upcoming,
                         includeHosted != null && includeHosted,
@@ -861,7 +865,7 @@ public class MatchServiceImpl implements MatchService {
                         limit);
 
         final int totalCount =
-                matchDao.countDashboardMatches(
+                matchDataService.countDashboardMatches(
                         user,
                         upcoming,
                         includeHosted != null && includeHosted,
