@@ -17,6 +17,7 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -44,6 +45,7 @@ import org.springframework.context.MessageSource;
 public class MatchServiceImplTest {
 
     @Mock private MatchDao matchDao;
+    @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
@@ -70,7 +72,7 @@ public class MatchServiceImplTest {
                         matchParticipantDao,
                         matchNotificationService,
                         securityService,
-                        new RecurringMatchAsyncService(matchDao),
+                        new RecurringMatchAsyncService(matchDataService),
                         messageSource,
                         clock);
         matchService = Mockito.spy(matchService);
@@ -96,7 +98,7 @@ public class MatchServiceImplTest {
                         matchParticipantDao,
                         matchNotificationService,
                         securityService,
-                        new RecurringMatchAsyncService(matchDao),
+                        new RecurringMatchAsyncService(matchDataService),
                         messageSource,
                         clock);
     }
@@ -514,7 +516,7 @@ public class MatchServiceImplTest {
                                 1))
                 .thenReturn(firstOccurrence);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
@@ -534,7 +536,7 @@ public class MatchServiceImplTest {
                                 2))
                 .thenReturn(secondOccurrence);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
@@ -674,7 +676,7 @@ public class MatchServiceImplTest {
                                 1))
                 .thenReturn(firstOccurrence);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
