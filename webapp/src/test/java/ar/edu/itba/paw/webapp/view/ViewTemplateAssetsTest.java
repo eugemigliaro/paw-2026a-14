@@ -500,7 +500,7 @@ class ViewTemplateAssetsTest {
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(detailView.contains("eventPage.mapAvailable"));
+        assertTrue(detailView.contains("mapAvailable"));
         assertTrue(detailView.contains("data-event-map=\"true\""));
         assertTrue(detailView.contains("data-tile-url-template"));
         assertTrue(detailView.contains("data-latitude"));

@@ -4,7 +4,7 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
-<spring:message var="pageTitle" code="page.title.eventDetail" arguments="${eventPage.event.title}" />
+<spring:message var="pageTitle" code="page.title.eventDetail" arguments="${event.title}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -19,10 +19,10 @@
 				<section class="detail-top ${hostViewer ? 'detail-top--host-view' : ''}">
 					<div class="detail-top__main">
 						<section
-							class="event-hero ${eventPage.event.mediaClass} ${not empty eventPage.event.bannerImageUrl ? 'event-hero--with-image' : ''}"
+							class="event-hero ${event.mediaClass} ${not empty event.bannerImageUrl ? 'event-hero--with-image' : ''}"
 							>
-								<c:if test="${not empty eventPage.event.bannerImageUrl}">
-									<c:url var="eventHeroBannerSrc" value="${eventPage.event.bannerImageUrl}" />
+								<c:if test="${not empty event.bannerImageUrl}">
+									<c:url var="eventHeroBannerSrc" value="${event.bannerImageUrl}" />
 									<img
 										class="event-hero__image"
 										src="${eventHeroBannerSrc}"
@@ -32,8 +32,8 @@
 								/>
 							</c:if>
 							<div class="event-heading">
-								<span class="event-heading__badge"><c:out value="${eventPage.event.sport}" /></span>
-								<h1 class="event-heading__title"><c:out value="${eventPage.event.title}" /></h1>
+								<span class="event-heading__badge"><c:out value="${event.sport}" /></span>
+								<h1 class="event-heading__title"><c:out value="${event.title}" /></h1>
 							</div>
 						</section>
 
@@ -49,7 +49,7 @@
 								</div>
 							</div>
 							<div class="detail-stack">
-								<c:forEach var="paragraph" items="${eventPage.aboutParagraphs}">
+								<c:forEach var="paragraph" items="${aboutParagraphs}">
 									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
 								</c:forEach>
 							</div>
@@ -258,7 +258,7 @@
 										<spring:message code="event.detail.whosJoining" />
 									</h2>
 								</div>
-								<span class="detail-section__meta"><c:out value="${eventPage.participantCountLabel}" /></span>
+								<span class="detail-section__meta"><c:out value="${participantCountLabel}" /></span>
 							</div>
 							<c:if test="${hostActionTarget eq 'participants' && not empty hostActionErrorNotice}">
 								<p class="booking-panel__notice booking-panel__notice--error">
@@ -267,7 +267,7 @@
 							</c:if>
 
 							<c:choose>
-								<c:when test="${empty eventPage.participants}">
+								<c:when test="${empty participants}">
 									<div class="panel participant-empty-state">
 										<span class="participant-empty-state__icon" aria-hidden="true">
 											<icon:noParticipants fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -276,13 +276,13 @@
 											<spring:message code="event.detail.noPlayers" />
 										</p>
 										<p class="participant-empty-state__copy">
-											<c:out value="${eventPage.participantsEmptyState}" />
+											<c:out value="${participantsEmptyState}" />
 										</p>
 									</div>
 								</c:when>
 								<c:otherwise>
 									<ul class="participant-list" aria-label="${participantsAria}">
-										<c:forEach var="participant" items="${eventPage.participants}">
+										<c:forEach var="participant" items="${participants}">
 											<li class="participant-list__item ${not empty participant.removeUrl ? 'participant-list__item--managed' : ''}">
 												<c:url var="participantProfileImageSrc" value="${participant.profileImageUrl}" />
 												<img
@@ -339,9 +339,9 @@
 									<c:url var="hostSeriesEditHref" value="${hostSeriesEditPath}" />
 									<c:url var="hostCancelAction" value="${hostCancelPath}" />
 									<c:url var="hostSeriesCancelAction" value="${hostSeriesCancelPath}" />
-									<div class="host-action-card ${not empty eventPage.occurrences ? 'host-action-card--recurring' : ''} ${isInviteOnly && empty eventPage.occurrences ? 'host-action-card--three' : ''}">
+									<div class="host-action-card ${not empty occurrences ? 'host-action-card--recurring' : ''} ${isInviteOnly && empty occurrences ? 'host-action-card--three' : ''}">
 										<c:choose>
-											<c:when test="${not empty eventPage.occurrences}">
+											<c:when test="${not empty occurrences}">
 												<spring:message var="hostEditOccurrenceLabel" code="event.host.action.editOccurrence" />
 												<spring:message var="hostEditSeriesLabel" code="event.host.action.editSeries" />
 												<spring:message var="hostCancelOccurrenceLabel" code="event.host.action.cancelOccurrence" />
@@ -466,7 +466,7 @@
 												</span>
 												<spring:message code="event.booking.reserveSpot" />
 											</dt>
-											<dd><c:out value="${eventPage.bookingPrice}" /></dd>
+											<dd><c:out value="${bookingPrice}" /></dd>
 										</div>
 									</dl>
 								</article>
@@ -480,7 +480,7 @@
 												</span>
 												<spring:message code="event.booking.date" />
 											</dt>
-											<dd><c:out value="${eventPage.bookingDetails[0].value}" /></dd>
+											<dd><c:out value="${bookingDetails[0].value}" /></dd>
 										</div>
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
@@ -489,7 +489,7 @@
 												</span>
 												<spring:message code="event.booking.time" />
 											</dt>
-											<dd><c:out value="${eventPage.bookingDetails[1].value}" /></dd>
+											<dd><c:out value="${bookingDetails[1].value}" /></dd>
 										</div>
 									</dl>
 								</article>
@@ -503,27 +503,27 @@
 												</span>
 												<spring:message code="event.booking.venue" />
 											</dt>
-											<dd class="event-info-panel__value--truncate"><c:out value="${eventPage.bookingDetails[2].value}" /></dd>
+											<dd class="event-info-panel__value--truncate"><c:out value="${bookingDetails[2].value}" /></dd>
 										</div>
 									</dl>
 								</article>
-								<c:if test="${eventPage.mapAvailable}">
+								<c:if test="${mapAvailable}">
 									<spring:message var="eventMapAria" code="event.detail.locationMap.aria" />
 									<c:url var="appRootUrl" value="/" />
 									<c:set var="contextAwareMapTileUrlTemplate"
-										value="${appRootUrl}${fn:substring(eventPage.mapTileUrlTemplate, 1, fn:length(eventPage.mapTileUrlTemplate))}" />
+										value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
 									<div
 										class="event-detail-map"
 										data-event-map="true"
 										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
-										data-attribution="${eventPage.mapAttribution}"
-										data-latitude="${eventPage.mapLatitude}"
-										data-longitude="${eventPage.mapLongitude}"
-										data-zoom="${eventPage.mapZoom}"
+										data-attribution="${mapAttribution}"
+										data-latitude="${mapLatitude}"
+										data-longitude="${mapLongitude}"
+										data-zoom="${mapZoom}"
 										role="img"
 										aria-label="${eventMapAria}">
-										<c:if test="${not empty eventPage.mapAttribution}">
-											<p class="event-detail-map__attribution"><c:out value="${eventPage.mapAttribution}" /></p>
+										<c:if test="${not empty mapAttribution}">
+											<p class="event-detail-map__attribution"><c:out value="${mapAttribution}" /></p>
 										</c:if>
 									</div>
 								</c:if>
@@ -538,16 +538,16 @@
 												<spring:message code="event.detail.hostedBy" />
 											</dt>
 											<dd>
-												<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
+												<c:url var="hostProfileImageSrc" value="${hostProfileImageUrl}" />
 												<span class="event-info-panel__host">
 													<img class="event-info-panel__host-avatar" src="${hostProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
 													<c:choose>
-														<c:when test="${not empty eventPage.hostProfileHref}">
-															<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
-															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${eventPage.hostLabel}" /></a>
+														<c:when test="${not empty hostProfileHref}">
+															<c:url var="hostProfileHref" value="${hostProfileHref}" />
+															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${hostLabel}" /></a>
 														</c:when>
 														<c:otherwise>
-															<span class="event-info-panel__host-name"><c:out value="${eventPage.hostLabel}" /></span>
+															<span class="event-info-panel__host-name"><c:out value="${hostLabel}" /></span>
 														</c:otherwise>
 													</c:choose>
 												</span>
@@ -566,8 +566,8 @@
 												<spring:message code="event.booking.availability" />
 											</dt>
 											<dd>
-												<c:out value="${eventPage.availabilityLabel}" /><br />
-												<c:out value="${eventPage.participantCountLabel}" />
+												<c:out value="${availabilityLabel}" /><br />
+												<c:out value="${participantCountLabel}" />
 											</dd>
 										</div>
 									</dl>
@@ -577,7 +577,7 @@
 									<c:if test="${reservationCancelled}">
 										<p class="booking-panel__notice booking-panel__notice--success">
 											<c:choose>
-												<c:when test="${not empty eventPage.occurrences}">
+												<c:when test="${not empty occurrences}">
 													<spring:message code="event.booking.occurrenceCancelled" />
 												</c:when>
 												<c:otherwise>
@@ -624,7 +624,7 @@
 												<c:if test="${reservationCancellationEnabled}">
 													<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
 													<c:choose>
-														<c:when test="${not empty eventPage.occurrences}">
+														<c:when test="${not empty occurrences}">
 															<spring:message var="leavingReservationLabel" code="event.booking.leavingOccurrence" />
 															<spring:message var="leaveReservationLabel" code="event.booking.leaveOccurrence" />
 														</c:when>
@@ -654,7 +654,7 @@
 														<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
 													</c:when>
 													<c:otherwise>
-														<ui:button label="${eventPage.ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+														<ui:button label="${ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
 														<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 													</c:otherwise>
 												</c:choose>
@@ -678,7 +678,7 @@
 												<form method="post" action="${joinRequestAction}" data-submit-guard="true" data-submit-loading-label="${requestingLabel}" class="booking-panel__request-form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<c:choose>
-														<c:when test="${not empty eventPage.occurrences}">
+														<c:when test="${not empty occurrences}">
 															<spring:message var="requestToJoinLabel" code="event.joinRequest.requestThisOccurrence" />
 														</c:when>
 														<c:otherwise>
@@ -693,7 +693,7 @@
 												<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
 												<form method="post" action="${reservationRequestAction}" data-submit-guard="true" data-submit-loading-label="${joiningLabel}" class="booking-panel__request-form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-													<ui:button label="${eventPage.ctaLabel}" type="submit" fullWidth="${true}" />
+													<ui:button label="${ctaLabel}" type="submit" fullWidth="${true}" />
 												</form>
 												<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 											</c:when>
@@ -728,7 +728,7 @@
 												<p class="booking-panel__note"><spring:message code="event.invite.note" /></p>
 											</c:when>
 											<c:otherwise>
-												<ui:button label="${eventPage.ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+												<ui:button label="${ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
 												<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 											</c:otherwise>
 										</c:choose>
@@ -813,7 +813,7 @@
 										</form>
 									</c:if>
 									<hr class="booking-panel__divider" />
-									<c:url var="hostReportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+									<c:url var="hostReportMatchHref" value="/reports/matches/${event.id}" />
 									<spring:message var="hostReportMatchLabel" code="moderation.report.match.menu" />
 									<ui:button label="${hostReportMatchLabel}" href="${hostReportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
 								</article>
@@ -828,7 +828,7 @@
 												</span>
 												<spring:message code="event.booking.reserveSpot" />
 											</dt>
-											<dd><c:out value="${eventPage.bookingPrice}" /></dd>
+											<dd><c:out value="${bookingPrice}" /></dd>
 										</div>
 									</dl>
 								</article>
@@ -842,7 +842,7 @@
 												</span>
 												<spring:message code="event.booking.date" />
 											</dt>
-											<dd><c:out value="${eventPage.bookingDetails[0].value}" /></dd>
+											<dd><c:out value="${bookingDetails[0].value}" /></dd>
 										</div>
 										<div class="booking-panel__detail-row event-info-panel__row">
 											<dt>
@@ -851,7 +851,7 @@
 												</span>
 												<spring:message code="event.booking.time" />
 											</dt>
-											<dd><c:out value="${eventPage.bookingDetails[1].value}" /></dd>
+											<dd><c:out value="${bookingDetails[1].value}" /></dd>
 										</div>
 									</dl>
 								</article>
@@ -865,27 +865,27 @@
 												</span>
 												<spring:message code="event.booking.venue" />
 											</dt>
-											<dd class="event-info-panel__value--truncate"><c:out value="${eventPage.bookingDetails[2].value}" /></dd>
+											<dd class="event-info-panel__value--truncate"><c:out value="${bookingDetails[2].value}" /></dd>
 										</div>
 									</dl>
 								</article>
-								<c:if test="${eventPage.mapAvailable}">
+								<c:if test="${mapAvailable}">
 									<spring:message var="eventMapAria" code="event.detail.locationMap.aria" />
 									<c:url var="appRootUrl" value="/" />
 									<c:set var="contextAwareMapTileUrlTemplate"
-										value="${appRootUrl}${fn:substring(eventPage.mapTileUrlTemplate, 1, fn:length(eventPage.mapTileUrlTemplate))}" />
+										value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
 									<div
 										class="event-detail-map"
 										data-event-map="true"
 										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
-										data-attribution="${eventPage.mapAttribution}"
-										data-latitude="${eventPage.mapLatitude}"
-										data-longitude="${eventPage.mapLongitude}"
-										data-zoom="${eventPage.mapZoom}"
+										data-attribution="${mapAttribution}"
+										data-latitude="${mapLatitude}"
+										data-longitude="${mapLongitude}"
+										data-zoom="${mapZoom}"
 										role="img"
 										aria-label="${eventMapAria}">
-										<c:if test="${not empty eventPage.mapAttribution}">
-											<p class="event-detail-map__attribution"><c:out value="${eventPage.mapAttribution}" /></p>
+										<c:if test="${not empty mapAttribution}">
+											<p class="event-detail-map__attribution"><c:out value="${mapAttribution}" /></p>
 										</c:if>
 									</div>
 								</c:if>
@@ -900,16 +900,16 @@
 												<spring:message code="event.detail.hostedBy" />
 											</dt>
 											<dd>
-												<c:url var="hostProfileImageSrc" value="${eventPage.hostProfileImageUrl}" />
+												<c:url var="hostProfileImageSrc" value="${hostProfileImageUrl}" />
 												<span class="event-info-panel__host">
 													<img class="event-info-panel__host-avatar" src="${hostProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
 													<c:choose>
-														<c:when test="${not empty eventPage.hostProfileHref}">
-															<c:url var="hostProfileHref" value="${eventPage.hostProfileHref}" />
-															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${eventPage.hostLabel}" /></a>
+														<c:when test="${not empty hostProfileHref}">
+															<c:url var="hostProfileHref" value="${hostProfileHref}" />
+															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${hostLabel}" /></a>
 														</c:when>
 														<c:otherwise>
-															<span class="event-info-panel__host-name"><c:out value="${eventPage.hostLabel}" /></span>
+															<span class="event-info-panel__host-name"><c:out value="${hostLabel}" /></span>
 														</c:otherwise>
 													</c:choose>
 												</span>
@@ -928,8 +928,8 @@
 												<spring:message code="event.booking.availability" />
 											</dt>
 											<dd>
-												<c:out value="${eventPage.availabilityLabel}" /><br />
-												<c:out value="${eventPage.participantCountLabel}" />
+												<c:out value="${availabilityLabel}" /><br />
+												<c:out value="${participantCountLabel}" />
 											</dd>
 										</div>
 									</dl>
@@ -939,7 +939,7 @@
 									<c:if test="${reservationCancelled}">
 										<p class="booking-panel__notice booking-panel__notice--info">
 											<c:choose>
-												<c:when test="${not empty eventPage.occurrences}">
+												<c:when test="${not empty occurrences}">
 													<spring:message code="event.booking.occurrenceCancelled" />
 												</c:when>
 												<c:otherwise>
@@ -987,7 +987,7 @@
 												<c:if test="${reservationCancellationEnabled}">
 													<c:url var="reservationCancelAction" value="${reservationCancelPath}" />
 													<c:choose>
-														<c:when test="${not empty eventPage.occurrences}">
+														<c:when test="${not empty occurrences}">
 															<spring:message var="leavingReservationLabel" code="event.booking.leavingOccurrence" />
 															<spring:message var="leaveReservationLabel" code="event.booking.leaveOccurrence" />
 														</c:when>
@@ -1017,7 +1017,7 @@
 														<p class="booking-panel__note"><spring:message code="event.joinRequest.inviteOnlyNote" /></p>
 													</c:when>
 													<c:otherwise>
-														<ui:button label="${eventPage.ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+														<ui:button label="${ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
 														<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 													</c:otherwise>
 												</c:choose>
@@ -1041,7 +1041,7 @@
 												<form method="post" action="${joinRequestAction}" data-submit-guard="true" data-submit-loading-label="${requestingLabel}" class="booking-panel__request-form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<c:choose>
-														<c:when test="${not empty eventPage.occurrences}">
+														<c:when test="${not empty occurrences}">
 															<spring:message var="requestToJoinLabel" code="event.joinRequest.requestThisOccurrence" />
 														</c:when>
 														<c:otherwise>
@@ -1056,7 +1056,7 @@
 												<c:url var="reservationRequestAction" value="${reservationRequestPath}" />
 												<form method="post" action="${reservationRequestAction}" data-submit-guard="true" data-submit-loading-label="${joiningLabel}" class="booking-panel__request-form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-													<ui:button label="${eventPage.ctaLabel}" type="submit" fullWidth="${true}" />
+													<ui:button label="${ctaLabel}" type="submit" fullWidth="${true}" />
 												</form>
 												<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 											</c:when>
@@ -1091,7 +1091,7 @@
 												<p class="booking-panel__note"><spring:message code="event.invite.note" /></p>
 											</c:when>
 											<c:otherwise>
-												<ui:button label="${eventPage.ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+												<ui:button label="${ctaLabel}" type="button" fullWidth="${true}" disabled="${true}" />
 												<p class="booking-panel__note"><spring:message code="event.booking.note" /></p>
 											</c:otherwise>
 										</c:choose>
@@ -1177,7 +1177,7 @@
 									</c:if>
 									<c:if test="${not empty pageContext.request.userPrincipal}">
 										<hr class="booking-panel__divider" />
-										<c:url var="reportMatchHref" value="/reports/matches/${eventPage.event.id}" />
+										<c:url var="reportMatchHref" value="/reports/matches/${event.id}" />
 										<spring:message var="reportMatchLabel" code="moderation.report.match.menu" />
 										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
 									</c:if>
@@ -1188,7 +1188,7 @@
 					</aside>
 				</section>
 
-				<c:if test="${not empty eventPage.occurrences}">
+				<c:if test="${not empty occurrences}">
 					<section class="detail-layout">
 						<div class="detail-layout__main">
 							<section class="panel detail-section recurrence-schedule" aria-labelledby="recurrence-schedule-title">
@@ -1201,7 +1201,7 @@
 									</div>
 								</div>
 								<ul id="recurrence-schedule-list" class="recurrence-schedule__list">
-									<c:forEach var="occurrence" items="${eventPage.occurrences}">
+									<c:forEach var="occurrence" items="${occurrences}">
 										<li class="recurrence-schedule__item ${occurrence.current ? 'recurrence-schedule__item--current' : ''}">
 											<div class="recurrence-schedule__date">
 												<c:choose>
@@ -1317,7 +1317,7 @@
 					<div class="event-grid">
 						<c:forEach
 							var="event"
-							items="${eventPage.nearbyEvents}"
+							items="${nearbyEvents}"
 						>
 							<c:url var="nearbyCardHref" value="${event.href}" />
 							<ui:card

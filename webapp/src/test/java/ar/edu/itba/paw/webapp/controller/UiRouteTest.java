@@ -1773,67 +1773,45 @@ class UiRouteTest {
                 .andExpect(model().attribute("reservationRequiresLogin", true))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "aboutParagraphs",
-                                                Matchers.contains("Friendly\n doubles session"))))
+                                        "aboutParagraphs",
+                                        Matchers.contains("Friendly\n doubles session")))
+                .andExpect(model().attribute("hostProfileHref", Matchers.is("/users/user7")))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "hostProfileHref", Matchers.is("/users/user7"))))
+                                        "hostProfileImageUrl",
+                                        Matchers.is("/assets/default-profile-avatar.svg")))
+                .andExpect(model().attribute("mapAvailable", Matchers.is(true)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "hostProfileImageUrl",
-                                                Matchers.is("/assets/default-profile-avatar.svg"))))
+                                        "mapTileUrlTemplate",
+                                        Matchers.is("/assets/tiles/{z}/{x}/{y}.png")))
+                .andExpect(model().attribute("mapLatitude", Matchers.closeTo(-34.61, 0.000001)))
+                .andExpect(model().attribute("mapLongitude", Matchers.closeTo(-58.38, 0.000001)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.allOf(
-                                                Matchers.hasProperty(
-                                                        "mapAvailable", Matchers.is(true)),
-                                                Matchers.hasProperty(
-                                                        "mapTileUrlTemplate",
-                                                        Matchers.is(
-                                                                "/assets/tiles/{z}/{x}/{y}.png")),
-                                                Matchers.hasProperty(
-                                                        "mapLatitude",
-                                                        Matchers.closeTo(-34.61, 0.000001)),
-                                                Matchers.hasProperty(
-                                                        "mapLongitude",
-                                                        Matchers.closeTo(-58.38, 0.000001)))))
-                .andExpect(
-                        model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "participants",
-                                                Matchers.contains(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "profileHref",
-                                                                        Matchers.is(
-                                                                                "/users/user2")),
-                                                                Matchers.hasProperty(
-                                                                        "profileImageUrl",
-                                                                        Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg")),
-                                                                Matchers.hasProperty(
-                                                                        "removeUrl",
-                                                                        Matchers.nullValue())),
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "profileHref",
-                                                                        Matchers.is(
-                                                                                "/users/user3")),
-                                                                Matchers.hasProperty(
-                                                                        "profileImageUrl",
-                                                                        Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg")),
-                                                                Matchers.hasProperty(
-                                                                        "removeUrl",
-                                                                        Matchers.nullValue()))))));
+                                        "participants",
+                                        Matchers.contains(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "profileHref",
+                                                                Matchers.is("/users/user2")),
+                                                        Matchers.hasProperty(
+                                                                "profileImageUrl",
+                                                                Matchers.is(
+                                                                        "/assets/default-profile-avatar.svg")),
+                                                        Matchers.hasProperty(
+                                                                "removeUrl", Matchers.nullValue())),
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "profileHref",
+                                                                Matchers.is("/users/user3")),
+                                                        Matchers.hasProperty(
+                                                                "profileImageUrl",
+                                                                Matchers.is(
+                                                                        "/assets/default-profile-avatar.svg")),
+                                                        Matchers.hasProperty(
+                                                                "removeUrl",
+                                                                Matchers.nullValue())))));
     }
 
     @Test
@@ -1846,17 +1824,15 @@ class UiRouteTest {
                 .andExpect(model().attribute("reservationRequiresLogin", false))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "participants",
-                                                Matchers.contains(
-                                                        Matchers.hasProperty(
-                                                                "reviewHref", Matchers.nullValue()),
-                                                        Matchers.hasProperty(
-                                                                "reviewHref",
-                                                                Matchers.is(
-                                                                        "/users/"
-                                                                                + "user3?reviewForm=open#reviews"))))));
+                                        "participants",
+                                        Matchers.contains(
+                                                Matchers.hasProperty(
+                                                        "reviewHref", Matchers.nullValue()),
+                                                Matchers.hasProperty(
+                                                        "reviewHref",
+                                                        Matchers.is(
+                                                                "/users/"
+                                                                        + "user3?reviewForm=open#reviews")))));
     }
 
     @Test
@@ -1913,42 +1889,30 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("occurrences", Matchers.hasSize(5)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(5))))
+                                        "occurrences",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "statusLabel", Matchers.is("Completed")))))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
+                                        "occurrences",
+                                        Matchers.hasItem(
+                                                Matchers.allOf(
                                                         Matchers.hasProperty(
                                                                 "statusLabel",
-                                                                Matchers.is("Completed"))))))
-                .andExpect(
-                        model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "statusLabel",
-                                                                        Matchers.is("In progress")),
-                                                                Matchers.hasProperty(
-                                                                        "statusTone",
-                                                                        Matchers.is(
-                                                                                "in-progress")))))))
-                .andExpect(
-                        model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
+                                                                Matchers.is("In progress")),
                                                         Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("Full"))))))
+                                                                "statusTone",
+                                                                Matchers.is("in-progress"))))))
+                .andExpect(
+                        model().attribute(
+                                        "occurrences",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "statusLabel", Matchers.is("Full")))))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(
                         model().attribute(
@@ -1958,23 +1922,17 @@ class UiRouteTest {
         // Page 2 shows the 6th occurrence: cancelled
         mockMvc.perform(get("/matches/46").param("seriesPage", "2"))
                 .andExpect(status().isOk())
+                .andExpect(model().attribute("occurrences", Matchers.hasSize(1)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(1))))
-                .andExpect(
-                        model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "statusLabel",
-                                                                        Matchers.is("Cancelled")),
-                                                                Matchers.hasProperty(
-                                                                        "href",
-                                                                        Matchers.nullValue()))))));
+                                        "occurrences",
+                                        Matchers.hasItem(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("Cancelled")),
+                                                        Matchers.hasProperty(
+                                                                "href", Matchers.nullValue())))));
     }
 
     @Test
@@ -1983,13 +1941,10 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("En curso"))))));
+                                        "occurrences",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "statusLabel", Matchers.is("En curso")))));
     }
 
     @Test
@@ -2073,18 +2028,15 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "statusLabel",
-                                                                        Matchers.is("Cancelled")),
-                                                                Matchers.hasProperty(
-                                                                        "href",
-                                                                        Matchers.is(
-                                                                                "/matches/50")))))));
+                                        "occurrences",
+                                        Matchers.hasItem(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "statusLabel",
+                                                                Matchers.is("Cancelled")),
+                                                        Matchers.hasProperty(
+                                                                "href",
+                                                                Matchers.is("/matches/50"))))));
     }
 
     @Test
@@ -2174,18 +2126,16 @@ class UiRouteTest {
                 .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "participants",
-                                                Matchers.contains(
-                                                        Matchers.hasProperty(
-                                                                "removeUrl",
-                                                                Matchers.is(
-                                                                        "/host/matches/42/participants/2/remove")),
-                                                        Matchers.hasProperty(
-                                                                "removeUrl",
-                                                                Matchers.is(
-                                                                        "/host/matches/42/participants/3/remove"))))));
+                                        "participants",
+                                        Matchers.contains(
+                                                Matchers.hasProperty(
+                                                        "removeUrl",
+                                                        Matchers.is(
+                                                                "/host/matches/42/participants/2/remove")),
+                                                Matchers.hasProperty(
+                                                        "removeUrl",
+                                                        Matchers.is(
+                                                                "/host/matches/42/participants/3/remove")))));
     }
 
     @Test

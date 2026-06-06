@@ -21,7 +21,6 @@ import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventDetailPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventOccurrenceViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.InviteParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ParticipantViewModel;
@@ -208,15 +207,14 @@ final class EventPageSupport {
         mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("isInviteOnly", isInviteOnly);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
-        mav.addObject(
-                "eventPage",
-                buildRealEventPage(
-                        match,
-                        confirmedParticipants,
-                        seriesOccurrences,
-                        currentUser,
-                        locale,
-                        hostCanManageParticipants));
+        addRealEventPageAttributes(
+                mav,
+                match,
+                confirmedParticipants,
+                seriesOccurrences,
+                currentUser,
+                locale,
+                hostCanManageParticipants);
         if (match.isRecurringOccurrence()) {
             mav.addObject("recurrenceHasPreviousPage", seriesOccurrencesPage.hasPrevious());
             mav.addObject("recurrenceHasNextPage", seriesOccurrencesPage.hasNext());
@@ -333,7 +331,8 @@ final class EventPageSupport {
         return mav;
     }
 
-    private EventDetailPageViewModel buildRealEventPage(
+    private void addRealEventPageAttributes(
+            final ModelAndView mav,
             final Match match,
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
@@ -347,7 +346,8 @@ final class EventPageSupport {
                         : Optional.ofNullable(
                                         playerReviewService.findReviewableUserIds(currentUser))
                                 .orElseGet(Set::of);
-        return new EventDetailPageViewModel(
+        mav.addObject(
+                "event",
                 toCard(
                         match,
                         locale,
@@ -355,38 +355,48 @@ final class EventPageSupport {
                         buildAvailabilityLabel(match, locale),
                         messageSource,
                         matchParticipationService,
-                        matchReservationService),
-                null,
-                null,
+                        matchReservationService));
+        mav.addObject(
+                "hostLabel",
                 host.getUsername() != null
                         ? host.getUsername()
                         : messageSource.getMessage(
                                 "event.detail.unknownHost",
                                 new Object[] {match.getHost().getId()},
-                                locale),
-                profileHrefFor(host),
-                profileUrlFor(host),
+                                locale));
+        mav.addObject("hostProfileHref", profileHrefFor(host));
+        mav.addObject("hostProfileImageUrl", profileUrlFor(host));
+        mav.addObject(
+                "participants",
                 toParticipantViewModels(
                         confirmedParticipants,
                         match.getId(),
                         currentUser,
                         reviewableUserIds,
-                        includeHostParticipantActions),
-                buildParticipantCountLabel(confirmedParticipants.size(), locale),
-                messageSource.getMessage("event.detail.noPlayersHint", null, locale),
-                buildAboutParagraphs(match, locale),
-                priceLabel(match.getPricePerPlayer(), locale, messageSource),
-                buildBookingDetails(match, locale),
-                buildAvailabilityLabel(match, locale),
-                messageSource.getMessage("event.booking.cta", null, locale),
-                List.of(),
-                toOccurrenceViewModels(match, seriesOccurrences, currentUser, locale),
-                mapPickerEnabled && !mapTileUrlTemplate.isBlank() && match.hasCoordinates(),
-                match.getLatitude(),
-                match.getLongitude(),
-                mapTileUrlTemplate,
-                mapAttribution,
-                mapDefaultZoom);
+                        includeHostParticipantActions));
+        mav.addObject(
+                "participantCountLabel",
+                buildParticipantCountLabel(confirmedParticipants.size(), locale));
+        mav.addObject(
+                "participantsEmptyState",
+                messageSource.getMessage("event.detail.noPlayersHint", null, locale));
+        mav.addObject("aboutParagraphs", buildAboutParagraphs(match, locale));
+        mav.addObject("bookingPrice", priceLabel(match.getPricePerPlayer(), locale, messageSource));
+        mav.addObject("bookingDetails", buildBookingDetails(match, locale));
+        mav.addObject("availabilityLabel", buildAvailabilityLabel(match, locale));
+        mav.addObject("ctaLabel", messageSource.getMessage("event.booking.cta", null, locale));
+        mav.addObject("nearbyEvents", List.of());
+        mav.addObject(
+                "occurrences",
+                toOccurrenceViewModels(match, seriesOccurrences, currentUser, locale));
+        mav.addObject(
+                "mapAvailable",
+                mapPickerEnabled && !mapTileUrlTemplate.isBlank() && match.hasCoordinates());
+        mav.addObject("mapLatitude", match.getLatitude());
+        mav.addObject("mapLongitude", match.getLongitude());
+        mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
+        mav.addObject("mapAttribution", mapAttribution);
+        mav.addObject("mapZoom", mapDefaultZoom);
     }
 
     private static String buildSeriesScheduleUrl(final Long eventId, final int page) {
