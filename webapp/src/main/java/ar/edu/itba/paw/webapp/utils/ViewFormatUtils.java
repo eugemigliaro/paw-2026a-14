@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.time.temporal.TemporalAccessor;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
 
@@ -22,6 +23,14 @@ public final class ViewFormatUtils {
                         .withLocale(resolvedLocale(locale))
                         .withZone(zoneId)
                         .format(instant);
+    }
+
+    public static String formatDate(final TemporalAccessor temporal, final Locale locale) {
+        return temporal == null ? "" : dateFormatter(locale).format(temporal);
+    }
+
+    public static String formatDateTime(final TemporalAccessor temporal, final Locale locale) {
+        return temporal == null ? "" : scheduleFormatter(locale).format(temporal);
     }
 
     public static String priceLabel(

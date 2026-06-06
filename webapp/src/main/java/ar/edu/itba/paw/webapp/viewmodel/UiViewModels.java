@@ -1255,109 +1255,6 @@ public final class UiViewModels {
         }
     }
 
-    public static final class PublicProfilePageViewModel {
-        private final String username;
-        private final String name;
-        private final String lastName;
-        private final String email;
-        private final String phone;
-        private final String profileImageUrl;
-
-        public PublicProfilePageViewModel(
-                final String username,
-                final String name,
-                final String lastName,
-                final String email,
-                final String phone,
-                final String profileImageUrl) {
-            this.username = username;
-            this.name = name;
-            this.lastName = lastName;
-            this.email = email;
-            this.phone = phone;
-            this.profileImageUrl = profileImageUrl;
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getLastName() {
-            return lastName;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public String getPhone() {
-            return phone;
-        }
-
-        public String getProfileImageUrl() {
-            return profileImageUrl;
-        }
-    }
-
-    public static final class PlayerReviewViewModel {
-        private final Long reviewId;
-        private final String reviewerUsername;
-        private final String reviewerProfileHref;
-        private final String reaction;
-        private final String reactionLabel;
-        private final String comment;
-        private final String updatedAtLabel;
-
-        public PlayerReviewViewModel(
-                final Long reviewId,
-                final String reviewerUsername,
-                final String reviewerProfileHref,
-                final String reaction,
-                final String reactionLabel,
-                final String comment,
-                final String updatedAtLabel) {
-            this.reviewId = reviewId;
-            this.reviewerUsername = reviewerUsername;
-            this.reviewerProfileHref = reviewerProfileHref;
-            this.reaction = reaction;
-            this.reactionLabel = reactionLabel;
-            this.comment = comment;
-            this.updatedAtLabel = updatedAtLabel;
-        }
-
-        public Long getReviewId() {
-            return reviewId;
-        }
-
-        public String getReviewerUsername() {
-            return reviewerUsername;
-        }
-
-        public String getReviewerProfileHref() {
-            return reviewerProfileHref;
-        }
-
-        public String getReaction() {
-            return reaction;
-        }
-
-        public String getReactionLabel() {
-            return reactionLabel;
-        }
-
-        public String getComment() {
-            return comment;
-        }
-
-        public String getUpdatedAtLabel() {
-            return updatedAtLabel;
-        }
-    }
-
     public static final class ReportPageViewModel {
         private final String targetTypeCode;
         private final ReportUserViewModel user;
@@ -1517,24 +1414,6 @@ public final class UiViewModels {
 
         public String getPriceLabel() {
             return priceLabel;
-        }
-    }
-
-    public static final class SportRatingViewModel {
-        private final String sportLabel;
-        private final int elo;
-
-        public SportRatingViewModel(final String sportLabel, final int elo) {
-            this.sportLabel = sportLabel;
-            this.elo = elo;
-        }
-
-        public String getSportLabel() {
-            return sportLabel;
-        }
-
-        public int getElo() {
-            return elo;
         }
     }
 }

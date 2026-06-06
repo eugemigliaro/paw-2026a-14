@@ -1,8 +1,8 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <!DOCTYPE html>
@@ -172,12 +172,12 @@
 														<spring:message code="tournament.bracket.schedule.tbd" />
 													</c:when>
 													<c:when test="${empty match.scheduledEndsAt}">
-														<fmt:formatDate value="${match.scheduledStartsAtDateTime}" type="both" dateStyle="medium" timeStyle="medium" />
+														<c:out value="${tf:dateTime(match.scheduledStartsAtDateTime)}" />
 													</c:when>
 													<c:otherwise>
 														<spring:message code="tournament.bracket.schedule.range">
-															<spring:argument><fmt:formatDate value="${match.scheduledStartsAtDateTime}" type="both" dateStyle="medium" timeStyle="medium" /></spring:argument>
-															<spring:argument><fmt:formatDate value="${match.scheduledEndsAtDateTime}" type="both" dateStyle="medium" timeStyle="medium" /></spring:argument>
+															<spring:argument value="${tf:dateTime(match.scheduledStartsAtDateTime)}" />
+															<spring:argument value="${tf:dateTime(match.scheduledEndsAtDateTime)}" />
 														</spring:message>
 													</c:otherwise>
 												</c:choose>

@@ -23,7 +23,6 @@ import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConv
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -127,9 +126,9 @@ class PublicProfileControllerTest {
                         .andReturn();
 
         final List<?> reviews = (List<?>) result.getModelAndView().getModel().get("profileReviews");
-        final PlayerReviewViewModel firstReview = (PlayerReviewViewModel) reviews.getFirst();
-        Assertions.assertEquals("Unknown player", firstReview.getReviewerUsername());
-        Assertions.assertNull(firstReview.getReviewerProfileHref());
+        final PlayerReview firstReview = (PlayerReview) reviews.getFirst();
+        Assertions.assertSame(review, firstReview);
+        Assertions.assertNull(firstReview.getReviewer().getUsername());
     }
 
     @Test
