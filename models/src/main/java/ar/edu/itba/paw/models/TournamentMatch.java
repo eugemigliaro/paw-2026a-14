@@ -194,6 +194,10 @@ public class TournamentMatch {
         return latitude != null && longitude != null;
     }
 
+    public boolean isRecordable() {
+        return teamA != null && teamB != null && winnerTeam == null;
+    }
+
     public TournamentMatchStatus getStatus() {
         return status;
     }

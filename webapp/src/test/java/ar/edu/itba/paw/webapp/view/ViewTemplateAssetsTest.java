@@ -457,11 +457,11 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("tournament.host.closeRegistration"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.startsAt"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.endsAt"));
-        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabled"));
-        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabledMessage"));
+        assertTrue(detailView.contains("tournamentCapabilities.closeRegistrationDisabled"));
+        assertTrue(detailView.contains("tournamentCloseRegistrationDisabledMessage"));
         assertTrue(
                 detailView.contains(
-                        "variant=\"primary\" disabled=\"${tournamentPage.closeRegistrationDisabled}\""));
+                        "variant=\"primary\" disabled=\"${tournamentCapabilities.closeRegistrationDisabled}\""));
         assertTrue(detailView.contains("booking-panel__notice--info"));
         assertTrue(detailView.contains("variant=\"danger\""));
         assertTrue(

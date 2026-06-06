@@ -50,4 +50,6 @@ public interface TournamentService {
     Tournament update(long tournamentId, User actingUser, UpdateTournamentRequest request);
 
     Tournament cancel(long tournamentId, User actingUser, String reason);
+
+    TournamentViewerCapabilities viewerCapabilities(Tournament tournament, User viewer);
 }
