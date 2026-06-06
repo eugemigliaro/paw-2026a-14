@@ -6,8 +6,11 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventCategory;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
@@ -23,7 +26,6 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,7 +37,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 final class MatchDashboardPageSupport {
 
-    private static final String TYPE_TOURNAMENT = "tournament";
     private static final List<EventStatus> PLAYER_STATUS_OPTIONS =
             List.of(EventStatus.OPEN, EventStatus.COMPLETED, EventStatus.CANCELLED);
 
@@ -60,7 +61,9 @@ final class MatchDashboardPageSupport {
         final SearchForm searchForm = selection.searchForm();
         final EventType selectedType = searchForm.getType();
         final String selectedTypeStr = selectedType.getDbValue();
-        final String selectedFilter = searchForm.getFilter();
+        final EventFilter selectedFilter =
+                searchForm.getFilter() == null ? EventFilter.UPCOMING : searchForm.getFilter();
+        final String selectedFilterValue = selectedFilter.name();
         final String searchQuery = searchForm.getQ();
         final String sort = searchForm.getSort().getQueryValue();
         final String startDate =
@@ -69,13 +72,12 @@ final class MatchDashboardPageSupport {
                 searchForm.getEndDate() == null ? null : searchForm.getEndDate().toString();
         final BigDecimal minPrice = searchForm.getMinPrice();
         final BigDecimal maxPrice = searchForm.getMaxPrice();
-        final ZoneId timezone = selection.selectedTimezone();
-        final String timezoneValue = timezone.getId();
         final List<String> selectedStatusesStr = toDbValues(searchForm.getStatus());
         final List<String> selectedSportsStr = toDbValues(searchForm.getSport());
         final List<String> selectedVisibilityStr = toDbValues(searchForm.getVisibility());
-        final List<String> selectedCategories = searchForm.getCategory();
-        final DateRangeBounds dateBounds = dateRangeBounds(path, timezone);
+        final List<String> selectedCategories =
+                searchForm.getCategory().stream().map(EventCategory::getQueryValue).toList();
+        final DateRangeBounds dateBounds = dateRangeBounds(selectedFilter);
 
         mav.addObject("pageTitleCode", pageTitleCode);
         mav.addObject("listTitle", title);
@@ -91,7 +93,6 @@ final class MatchDashboardPageSupport {
         mav.addObject("selectedStatuses", selectedStatusesStr);
         mav.addObject("selectedVisibility", selectedVisibilityStr);
         mav.addObject("selectedCategories", selectedCategories);
-        mav.addObject("selectedTimezone", timezoneValue);
         mav.addObject("selectedMinPriceValue", formatNullablePriceValue(minPrice));
         mav.addObject("selectedMaxPriceValue", formatNullablePriceValue(maxPrice));
         mav.addObject("searchForm", searchForm);
@@ -101,14 +102,13 @@ final class MatchDashboardPageSupport {
                         path,
                         locale,
                         selectedType,
-                        selectedFilter,
+                        selectedFilterValue,
                         searchQuery,
                         sort,
                         startDate,
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezoneValue,
                         selectedStatusesStr,
                         selectedSportsStr,
                         selectedVisibilityStr,
@@ -122,7 +122,6 @@ final class MatchDashboardPageSupport {
                                         tournament ->
                                                 toCard(
                                                         tournament,
-                                                        timezone,
                                                         locale,
                                                         currentUser,
                                                         messageSource.getMessage(
@@ -139,7 +138,6 @@ final class MatchDashboardPageSupport {
                                         match ->
                                                 toCard(
                                                         match,
-                                                        timezone,
                                                         locale,
                                                         currentUser,
                                                         messageSource.getMessage(
@@ -164,14 +162,13 @@ final class MatchDashboardPageSupport {
                 buildPagination(
                         path,
                         selectedType,
-                        selectedFilter,
+                        selectedFilterValue,
                         searchQuery,
                         sort,
                         startDate,
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezoneValue,
                         selectedStatusesStr,
                         selectedSportsStr,
                         selectedVisibilityStr,
@@ -191,7 +188,6 @@ final class MatchDashboardPageSupport {
             final String selectedEndDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -213,7 +209,6 @@ final class MatchDashboardPageSupport {
                                     selectedEndDate,
                                     minPrice,
                                     maxPrice,
-                                    timezone,
                                     selectedStatuses,
                                     selectedSports,
                                     selectedVisibility,
@@ -234,7 +229,6 @@ final class MatchDashboardPageSupport {
                                 selectedEndDate,
                                 minPrice,
                                 maxPrice,
-                                timezone,
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
@@ -256,7 +250,6 @@ final class MatchDashboardPageSupport {
                                     selectedEndDate,
                                     minPrice,
                                     maxPrice,
-                                    timezone,
                                     selectedStatuses,
                                     selectedSports,
                                     selectedVisibility,
@@ -279,7 +272,6 @@ final class MatchDashboardPageSupport {
                                     selectedEndDate,
                                     minPrice,
                                     maxPrice,
-                                    timezone,
                                     selectedStatuses,
                                     selectedSports,
                                     selectedVisibility,
@@ -302,7 +294,6 @@ final class MatchDashboardPageSupport {
                                 selectedEndDate,
                                 minPrice,
                                 maxPrice,
-                                timezone,
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
@@ -320,7 +311,6 @@ final class MatchDashboardPageSupport {
                                 selectedEndDate,
                                 minPrice,
                                 maxPrice,
-                                timezone,
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
@@ -338,7 +328,6 @@ final class MatchDashboardPageSupport {
                                 selectedEndDate,
                                 minPrice,
                                 maxPrice,
-                                timezone,
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
@@ -370,7 +359,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -394,7 +382,6 @@ final class MatchDashboardPageSupport {
                                 endDate,
                                 minPrice,
                                 maxPrice,
-                                timezone,
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
@@ -412,7 +399,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -429,7 +415,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
@@ -450,7 +435,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -462,10 +446,10 @@ final class MatchDashboardPageSupport {
                 .equals(path)) { // TODO: this is a bit hacky, find a better way to determine which
             // params to include
             if (selectedType == EventType.TOURNAMENT) {
-                params.put("type", TYPE_TOURNAMENT);
+                params.put("type", EventType.TOURNAMENT.getDbValue());
             }
             if ("past".equalsIgnoreCase(selectedFilter)) {
-                params.put("filter", "past");
+                params.put("filter", EventFilter.PAST.name());
             }
         }
         addCommonQueryParams(
@@ -476,7 +460,6 @@ final class MatchDashboardPageSupport {
                 endDate,
                 minPrice,
                 maxPrice,
-                timezone,
                 selectedStatuses,
                 selectedSports,
                 selectedVisibility,
@@ -492,7 +475,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -514,9 +496,6 @@ final class MatchDashboardPageSupport {
         }
         if (maxPrice != null) {
             params.put("maxPrice", maxPrice.toPlainString());
-        }
-        if (timezone != null && !timezone.isBlank()) {
-            params.put("tz", timezone);
         }
 
         final String encodedStatuses =
@@ -550,7 +529,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -569,7 +547,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
@@ -589,7 +566,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> statuses,
             final List<String> sports,
             final List<String> visibility,
@@ -607,7 +583,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         statuses,
                         sports,
                         visibility,
@@ -627,7 +602,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -647,7 +621,6 @@ final class MatchDashboardPageSupport {
                                 endDate,
                                 minPrice,
                                 maxPrice,
-                                timezone,
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
@@ -668,7 +641,6 @@ final class MatchDashboardPageSupport {
                                 null,
                                 null,
                                 null,
-                                timezone,
                                 List.of(),
                                 selectedSports,
                                 List.of(),
@@ -689,7 +661,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -707,7 +678,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         List.of(),
                         selectedVisibility,
@@ -725,7 +695,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         toggleValue(selectedSports, "football"),
                         selectedVisibility,
@@ -743,7 +712,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         toggleValue(selectedSports, "tennis"),
                         selectedVisibility,
@@ -761,7 +729,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         toggleValue(selectedSports, "basketball"),
                         selectedVisibility,
@@ -779,7 +746,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         toggleValue(selectedSports, "padel"),
                         selectedVisibility,
@@ -797,7 +763,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         toggleValue(selectedSports, "other"),
                         selectedVisibility,
@@ -817,7 +782,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -837,7 +801,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         List.of(),
                         selectedSports,
                         selectedVisibility,
@@ -858,7 +821,6 @@ final class MatchDashboardPageSupport {
                             endDate,
                             minPrice,
                             maxPrice,
-                            timezone,
                             toggleValue(selectedStatuses, status),
                             selectedSports,
                             selectedVisibility,
@@ -881,7 +843,6 @@ final class MatchDashboardPageSupport {
             final String endDate,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
-            final String timezone,
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
@@ -899,7 +860,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
@@ -917,7 +877,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
@@ -935,7 +894,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
@@ -953,7 +911,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
@@ -971,7 +928,6 @@ final class MatchDashboardPageSupport {
                         endDate,
                         minPrice,
                         maxPrice,
-                        timezone,
                         selectedStatuses,
                         selectedSports,
                         selectedVisibility,
@@ -989,9 +945,9 @@ final class MatchDashboardPageSupport {
                 "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
-    private static DateRangeBounds dateRangeBounds(final String path, final ZoneId zoneId) {
-        final LocalDate today = LocalDate.now(zoneId);
-        if (path.endsWith("/finished") || path.endsWith("/past")) {
+    private static DateRangeBounds dateRangeBounds(final EventFilter selectedFilter) {
+        final LocalDate today = LocalDate.now(PlatformTime.ZONE);
+        if (selectedFilter == EventFilter.PAST) {
             return new DateRangeBounds(null, today.toString());
         }
         return new DateRangeBounds(today.toString(), null);

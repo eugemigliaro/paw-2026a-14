@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Test;
 class ViewTemplateAssetsTest {
 
     @Test
-    void sharedHeadLoadsTimezoneFieldScript() throws IOException {
+    void sharedHeadDoesNotLoadBrowserTimezoneScript() throws IOException {
         final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
 
-        assertTrue(head.contains("/js/timezone-field.js"));
+        assertFalse(head.contains("/js/timezone-field.js"));
         assertTrue(head.contains("/css/auth.css"));
         assertTrue(head.contains("/js/overflow-menu.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
@@ -26,11 +26,12 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void hostCreateMatchUsesSharedTimezoneScriptInsteadOfLegacyPageScript() throws IOException {
+    void hostCreateMatchUsesPlatformTimezoneInsteadOfBrowserTimezoneField() throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
         final String buttonTag = read("src/main/webapp/WEB-INF/tags/button.tag");
 
-        assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
+        assertFalse(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
+        assertFalse(hostCreateMatch.contains("name=\"tz\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
         assertTrue(
                 hostCreateMatch.contains(
@@ -104,10 +105,11 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void feedTimezoneInputsUseBrowserTimezoneFieldHook() throws IOException {
+    void feedDoesNotSubmitBrowserTimezone() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
 
-        assertEquals(3, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
+        assertEquals(0, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
+        assertFalse(feedIndex.contains("name=\"tz\""));
     }
 
     @Test
@@ -130,7 +132,7 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void feedClearAllResetsToPublicExploreWithoutPreservingFilters() throws IOException {
+    void feedClearAllKeepsEventTypeAndFilter() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
         final int clearAllIndex = feedIndex.indexOf("var=\"clearFiltersHref\"");
         final int clearAllLabelIndex = feedIndex.indexOf("var=\"clearAllLabel\"");
@@ -138,14 +140,39 @@ class ViewTemplateAssetsTest {
         assertTrue(clearAllIndex >= 0);
         assertTrue(clearAllLabelIndex > clearAllIndex);
         assertTrue(feedIndex.contains("<c:set var=\"feedPath\" value=\"/\" />"));
-        assertTrue(feedIndex.contains("<c:url var=\"clearFiltersHref\" value=\"${feedPath}\" />"));
-        assertFalse(
+        assertTrue(feedIndex.contains("<c:url var=\"clearFiltersHref\" value=\"${feedPath}\">"));
+        assertTrue(feedIndex.contains("<c:param name=\"type\" value=\"${selectedType}\" />"));
+        assertTrue(
                 feedIndex.contains(
-                        "<c:url var=\"clearFiltersHref\" value=\"${feedFormAction}\" />"));
+                        "<c:param name=\"filter\" value=\"${searchForm.filterName}\" />"));
         final String clearAllBlock = feedIndex.substring(clearAllIndex, clearAllLabelIndex);
         assertFalse(clearAllBlock.contains("name=\"sort\""));
         assertFalse(clearAllBlock.contains("name=\"startDate\""));
         assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"minPrice\""));
+        assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
+    }
+
+    @Test
+    void eventsClearAllKeepsEventTypeSortAndFilterState() throws IOException {
+        final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+        final int clearAllIndex = eventsList.indexOf("var=\"clearSearchHref\"");
+        final int clearAllLabelIndex = eventsList.indexOf("var=\"clearAllLabel\"");
+
+        assertTrue(clearAllIndex >= 0);
+        assertTrue(clearAllLabelIndex > clearAllIndex);
+        assertTrue(
+                eventsList.contains(
+                        "<c:url var=\"clearSearchHref\" value=\"${listControls.cleanSearchAction}\">"));
+        assertTrue(eventsList.contains("<c:param name=\"type\" value=\"${searchForm.type}\" />"));
+        assertTrue(
+                eventsList.contains(
+                        "<c:param name=\"filter\" value=\"${searchForm.filterName}\" />"));
+        final String clearAllBlock = eventsList.substring(clearAllIndex, clearAllLabelIndex);
+        assertFalse(clearAllBlock.contains("name=\"sort\""));
+        assertFalse(clearAllBlock.contains("name=\"startDate\""));
+        assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"tz\""));
         assertFalse(clearAllBlock.contains("name=\"minPrice\""));
         assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
     }
@@ -166,6 +193,7 @@ class ViewTemplateAssetsTest {
         assertFalse(feedIndex.contains("data-filter-name=\"${eventTypeFilterTitle}\""));
         assertTrue(feedCss.contains(".feed-event-type-toggle"));
         assertTrue(feedCss.contains(".feed-event-type-toggle .events-toggle-icon"));
+        assertTrue(eventsToggleScript.contains("toUpperCase()"));
         assertTrue(eventsToggleScript.contains("optionCount === 2 && selectedIndex === 1"));
         assertTrue(toggleTag.contains("iconOnly"));
         assertTrue(toggleTag.contains("leftIcon"));
@@ -193,12 +221,11 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
+    void sortSelectDoesNotMutateOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
-        final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
 
-        assertTrue(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
+        assertFalse(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
         assertTrue(sortSelectTag.contains("data-close-on-select=\"true\""));
         assertTrue(sortSelectTag.contains("aria-expanded=\"false\""));
         assertTrue(sortSelectTag.contains("aria-current="));
@@ -207,17 +234,13 @@ class ViewTemplateAssetsTest {
         assertFalse(sortSelectTag.contains("aria-haspopup=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"option\""));
-        assertTrue(timezoneScript.contains("data-browser-timezone-url-link"));
-        assertFalse(timezoneScript.contains("data-browser-timezone-url-options"));
-        assertTrue(timezoneScript.contains("searchParams.set('tz', timezone)"));
     }
 
     @Test
-    void timezoneFieldScriptExistsAndTargetsBrowserTimezoneHook() throws IOException {
+    void timezoneFieldScriptIsRemoved() {
         final Path scriptPath = Path.of("src/main/webapp/js/timezone-field.js");
 
-        assertTrue(Files.exists(scriptPath));
-        assertTrue(Files.readString(scriptPath).contains("data-browser-timezone-field"));
+        assertFalse(Files.exists(scriptPath));
     }
 
     @Test
@@ -406,6 +429,18 @@ class ViewTemplateAssetsTest {
         assertTrue(script.contains("report-filter-form"));
         assertTrue(script.contains("input[type=\"checkbox\"]"));
         assertTrue(script.contains(".submit()"));
+    }
+
+    @Test
+    void submitGuardRestoresButtonStateWhenPageIsRestoredFromHistory() throws IOException {
+        final String script = read("src/main/webapp/js/form-submit-guard.js");
+
+        assertTrue(script.contains("window.addEventListener(\"pageshow\""));
+        assertTrue(script.contains("delete form.dataset.submitting"));
+        assertTrue(script.contains("restoreSubmitButtons(form)"));
+        assertTrue(
+                script.indexOf("disableSubmitButtons(form)")
+                        < script.indexOf("updateLoadingLabel(form)"));
     }
 
     @Test

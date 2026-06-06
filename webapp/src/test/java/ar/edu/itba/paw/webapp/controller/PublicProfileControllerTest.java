@@ -14,7 +14,6 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
@@ -67,8 +66,7 @@ class PublicProfileControllerTest {
                                         playerReviewService,
                                         moderationService,
                                         userSportRatingService,
-                                        messageSource,
-                                        PlatformTimeZoneServiceImpl.argentinaDefault()))
+                                        messageSource))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();

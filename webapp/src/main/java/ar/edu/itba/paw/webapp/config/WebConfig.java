@@ -3,6 +3,8 @@ package ar.edu.itba.paw.webapp.config;
 import ar.edu.itba.paw.services.AdminBootstrapService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventCategoryConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
@@ -17,7 +19,6 @@ import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
-import ar.edu.itba.paw.webapp.config.converters.StringToZoneIdConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import java.util.List;
 import java.util.Locale;
@@ -199,7 +200,6 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventStatusConverter());
         registry.addConverter(new StringToEventVisibilityConverter());
         registry.addConverter(new StringToMatchSortConverter());
-        registry.addConverter(new StringToZoneIdConverter());
         registry.addConverter(new StringToEventTypeConverter());
         registry.addConverter(new StringToTournamentPairingStrategyConverter());
         registry.addConverter(new StringToReportTargetTypeConverter());
@@ -211,6 +211,8 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventJoinPolicyConverter());
         registry.addConverter(new StringToRecurrenceFrequencyConverter());
         registry.addConverter(new StringToRecurrenceEndModeConverter());
+        registry.addConverter(new StringToEventFilterConverter());
+        registry.addConverter(new StringToEventCategoryConverter());
     }
 
     @Override

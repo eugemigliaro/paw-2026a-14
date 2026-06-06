@@ -72,15 +72,12 @@
 									</c:if>
 									<input type="hidden" name="sort"
 										value="<c:out value='${searchForm.sort}' />" />
-									<input type="hidden" name="tz"
-										value="<c:out value='${searchForm.timezone}' />"
-										data-browser-timezone-field="true" />
 									<input type="hidden" name="minPrice"
 										value="<c:out value='${searchForm.minPrice}' />" />
 									<input type="hidden" name="maxPrice"
 										value="<c:out value='${searchForm.maxPrice}' />" />
-									<c:if test="${searchForm.filter eq 'past'}">
-										<input type="hidden" name="filter" value="past" />
+									<c:if test="${searchForm.filterName eq 'PAST'}">
+										<input type="hidden" name="filter" value="${searchForm.filterName}" />
 									</c:if>
 									<input type="hidden" name="page" id="eventsSearchForm_page" value="${pageNumber}" />
 									<div class="filters-bar__search-row">
@@ -94,7 +91,7 @@
 							</div>
 
 							<!-- Toggle -->
-							<ui:eventsFilterToggle currentFilter="${searchForm.filter}" />
+							<ui:eventsFilterToggle currentFilter="${searchForm.filterName}" />
 						</div>
 					</div>
 
@@ -262,9 +259,6 @@
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
 												value="<c:out value='${searchForm.sort}' />" />
-											<input type="hidden" name="tz"
-												value="<c:out value='${searchForm.timezone}' />"
-												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
 												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
@@ -292,8 +286,8 @@
 												value="<c:out value='${searchForm.minPrice}' />" />
 											<input type="hidden" name="maxPrice"
 												value="<c:out value='${searchForm.maxPrice}' />" />
-											<c:if test="${searchForm.filter eq 'past'}">
-												<input type="hidden" name="filter" value="past" />
+											<c:if test="${searchForm.filterName eq 'PAST'}">
+												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
 
 											<div class="field filter-rail__field">
@@ -320,7 +314,6 @@
 												<c:url var="clearDateHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
 													<c:param name="sort" value="${searchForm.sort}" />
-													<c:param name="tz" value="${searchForm.timezone}" />
 													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>
@@ -338,8 +331,8 @@
 													</c:forEach>
 													<c:param name="minPrice" value="${searchForm.minPrice}" />
 													<c:param name="maxPrice" value="${searchForm.maxPrice}" />
-													<c:if test="${searchForm.filter eq 'past'}">
-														<c:param name="filter" value="past" />
+													<c:if test="${searchForm.filterName eq 'PAST'}">
+														<c:param name="filter" value="${searchForm.filterName}" />
 													</c:if>
 												</c:url>
 												<spring:message var="applyDateLabel"
@@ -391,9 +384,6 @@
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
 												value="<c:out value='${searchForm.sort}' />" />
-											<input type="hidden" name="tz"
-												value="<c:out value='${searchForm.timezone}' />"
-												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
 												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
@@ -423,8 +413,8 @@
 												<input type="hidden" name="endDate"
 													value="<c:out value='${searchForm.endDate}' />" />
 											</c:if>
-											<c:if test="${searchForm.filter eq 'past'}">
-												<input type="hidden" name="filter" value="past" />
+											<c:if test="${searchForm.filterName eq 'PAST'}">
+												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
 
 											<div
@@ -466,7 +456,6 @@
 												<c:url var="clearPriceHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
 													<c:param name="sort" value="${searchForm.sort}" />
-													<c:param name="tz" value="${searchForm.timezone}" />
 													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>
@@ -488,8 +477,8 @@
 													</c:if>
 													<c:param name="minPrice" value="" />
 													<c:param name="maxPrice" value="" />
-													<c:if test="${searchForm.filter eq 'past'}">
-														<c:param name="filter" value="past" />
+													<c:if test="${searchForm.filterName eq 'PAST'}">
+														<c:param name="filter" value="${searchForm.filterName}" />
 													</c:if>
 												</c:url>
 												<spring:message var="applyPriceLabel"
@@ -521,13 +510,9 @@
 										</c:if>
 									</div>
 
-								<c:url var="clearSearchHref"
-									value="${listControls.cleanSearchAction}">
-									<c:param name="sort" value="${searchForm.sort}" />
-									<c:param name="tz" value="${searchForm.timezone}" />
-									<c:if test="${searchForm.filter eq 'past'}">
-										<c:param name="filter" value="past" />
-									</c:if>
+								<c:url var="clearSearchHref" value="${listControls.cleanSearchAction}">
+									<c:param name="type" value="${searchForm.type}" />
+									<c:param name="filter" value="${searchForm.filterName}" />
 								</c:url>
 									<spring:message var="clearAllLabel" code="filter.clearAll" />
 									<ui:button label="${clearAllLabel}" href="${clearSearchHref}"

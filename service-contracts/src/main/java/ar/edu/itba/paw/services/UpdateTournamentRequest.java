@@ -2,7 +2,8 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 public class UpdateTournamentRequest {
 
@@ -12,14 +13,18 @@ public class UpdateTournamentRequest {
     private final String address;
     private final Double latitude;
     private final Double longitude;
-    private final Instant startsAt;
-    private final Instant endsAt;
+    private final LocalDate startDate;
+    private final LocalTime startTime;
+    private final LocalDate endDate;
+    private final LocalTime endTime;
     private final BigDecimal pricePerPlayer;
     private final ImageUpload bannerImage;
     private final int bracketSize;
     private final int teamSize;
-    private final Instant registrationOpensAt;
-    private final Instant registrationClosesAt;
+    private final LocalDate registrationOpensDate;
+    private final LocalTime registrationOpensTime;
+    private final LocalDate registrationClosesDate;
+    private final LocalTime registrationClosesTime;
 
     public UpdateTournamentRequest(
             final Sport sport,
@@ -28,28 +33,36 @@ public class UpdateTournamentRequest {
             final String address,
             final Double latitude,
             final Double longitude,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final BigDecimal pricePerPlayer,
             final ImageUpload bannerImage,
             final int bracketSize,
             final int teamSize,
-            final Instant registrationOpensAt,
-            final Instant registrationClosesAt) {
+            final LocalDate registrationOpensDate,
+            final LocalTime registrationOpensTime,
+            final LocalDate registrationClosesDate,
+            final LocalTime registrationClosesTime) {
         this.sport = sport;
         this.title = title;
         this.description = description;
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.startsAt = startsAt;
-        this.endsAt = endsAt;
+        this.startDate = startDate;
+        this.startTime = startTime;
+        this.endDate = endDate;
+        this.endTime = endTime;
         this.pricePerPlayer = pricePerPlayer;
         this.bannerImage = bannerImage;
         this.bracketSize = bracketSize;
         this.teamSize = teamSize;
-        this.registrationOpensAt = registrationOpensAt;
-        this.registrationClosesAt = registrationClosesAt;
+        this.registrationOpensDate = registrationOpensDate;
+        this.registrationOpensTime = registrationOpensTime;
+        this.registrationClosesDate = registrationClosesDate;
+        this.registrationClosesTime = registrationClosesTime;
     }
 
     public Sport getSport() {
@@ -76,12 +89,20 @@ public class UpdateTournamentRequest {
         return longitude;
     }
 
-    public Instant getStartsAt() {
-        return startsAt;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public Instant getEndsAt() {
-        return endsAt;
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
     }
 
     public BigDecimal getPricePerPlayer() {
@@ -100,11 +121,19 @@ public class UpdateTournamentRequest {
         return teamSize;
     }
 
-    public Instant getRegistrationOpensAt() {
-        return registrationOpensAt;
+    public LocalDate getRegistrationOpensDate() {
+        return registrationOpensDate;
     }
 
-    public Instant getRegistrationClosesAt() {
-        return registrationClosesAt;
+    public LocalTime getRegistrationOpensTime() {
+        return registrationOpensTime;
+    }
+
+    public LocalDate getRegistrationClosesDate() {
+        return registrationClosesDate;
+    }
+
+    public LocalTime getRegistrationClosesTime() {
+        return registrationClosesTime;
     }
 }

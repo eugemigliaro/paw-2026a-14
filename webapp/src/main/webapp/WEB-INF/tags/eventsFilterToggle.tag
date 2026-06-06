@@ -28,8 +28,8 @@
 <spring:message var="defaultLeftLabel" code="filter.upcoming" text="Upcoming" />
 <spring:message var="defaultRightLabel" code="filter.past" text="Past" />
 
-<c:set var="resolvedLeftValue" value="${empty leftValue ? (empty upcomingValue ? 'upcoming' : upcomingValue) : leftValue}" />
-<c:set var="resolvedRightValue" value="${empty rightValue ? (empty pastValue ? 'past' : pastValue) : rightValue}" />
+<c:set var="resolvedLeftValue" value="${empty leftValue ? (empty upcomingValue ? 'UPCOMING' : upcomingValue) : leftValue}" />
+<c:set var="resolvedRightValue" value="${empty rightValue ? (empty pastValue ? 'PAST' : pastValue) : rightValue}" />
 <c:set var="resolvedThirdValue" value="${thirdValue}" />
 <c:set var="resolvedCurrentValue" value="${empty currentValue ? currentFilter : currentValue}" />
 <c:set var="resolvedLeftLabel" value="${empty leftLabel ? defaultLeftLabel : leftLabel}" />

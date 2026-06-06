@@ -53,11 +53,6 @@
 								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-								<input
-									type="hidden"
-									name="tz"
-									value="<c:out value='${selectedTimezone}' />"
-									data-browser-timezone-field="true" />
 								<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 								<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 								<div class="search-panel__row">
@@ -147,10 +142,32 @@
 											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 												<c:choose>
 													<c:when test="${optionStatus.first}">
-														<c:set var="clearFilterHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="clearFilterHref" value="${feedFormAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:set var="clearFilterHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 													</c:when>
 													<c:otherwise>
-														<c:url var="optionHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="optionHref" value="${feedFormAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:url var="optionHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 														<a href="${optionHref}" class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
 															<c:out value="${option.label}" />
 														</a>
@@ -205,7 +222,6 @@
 											<input type="hidden" name="type" value="tournament" />
 										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 										<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 
@@ -227,7 +243,6 @@
 												<c:param name="type" value="tournament" />
 											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
-											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="minPrice" value="${selectedMinPriceValue}" />
 											<c:param name="maxPrice" value="${selectedMaxPriceValue}" />
 										</c:url>
@@ -279,7 +294,6 @@
 											<input type="hidden" name="type" value="tournament" />
 										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 										<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 
@@ -307,7 +321,6 @@
 												<c:param name="type" value="tournament" />
 											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
-											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="startDate" value="${selectedStartDateValue}" />
 											<c:param name="endDate" value="${selectedEndDateValue}" />
 											<c:param name="minPrice" value="" />
@@ -340,7 +353,10 @@
 									</c:if>
 								</div>
 
-							<c:url var="clearFiltersHref" value="${feedPath}" />
+							<c:url var="clearFiltersHref" value="${feedPath}">
+								<c:param name="type" value="${selectedType}" />
+								<c:param name="filter" value="${searchForm.filterName}" />
+							</c:url>
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
 							<ui:button
 								label="${clearAllLabel}"

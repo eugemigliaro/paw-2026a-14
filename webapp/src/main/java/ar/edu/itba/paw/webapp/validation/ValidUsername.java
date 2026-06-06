@@ -7,12 +7,14 @@ import java.lang.annotation.Target;
 import javax.validation.Constraint;
 import javax.validation.Payload;
 
-@Target(ElementType.TYPE)
+@Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = RecurrenceSelectionValidator.class)
-public @interface ValidRecurrenceSelection {
+@Constraint(validatedBy = UsernameValidator.class)
+public @interface ValidUsername {
 
-    String message() default "{CreateEventForm.recurrence.Valid}";
+    boolean mustExist() default true;
+
+    String message() default "{validation.user.username.mustExist}";
 
     Class<?>[] groups() default {};
 

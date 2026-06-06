@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -27,10 +28,7 @@ import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
+import java.time.OffsetDateTime;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,17 +107,6 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        final Instant startsAt =
-                toInstant(
-                        createEventForm.getEventDate(),
-                        createEventForm.getEventTime(),
-                        createEventForm.getTimezone());
-        final Instant endsAt =
-                toInstant(
-                        createEventForm.getEndDate(),
-                        createEventForm.getEndTime(),
-                        createEventForm.getTimezone());
-
         final CreateMatchRequest request =
                 new CreateMatchRequest(
                         user,
@@ -128,8 +115,10 @@ public class HostController {
                         createEventForm.getLongitude(),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
-                        startsAt,
-                        endsAt,
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getEndDate(),
+                        createEventForm.getEndTime(),
                         createEventForm.getMaxPlayers(),
                         createEventForm.getPricePerPlayer(),
                         createEventForm.getSport() == null
@@ -176,24 +165,15 @@ public class HostController {
             return hostFormView(createEventForm, null, locale, formConfig);
         }
 
-        final Instant startsAt =
-                toInstant(
-                        createEventForm.getEventDate(),
-                        createEventForm.getEventTime(),
-                        createEventForm.getTimezone());
-        final Instant endsAt =
-                toInstant(
-                        createEventForm.getEndDate(),
-                        createEventForm.getEndTime(),
-                        createEventForm.getTimezone());
-
         final UpdateMatchRequest request =
                 new UpdateMatchRequest(
                         createEventForm.getAddress(),
                         createEventForm.getTitle(),
                         createEventForm.getDescription(),
-                        startsAt,
-                        endsAt,
+                        createEventForm.getEventDate(),
+                        createEventForm.getEventTime(),
+                        createEventForm.getEndDate(),
+                        createEventForm.getEndTime(),
                         createEventForm.getMaxPlayers().intValue(),
                         createEventForm.getPricePerPlayer(),
                         createEventForm.getSport() == null
@@ -405,8 +385,7 @@ public class HostController {
 
     private CreateEventForm toForm(final Match match) {
         final CreateEventForm form = new CreateEventForm();
-        final LocalDateTime startsAt =
-                LocalDateTime.ofInstant(match.getStartsAt(), ZoneId.systemDefault());
+        final OffsetDateTime startsAt = match.getStartsAtDateTime();
         form.setTitle(match.getTitle());
         form.setDescription(match.getDescription());
         form.setAddress(match.getAddress());
@@ -417,13 +396,11 @@ public class HostController {
         form.setJoinPolicy(formJoinPolicy(match));
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
-        final LocalDateTime endsAt =
-                LocalDateTime.ofInstant(resolveEndsAt(match), ZoneId.systemDefault());
+        final OffsetDateTime endsAt = PlatformTime.toOffsetDateTime(resolveEndsAt(match));
         form.setEndDate(endsAt.toLocalDate());
         form.setEndTime(endsAt.toLocalTime());
         form.setMaxPlayers(match.getMaxPlayers());
         form.setPricePerPlayer(match.getPricePerPlayer());
-        form.setTimezone(ZoneId.systemDefault());
         return form;
     }
 
@@ -445,8 +422,10 @@ public class HostController {
                 form.getAddress(),
                 form.getTitle(),
                 form.getDescription(),
-                toInstant(form.getEventDate(), form.getEventTime(), form.getTimezone()),
-                toInstant(form.getEndDate(), form.getEndTime(), form.getTimezone()),
+                form.getEventDate(),
+                form.getEventTime(),
+                form.getEndDate(),
+                form.getEndTime(),
                 form.getMaxPlayers().intValue(),
                 form.getPricePerPlayer(),
                 form.getSport() == null ? Sport.PADEL : form.getSport(),
@@ -482,16 +461,6 @@ public class HostController {
         }
     }
 
-    private static Instant toInstant(
-            final LocalDate eventDate,
-            final LocalTime eventTime,
-            final ZoneId timezone) { // TODO: isn't this similar to the platformTimeZoneService ?
-        return eventDate
-                .atTime(eventTime)
-                .atZone(timezone == null ? ZoneId.systemDefault() : timezone)
-                .toInstant();
-    }
-
     private static CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {
         if (!form.isRecurring()) {
             return null;
@@ -505,8 +474,7 @@ public class HostController {
                         : null,
                 form.getRecurrenceEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
                         ? form.getRecurrenceOccurrenceCount()
-                        : null,
-                form.getTimezone());
+                        : null);
     }
 
     private ImageUpload bannerUpload(

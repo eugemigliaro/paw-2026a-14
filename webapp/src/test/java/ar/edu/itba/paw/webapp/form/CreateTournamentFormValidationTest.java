@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Set;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
@@ -137,6 +138,72 @@ class CreateTournamentFormValidationTest {
     }
 
     @Test
+    void missingScheduleFieldsFailBeanValidation() {
+        // 1. Arrange
+        final CreateTournamentForm form = validForm();
+        form.setStartDate(null);
+        form.setStartTime(null);
+        form.setEndDate(null);
+        form.setEndTime(null);
+
+        // 2. Exercise
+        final Set<ConstraintViolation<CreateTournamentForm>> violations = validator.validate(form);
+
+        // 3. Assert
+        assertTrue(hasViolation(violations, "startDate"));
+        assertTrue(hasViolation(violations, "startTime"));
+        assertTrue(hasViolation(violations, "endDate"));
+        assertTrue(hasViolation(violations, "endTime"));
+    }
+
+    @Test
+    void endBeforeStartFailsBeanValidation() {
+        // 1. Arrange
+        final CreateTournamentForm form = validForm();
+        form.setEndDate(form.getStartDate());
+        form.setEndTime(form.getStartTime());
+
+        // 2. Exercise
+        final Set<ConstraintViolation<CreateTournamentForm>> violations = validator.validate(form);
+
+        // 3. Assert
+        assertTrue(hasViolation(violations, "endTime"));
+    }
+
+    @Test
+    void startBeforeRegistrationCloseFailsBeanValidation() {
+        // 1. Arrange
+        final CreateTournamentForm form = validForm();
+        form.setStartDate(form.getRegistrationClosesDate());
+        form.setStartTime(form.getRegistrationClosesTime());
+        form.setEndDate(form.getRegistrationClosesDate().plusDays(1));
+        form.setEndTime(LocalTime.of(21, 0));
+
+        // 2. Exercise
+        final Set<ConstraintViolation<CreateTournamentForm>> violations = validator.validate(form);
+
+        // 3. Assert
+        assertTrue(hasViolation(violations, "startTime"));
+    }
+
+    @Test
+    void startAfterRegistrationClosePassesBeanValidation() {
+        // 1. Arrange
+        final CreateTournamentForm form = validForm();
+        form.setStartDate(form.getRegistrationClosesDate().plusDays(1));
+        form.setStartTime(LocalTime.of(18, 0));
+        form.setEndDate(form.getStartDate());
+        form.setEndTime(LocalTime.of(21, 0));
+
+        // 2. Exercise
+        final Set<ConstraintViolation<CreateTournamentForm>> violations = validator.validate(form);
+
+        // 3. Assert
+        assertFalse(hasViolation(violations, "startTime"));
+        assertFalse(hasViolation(violations, "endTime"));
+    }
+
+    @Test
     void outOfRangeCoordinatesFailBeanValidation() {
         // 1. Arrange
         final CreateTournamentForm form = validForm();
@@ -160,6 +227,10 @@ class CreateTournamentFormValidationTest {
         form.setLongitude(-58.4);
         form.setRegistrationOpensDate(LocalDate.now().plusDays(1));
         form.setRegistrationClosesDate(LocalDate.now().plusDays(10));
+        form.setStartDate(LocalDate.now().plusDays(11));
+        form.setStartTime(LocalTime.of(18, 0));
+        form.setEndDate(LocalDate.now().plusDays(11));
+        form.setEndTime(LocalTime.of(21, 0));
         form.setBracketSize(8);
         form.setTeamSize(1);
         form.setPricePerPlayer(BigDecimal.ZERO);

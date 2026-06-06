@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
@@ -8,7 +9,6 @@ import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitExcep
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
@@ -64,7 +64,7 @@ public class UserBanAppealController {
                 "banUntilLabel",
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                         .withLocale(locale)
-                        .withZone(ZoneId.systemDefault())
+                        .withZone(PlatformTime.ZONE)
                         .format(activeBan.getBannedUntil()));
         mav.addObject(
                 "banReason",

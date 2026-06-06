@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.EloUpdatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -21,6 +22,8 @@ import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -1130,7 +1133,22 @@ public class TournamentBracketServiceImplTest {
     private static TournamentMatchScheduleRequest scheduleAt(
             final long matchId, final Instant startsAt, final Instant endsAt) {
         return new TournamentMatchScheduleRequest(
-                matchId, startsAt, endsAt, "Club Court 1", -34.56, -58.45);
+                matchId,
+                dateOf(startsAt),
+                timeOf(startsAt),
+                dateOf(endsAt),
+                timeOf(endsAt),
+                "Club Court 1",
+                -34.56,
+                -58.45);
+    }
+
+    private static LocalDate dateOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalDate();
+    }
+
+    private static LocalTime timeOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalTime();
     }
 
     private static TournamentMatch match(

@@ -13,12 +13,14 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -38,7 +40,6 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.TournamentService;
@@ -62,6 +63,8 @@ import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotRecurringEx
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotEligibleException;
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
 import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureNotFoundException;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventCategoryConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
@@ -78,8 +81,12 @@ import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
+import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
+import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -91,6 +98,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorFactory;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -140,8 +149,13 @@ class UiRouteTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
         final MessageSource messageSource = messageSource();
-        final LocalValidatorFactoryBean validator = validator(messageSource);
+        final UserEmailValidator userEmailValidator =
+                new UserEmailValidator(Mockito.mock(UserService.class));
+        final UsernameValidator usernameValidator =
+                new UsernameValidator(Mockito.mock(UserService.class));
 
+        final LocalValidatorFactoryBean validator =
+                validator(messageSource, userEmailValidator, usernameValidator);
         lastSportsFilter = null;
         reservationFailure = null;
         reservationCancellationFailure = null;
@@ -552,8 +566,9 @@ class UiRouteTest {
                                 null,
                                 request.getTitle(),
                                 request.getDescription(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
+                                PlatformTime.toInstant(
+                                        request.getStartDate(), request.getStartTime()),
+                                PlatformTime.toInstant(request.getEndDate(), request.getEndTime()),
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
@@ -725,8 +740,10 @@ class UiRouteTest {
                                         null,
                                         request.getTitle(),
                                         request.getDescription(),
-                                        request.getStartsAt(),
-                                        request.getEndsAt(),
+                                        PlatformTime.toInstant(
+                                                request.getStartDate(), request.getStartTime()),
+                                        PlatformTime.toInstant(
+                                                request.getEndDate(), request.getEndTime()),
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
@@ -774,8 +791,10 @@ class UiRouteTest {
                                         null,
                                         request.getTitle(),
                                         request.getDescription(),
-                                        request.getStartsAt(),
-                                        request.getEndsAt(),
+                                        PlatformTime.toInstant(
+                                                request.getStartDate(), request.getStartTime()),
+                                        PlatformTime.toInstant(
+                                                request.getEndDate(), request.getEndTime()),
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
@@ -867,12 +886,11 @@ class UiRouteTest {
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
                             final List<Sport> sport,
-                            final Instant startDate,
-                            final Instant endDate,
+                            final LocalDate startDate,
+                            final LocalDate endDate,
                             final EventSort sort,
                             final int page,
                             final int pageSize,
-                            final ZoneId timezone,
                             final BigDecimal minPrice,
                             final BigDecimal maxPrice,
                             final Double latitude,
@@ -895,12 +913,11 @@ class UiRouteTest {
                             String query,
                             List<Sport> sports,
                             List<EventStatus> statuses,
-                            Instant startDate,
-                            Instant endDate,
+                            LocalDate startDate,
+                            LocalDate endDate,
                             BigDecimal minPrice,
                             BigDecimal maxPrice,
                             EventSort sort,
-                            ZoneId timezone,
                             List<ParticipantStatus> participantStatuses,
                             int page,
                             int pageSize) {
@@ -1545,12 +1562,11 @@ class UiRouteTest {
                                 Mockito.any(),
                                 ArgumentMatchers.nullable(String.class),
                                 ArgumentMatchers.<List<Sport>>any(),
-                                ArgumentMatchers.nullable(Instant.class),
-                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
                                 ArgumentMatchers.nullable(EventSort.class),
                                 Mockito.anyInt(),
                                 Mockito.anyInt(),
-                                ArgumentMatchers.nullable(ZoneId.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -1596,8 +1612,7 @@ class UiRouteTest {
                                         playerReviewService,
                                         moderationService,
                                         userSportRatingService,
-                                        messageSource,
-                                        PlatformTimeZoneServiceImpl.argentinaDefault()),
+                                        messageSource),
                                 new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
@@ -2566,9 +2581,10 @@ class UiRouteTest {
         Assertions.assertNotNull(lastCreateMatchRequest);
         Assertions.assertFalse(lastCreateMatchRequest.isRecurring());
         Assertions.assertEquals(
-                Instant.parse("2099-04-10T21:00:00Z"), lastCreateMatchRequest.getStartsAt());
-        Assertions.assertEquals(
-                Instant.parse("2099-04-10T22:30:00Z"), lastCreateMatchRequest.getEndsAt());
+                LocalDate.parse("2099-04-10"), lastCreateMatchRequest.getStartDate());
+        Assertions.assertEquals(LocalTime.parse("18:00"), lastCreateMatchRequest.getStartTime());
+        Assertions.assertEquals(LocalDate.parse("2099-04-10"), lastCreateMatchRequest.getEndDate());
+        Assertions.assertEquals(LocalTime.parse("19:30"), lastCreateMatchRequest.getEndTime());
     }
 
     @Test
@@ -3282,6 +3298,21 @@ class UiRouteTest {
     }
 
     @Test
+    void getEventsRouteRendersSortLinksAgainstEventsPath() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(get("/events")).andExpect(status().isOk()).andReturn();
+
+        final MatchListControlsViewModel listControls =
+                (MatchListControlsViewModel)
+                        result.getModelAndView().getModel().get("listControls");
+        final SelectOptionViewModel firstSortOption = listControls.getSortOptions().get(0);
+        Assertions.assertNull(firstSortOption.getHref());
+        Assertions.assertTrue(firstSortOption.getParams().containsKey("sort"));
+    }
+
+    @Test
     void getEventsRouteRejectsInvalidPageParameter() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
@@ -3314,6 +3345,20 @@ class UiRouteTest {
         Assertions.assertEquals(
                 List.of(EventVisibility.PUBLIC, EventVisibility.INVITE_ONLY),
                 searchForm.getVisibility());
+    }
+
+    @Test
+    void getEventsRoutePreservesPastFilterAsLowercaseQueryParam() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(get("/events").param("filter", "past"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final SearchForm searchForm =
+                (SearchForm) result.getModelAndView().getModel().get("searchForm");
+        Assertions.assertEquals(EventFilter.PAST, searchForm.getFilter());
     }
 
     @Test
@@ -3766,6 +3811,8 @@ class UiRouteTest {
         conversionService.addConverter(new StringToRecurrenceEndModeConverter());
         conversionService.addConverter(new StringToRecurrenceFrequencyConverter());
         conversionService.addConverter(new StringToEventJoinPolicyConverter());
+        conversionService.addConverter(new StringToEventFilterConverter());
+        conversionService.addConverter(new StringToEventCategoryConverter());
         return conversionService;
     }
 
@@ -3781,9 +3828,34 @@ class UiRouteTest {
         return localeChangeInterceptor;
     }
 
-    private static LocalValidatorFactoryBean validator(final MessageSource messageSource) {
+    private static LocalValidatorFactoryBean validator(
+            final MessageSource messageSource,
+            final UserEmailValidator userEmailValidator,
+            final UsernameValidator usernameValidator) {
+        ConstraintValidatorFactory customConstraintFactory =
+                new ConstraintValidatorFactory() {
+                    @Override
+                    public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
+                        if (key == UserEmailValidator.class) {
+                            return (T) userEmailValidator;
+                        } else if (key == UsernameValidator.class) {
+                            return (T) usernameValidator;
+                        }
+                        try {
+                            return key.getDeclaredConstructor().newInstance();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    @Override
+                    public void releaseInstance(ConstraintValidator<?, ?> instance) {}
+                }; // TODO: find a better way to inject the custom validator without having to
+        // reimplement the whole factory
+
         final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.setValidationMessageSource(messageSource);
+        validator.setConstraintValidatorFactory(customConstraintFactory);
         validator.afterPropertiesSet();
         return validator;
     }

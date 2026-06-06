@@ -13,8 +13,9 @@
 
 		eventsButtons.forEach(function(button) {
 			button.addEventListener("click", function(event) {
-				var value = button.dataset.value;
-				var isPast = value === "past";
+				var value = button.dataset.value || "";
+				var normalizedValue = value.trim().toUpperCase();
+				var isPast = normalizedValue === "PAST";
 				var selectedIndex = Array.prototype.indexOf.call(eventsButtons, button);
 				var optionCount = eventsButtons.length;
 				var currentUrl = new URL(window.location);
@@ -35,7 +36,7 @@
 				event.preventDefault();
 
 				if (isPast) {
-					currentUrl.searchParams.set("filter", "past");
+					currentUrl.searchParams.set("filter", normalizedValue);
 				} else {
 					currentUrl.searchParams.delete("filter");
 				}

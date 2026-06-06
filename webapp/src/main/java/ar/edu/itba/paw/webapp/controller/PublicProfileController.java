@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
@@ -9,7 +10,6 @@ import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
@@ -57,7 +57,6 @@ public class PublicProfileController {
     private final ModerationService moderationService;
     private final UserSportRatingService userSportRatingService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public PublicProfileController(
@@ -65,14 +64,12 @@ public class PublicProfileController {
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
             final UserSportRatingService userSportRatingService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final MessageSource messageSource) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
         this.moderationService = moderationService;
         this.userSportRatingService = userSportRatingService;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
     }
 
     @GetMapping("/users/{username}")
@@ -143,11 +140,7 @@ public class PublicProfileController {
                             "profileBannedUntil",
                             DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                                     .withLocale(resolvedLocale)
-                                    .format(
-                                            ban.getBannedUntil()
-                                                    .atZone(
-                                                            platformTimeZoneService
-                                                                    .defaultZone())));
+                                    .format(ban.getBannedUntil().atZone(PlatformTime.ZONE)));
                 });
         if (user != null && user.getId().equals(targetUser.getId())) {
             mav.addObject("profileEditHref", "/account");
@@ -458,7 +451,7 @@ public class PublicProfileController {
         }
         return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
                 .withLocale(locale == null ? Locale.ENGLISH : locale)
-                .format(review.getUpdatedAt().atZone(platformTimeZoneService.defaultZone()));
+                .format(review.getUpdatedAt().atZone(PlatformTime.ZONE));
     }
 
     private User findUserByUsernameOrThrow(final String username) {

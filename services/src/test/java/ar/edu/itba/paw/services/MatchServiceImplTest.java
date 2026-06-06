@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
@@ -24,7 +25,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -104,8 +105,11 @@ public class MatchServiceImplTest {
     @Test
     public void testSearchPublicMatchesWithValidInputs() {
         final Match match = createTestMatch(1L, "Football", "football");
-        final Instant expectedStart = Instant.parse("2026-04-10T00:00:00Z");
-        final Instant expectedEndExclusive = Instant.parse("2026-04-16T00:00:00Z");
+        final LocalDate searchStart = LocalDate.parse("2026-04-10");
+        final LocalDate searchEnd = LocalDate.parse("2026-04-15");
+        final Instant expectedStart = searchStart.atStartOfDay(PlatformTime.ZONE).toInstant();
+        final Instant expectedEndExclusive =
+                searchEnd.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant();
         Mockito.when(
                         matchDao.findPublicMatches(
                                 "football",
@@ -116,7 +120,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 EventSort.SOONEST,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 10,
@@ -130,20 +133,18 @@ public class MatchServiceImplTest {
                                 expectedStart,
                                 expectedEndExclusive,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(25);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
                         "football",
                         List.of(Sport.FOOTBALL),
-                        expectedStart,
-                        expectedEndExclusive,
+                        searchStart,
+                        searchEnd,
                         EventSort.SOONEST,
                         2,
                         10,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -169,7 +170,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -183,24 +183,12 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
                 matchService.searchPublicMatches(
-                        null,
-                        List.of(Sport.PADEL),
-                        null,
-                        null,
-                        null,
-                        1,
-                        0,
-                        ZoneId.of("UTC"),
-                        null,
-                        null,
-                        null,
-                        null);
+                        null, List.of(Sport.PADEL), null, null, null, 1, 0, null, null, null, null);
 
         Assertions.assertEquals(1, result.getItems().size());
         Assertions.assertEquals("Padel", result.getItems().get(0).getTitle());
@@ -221,7 +209,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -235,8 +222,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(2);
 
         final PaginatedResult<Match> result =
@@ -248,7 +234,6 @@ public class MatchServiceImplTest {
                         null,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -274,7 +259,6 @@ public class MatchServiceImplTest {
                                 minPrice,
                                 maxPrice,
                                 EventSort.PRICE_LOW,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 0,
@@ -288,8 +272,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 minPrice,
-                                maxPrice,
-                                ZoneId.of("UTC")))
+                                maxPrice))
                 .thenReturn(1);
 
         final PaginatedResult<Match> result =
@@ -301,7 +284,6 @@ public class MatchServiceImplTest {
                         EventSort.PRICE_LOW,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         minPrice,
                         maxPrice,
                         null,
@@ -322,8 +304,7 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 null,
-                                null,
-                                ZoneId.of("UTC")))
+                                null))
                 .thenReturn(13);
         Mockito.when(
                         matchDao.findPublicMatches(
@@ -335,7 +316,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 EventSort.SOONEST,
-                                ZoneId.of("UTC"),
                                 null,
                                 null,
                                 12,
@@ -351,7 +331,6 @@ public class MatchServiceImplTest {
                         EventSort.SOONEST,
                         99,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -393,8 +372,10 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Test Match",
                                 "Test Description",
-                                now,
-                                null,
+                                dateOf(now),
+                                timeOf(now),
+                                dateOf(null),
+                                timeOf(null),
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
@@ -405,6 +386,56 @@ public class MatchServiceImplTest {
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1L, result.getId());
         Assertions.assertEquals("Test Match", result.getTitle());
+    }
+
+    @Test
+    public void testCreateMatchConvertsArgentinaLocalDateTimeToUtcInstant() {
+        // 1. Arrange
+        final Instant expectedStartsAt = Instant.parse("2099-04-10T21:00:00Z");
+        final Instant expectedEndsAt = Instant.parse("2099-04-10T22:30:00Z");
+        final Match expectedMatch = createTestMatch(1L, "Argentina Match", "football");
+        Mockito.when(
+                        matchDao.createMatch(
+                                UserUtils.getUser(1L),
+                                "Test Address",
+                                "Argentina Match",
+                                "Test Description",
+                                expectedStartsAt,
+                                expectedEndsAt,
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                EventVisibility.PUBLIC,
+                                EventJoinPolicy.DIRECT,
+                                EventStatus.OPEN,
+                                null,
+                                (Double) null,
+                                (Double) null))
+                .thenReturn(expectedMatch);
+
+        // 2. Exercise
+        final Match result =
+                matchService.createMatch(
+                        new CreateMatchRequest(
+                                UserUtils.getUser(1L),
+                                "Test Address",
+                                "Argentina Match",
+                                "Test Description",
+                                LocalDate.parse("2099-04-10"),
+                                LocalTime.parse("18:00"),
+                                LocalDate.parse("2099-04-10"),
+                                LocalTime.parse("19:30"),
+                                10,
+                                BigDecimal.ZERO,
+                                Sport.FOOTBALL,
+                                EventVisibility.PUBLIC,
+                                EventStatus.OPEN,
+                                null));
+
+        // 3. Assert
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(1L, result.getId());
+        Assertions.assertEquals("Argentina Match", result.getTitle());
     }
 
     @Test
@@ -491,7 +522,13 @@ public class MatchServiceImplTest {
                         null);
         Mockito.when(
                         matchDao.createMatchSeries(
-                                host, RecurrenceFrequency.WEEKLY, startsAt, endsAt, "UTC", null, 3))
+                                host,
+                                RecurrenceFrequency.WEEKLY,
+                                startsAt,
+                                endsAt,
+                                PlatformTime.ZONE.getId(),
+                                null,
+                                3))
                 .thenReturn(77L);
         Mockito.when(
                         matchDao.createMatch(
@@ -562,8 +599,10 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Weekly Padel",
                                 "Test Description",
-                                startsAt,
-                                endsAt,
+                                dateOf(startsAt),
+                                timeOf(startsAt),
+                                dateOf(endsAt),
+                                timeOf(endsAt),
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
@@ -575,8 +614,7 @@ public class MatchServiceImplTest {
                                         RecurrenceFrequency.WEEKLY,
                                         RecurrenceEndMode.OCCURRENCE_COUNT,
                                         null,
-                                        3,
-                                        ZoneId.of("UTC"))));
+                                        3)));
 
         // 3. Assert
         Assertions.assertNotNull(result);
@@ -649,7 +687,7 @@ public class MatchServiceImplTest {
                                 RecurrenceFrequency.WEEKLY,
                                 startsAt,
                                 endsAt,
-                                "UTC",
+                                PlatformTime.ZONE.getId(),
                                 untilDate,
                                 null))
                 .thenReturn(88L);
@@ -702,8 +740,10 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Weekly Padel",
                                 "Test Description",
-                                startsAt,
-                                endsAt,
+                                dateOf(startsAt),
+                                timeOf(startsAt),
+                                dateOf(endsAt),
+                                timeOf(endsAt),
                                 8,
                                 BigDecimal.ZERO,
                                 Sport.PADEL,
@@ -715,8 +755,7 @@ public class MatchServiceImplTest {
                                         RecurrenceFrequency.WEEKLY,
                                         RecurrenceEndMode.UNTIL_DATE,
                                         untilDate,
-                                        null,
-                                        ZoneId.of("UTC"))));
+                                        null)));
 
         // 3. Assert
         Assertions.assertEquals(111L, result.getId());
@@ -741,8 +780,10 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Weekly Padel",
                                                 "Test Description",
-                                                startsAt,
-                                                endsAt,
+                                                dateOf(startsAt),
+                                                timeOf(startsAt),
+                                                dateOf(endsAt),
+                                                timeOf(endsAt),
                                                 8,
                                                 BigDecimal.ZERO,
                                                 Sport.PADEL,
@@ -754,8 +795,7 @@ public class MatchServiceImplTest {
                                                         RecurrenceFrequency.WEEKLY,
                                                         RecurrenceEndMode.UNTIL_DATE,
                                                         java.time.LocalDate.of(2026, 4, 12),
-                                                        null,
-                                                        ZoneId.of("UTC")))));
+                                                        null))));
 
         // 3. Assert
         Assertions.assertEquals("match.recurrence.error.tooFewOccurrences", exception.getMessage());
@@ -773,8 +813,10 @@ public class MatchServiceImplTest {
                                                 "Test Address",
                                                 "Test Match",
                                                 "Test Description",
-                                                FIXED_NOW,
-                                                null,
+                                                dateOf(FIXED_NOW),
+                                                timeOf(FIXED_NOW),
+                                                dateOf(null),
+                                                timeOf(null),
                                                 10,
                                                 BigDecimal.ZERO,
                                                 Sport.FOOTBALL,
@@ -794,8 +836,10 @@ public class MatchServiceImplTest {
                         "Test Address",
                         "Test Match",
                         "Test Description",
-                        FIXED_NOW.plusSeconds(3600),
-                        FIXED_NOW.plusSeconds(7200),
+                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                        timeOf(FIXED_NOW.plusSeconds(7200)),
                         1001,
                         BigDecimal.ZERO,
                         Sport.FOOTBALL,
@@ -826,8 +870,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -851,8 +897,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -900,8 +948,61 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Updated Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(5400),
-                                        FIXED_NOW.plusSeconds(9000),
+                                        dateOf(FIXED_NOW.plusSeconds(5400)),
+                                        timeOf(FIXED_NOW.plusSeconds(5400)),
+                                        dateOf(FIXED_NOW.plusSeconds(9000)),
+                                        timeOf(FIXED_NOW.plusSeconds(9000)),
+                                        10,
+                                        BigDecimal.ZERO,
+                                        Sport.FOOTBALL,
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        null)));
+    }
+
+    @Test
+    public void testUpdateMatchRejectsAlreadyStartedOpenMatch() {
+        final Match startedMatch =
+                new Match(
+                        17L,
+                        Sport.FOOTBALL,
+                        UserUtils.getUser(1L),
+                        "Test Address",
+                        null,
+                        null,
+                        "Started Match",
+                        "Test Description",
+                        FIXED_NOW.minusSeconds(60),
+                        FIXED_NOW.plusSeconds(3600),
+                        10,
+                        BigDecimal.ZERO,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        0,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null);
+        Mockito.when(matchDao.findById(17L)).thenReturn(Optional.of(startedMatch));
+
+        Assertions.assertThrows(
+                MatchUpdateNotEditableException.class,
+                () ->
+                        matchService.updateMatch(
+                                17L,
+                                UserUtils.getUser(1L),
+                                new UpdateMatchRequest(
+                                        "Test Address",
+                                        "Updated Match",
+                                        "Test Description",
+                                        dateOf(FIXED_NOW.plusSeconds(5400)),
+                                        timeOf(FIXED_NOW.plusSeconds(5400)),
+                                        dateOf(FIXED_NOW.plusSeconds(9000)),
+                                        timeOf(FIXED_NOW.plusSeconds(9000)),
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -925,8 +1026,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        FIXED_NOW,
-                                        FIXED_NOW.plusSeconds(3600),
+                                        dateOf(FIXED_NOW),
+                                        timeOf(FIXED_NOW),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -950,8 +1053,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(7200),
-                                        FIXED_NOW.plusSeconds(3600),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -977,8 +1082,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         1,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -1004,8 +1111,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         1001,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -1075,8 +1184,10 @@ public class MatchServiceImplTest {
                                 "Updated Address",
                                 "Updated Title",
                                 "Updated Description",
-                                FIXED_NOW.plusSeconds(3600),
-                                FIXED_NOW.plusSeconds(7200),
+                                dateOf(FIXED_NOW.plusSeconds(3600)),
+                                timeOf(FIXED_NOW.plusSeconds(3600)),
+                                dateOf(FIXED_NOW.plusSeconds(7200)),
+                                timeOf(FIXED_NOW.plusSeconds(7200)),
                                 12,
                                 BigDecimal.ONE,
                                 Sport.TENNIS,
@@ -1139,8 +1250,10 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Private Match",
                                 "Test Description",
-                                FIXED_NOW.plusSeconds(3600),
-                                FIXED_NOW.plusSeconds(7200),
+                                dateOf(FIXED_NOW.plusSeconds(3600)),
+                                timeOf(FIXED_NOW.plusSeconds(3600)),
+                                dateOf(FIXED_NOW.plusSeconds(7200)),
+                                timeOf(FIXED_NOW.plusSeconds(7200)),
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
@@ -1203,8 +1316,10 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Request Match",
                                 "Test Description",
-                                FIXED_NOW.plusSeconds(3600),
-                                FIXED_NOW.plusSeconds(7200),
+                                dateOf(FIXED_NOW.plusSeconds(3600)),
+                                timeOf(FIXED_NOW.plusSeconds(3600)),
+                                dateOf(FIXED_NOW.plusSeconds(7200)),
+                                timeOf(FIXED_NOW.plusSeconds(7200)),
                                 10,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
@@ -1242,8 +1357,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Request Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         3,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -1303,8 +1420,10 @@ public class MatchServiceImplTest {
                                 "Test Address",
                                 "Request Match",
                                 "Test Description",
-                                FIXED_NOW.plusSeconds(3600),
-                                FIXED_NOW.plusSeconds(7200),
+                                dateOf(FIXED_NOW.plusSeconds(3600)),
+                                timeOf(FIXED_NOW.plusSeconds(3600)),
+                                dateOf(FIXED_NOW.plusSeconds(7200)),
+                                timeOf(FIXED_NOW.plusSeconds(7200)),
                                 4,
                                 BigDecimal.ZERO,
                                 Sport.FOOTBALL,
@@ -1356,8 +1475,10 @@ public class MatchServiceImplTest {
                                         "Updated Address",
                                         "Updated Title",
                                         "Updated Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         12,
                                         BigDecimal.ONE,
                                         Sport.TENNIS,
@@ -1552,7 +1673,6 @@ public class MatchServiceImplTest {
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.any(),
                                 Mockito.anyInt(),
                                 Mockito.anyInt()))
                 .thenReturn(expectedMatches);
@@ -1569,7 +1689,6 @@ public class MatchServiceImplTest {
                                 Mockito.any(),
                                 Mockito.any(),
                                 Mockito.any(),
-                                Mockito.any(),
                                 Mockito.any()))
                 .thenReturn(3);
 
@@ -1577,7 +1696,6 @@ public class MatchServiceImplTest {
                 matchService.findDashboardMatches(
                         user,
                         Boolean.TRUE,
-                        null,
                         null,
                         null,
                         null,
@@ -1618,7 +1736,6 @@ public class MatchServiceImplTest {
                                 Mockito.isNull(),
                                 Mockito.isNull(),
                                 Mockito.isNull(),
-                                Mockito.isNull(),
                                 Mockito.eq(5), // offset = (2-1)*5 = 5
                                 Mockito.eq(5))) // limit = 5
                 .thenReturn(expected);
@@ -1635,7 +1752,6 @@ public class MatchServiceImplTest {
                                 Mockito.isNull(),
                                 Mockito.isNull(),
                                 Mockito.isNull(),
-                                Mockito.isNull(),
                                 Mockito.isNull()))
                 .thenReturn(6);
 
@@ -1644,7 +1760,6 @@ public class MatchServiceImplTest {
                         user,
                         Boolean.TRUE,
                         false,
-                        null,
                         null,
                         null,
                         null,
@@ -1716,8 +1831,10 @@ public class MatchServiceImplTest {
                         "Updated Address",
                         "Updated Weekly Padel",
                         "Updated Description",
-                        FIXED_NOW.plusSeconds(5400),
-                        FIXED_NOW.plusSeconds(9000),
+                        dateOf(FIXED_NOW.plusSeconds(5400)),
+                        timeOf(FIXED_NOW.plusSeconds(5400)),
+                        dateOf(FIXED_NOW.plusSeconds(9000)),
+                        timeOf(FIXED_NOW.plusSeconds(9000)),
                         8,
                         BigDecimal.ONE,
                         Sport.PADEL,
@@ -1813,8 +1930,10 @@ public class MatchServiceImplTest {
                         "Updated Address",
                         "Updated Weekly Padel",
                         "Updated Description",
-                        FIXED_NOW.plusSeconds(30),
-                        FIXED_NOW.plusSeconds(3630),
+                        dateOf(FIXED_NOW.plusSeconds(30)),
+                        timeOf(FIXED_NOW.plusSeconds(30)),
+                        dateOf(FIXED_NOW.plusSeconds(3630)),
+                        timeOf(FIXED_NOW.plusSeconds(3630)),
                         8,
                         BigDecimal.ONE,
                         Sport.PADEL,
@@ -1851,8 +1970,10 @@ public class MatchServiceImplTest {
                                         "Updated Address",
                                         "Updated Match",
                                         "Updated Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         8,
                                         BigDecimal.ONE,
                                         Sport.PADEL,
@@ -2133,8 +2254,10 @@ public class MatchServiceImplTest {
                                 "Updated Address",
                                 "Updated Title",
                                 "Updated Description",
-                                FIXED_NOW.plusSeconds(3600),
-                                FIXED_NOW.plusSeconds(7200),
+                                dateOf(FIXED_NOW.plusSeconds(3600)),
+                                timeOf(FIXED_NOW.plusSeconds(3600)),
+                                dateOf(FIXED_NOW.plusSeconds(7200)),
+                                timeOf(FIXED_NOW.plusSeconds(7200)),
                                 12,
                                 BigDecimal.ONE,
                                 Sport.FOOTBALL,
@@ -2200,8 +2323,10 @@ public class MatchServiceImplTest {
                                         "Test Address",
                                         "Test Match",
                                         "Test Description",
-                                        FIXED_NOW.plusSeconds(3600),
-                                        FIXED_NOW.plusSeconds(7200),
+                                        dateOf(FIXED_NOW.plusSeconds(3600)),
+                                        timeOf(FIXED_NOW.plusSeconds(3600)),
+                                        dateOf(FIXED_NOW.plusSeconds(7200)),
+                                        timeOf(FIXED_NOW.plusSeconds(7200)),
                                         10,
                                         BigDecimal.ZERO,
                                         Sport.FOOTBALL,
@@ -2391,7 +2516,6 @@ public class MatchServiceImplTest {
                                 null,
                                 EventSort.SOONEST,
                                 null,
-                                null,
                                 0,
                                 9))
                 .thenReturn(List.of(hosted));
@@ -2408,7 +2532,6 @@ public class MatchServiceImplTest {
                                 null,
                                 null,
                                 EventSort.SOONEST,
-                                null,
                                 null))
                 .thenReturn(1);
 
@@ -2425,7 +2548,6 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         EventSort.SOONEST,
-                        null,
                         null,
                         1,
                         9);
@@ -2535,5 +2657,13 @@ public class MatchServiceImplTest {
                 null,
                 null,
                 null);
+    }
+
+    private static LocalDate dateOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalDate();
+    }
+
+    private static LocalTime timeOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalTime();
     }
 }

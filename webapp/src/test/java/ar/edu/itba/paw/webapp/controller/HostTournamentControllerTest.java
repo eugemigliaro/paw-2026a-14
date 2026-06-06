@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -33,6 +34,7 @@ import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegi
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationUnderCapacityException;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
+import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -40,7 +42,7 @@ import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -54,6 +56,8 @@ import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
@@ -124,7 +128,7 @@ class HostTournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(validCreatePost())
-                .andExpect(status().is3xxRedirection())
+                .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/tournaments/99"));
     }
 
@@ -162,7 +166,7 @@ class HostTournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(createPost("City Padel Cup", false, true))
-                .andExpect(status().is3xxRedirection())
+                .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/tournaments/99"));
     }
 
@@ -262,6 +266,34 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void getEditTournamentWithLegacyEmptyScheduleReturnsBlankScheduleFields() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findTournamentForHost(Mockito.eq(77L), Mockito.any()))
+                .thenReturn(
+                        Optional.of(
+                                tournament(77L, host, TournamentStatus.REGISTRATION, null, null)));
+
+        // 2. Exercise
+        final MvcResult result =
+                mockMvc.perform(get("/host/tournaments/77/edit").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("host/tournaments/create"))
+                        .andExpect(model().attribute("isEditMode", true))
+                        .andReturn();
+
+        // 3. Assert
+        final CreateTournamentForm form =
+                (CreateTournamentForm)
+                        result.getModelAndView().getModel().get("createTournamentForm");
+        Assertions.assertNull(form.getStartDate());
+        Assertions.assertNull(form.getStartTime());
+        Assertions.assertNull(form.getEndDate());
+        Assertions.assertNull(form.getEndTime());
+    }
+
+    @Test
     void postEditTournamentWithValidFormRedirectsToTournamentDetail() throws Exception {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
@@ -278,8 +310,24 @@ class HostTournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(editPost(77L, "Updated City Cup"))
-                .andExpect(status().is3xxRedirection())
+                .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/tournaments/77"));
+    }
+
+    @Test
+    void postCreateWithStartBeforeRegistrationCloseReturnsForm() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        failIfTournamentCreationIsAttempted();
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        createPostWithSchedule(
+                                "City Padel Cup", "2030-04-09", "20:00", "2030-04-10", "21:00"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attributeHasFieldErrors("createTournamentForm", "startTime"));
     }
 
     @Test
@@ -470,7 +518,7 @@ class HostTournamentControllerTest {
                                 java.util.List.of(roundOneMatch, roundTwoMatch),
                                 null,
                                 roundOneMatch));
-        final String expectedDate = LocalDate.now(ZoneId.systemDefault()).plusDays(1).toString();
+        final String expectedDate = LocalDate.now(PlatformTime.ZONE).plusDays(1).toString();
 
         // 2. Exercise
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
@@ -552,7 +600,7 @@ class HostTournamentControllerTest {
                 .thenReturn(java.util.Optional.of(tournament));
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(post("/host/tournaments/77/bracket/publish").param("tz", "UTC"))
+        mockMvc.perform(post("/host/tournaments/77/bracket/publish"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/bracket-setup"));
     }
@@ -560,8 +608,10 @@ class HostTournamentControllerTest {
     private static boolean isValidCreateRequest(final CreateTournamentRequest request) {
         return request != null
                 && Sport.PADEL == request.getSport()
-                && request.getStartsAt() == null
-                && request.getEndsAt() == null
+                && LocalDate.of(2030, 4, 10).equals(request.getStartDate())
+                && LocalTime.of(18, 0).equals(request.getStartTime())
+                && LocalDate.of(2030, 4, 10).equals(request.getEndDate())
+                && LocalTime.of(21, 0).equals(request.getEndTime())
                 && request.getBracketSize() == 8
                 && request.getTeamSize() == 1
                 && request.isAllowSoloSignup()
@@ -571,8 +621,10 @@ class HostTournamentControllerTest {
     private static boolean isCreateRequestWithArgentinaFallback(
             final CreateTournamentRequest request) {
         return request != null
-                && Instant.parse("2030-04-01T12:00:00Z").equals(request.getRegistrationOpensAt())
-                && Instant.parse("2030-04-09T23:00:00Z").equals(request.getRegistrationClosesAt());
+                && LocalDate.of(2030, 4, 1).equals(request.getRegistrationOpensDate())
+                && LocalTime.of(9, 0).equals(request.getRegistrationOpensTime())
+                && LocalDate.of(2030, 4, 9).equals(request.getRegistrationClosesDate())
+                && LocalTime.of(20, 0).equals(request.getRegistrationClosesTime());
     }
 
     private static boolean isTeamDraftOnlyCreateRequest(final CreateTournamentRequest request) {
@@ -602,13 +654,12 @@ class HostTournamentControllerTest {
                 && schedules.get(1).getMatchId() == 11L;
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validCreatePost() {
+    private static MockHttpServletRequestBuilder validCreatePost() {
         return createPost("City Padel Cup");
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            editPost(final long tournamentId, final String title) {
+    private static MockHttpServletRequestBuilder editPost(
+            final long tournamentId, final String title) {
         return post("/host/tournaments/" + tournamentId + "/edit")
                 .locale(Locale.ENGLISH)
                 .param("title", title)
@@ -619,21 +670,22 @@ class HostTournamentControllerTest {
                 .param("registrationOpensTime", "09:00")
                 .param("registrationClosesDate", "2030-04-09")
                 .param("registrationClosesTime", "20:00")
+                .param("startDate", "2030-04-10")
+                .param("startTime", "18:00")
+                .param("endDate", "2030-04-10")
+                .param("endTime", "21:00")
                 .param("bracketSize", "16")
                 .param("teamSize", "2")
                 .param("pricePerPlayer", "15.00")
                 .param("allowSoloSignup", "true")
-                .param("_allowTeamDraft", "on")
-                .param("tz", "UTC");
+                .param("_allowTeamDraft", "on");
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPost(final String title) {
+    private static MockHttpServletRequestBuilder createPost(final String title) {
         return createPost(title, true, true);
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPostWithoutTimezone(final String title) {
+    private static MockHttpServletRequestBuilder createPostWithoutTimezone(final String title) {
         return post("/host/tournaments")
                 .locale(Locale.ENGLISH)
                 .param("title", title)
@@ -644,6 +696,10 @@ class HostTournamentControllerTest {
                 .param("registrationOpensTime", "09:00")
                 .param("registrationClosesDate", "2030-04-09")
                 .param("registrationClosesTime", "20:00")
+                .param("startDate", "2030-04-10")
+                .param("startTime", "18:00")
+                .param("endDate", "2030-04-10")
+                .param("endTime", "21:00")
                 .param("bracketSize", "8")
                 .param("teamSize", "1")
                 .param("pricePerPlayer", "10.00")
@@ -651,22 +707,58 @@ class HostTournamentControllerTest {
                 .param("allowTeamDraft", "true");
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPost(
-                    final String title,
-                    final boolean allowSoloSignup,
-                    final boolean allowTeamDraft) {
+    private static MockHttpServletRequestBuilder createPost(
+            final String title, final boolean allowSoloSignup, final boolean allowTeamDraft) {
         return createPost(title, Sport.PADEL.getDbValue(), "1", allowSoloSignup, allowTeamDraft);
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPost(
-                    final String title,
-                    final String sport,
-                    final String teamSize,
-                    final boolean allowSoloSignup,
-                    final boolean allowTeamDraft) {
-        final org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder builder =
+    private static MockHttpServletRequestBuilder createPost(
+            final String title,
+            final String sport,
+            final String teamSize,
+            final boolean allowSoloSignup,
+            final boolean allowTeamDraft) {
+        return createPostWithSchedule(
+                title,
+                sport,
+                teamSize,
+                allowSoloSignup,
+                allowTeamDraft,
+                "2030-04-10",
+                "18:00",
+                "2030-04-10",
+                "21:00");
+    }
+
+    private static MockHttpServletRequestBuilder createPostWithSchedule(
+            final String title,
+            final String startDate,
+            final String startTime,
+            final String endDate,
+            final String endTime) {
+        return createPostWithSchedule(
+                title,
+                Sport.PADEL.getDbValue(),
+                "1",
+                true,
+                true,
+                startDate,
+                startTime,
+                endDate,
+                endTime);
+    }
+
+    private static MockHttpServletRequestBuilder createPostWithSchedule(
+            final String title,
+            final String sport,
+            final String teamSize,
+            final boolean allowSoloSignup,
+            final boolean allowTeamDraft,
+            final String startDate,
+            final String startTime,
+            final String endDate,
+            final String endTime) {
+        final MockHttpServletRequestBuilder builder =
                 post("/host/tournaments")
                         .locale(Locale.ENGLISH)
                         .param("title", title)
@@ -677,10 +769,13 @@ class HostTournamentControllerTest {
                         .param("registrationOpensTime", "09:00")
                         .param("registrationClosesDate", "2030-04-09")
                         .param("registrationClosesTime", "20:00")
+                        .param("startDate", startDate)
+                        .param("startTime", startTime)
+                        .param("endDate", endDate)
+                        .param("endTime", endTime)
                         .param("bracketSize", "8")
                         .param("teamSize", teamSize)
-                        .param("pricePerPlayer", "10.00")
-                        .param("tz", "UTC");
+                        .param("pricePerPlayer", "10.00");
         if (allowSoloSignup) {
             builder.param("allowSoloSignup", "true");
         } else {
@@ -694,8 +789,7 @@ class HostTournamentControllerTest {
         return builder;
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validPublishPost() {
+    private static MockHttpServletRequestBuilder validPublishPost() {
         return post("/host/tournaments/77/bracket/publish")
                 .param("schedules[0].startDate", "2030-04-10")
                 .param("schedules[0].startTime", "18:00")
@@ -718,12 +812,25 @@ class HostTournamentControllerTest {
                 .param("schedules[1].matchId", "11")
                 .param("schedules[1].roundNumber", "1")
                 .param("schedules[1].roundLabel", "Round 1")
-                .param("schedules[1].matchLabel", "Match 2")
-                .param("tz", "UTC");
+                .param("schedules[1].matchLabel", "Match 2");
     }
 
     private static Tournament tournament(
             final Long id, final User host, final TournamentStatus status) {
+        return tournament(
+                id,
+                host,
+                status,
+                Instant.parse("2030-04-10T18:00:00Z"),
+                Instant.parse("2030-04-10T21:00:00Z"));
+    }
+
+    private static Tournament tournament(
+            final Long id,
+            final User host,
+            final TournamentStatus status,
+            final Instant startsAt,
+            final Instant endsAt) {
         return new Tournament(
                 id,
                 host,
@@ -733,8 +840,8 @@ class HostTournamentControllerTest {
                 "Downtown Club",
                 null,
                 null,
-                Instant.parse("2030-04-10T18:00:00Z"),
-                Instant.parse("2030-04-10T21:00:00Z"),
+                startsAt,
+                endsAt,
                 BigDecimal.TEN,
                 null,
                 TournamentFormat.SINGLE_ELIMINATION,
