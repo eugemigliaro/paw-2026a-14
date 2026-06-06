@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.query.EventCategory;
 import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -7,7 +8,6 @@ import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,12 +19,6 @@ final class MatchDashboardQueryState {
         final SearchForm normalizedForm = copy(sourceForm);
         normalizedForm.normalizeDefaults();
 
-        final ZoneId selectedTimezone =
-                normalizedForm.getTimezone() == null
-                        ? ZoneId.systemDefault()
-                        : normalizedForm.getTimezone();
-        normalizedForm.setTimezone(selectedTimezone);
-
         final boolean tournament = normalizedForm.getType() == EventType.TOURNAMENT;
         final boolean context =
                 normalizedForm.getFilter() == null
@@ -35,8 +29,7 @@ final class MatchDashboardQueryState {
                         : normalizeDateRange(
                                 normalizedForm.getStartDate(),
                                 normalizedForm.getEndDate(),
-                                normalizedForm.getFilter(),
-                                selectedTimezone);
+                                normalizedForm.getFilter());
 
         final List<EventCategory> selectedCategories =
                 tournament ? List.of() : normalizedForm.getCategory();
@@ -52,13 +45,7 @@ final class MatchDashboardQueryState {
         normalizedForm.setEndDate(dateRange.endDate());
 
         return new DashboardSelection(
-                normalizedForm,
-                tournament,
-                context,
-                selectedTimezone,
-                dateRange,
-                includeHosted,
-                participantStatuses);
+                normalizedForm, tournament, context, dateRange, includeHosted, participantStatuses);
     }
 
     private static SearchForm copy(final SearchForm sourceForm) {
@@ -71,7 +58,6 @@ final class MatchDashboardQueryState {
         copy.setEndDate(sourceForm.getEndDate());
         copy.setMinPrice(sourceForm.getMinPrice());
         copy.setMaxPrice(sourceForm.getMaxPrice());
-        copy.setTimezone(sourceForm.getTimezone());
         copy.setSport(sourceForm.getSport());
         copy.setStatus(sourceForm.getStatus());
         copy.setCategory(sourceForm.getCategory());
@@ -111,13 +97,10 @@ final class MatchDashboardQueryState {
     }
 
     private static DateRange normalizeDateRange(
-            final LocalDate rawStartDate,
-            final LocalDate rawEndDate,
-            final EventFilter context,
-            final ZoneId zoneId) {
+            final LocalDate rawStartDate, final LocalDate rawEndDate, final EventFilter context) {
         LocalDate startDate = rawStartDate;
         LocalDate endDate = rawEndDate;
-        final LocalDate today = LocalDate.now(zoneId);
+        final LocalDate today = LocalDate.now(PlatformTime.ZONE);
 
         if (context == EventFilter.UPCOMING) {
             if (startDate == null) {
@@ -137,7 +120,6 @@ final class MatchDashboardQueryState {
         private final SearchForm searchForm;
         private final boolean tournament;
         private final boolean upcoming;
-        private final ZoneId selectedTimezone;
         private final DateRange dateRange;
         private final Boolean includeHosted;
         private final List<ParticipantStatus> participantStatuses;
@@ -146,14 +128,12 @@ final class MatchDashboardQueryState {
                 final SearchForm searchForm,
                 final boolean tournament,
                 final boolean upcoming,
-                final ZoneId selectedTimezone,
                 final DateRange dateRange,
                 final Boolean includeHosted,
                 final List<ParticipantStatus> participantStatuses) {
             this.searchForm = searchForm;
             this.tournament = tournament;
             this.upcoming = upcoming;
-            this.selectedTimezone = selectedTimezone;
             this.dateRange = dateRange;
             this.includeHosted = includeHosted;
             this.participantStatuses = participantStatuses;
@@ -169,10 +149,6 @@ final class MatchDashboardQueryState {
 
         boolean upcoming() {
             return upcoming;
-        }
-
-        ZoneId selectedTimezone() {
-            return selectedTimezone;
         }
 
         DateRange dateRange() {

@@ -65,8 +65,7 @@
 						<a
 							href="${optionHref}"
 							class="filter-dropdown__item sort-panel__item ${option.selected ? 'filter-dropdown__item--active sort-panel__item--active' : ''}"
-							aria-current="${option.selected ? 'true' : 'false'}"
-							data-browser-timezone-url-link="true">
+							aria-current="${option.selected ? 'true' : 'false'}">
 							<c:out value="${option.label}" />
 						</a>
 					</c:forEach>

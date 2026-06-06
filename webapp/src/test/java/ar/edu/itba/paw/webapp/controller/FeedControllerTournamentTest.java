@@ -34,7 +34,7 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Assertions;
@@ -71,12 +71,11 @@ class FeedControllerTournamentTest {
                         matchService.searchPublicMatches(
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.<List<Sport>>any(),
-                                ArgumentMatchers.nullable(Instant.class),
-                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
                                 ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.nullable(ZoneId.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -92,12 +91,11 @@ class FeedControllerTournamentTest {
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
                                 ArgumentMatchers.<List<Sport>>any(),
-                                ArgumentMatchers.nullable(Instant.class),
-                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
                                 ArgumentMatchers.nullable(EventSort.class),
                                 ArgumentMatchers.anyInt(),
                                 ArgumentMatchers.anyInt(),
-                                ArgumentMatchers.nullable(ZoneId.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -142,12 +140,11 @@ class FeedControllerTournamentTest {
                 .searchPublicTournaments(
                         ArgumentMatchers.anyString(),
                         ArgumentMatchers.<List<Sport>>any(),
-                        ArgumentMatchers.nullable(Instant.class),
-                        ArgumentMatchers.nullable(Instant.class),
+                        ArgumentMatchers.nullable(LocalDate.class),
+                        ArgumentMatchers.nullable(LocalDate.class),
                         ArgumentMatchers.nullable(EventSort.class),
                         ArgumentMatchers.anyInt(),
                         ArgumentMatchers.anyInt(),
-                        ArgumentMatchers.nullable(ZoneId.class),
                         ArgumentMatchers.nullable(BigDecimal.class),
                         ArgumentMatchers.nullable(BigDecimal.class),
                         ArgumentMatchers.nullable(Double.class),
@@ -177,7 +174,6 @@ class FeedControllerTournamentTest {
                                 Mockito.eq(EventSort.PRICE_LOW),
                                 Mockito.eq(2),
                                 Mockito.eq(12),
-                                Mockito.nullable(ZoneId.class),
                                 Mockito.<BigDecimal>argThat(
                                         value -> value.compareTo(new BigDecimal("5")) == 0),
                                 Mockito.<BigDecimal>argThat(
@@ -294,7 +290,6 @@ class FeedControllerTournamentTest {
                                 Mockito.eq(EventSort.DISTANCE),
                                 Mockito.eq(1),
                                 Mockito.eq(12),
-                                Mockito.nullable(ZoneId.class),
                                 Mockito.isNull(),
                                 Mockito.isNull(),
                                 Mockito.eq(-34.61),

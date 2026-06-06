@@ -72,9 +72,6 @@
 									</c:if>
 									<input type="hidden" name="sort"
 										value="<c:out value='${searchForm.sort}' />" />
-									<input type="hidden" name="tz"
-										value="<c:out value='${searchForm.timezone}' />"
-										data-browser-timezone-field="true" />
 									<input type="hidden" name="minPrice"
 										value="<c:out value='${searchForm.minPrice}' />" />
 									<input type="hidden" name="maxPrice"
@@ -262,9 +259,6 @@
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
 												value="<c:out value='${searchForm.sort}' />" />
-											<input type="hidden" name="tz"
-												value="<c:out value='${searchForm.timezone}' />"
-												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
 												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
@@ -320,7 +314,6 @@
 												<c:url var="clearDateHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
 													<c:param name="sort" value="${searchForm.sort}" />
-													<c:param name="tz" value="${searchForm.timezone}" />
 													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>
@@ -391,9 +384,6 @@
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
 												value="<c:out value='${searchForm.sort}' />" />
-											<input type="hidden" name="tz"
-												value="<c:out value='${searchForm.timezone}' />"
-												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
 												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
@@ -466,7 +456,6 @@
 												<c:url var="clearPriceHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
 													<c:param name="sort" value="${searchForm.sort}" />
-													<c:param name="tz" value="${searchForm.timezone}" />
 													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>

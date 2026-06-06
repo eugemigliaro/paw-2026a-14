@@ -9,6 +9,7 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -27,7 +28,6 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ParticipantViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -350,7 +350,6 @@ final class EventPageSupport {
         return new EventDetailPageViewModel(
                 toCard(
                         match,
-                        ZoneId.systemDefault(),
                         locale,
                         currentUser,
                         buildAvailabilityLabel(match, locale),
@@ -423,11 +422,10 @@ final class EventPageSupport {
                 new BookingDetailViewModel(
                         messageSource.getMessage("event.booking.date", null, locale),
                         dateFormatter(locale)
-                                .format(match.getStartsAt().atZone(ZoneId.systemDefault()))),
+                                .format(match.getStartsAt().atZone(PlatformTime.ZONE))),
                 new BookingDetailViewModel(
                         messageSource.getMessage("event.booking.time", null, locale),
-                        timeFormatter(locale)
-                                        .format(match.getStartsAt().atZone(ZoneId.systemDefault()))
+                        timeFormatter(locale).format(match.getStartsAt().atZone(PlatformTime.ZONE))
                                 + (match.getEndsAt() == null
                                         ? ""
                                         : " - "
@@ -435,8 +433,8 @@ final class EventPageSupport {
                                                         .format(
                                                                 match.getEndsAt()
                                                                         .atZone(
-                                                                                ZoneId
-                                                                                        .systemDefault())))),
+                                                                                PlatformTime
+                                                                                        .ZONE)))),
                 new BookingDetailViewModel(
                         messageSource.getMessage("event.booking.venue", null, locale),
                         match.getAddress()));
@@ -539,7 +537,7 @@ final class EventPageSupport {
                                             .format(
                                                     occurrence
                                                             .getStartsAt()
-                                                            .atZone(ZoneId.systemDefault())),
+                                                            .atZone(PlatformTime.ZONE)),
                                     eventStateLabel(state, locale),
                                     state.tone(),
                                     occurrence.getId().equals(currentMatch.getId()),
@@ -759,7 +757,7 @@ final class EventPageSupport {
 
     private String eventStateNotice(final Match match, final Locale locale) {
         final EventDisplayState state = eventDisplayState(match);
-        if ("completed".equals(state.key())) {
+        if ("completed".equals(state.key()) || "inProgress".equals(state.key())) {
             return messageSource.getMessage("event.state.completedNotice", null, locale);
         }
         if ("cancelled".equals(state.key())) {
@@ -968,7 +966,7 @@ final class EventPageSupport {
     }
 
     private boolean canHostEdit(final Match match) {
-        if (hasEventEnded(match)) {
+        if (hasEventStarted(match)) {
             return false;
         }
         return match.getStatus() != EventStatus.COMPLETED
@@ -976,7 +974,7 @@ final class EventPageSupport {
     }
 
     private boolean canHostCancel(final Match match) {
-        if (hasEventEnded(match)) {
+        if (hasEventStarted(match)) {
             return false;
         }
         return match.getStatus() != EventStatus.COMPLETED

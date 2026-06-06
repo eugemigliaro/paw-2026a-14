@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -15,6 +16,8 @@ import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -593,6 +596,18 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         }
     }
 
+    private static Instant resolveStartsAt(final TournamentMatchScheduleRequest schedule) {
+        return toInstant(schedule.getStartDate(), schedule.getStartTime());
+    }
+
+    private static Instant resolveEndsAt(final TournamentMatchScheduleRequest schedule) {
+        return toInstant(schedule.getEndDate(), schedule.getEndTime());
+    }
+
+    private static Instant toInstant(final LocalDate date, final LocalTime time) {
+        return date == null || time == null ? null : PlatformTime.toInstant(date, time);
+    }
+
     private Map<Long, TournamentMatchScheduleRequest> schedulesByMatchId(
             final List<TournamentMatchScheduleRequest> schedules) {
         if (schedules == null) {
@@ -625,13 +640,13 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
     private void validateSchedule(
             final TournamentMatchScheduleRequest schedule, final Instant now) {
-        if (schedule.getStartsAt() == null
-                || schedule.getEndsAt() == null
-                || !schedule.getEndsAt().isAfter(schedule.getStartsAt())
+        if (resolveStartsAt(schedule) == null
+                || resolveEndsAt(schedule) == null
+                || !resolveEndsAt(schedule).isAfter(resolveStartsAt(schedule))
                 || isBlank(schedule.getAddress())) {
             throw new TournamentBracketInvalidScheduleException("Invalid schedule for match");
         }
-        if (schedule.getStartsAt().isBefore(now)) {
+        if (resolveStartsAt(schedule).isBefore(now)) {
             throw new TournamentBracketInvalidScheduleException("Schedule starts before now");
         }
         if ((schedule.getLatitude() == null) != (schedule.getLongitude() == null)) {
@@ -653,14 +668,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final Map<Integer, Instant> latestRoundEnd = new HashMap<>();
         for (final TournamentMatch match : matches) {
             final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
-            if (schedule == null || schedule.getEndsAt() == null) {
+            if (schedule == null || resolveEndsAt(schedule) == null) {
                 continue;
             }
             latestRoundEnd.compute(
                     match.getRoundNumber(),
                     (round, existingEnd) ->
-                            existingEnd == null || schedule.getEndsAt().isAfter(existingEnd)
-                                    ? schedule.getEndsAt()
+                            existingEnd == null || resolveEndsAt(schedule).isAfter(existingEnd)
+                                    ? resolveEndsAt(schedule)
                                     : existingEnd);
         }
 
@@ -675,8 +690,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             }
             final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
             if (schedule != null
-                    && schedule.getStartsAt() != null
-                    && schedule.getStartsAt().isBefore(previousRoundLatestEnd)) {
+                    && resolveStartsAt(schedule) != null
+                    && resolveStartsAt(schedule).isBefore(previousRoundLatestEnd)) {
                 throw new TournamentBracketInvalidRoundOrderException(
                         "Invalid round order for match");
             }
@@ -687,8 +702,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             final TournamentMatch match,
             final TournamentMatchScheduleRequest schedule,
             final Instant now) {
-        match.setScheduledStartsAt(schedule.getStartsAt());
-        match.setScheduledEndsAt(schedule.getEndsAt());
+        match.setScheduledStartsAt(resolveStartsAt(schedule));
+        match.setScheduledEndsAt(resolveEndsAt(schedule));
         match.setAddress(schedule.getAddress());
         match.setLatitude(schedule.getLatitude());
         match.setLongitude(schedule.getLongitude());

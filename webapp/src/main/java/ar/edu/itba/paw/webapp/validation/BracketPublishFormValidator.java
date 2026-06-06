@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.validation;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.webapp.form.BracketPublishForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishScheduleForm;
 import java.time.Instant;
@@ -23,6 +24,7 @@ public class BracketPublishFormValidator
         boolean valid = true;
         context.disableDefaultConstraintViolation();
 
+        final ZoneId zoneId = PlatformTime.ZONE;
         final Instant now = Instant.now();
         Instant previousRoundEnd = null;
         Integer previousRoundNumber = null;
@@ -50,9 +52,8 @@ public class BracketPublishFormValidator
             }
 
             final Instant startsAt =
-                    toInstant(schedule.getStartDate(), schedule.getStartTime(), form.getTz());
-            final Instant endsAt =
-                    toInstant(schedule.getEndDate(), schedule.getEndTime(), form.getTz());
+                    toInstant(schedule.getStartDate(), schedule.getStartTime(), zoneId);
+            final Instant endsAt = toInstant(schedule.getEndDate(), schedule.getEndTime(), zoneId);
 
             if (endsAt != null && startsAt != null && !endsAt.isAfter(startsAt)) {
                 reject(
@@ -84,7 +85,7 @@ public class BracketPublishFormValidator
                                                 toInstant(
                                                         other.getEndDate(),
                                                         other.getEndTime(),
-                                                        form.getTz()))
+                                                        zoneId))
                                 .filter(value -> value != null)
                                 .max(Comparator.naturalOrder())
                                 .orElse(previousRoundEnd);

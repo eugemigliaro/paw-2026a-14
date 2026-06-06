@@ -10,8 +10,6 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,19 +59,6 @@ public class MatchDashboardController {
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final SearchForm viewSearchForm = selection.searchForm();
-        final ZoneId selectedTimezone = selection.selectedTimezone();
-        final Instant startInstant =
-                viewSearchForm.getStartDate() == null
-                        ? null
-                        : viewSearchForm.getStartDate().atStartOfDay(selectedTimezone).toInstant();
-        final Instant endInstant =
-                viewSearchForm.getEndDate() == null
-                        ? null
-                        : viewSearchForm
-                                .getEndDate()
-                                .plusDays(1)
-                                .atStartOfDay(selectedTimezone)
-                                .toInstant();
 
         final PaginatedResult<Match> result =
                 selection.tournament()
@@ -85,12 +70,11 @@ public class MatchDashboardController {
                                 viewSearchForm.getQ(),
                                 viewSearchForm.getSport(),
                                 viewSearchForm.getStatus(),
-                                startInstant,
-                                endInstant,
+                                viewSearchForm.getStartDate(),
+                                viewSearchForm.getEndDate(),
                                 viewSearchForm.getMinPrice(),
                                 viewSearchForm.getMaxPrice(),
                                 viewSearchForm.getSort(),
-                                selectedTimezone,
                                 selection.participantStatuses(),
                                 viewSearchForm.getPage(),
                                 PAGE_SIZE);
@@ -102,12 +86,11 @@ public class MatchDashboardController {
                                 selection.includeHosted(),
                                 viewSearchForm.getQ(),
                                 viewSearchForm.getSport(),
-                                startInstant,
-                                endInstant,
+                                viewSearchForm.getStartDate(),
+                                viewSearchForm.getEndDate(),
                                 viewSearchForm.getSort(),
                                 viewSearchForm.getPage(),
                                 PAGE_SIZE,
-                                selectedTimezone,
                                 viewSearchForm.getMinPrice(),
                                 viewSearchForm.getMaxPrice(),
                                 viewSearchForm.getLatitude(),

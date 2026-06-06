@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -64,9 +65,8 @@ import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -94,6 +94,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
 
 @Controller
 public class HostTournamentController {
@@ -172,8 +173,10 @@ public class HostTournamentController {
                         createTournamentForm.getAddress(),
                         createTournamentForm.getLatitude(),
                         createTournamentForm.getLongitude(),
-                        null, // TODO: add this field so that sorting is not broken
-                        null, // TODO: add this field so that sorting is not broken
+                        createTournamentForm.getStartDate(),
+                        createTournamentForm.getStartTime(),
+                        createTournamentForm.getEndDate(),
+                        createTournamentForm.getEndTime(),
                         createTournamentForm.getPricePerPlayer(),
                         bannerUpload(createTournamentForm.getBannerImage()),
                         TournamentFormat.SINGLE_ELIMINATION,
@@ -181,18 +184,14 @@ public class HostTournamentController {
                         createTournamentForm.getTeamSize(),
                         createTournamentForm.isAllowSoloSignup(),
                         createTournamentForm.isAllowTeamDraft(),
-                        toInstant(
-                                createTournamentForm.getRegistrationOpensDate(),
-                                createTournamentForm.getRegistrationOpensTime(),
-                                createTournamentForm.getTz()),
-                        toInstant(
-                                createTournamentForm.getRegistrationClosesDate(),
-                                createTournamentForm.getRegistrationClosesTime(),
-                                createTournamentForm.getTz()));
+                        createTournamentForm.getRegistrationOpensDate(),
+                        createTournamentForm.getRegistrationOpensTime(),
+                        createTournamentForm.getRegistrationClosesDate(),
+                        createTournamentForm.getRegistrationClosesTime());
 
         try {
             final Tournament createdTournament = tournamentService.createTournament(user, request);
-            return new ModelAndView("redirect:/tournaments/" + createdTournament.getId());
+            return seeOther("/tournaments/" + createdTournament.getId());
         } catch (final TournamentLifecycleException exception) {
             applyServiceError(exception, bindingResult, locale);
             return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
@@ -244,20 +243,18 @@ public class HostTournamentController {
                         createTournamentForm.getAddress(),
                         createTournamentForm.getLatitude(),
                         createTournamentForm.getLongitude(),
-                        tournament.getStartsAt(),
-                        tournament.getEndsAt(),
+                        createTournamentForm.getStartDate(),
+                        createTournamentForm.getStartTime(),
+                        createTournamentForm.getEndDate(),
+                        createTournamentForm.getEndTime(),
                         createTournamentForm.getPricePerPlayer(),
                         bannerUpload(createTournamentForm.getBannerImage()),
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
-                        toInstant(
-                                createTournamentForm.getRegistrationOpensDate(),
-                                createTournamentForm.getRegistrationOpensTime(),
-                                createTournamentForm.getTz()),
-                        toInstant(
-                                createTournamentForm.getRegistrationClosesDate(),
-                                createTournamentForm.getRegistrationClosesTime(),
-                                createTournamentForm.getTz()));
+                        createTournamentForm.getRegistrationOpensDate(),
+                        createTournamentForm.getRegistrationOpensTime(),
+                        createTournamentForm.getRegistrationClosesDate(),
+                        createTournamentForm.getRegistrationClosesTime());
 
         try {
             tournamentService.update(
@@ -273,7 +270,7 @@ public class HostTournamentController {
 
         redirectAttributes.addFlashAttribute(
                 "tournamentNoticeCode", "tournament.host.edit.success");
-        return new ModelAndView("redirect:/tournaments/" + tournamentId);
+        return seeOther("/tournaments/" + tournamentId);
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/close-registration")
@@ -588,7 +585,6 @@ public class HostTournamentController {
     private BracketPublishForm createBracketPublishForm(
             final TournamentBracketViewModel bracketPage) {
         final BracketPublishForm form = new BracketPublishForm();
-        form.setTz(ZoneId.systemDefault());
         final List<BracketPublishScheduleForm> schedules = new ArrayList<>();
         for (final TournamentBracketViewModel.RoundViewModel round : bracketPage.getRounds()) {
             for (final TournamentBracketViewModel.MatchViewModel match : round.getMatches()) {
@@ -627,14 +623,15 @@ public class HostTournamentController {
 
     private List<TournamentMatchScheduleRequest> toMatchScheduleRequests(
             final BracketPublishForm form) {
-        final ZoneId zoneId = form.getTz() != null ? form.getTz() : ZoneId.systemDefault();
         final List<TournamentMatchScheduleRequest> schedules = new ArrayList<>();
         for (final BracketPublishScheduleForm schedule : form.getSchedules()) {
             schedules.add(
                     new TournamentMatchScheduleRequest(
                             schedule.getMatchId(),
-                            toInstant(schedule.getStartDate(), schedule.getStartTime(), zoneId),
-                            toInstant(schedule.getEndDate(), schedule.getEndTime(), zoneId),
+                            schedule.getStartDate(),
+                            schedule.getStartTime(),
+                            schedule.getEndDate(),
+                            schedule.getEndTime(),
                             schedule.getAddress(),
                             schedule.getLatitude(),
                             schedule.getLongitude()));
@@ -670,8 +667,11 @@ public class HostTournamentController {
     }
 
     private CreateTournamentForm toForm(final Tournament tournament) {
-        final ZoneId zoneId = ZoneId.systemDefault();
         final CreateTournamentForm form = new CreateTournamentForm();
+        form.setStartDate(null);
+        form.setStartTime(null);
+        form.setEndDate(null);
+        form.setEndTime(null);
         form.setTitle(tournament.getTitle());
         form.setDescription(tournament.getDescription());
         form.setAddress(tournament.getAddress());
@@ -683,15 +683,20 @@ public class HostTournamentController {
         form.setAllowSoloSignup(tournament.isAllowSoloSignup());
         form.setAllowTeamDraft(tournament.isAllowTeamDraft());
         form.setPricePerPlayer(tournament.getPricePerPlayer());
-        form.setRegistrationOpensDate(
-                LocalDate.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
-        form.setRegistrationOpensTime(
-                LocalTime.ofInstant(tournament.getRegistrationOpensAt(), zoneId));
-        form.setRegistrationClosesDate(
-                LocalDate.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
-        form.setRegistrationClosesTime(
-                LocalTime.ofInstant(tournament.getRegistrationClosesAt(), zoneId));
-        form.setTz(zoneId);
+        form.setRegistrationOpensDate(tournament.getRegistrationOpensAtDateTime().toLocalDate());
+        form.setRegistrationOpensTime(tournament.getRegistrationOpensAtDateTime().toLocalTime());
+        form.setRegistrationClosesDate(tournament.getRegistrationClosesAtDateTime().toLocalDate());
+        form.setRegistrationClosesTime(tournament.getRegistrationClosesAtDateTime().toLocalTime());
+        final OffsetDateTime startsAt = tournament.getStartsAtDateTime();
+        if (startsAt != null) {
+            form.setStartDate(startsAt.toLocalDate());
+            form.setStartTime(startsAt.toLocalTime());
+        }
+        final OffsetDateTime endsAt = tournament.getEndsAtDateTime();
+        if (endsAt != null) {
+            form.setEndDate(endsAt.toLocalDate());
+            form.setEndTime(endsAt.toLocalTime());
+        }
         return form;
     }
 
@@ -718,6 +723,12 @@ public class HostTournamentController {
                 return bannerImage.getInputStream();
             }
         };
+    }
+
+    private static ModelAndView seeOther(final String targetUrl) {
+        final RedirectView redirectView = new RedirectView(targetUrl, true);
+        redirectView.setStatusCode(HttpStatus.SEE_OTHER);
+        return new ModelAndView(redirectView);
     }
 
     private boolean isEditable(final Tournament tournament) {
@@ -865,8 +876,7 @@ public class HostTournamentController {
     private TournamentBracketViewModel buildBracketPage(
             final TournamentBracketView bracketView, final Locale locale) {
         final Tournament tournament = bracketView.getTournament();
-        final String defaultScheduleDate =
-                LocalDate.now(ZoneId.systemDefault()).plusDays(1).toString();
+        final String defaultScheduleDate = LocalDate.now(PlatformTime.ZONE).plusDays(1).toString();
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 bracketView.getMatches().stream()
                         .sorted(
@@ -1083,13 +1093,13 @@ public class HostTournamentController {
             return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
         }
         if (match.getScheduledEndsAt() == null) {
-            return formatInstant(match.getScheduledStartsAt(), locale, ZoneId.systemDefault());
+            return formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE);
         }
         return messageSource.getMessage(
                 "tournament.bracket.schedule.range",
                 new Object[] {
-                    formatInstant(match.getScheduledStartsAt(), locale, ZoneId.systemDefault()),
-                    formatInstant(match.getScheduledEndsAt(), locale, ZoneId.systemDefault())
+                    formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE),
+                    formatInstant(match.getScheduledEndsAt(), locale, PlatformTime.ZONE)
                 },
                 locale);
     }
@@ -1106,14 +1116,13 @@ public class HostTournamentController {
     private static String scheduleDate(final Instant instant) {
         return instant == null
                 ? ""
-                : LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalDate().toString();
+                : PlatformTime.toOffsetDateTime(instant).toLocalDate().toString();
     }
 
     private static String scheduleTime(final Instant instant) {
         return instant == null
                 ? ""
-                : TIME_INPUT_FORMATTER.format(
-                        LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toLocalTime());
+                : TIME_INPUT_FORMATTER.format(PlatformTime.toOffsetDateTime(instant).toLocalTime());
     }
 
     private static String scheduleAddress(
@@ -1159,13 +1168,6 @@ public class HostTournamentController {
     private static Optional<String> flashString(final Model model, final String name) {
         final Object value = model.asMap().get(name);
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
-    }
-
-    private static Instant toInstant(
-            final LocalDate date, final LocalTime time, final ZoneId zoneId) {
-        return date.atTime(time)
-                .atZone(zoneId != null ? zoneId : ZoneId.systemDefault())
-                .toInstant();
     }
 
     private static String normalizeBlank(final String value) {

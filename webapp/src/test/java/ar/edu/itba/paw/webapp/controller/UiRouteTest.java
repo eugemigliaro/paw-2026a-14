@@ -13,6 +13,7 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.Tournament;
@@ -39,7 +40,6 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.TournamentService;
@@ -566,8 +566,9 @@ class UiRouteTest {
                                 null,
                                 request.getTitle(),
                                 request.getDescription(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
+                                PlatformTime.toInstant(
+                                        request.getStartDate(), request.getStartTime()),
+                                PlatformTime.toInstant(request.getEndDate(), request.getEndTime()),
                                 request.getMaxPlayers(),
                                 request.getPricePerPlayer(),
                                 request.getVisibility(),
@@ -739,8 +740,10 @@ class UiRouteTest {
                                         null,
                                         request.getTitle(),
                                         request.getDescription(),
-                                        request.getStartsAt(),
-                                        request.getEndsAt(),
+                                        PlatformTime.toInstant(
+                                                request.getStartDate(), request.getStartTime()),
+                                        PlatformTime.toInstant(
+                                                request.getEndDate(), request.getEndTime()),
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
@@ -788,8 +791,10 @@ class UiRouteTest {
                                         null,
                                         request.getTitle(),
                                         request.getDescription(),
-                                        request.getStartsAt(),
-                                        request.getEndsAt(),
+                                        PlatformTime.toInstant(
+                                                request.getStartDate(), request.getStartTime()),
+                                        PlatformTime.toInstant(
+                                                request.getEndDate(), request.getEndTime()),
                                         request.getMaxPlayers(),
                                         request.getPricePerPlayer(),
                                         request.getVisibility(),
@@ -881,12 +886,11 @@ class UiRouteTest {
                     public PaginatedResult<Match> searchPublicMatches(
                             final String query,
                             final List<Sport> sport,
-                            final Instant startDate,
-                            final Instant endDate,
+                            final LocalDate startDate,
+                            final LocalDate endDate,
                             final EventSort sort,
                             final int page,
                             final int pageSize,
-                            final ZoneId timezone,
                             final BigDecimal minPrice,
                             final BigDecimal maxPrice,
                             final Double latitude,
@@ -909,12 +913,11 @@ class UiRouteTest {
                             String query,
                             List<Sport> sports,
                             List<EventStatus> statuses,
-                            Instant startDate,
-                            Instant endDate,
+                            LocalDate startDate,
+                            LocalDate endDate,
                             BigDecimal minPrice,
                             BigDecimal maxPrice,
                             EventSort sort,
-                            ZoneId timezone,
                             List<ParticipantStatus> participantStatuses,
                             int page,
                             int pageSize) {
@@ -1559,12 +1562,11 @@ class UiRouteTest {
                                 Mockito.any(),
                                 ArgumentMatchers.nullable(String.class),
                                 ArgumentMatchers.<List<Sport>>any(),
-                                ArgumentMatchers.nullable(Instant.class),
-                                ArgumentMatchers.nullable(Instant.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
+                                ArgumentMatchers.nullable(LocalDate.class),
                                 ArgumentMatchers.nullable(EventSort.class),
                                 Mockito.anyInt(),
                                 Mockito.anyInt(),
-                                ArgumentMatchers.nullable(ZoneId.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(BigDecimal.class),
                                 ArgumentMatchers.nullable(Double.class),
@@ -1610,8 +1612,7 @@ class UiRouteTest {
                                         playerReviewService,
                                         moderationService,
                                         userSportRatingService,
-                                        messageSource,
-                                        PlatformTimeZoneServiceImpl.argentinaDefault()),
+                                        messageSource),
                                 new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
@@ -2580,9 +2581,10 @@ class UiRouteTest {
         Assertions.assertNotNull(lastCreateMatchRequest);
         Assertions.assertFalse(lastCreateMatchRequest.isRecurring());
         Assertions.assertEquals(
-                Instant.parse("2099-04-10T21:00:00Z"), lastCreateMatchRequest.getStartsAt());
-        Assertions.assertEquals(
-                Instant.parse("2099-04-10T22:30:00Z"), lastCreateMatchRequest.getEndsAt());
+                LocalDate.parse("2099-04-10"), lastCreateMatchRequest.getStartDate());
+        Assertions.assertEquals(LocalTime.parse("18:00"), lastCreateMatchRequest.getStartTime());
+        Assertions.assertEquals(LocalDate.parse("2099-04-10"), lastCreateMatchRequest.getEndDate());
+        Assertions.assertEquals(LocalTime.parse("19:30"), lastCreateMatchRequest.getEndTime());
     }
 
     @Test
