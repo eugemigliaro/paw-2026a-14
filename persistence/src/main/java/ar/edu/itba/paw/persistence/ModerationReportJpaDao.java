@@ -223,14 +223,17 @@ public class ModerationReportJpaDao implements ModerationReportDao {
             final int page,
             final int pageSize) {
         final int safePage = page > 0 ? page : 1;
-        final String baseJpql = buildFilteredQuery(reporterUserIdFilter, targetTypes, statuses);
+        final int safeOffset = Math.max(0, (safePage - 1) * pageSize);
+        final String filtersJpql = buildReportFilters(reporterUserIdFilter, targetTypes, statuses);
 
-        final String countJpql = baseJpql.replaceFirst("FROM", "SELECT COUNT(mr) FROM");
+        final String countJpql = "SELECT COUNT(mr) FROM ModerationReport mr" + filtersJpql;
         final int totalCount =
                 executeCountQuery(countJpql, reporterUserIdFilter, targetTypes, statuses);
 
-        final String resultJpql = baseJpql + " ORDER BY mr.createdAt DESC, mr.id DESC";
-        final int safeOffset = Math.max(0, (safePage - 1) * pageSize);
+        final String resultJpql =
+                "SELECT mr FROM ModerationReport mr"
+                        + filtersJpql
+                        + " ORDER BY mr.createdAt DESC, mr.id DESC";
 
         final TypedQuery<ModerationReport> query =
                 em.createQuery(resultJpql, ModerationReport.class);
@@ -242,11 +245,11 @@ public class ModerationReportJpaDao implements ModerationReportDao {
         return new PaginatedResult<>(items, totalCount, safePage, pageSize);
     }
 
-    private String buildFilteredQuery(
+    private String buildReportFilters(
             final Long reporterUserIdFilter,
             final List<ReportTargetType> targetTypes,
             final List<ReportStatus> statuses) {
-        final StringBuilder jpql = new StringBuilder("FROM ModerationReport mr WHERE 1=1");
+        final StringBuilder jpql = new StringBuilder(" WHERE 1=1");
 
         if (reporterUserIdFilter != null) {
             jpql.append(" AND mr.reporter.id = :reporterUserId");
