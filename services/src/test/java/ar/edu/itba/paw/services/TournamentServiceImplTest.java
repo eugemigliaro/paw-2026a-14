@@ -181,13 +181,9 @@ public class TournamentServiceImplTest {
                         null);
 
         // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertInstanceOf(TournamentLifecycleInvalidScheduleException.class, exception);
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -205,13 +201,9 @@ public class TournamentServiceImplTest {
                         futureRegistrationClose().plusSeconds(3600));
 
         // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertInstanceOf(TournamentLifecycleInvalidScheduleException.class, exception);
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -230,13 +222,9 @@ public class TournamentServiceImplTest {
                         startsAt);
 
         // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertInstanceOf(TournamentLifecycleInvalidScheduleException.class, exception);
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -315,13 +303,9 @@ public class TournamentServiceImplTest {
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
 
         // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.update(10L, host, updateRequest(null, null)));
-
-        // 3. Assert
-        Assertions.assertInstanceOf(TournamentLifecycleInvalidScheduleException.class, exception);
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.update(10L, host, updateRequest(null, null)));
     }
 
     @Test
@@ -332,19 +316,15 @@ public class TournamentServiceImplTest {
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
 
         // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () ->
-                                tournamentService.update(
-                                        10L,
-                                        host,
-                                        updateRequest(
-                                                futureRegistrationClose(),
-                                                futureRegistrationClose().plusSeconds(3600))));
-
-        // 3. Assert
-        Assertions.assertInstanceOf(TournamentLifecycleInvalidScheduleException.class, exception);
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () ->
+                        tournamentService.update(
+                                10L,
+                                host,
+                                updateRequest(
+                                        futureRegistrationClose(),
+                                        futureRegistrationClose().plusSeconds(3600))));
     }
 
     @Test
@@ -356,15 +336,9 @@ public class TournamentServiceImplTest {
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
 
         // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () ->
-                                tournamentService.update(
-                                        10L, host, updateRequest(startsAt, startsAt)));
-
-        // 3. Assert
-        Assertions.assertInstanceOf(TournamentLifecycleInvalidScheduleException.class, exception);
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.update(10L, host, updateRequest(startsAt, startsAt)));
     }
 
     @Test
