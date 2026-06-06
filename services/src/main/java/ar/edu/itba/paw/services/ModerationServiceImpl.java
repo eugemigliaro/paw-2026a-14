@@ -12,11 +12,11 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.exceptions.ModerationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
@@ -48,7 +48,7 @@ public class ModerationServiceImpl implements ModerationService {
     private final ModerationReportDao moderationReportDao;
     private final UserDataService userDataService;
     private final MatchDataService matchDataService;
-    private final MatchParticipantDao matchParticipantDao;
+    private final MatchParticipantDataService matchParticipantDataService;
     private final PlayerReviewDataService playerReviewDataService;
     private final MailDispatchService mailDispatchService;
     private final MatchService matchService;
@@ -61,7 +61,7 @@ public class ModerationServiceImpl implements ModerationService {
             final ModerationReportDao moderationReportDao,
             final UserDataService userDataService,
             final MatchDataService matchDataService,
-            final MatchParticipantDao matchParticipantDao,
+            final MatchParticipantDataService matchParticipantDataService,
             final PlayerReviewDataService playerReviewDataService,
             final MailDispatchService mailDispatchService,
             final MatchService matchService,
@@ -71,7 +71,7 @@ public class ModerationServiceImpl implements ModerationService {
         this.moderationReportDao = moderationReportDao;
         this.userDataService = userDataService;
         this.matchDataService = matchDataService;
-        this.matchParticipantDao = matchParticipantDao;
+        this.matchParticipantDataService = matchParticipantDataService;
         this.playerReviewDataService = playerReviewDataService;
         this.mailDispatchService = mailDispatchService;
         this.matchService = matchService;
@@ -352,7 +352,7 @@ public class ModerationServiceImpl implements ModerationService {
                         .map(Match::getId)
                         .toList();
         for (final Long matchId : participantMatchIds) {
-            matchParticipantDao.removeParticipant(matchId, user);
+            matchParticipantDataService.removeParticipant(matchId, user);
         }
 
         final List<Long> hostedMatchIds =

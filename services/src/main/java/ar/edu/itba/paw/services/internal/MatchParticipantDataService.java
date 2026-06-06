@@ -6,4 +6,6 @@ import java.util.List;
 public interface MatchParticipantDataService {
 
     List<User> findConfirmedParticipants(Long matchId);
+
+    boolean removeParticipant(Long matchId, User user);
 }

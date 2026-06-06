@@ -86,8 +86,10 @@ relevant focused Maven test pass.
     `MatchParticipantDataService`.
     - [x] Move `MatchNotificationServiceImpl` behind
       `MatchParticipantDataService`.
+    - [x] Move `ModerationServiceImpl` behind `MatchParticipantDataService`.
 19. [ ] Update affected `MatchParticipantDao`-based service tests.
     - [x] Update `MatchNotificationServiceImplTest`.
+    - [x] Update `ModerationServiceImplTest`.
 20. [ ] Run the final DAO ownership acceptance check:
 
     ```bash

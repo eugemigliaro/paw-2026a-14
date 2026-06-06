@@ -21,4 +21,9 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     public List<User> findConfirmedParticipants(final Long matchId) {
         return matchParticipantDao.findConfirmedParticipants(matchId);
     }
+
+    @Override
+    public boolean removeParticipant(final Long matchId, final User user) {
+        return matchParticipantDao.removeParticipant(matchId, user);
+    }
 }
