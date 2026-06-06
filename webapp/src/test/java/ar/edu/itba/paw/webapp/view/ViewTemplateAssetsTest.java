@@ -288,7 +288,7 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("data-location-picker=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-zoom-in=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-zoom-out=\"true\""));
-        assertTrue(hostCreateMatch.contains("data-location-current=\"true\""));
+        assertFalse(hostCreateMatch.contains("data-location-current=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-clear=\"true\""));
         assertFalse(hostCreateMatch.contains("data-location-unavailable-message"));
         assertFalse(hostCreateMatch.contains("data-location-current-status"));
@@ -302,6 +302,8 @@ class ViewTemplateAssetsTest {
         assertNotNull(english.getProperty("host.form.location.zoomOut"));
         assertNotNull(spanish.getProperty("host.form.location.zoomIn"));
         assertNotNull(spanish.getProperty("host.form.location.zoomOut"));
+        assertFalse(english.containsKey("host.form.location.current"));
+        assertFalse(spanish.containsKey("host.form.location.current"));
     }
 
     @Test
@@ -319,7 +321,7 @@ class ViewTemplateAssetsTest {
         assertTrue(hostTournamentCreate.contains("data-location-map=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-zoom-in=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-zoom-out=\"true\""));
-        assertTrue(hostTournamentCreate.contains("data-location-current=\"true\""));
+        assertFalse(hostTournamentCreate.contains("data-location-current=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-clear=\"true\""));
         assertTrue(hostTournamentCreate.contains("host.form.location.map"));
         assertTrue(hostTournamentCreate.contains("host.form.location.map.aria"));
@@ -350,13 +352,16 @@ class ViewTemplateAssetsTest {
         assertTrue(script.contains("L.tileLayer"));
         assertTrue(script.contains("L.marker"));
         assertTrue(script.contains("L.divIcon"));
-        assertTrue(script.contains("isSecureContext"));
         assertTrue(script.contains("window.MatchPointLocationPicker"));
         assertTrue(script.contains("data-latitude-input"));
         assertTrue(script.contains("location-picker:change"));
         assertTrue(script.contains("data-location-zoom-in"));
         assertTrue(script.contains("data-location-zoom-out"));
         assertTrue(script.contains("data-location-picker"));
+        assertFalse(script.contains("data-location-current"));
+        assertFalse(script.contains("map.locate"));
+        assertFalse(script.contains("locationfound"));
+        assertFalse(script.contains("isSecureContext"));
         assertTrue(head.contains("/js/vendor/leaflet.js"));
         assertTrue(head.contains("/css/vendor/leaflet.css"));
     }

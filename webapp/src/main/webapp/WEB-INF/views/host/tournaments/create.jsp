@@ -119,9 +119,6 @@
 												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
 													<spring:message code="host.form.location.zoomIn" />
 												</button>
-												<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
-													<spring:message code="host.form.location.current" />
-												</button>
 												<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
 													<spring:message code="host.form.location.clear" />
 												</button>
