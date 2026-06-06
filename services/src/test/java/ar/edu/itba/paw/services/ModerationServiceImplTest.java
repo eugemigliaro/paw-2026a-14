@@ -1,8 +1,6 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.ModerationReport;
-import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
@@ -51,7 +49,7 @@ public class ModerationServiceImplTest {
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private PlayerReviewDao playerReviewDao;
-    @Mock private MatchService matchService;
+    @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
     private ModerationService moderationService;
@@ -68,7 +66,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDao,
                         playerReviewDao,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -83,7 +81,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDao,
                         playerReviewDao,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -98,7 +96,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDao,
                         playerReviewDao,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }

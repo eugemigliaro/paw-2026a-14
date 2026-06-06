@@ -1035,6 +1035,66 @@ public class MatchJpaDaoTest {
     }
 
     @Test
+    public void testCancelFutureHostedMatchesCancelsOnlyHostFutureOpenMatches() {
+        final User otherHost = createUser("other-host", "other-host@test.com");
+        host = em.find(User.class, host.getId());
+        final User managedOtherHost = em.find(User.class, otherHost.getId());
+        final Instant now = Instant.now();
+        final Match futureHosted =
+                createMatchWithPolicy(
+                        "Future Hosted",
+                        EventStatus.OPEN,
+                        ZonedDateTime.now().plusDays(1),
+                        host,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
+        final Match pastHosted =
+                createMatchWithPolicy(
+                        "Past Hosted",
+                        EventStatus.OPEN,
+                        ZonedDateTime.now().minusDays(1),
+                        host,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
+        final Match completedHosted =
+                createMatchWithPolicy(
+                        "Completed Hosted",
+                        EventStatus.COMPLETED,
+                        ZonedDateTime.now().plusDays(2),
+                        host,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
+        final Match futureOtherHost =
+                createMatchWithPolicy(
+                        "Other Host",
+                        EventStatus.OPEN,
+                        ZonedDateTime.now().plusDays(3),
+                        managedOtherHost,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
+        em.flush();
+        em.clear();
+
+        final List<Match> futureHostedMatches = matchDao.findFutureHostedMatches(host, now);
+        final int cancelled = matchDao.cancelFutureHostedMatches(host, now);
+
+        Assertions.assertEquals(List.of(futureHosted.getId()), matchIds(futureHostedMatches));
+        Assertions.assertEquals(1, cancelled);
+        em.flush();
+        em.clear();
+        Assertions.assertEquals(
+                EventStatus.CANCELLED,
+                matchDao.findById(futureHosted.getId()).orElseThrow().getStatus());
+        Assertions.assertEquals("open", storedMatchStatus(pastHosted.getId()));
+        Assertions.assertEquals(
+                EventStatus.COMPLETED,
+                matchDao.findById(completedHosted.getId()).orElseThrow().getStatus());
+        Assertions.assertEquals(
+                EventStatus.OPEN,
+                matchDao.findById(futureOtherHost.getId()).orElseThrow().getStatus());
+    }
+
+    @Test
     public void testCancelMatchCancelsOnlySelectedRecurringOccurrence() {
         final ZonedDateTime startsAt = ZonedDateTime.now().plusDays(1);
         final ZonedDateTime endsAt = startsAt.plusMinutes(90);
@@ -2030,6 +2090,17 @@ public class MatchJpaDaoTest {
     private int countMatches() {
         return ((Number) em.createQuery("SELECT COUNT(m) FROM Match m").getSingleResult())
                 .intValue();
+    }
+
+    private String storedMatchStatus(final Long matchId) {
+        return (String)
+                em.createNativeQuery("SELECT status FROM matches WHERE id = :matchId")
+                        .setParameter("matchId", matchId)
+                        .getSingleResult();
+    }
+
+    private static List<Long> matchIds(final List<Match> matches) {
+        return matches.stream().map(Match::getId).toList();
     }
 
     private int countParticipants() {

@@ -467,6 +467,26 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
+    public int cancelFutureReservations(final User user, final Instant startsAfter) {
+        return em.createQuery(
+                        "UPDATE MatchParticipant mp"
+                                + " SET mp.status = :cancelledStatus,"
+                                + " mp.version = mp.version + 1"
+                                + " WHERE mp.user.id = :userId"
+                                + " AND mp.status IN :activeStatuses"
+                                + " AND mp.match.id IN ("
+                                + "   SELECT m.id FROM Match m"
+                                + "   WHERE m.startsAt > :startsAfter"
+                                + "   AND m.deleted = FALSE"
+                                + " )")
+                .setParameter("cancelledStatus", ParticipantStatus.CANCELLED)
+                .setParameter("userId", user.getId())
+                .setParameter("activeStatuses", ACTIVE_RESERVATION_STATUSES)
+                .setParameter("startsAfter", startsAfter)
+                .executeUpdate();
+    }
+
+    @Override
     public boolean cancelJoinRequest(final Long matchId, final User user) {
         return rejectRequest(matchId, user);
     }
@@ -497,6 +517,24 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                 .setParameter("userId", user.getId())
                 .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
                 .getResultList();
+    }
+
+    @Override
+    public List<Match> findPendingRequestMatches(final User user) {
+        final List<Match> matches =
+                em.createQuery(
+                                "SELECT m FROM MatchParticipant mp"
+                                        + " JOIN mp.match m"
+                                        + " WHERE mp.user.id = :userId"
+                                        + " AND mp.status = :status"
+                                        + " AND m.host.id <> :userId"
+                                        + " ORDER BY mp.joinedAt ASC",
+                                Match.class)
+                        .setParameter("userId", user.getId())
+                        .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
+                        .getResultList();
+        enrichMatches(matches);
+        return matches;
     }
 
     @Override
@@ -686,6 +724,34 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                 .getResultList();
     }
 
+    @Override
+    public List<Match> findInvitedMatches(final User user) {
+        final List<Match> matches =
+                em.createQuery(
+                                "SELECT m FROM MatchParticipant mp"
+                                        + " JOIN mp.match m"
+                                        + " WHERE mp.user.id = :userId"
+                                        + " AND mp.status = :status"
+                                        + " AND m.host.id <> :userId"
+                                        + " AND (mp.scope = :matchScope OR m.startsAt = ("
+                                        + "   SELECT MIN(m2.startsAt) FROM MatchParticipant mp2"
+                                        + "   JOIN mp2.match m2"
+                                        + "   WHERE mp2.user.id = :userId"
+                                        + "   AND mp2.status = :status"
+                                        + "   AND mp2.scope = :seriesScope"
+                                        + "   AND m2.series.id = m.series.id"
+                                        + " ))"
+                                        + " ORDER BY m.startsAt ASC",
+                                Match.class)
+                        .setParameter("userId", user.getId())
+                        .setParameter("status", ParticipantStatus.INVITED)
+                        .setParameter("matchScope", ParticipantScope.MATCH)
+                        .setParameter("seriesScope", ParticipantScope.SERIES)
+                        .getResultList();
+        enrichMatches(matches);
+        return matches;
+    }
+
     private boolean upsertParticipant(
             final Match match,
             final User user,
@@ -783,5 +849,32 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
         }
 
         return matches;
+    }
+
+    private void enrichMatches(final List<Match> matches) {
+        if (matches.isEmpty()) {
+            return;
+        }
+
+        final List<Long> ids = matches.stream().map(Match::getId).collect(Collectors.toList());
+        final List<Object[]> counts =
+                em.createQuery(
+                                "SELECT mp.match.id, COUNT(mp.id) FROM MatchParticipant mp"
+                                        + " WHERE mp.match.id IN :ids"
+                                        + " AND mp.status IN :activeStatuses"
+                                        + " GROUP BY mp.match.id",
+                                Object[].class)
+                        .setParameter("ids", ids)
+                        .setParameter("activeStatuses", ACTIVE_PARTICIPANT_STATUSES)
+                        .getResultList();
+
+        final Map<Long, Integer> joinedPlayersByMatchId = new HashMap<>();
+        for (final Object[] row : counts) {
+            joinedPlayersByMatchId.put((Long) row[0], ((Long) row[1]).intValue());
+        }
+        matches.forEach(
+                match ->
+                        match.setJoinedPlayers(
+                                joinedPlayersByMatchId.getOrDefault(match.getId(), 0)));
     }
 }

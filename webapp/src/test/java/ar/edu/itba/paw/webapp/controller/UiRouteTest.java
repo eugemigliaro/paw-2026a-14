@@ -713,7 +713,7 @@ class UiRouteTest {
                             final Long matchId,
                             final User actingUser,
                             final UpdateMatchRequest request) {
-                        if (matchId != 42L) {
+                        if (matchId != 42L && matchId != 51L) {
                             throw new MatchUpdateNotFoundException("Missing match");
                         }
                         if (actingUser.getId() != 7L) {
@@ -3036,6 +3036,59 @@ class UiRouteTest {
         Assertions.assertNotNull(updatedMatch);
         Assertions.assertEquals(EventVisibility.PRIVATE, updatedMatch.getVisibility());
         Assertions.assertEquals(EventJoinPolicy.INVITE_ONLY, updatedMatch.getJoinPolicy());
+    }
+
+    @Test
+    void postHostEditPersistsPublicVisibilityAndJoinPolicyFromPrivateMatch() throws Exception {
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/51/edit")
+                                .param("title", "Updated Public Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/51"))
+                .andExpect(flash().attribute("hostAction", "updated"));
+
+        final Match updatedMatch = lastUpdatedMatch;
+        Assertions.assertNotNull(updatedMatch);
+        Assertions.assertEquals(EventVisibility.PUBLIC, updatedMatch.getVisibility());
+        Assertions.assertEquals(EventJoinPolicy.DIRECT, updatedMatch.getJoinPolicy());
+    }
+
+    @Test
+    void postHostEditRejectsPublicInviteOnlyPolicyFromStaleFormState() throws Exception {
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/host/matches/51/edit")
+                                .param("title", "Updated Public Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "invite_only")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "20:15")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attributeHasFieldErrors("createEventForm", "joinPolicy"));
+
+        Assertions.assertNull(lastUpdatedMatch);
     }
 
     @Test

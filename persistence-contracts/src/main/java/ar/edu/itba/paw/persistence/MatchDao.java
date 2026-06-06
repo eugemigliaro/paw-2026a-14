@@ -209,6 +209,10 @@ public interface MatchDao {
 
     boolean cancelMatch(Long matchId, User host);
 
+    List<Match> findFutureHostedMatches(User host, Instant startsAfter);
+
+    int cancelFutureHostedMatches(User host, Instant startsAfter);
+
     boolean softDeleteMatch(Long matchId, User deletedBy, String deleteReason);
 
     boolean restoreMatch(Long matchId);

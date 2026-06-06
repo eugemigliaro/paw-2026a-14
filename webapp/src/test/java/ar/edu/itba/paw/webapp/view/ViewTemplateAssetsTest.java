@@ -200,6 +200,27 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void hostVisibilityToggleRestoresPublicJoinPolicyValue() throws IOException {
+        final String hostCreateScript = read("src/main/webapp/js/host-create-match.js");
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
+
+        assertTrue(hostCreateMatch.contains("selectedVisibility"));
+        assertTrue(hostCreateMatch.contains("currentValue=\"${selectedVisibility}\""));
+        assertTrue(hostCreateMatch.contains("currentValue=\"${selectedJoinPolicy}\""));
+        assertTrue(hostCreateMatch.contains("selectedVisibility eq 'private'"));
+        assertTrue(hostCreateScript.contains("var lastPublicJoinPolicy"));
+        assertTrue(hostCreateScript.contains("function isPublicJoinPolicy"));
+        assertTrue(
+                hostCreateScript.contains(
+                        "syncSegmentedToggle(joinPolicyToggle, joinPolicyInput, \"\")"));
+        assertTrue(
+                hostCreateScript.contains(
+                        "syncSegmentedToggle(joinPolicyToggle, joinPolicyInput, lastPublicJoinPolicy || defaultPublicJoinPolicy)"));
+        assertTrue(head.contains("/js/host-create-match.js?v=20260606"));
+    }
+
+    @Test
     void sortSelectDoesNotMutateOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");

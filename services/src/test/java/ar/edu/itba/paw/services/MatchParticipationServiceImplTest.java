@@ -331,16 +331,8 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
-    public void testFindPendingRequestMatchesSkipsHostedMatches() {
+    public void testFindPendingRequestMatchesDelegatesToDao() {
         // Arrange
-        final Match hostedMatch =
-                createMatchWithHost(
-                        10L,
-                        20L,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.APPROVAL_REQUIRED,
-                        EventStatus.OPEN,
-                        FIXED_NOW.plusSeconds(3600));
         final Match otherMatch =
                 createMatchWithHost(
                         11L,
@@ -350,9 +342,8 @@ public class MatchParticipationServiceImplTest {
                         EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.findPendingMatchIds(u)).thenReturn(List.of(10L, 11L));
-        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(hostedMatch));
-        Mockito.when(matchDao.findMatchById(11L)).thenReturn(Optional.of(otherMatch));
+        Mockito.when(matchParticipantDao.findPendingRequestMatches(u))
+                .thenReturn(List.of(otherMatch));
 
         // Exercise
         final List<Match> matches = matchParticipationService.findPendingRequestMatches(u);
@@ -362,16 +353,8 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
-    public void testFindInvitedMatchesSkipsHostedMatches() {
+    public void testFindInvitedMatchesDelegatesToDao() {
         // Arrange
-        final Match hostedMatch =
-                createMatchWithHost(
-                        10L,
-                        20L,
-                        EventVisibility.PRIVATE,
-                        EventJoinPolicy.INVITE_ONLY,
-                        EventStatus.OPEN,
-                        FIXED_NOW.plusSeconds(3600));
         final Match otherMatch =
                 createMatchWithHost(
                         11L,
@@ -381,15 +364,35 @@ public class MatchParticipationServiceImplTest {
                         EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.findInvitedMatchIds(u)).thenReturn(List.of(10L, 11L));
-        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(hostedMatch));
-        Mockito.when(matchDao.findMatchById(11L)).thenReturn(Optional.of(otherMatch));
+        Mockito.when(matchParticipantDao.findInvitedMatches(u)).thenReturn(List.of(otherMatch));
 
         // Exercise
         final List<Match> matches = matchParticipationService.findInvitedMatches(u);
 
         // Assert
         Assertions.assertEquals(List.of(otherMatch), matches);
+    }
+
+    @Test
+    public void testFindInvitedUsersAllowsPrivateInviteOnlyMatch() {
+        // Arrange
+        final Match match =
+                createMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600));
+        final User invitedUser = UserUtils.getUser(20L);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(matchParticipantDao.findInvitedUsers(10L)).thenReturn(List.of(invitedUser));
+
+        // Exercise
+        final List<User> invitedUsers =
+                matchParticipationService.findInvitedUsers(10L, UserUtils.getUser(1L));
+
+        // Assert
+        Assertions.assertEquals(List.of(invitedUser), invitedUsers);
     }
 
     @Test

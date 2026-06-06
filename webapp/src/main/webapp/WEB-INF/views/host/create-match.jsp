@@ -40,6 +40,8 @@
 			<spring:message var="recurrenceEndOccurrenceCount" code="host.form.recurrence.endMode.occurrenceCount" />
 			<spring:message var="recurrenceEndModePlaceholder" code="host.form.recurrence.endMode.placeholder" />
 			<spring:message var="recurrenceFrequencyPlaceholder" code="host.form.recurrence.frequency.placeholder" />
+			<c:set var="selectedVisibility" value="${createEventForm.visibility.dbValue}" />
+			<c:set var="selectedJoinPolicy" value="${createEventForm.joinPolicy.dbValue}" />
 			<c:url var="resolvedFormAction" value="${formAction}" />
 
 			<main class="page-shell">
@@ -278,11 +280,11 @@
 												</span>
 											</div>
 											<input type="hidden" name="visibility"
-												value="${createEventForm.visibility}" />
+												value="${selectedVisibility}" />
 										</c:when>
 										<c:otherwise>
 											<ui:eventsFilterToggle id="match-visibility-toggle"
-												currentValue="${createEventForm.visibility}"
+												currentValue="${selectedVisibility}"
 												inputName="visibility" leftValue="public"
 												rightValue="private" leftLabel="${visibilityPublic}"
 												rightLabel="${visibilityPrivate}"
@@ -293,7 +295,8 @@
 									</c:choose>
 								</div>
 
-								<div class="field" id="join-policy-field">
+								<div class="field" id="join-policy-field"
+									<c:if test="${selectedVisibility eq 'private'}">style="display: none;"</c:if>>
 									<span class="field__label">
 										<spring:message code="host.form.joinPolicy" />
 									</span>
@@ -311,11 +314,11 @@
 												</span>
 											</div>
 											<input type="hidden" name="joinPolicy"
-												value="${createEventForm.joinPolicy}" />
+												value="${selectedJoinPolicy}" />
 										</c:when>
 										<c:otherwise>
 											<ui:eventsFilterToggle id="match-join-policy-toggle"
-												currentValue="${createEventForm.joinPolicy}"
+												currentValue="${selectedJoinPolicy}"
 												inputName="joinPolicy" leftValue="direct"
 												rightValue="approval_required"
 												leftLabel="${joinPolicyDirect}"
