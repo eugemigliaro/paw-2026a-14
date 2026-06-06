@@ -118,10 +118,16 @@ public class FeedController {
                         ? ZoneId.systemDefault()
                         : searchForm.getTimezone();
         final DateRange selectedDateRange =
-                normalizeDateRange(
-                        searchForm.getStartDate(), searchForm.getEndDate(), selectedTimezone);
-        final PriceRange selectedPriceRange =
-                normalizePriceRange(searchForm.getMinPrice(), searchForm.getMaxPrice());
+                new DateRange(searchForm.getStartDate(), searchForm.getEndDate());
+        final BigDecimal minPrice =
+                searchForm.getMinPrice() != null
+                        ? searchForm.getMinPrice().stripTrailingZeros()
+                        : null;
+        final BigDecimal maxPrice =
+                searchForm.getMaxPrice() != null
+                        ? searchForm.getMaxPrice().stripTrailingZeros()
+                        : null;
+        final PriceRange selectedPriceRange = new PriceRange(minPrice, maxPrice);
         final boolean nearMeUnavailable =
                 exploreLocation == null && searchForm.getSort() == EventSort.DISTANCE;
         final EventSort selectedSort =
@@ -780,11 +786,13 @@ public class FeedController {
                 "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
-    private static double distanceInKilometers(
-            final double fromLatitude,
-            final double fromLongitude,
-            final double toLatitude,
-            final double toLongitude) {
+    private static double
+            distanceInKilometers( // TODO: add as an attribute to Match and Tournament and compute
+                    // it in the service layer
+                    final double fromLatitude,
+                    final double fromLongitude,
+                    final double toLatitude,
+                    final double toLongitude) {
         final double earthRadiusKm = 6371.0088;
         final double fromLatRad = Math.toRadians(fromLatitude);
         final double toLatRad = Math.toRadians(toLatitude);
@@ -809,51 +817,6 @@ public class FeedController {
             return new ExploreLocation((Double) latitude, (Double) longitude);
         }
         return null;
-    }
-
-    private static DateRange normalizeDateRange(
-            final LocalDate rawStartDate,
-            final LocalDate rawEndDate,
-            final ZoneId
-                    zoneId) { // TODO: do not change these fields in controller. Show error in form
-        // validation instead.
-        LocalDate startDate = rawStartDate;
-        LocalDate endDate = rawEndDate;
-        final LocalDate today = LocalDate.now(zoneId);
-
-        if (startDate != null && startDate.isBefore(today)) {
-            startDate = today;
-        }
-        if (endDate != null && endDate.isBefore(today)) {
-            endDate = today;
-        }
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            return new DateRange(endDate, startDate);
-        }
-
-        return new DateRange(startDate, endDate);
-    }
-
-    private static PriceRange
-            normalizePriceRange( // TODO: do not change these fields in controller. Show error in
-                    // form validation instead.
-                    final BigDecimal rawMinPrice,
-                    final BigDecimal rawMaxPrice) {
-        final BigDecimal minPrice =
-                rawMinPrice == null || rawMinPrice.compareTo(BigDecimal.ZERO) < 0
-                        ? null
-                        : rawMinPrice.stripTrailingZeros();
-        final BigDecimal maxPrice =
-                rawMaxPrice == null || rawMaxPrice.compareTo(BigDecimal.ZERO) < 0
-                        ? null
-                        : rawMaxPrice.stripTrailingZeros();
-
-        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
-            return new PriceRange(maxPrice, minPrice);
-        }
-
-        return new PriceRange(minPrice, maxPrice);
     }
 
     private static boolean isSportSelected(final List<String> selectedSports, final Sport sport) {

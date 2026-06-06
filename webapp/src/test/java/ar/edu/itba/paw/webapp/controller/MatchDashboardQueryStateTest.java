@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ar.edu.itba.paw.models.query.EventCategory;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
@@ -22,7 +24,7 @@ class MatchDashboardQueryStateTest {
     void resolveClearsMatchOnlyFiltersForTournamentQueries() {
         final SearchForm searchForm = new SearchForm();
         searchForm.setType(EventType.TOURNAMENT);
-        searchForm.setCategory(List.of("joined", "hosted"));
+        searchForm.setCategory(List.of(EventCategory.JOINED, EventCategory.HOSTED));
         searchForm.setStatus(List.of());
         searchForm.setSport(List.of(Sport.PADEL));
         searchForm.setVisibility(List.of(EventVisibility.PUBLIC));
@@ -43,8 +45,9 @@ class MatchDashboardQueryStateTest {
     @Test
     void resolveDerivesPastMatchSelectionsFromCategories() {
         final SearchForm searchForm = new SearchForm();
-        searchForm.setFilter("past");
-        searchForm.setCategory(List.of("joined", "pending", "hosted"));
+        searchForm.setFilter(EventFilter.PAST);
+        searchForm.setCategory(
+                List.of(EventCategory.JOINED, EventCategory.PENDING, EventCategory.HOSTED));
         searchForm.setStartDate(null);
         searchForm.setEndDate(null);
 

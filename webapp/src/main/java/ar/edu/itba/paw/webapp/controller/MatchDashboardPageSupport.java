@@ -8,6 +8,8 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventCategory;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
@@ -35,7 +37,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 final class MatchDashboardPageSupport {
 
-    private static final String TYPE_TOURNAMENT = "tournament";
     private static final List<EventStatus> PLAYER_STATUS_OPTIONS =
             List.of(EventStatus.OPEN, EventStatus.COMPLETED, EventStatus.CANCELLED);
 
@@ -60,7 +61,9 @@ final class MatchDashboardPageSupport {
         final SearchForm searchForm = selection.searchForm();
         final EventType selectedType = searchForm.getType();
         final String selectedTypeStr = selectedType.getDbValue();
-        final String selectedFilter = searchForm.getFilter();
+        final EventFilter selectedFilter =
+                searchForm.getFilter() == null ? EventFilter.UPCOMING : searchForm.getFilter();
+        final String selectedFilterValue = selectedFilter.name();
         final String searchQuery = searchForm.getQ();
         final String sort = searchForm.getSort().getQueryValue();
         final String startDate =
@@ -74,8 +77,9 @@ final class MatchDashboardPageSupport {
         final List<String> selectedStatusesStr = toDbValues(searchForm.getStatus());
         final List<String> selectedSportsStr = toDbValues(searchForm.getSport());
         final List<String> selectedVisibilityStr = toDbValues(searchForm.getVisibility());
-        final List<String> selectedCategories = searchForm.getCategory();
-        final DateRangeBounds dateBounds = dateRangeBounds(path, timezone);
+        final List<String> selectedCategories =
+                searchForm.getCategory().stream().map(EventCategory::getQueryValue).toList();
+        final DateRangeBounds dateBounds = dateRangeBounds(selectedFilter, timezone);
 
         mav.addObject("pageTitleCode", pageTitleCode);
         mav.addObject("listTitle", title);
@@ -101,7 +105,7 @@ final class MatchDashboardPageSupport {
                         path,
                         locale,
                         selectedType,
-                        selectedFilter,
+                        selectedFilterValue,
                         searchQuery,
                         sort,
                         startDate,
@@ -164,7 +168,7 @@ final class MatchDashboardPageSupport {
                 buildPagination(
                         path,
                         selectedType,
-                        selectedFilter,
+                        selectedFilterValue,
                         searchQuery,
                         sort,
                         startDate,
@@ -462,10 +466,10 @@ final class MatchDashboardPageSupport {
                 .equals(path)) { // TODO: this is a bit hacky, find a better way to determine which
             // params to include
             if (selectedType == EventType.TOURNAMENT) {
-                params.put("type", TYPE_TOURNAMENT);
+                params.put("type", EventType.TOURNAMENT.getDbValue());
             }
             if ("past".equalsIgnoreCase(selectedFilter)) {
-                params.put("filter", "past");
+                params.put("filter", EventFilter.PAST.name());
             }
         }
         addCommonQueryParams(
@@ -989,9 +993,10 @@ final class MatchDashboardPageSupport {
                 "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
-    private static DateRangeBounds dateRangeBounds(final String path, final ZoneId zoneId) {
+    private static DateRangeBounds dateRangeBounds(
+            final EventFilter selectedFilter, final ZoneId zoneId) {
         final LocalDate today = LocalDate.now(zoneId);
-        if (path.endsWith("/finished") || path.endsWith("/past")) {
+        if (selectedFilter == EventFilter.PAST) {
             return new DateRangeBounds(null, today.toString());
         }
         return new DateRangeBounds(today.toString(), null);

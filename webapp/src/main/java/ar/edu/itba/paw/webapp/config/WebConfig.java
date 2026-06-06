@@ -3,6 +3,8 @@ package ar.edu.itba.paw.webapp.config;
 import ar.edu.itba.paw.services.AdminBootstrapService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventCategoryConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
@@ -211,6 +213,8 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventJoinPolicyConverter());
         registry.addConverter(new StringToRecurrenceFrequencyConverter());
         registry.addConverter(new StringToRecurrenceEndModeConverter());
+        registry.addConverter(new StringToEventFilterConverter());
+        registry.addConverter(new StringToEventCategoryConverter());
     }
 
     @Override
