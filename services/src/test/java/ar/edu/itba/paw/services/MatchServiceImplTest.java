@@ -17,6 +17,7 @@ import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -44,6 +45,7 @@ import org.springframework.context.MessageSource;
 public class MatchServiceImplTest {
 
     @Mock private MatchDataService matchDataService;
+    @Mock private MatchParticipantDataService matchParticipantDataService;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
@@ -62,7 +64,8 @@ public class MatchServiceImplTest {
         mailDispatchService = new RecordingMailDispatchService();
         matchNotificationService =
                 Mockito.spy(
-                        new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService));
+                        new MatchNotificationServiceImpl(
+                                matchParticipantDataService, mailDispatchService));
         matchService =
                 new MatchServiceImpl(
                         matchDataService,

@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -36,6 +37,7 @@ public class MatchParticipationServiceImplTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T18:00:00Z");
 
     @Mock private MatchDataService matchDataService;
+    @Mock private MatchParticipantDataService matchParticipantDataService;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
 
@@ -49,7 +51,7 @@ public class MatchParticipationServiceImplTest {
         mailDispatchService = new RecordingMailDispatchService();
         final StaticMessageSource messageSource = new StaticMessageSource();
         final MatchNotificationService matchNotificationService =
-                new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService);
+                new MatchNotificationServiceImpl(matchParticipantDataService, mailDispatchService);
         matchParticipationService =
                 new MatchParticipationServiceImpl(
                         matchDataService,

@@ -49,12 +49,12 @@ relevant focused Maven test pass.
     `TournamentBracketServiceImpl`, and `TournamentMailServiceImpl` behind
     `TournamentTeamDataService`.
 13. [x] Update affected `TournamentTeamDao`-based service tests.
-14. [ ] Add `MatchDataService` / `MatchDataServiceImpl`.
+14. [x] Add `MatchDataService` / `MatchDataServiceImpl`.
     - [x] Start `MatchDataService` with the `findById` operation needed by
       `SecurityServiceImpl`.
     - [x] Expand `MatchDataService` to cover the remaining `MatchDao` operations
       as the larger match services move behind it.
-15. [ ] Move `MatchDao` access in `MatchServiceImpl`,
+15. [x] Move `MatchDao` access in `MatchServiceImpl`,
     `MatchReservationServiceImpl`, `MatchParticipationServiceImpl`,
     `ModerationServiceImpl`, `RecurringMatchAsyncService`, and
     `SecurityServiceImpl` behind `MatchDataService`.
@@ -67,7 +67,7 @@ relevant focused Maven test pass.
     - [x] Move `MatchParticipationServiceImpl` behind `MatchDataService`.
     - [x] Move `ModerationServiceImpl` match access behind `MatchDataService`.
     - [x] Move `RecurringMatchAsyncService` behind `MatchDataService`.
-16. [ ] Update affected `MatchDao`-based service tests.
+16. [x] Update affected `MatchDao`-based service tests.
     - [x] Update `SecurityServiceImplTest`.
     - [x] Update `ModerationServiceImplTest`.
     - [x] Update recurring occurrence setup in `MatchServiceImplTest`.
@@ -77,11 +77,17 @@ relevant focused Maven test pass.
     - [x] Update `MatchParticipationServiceImplTest`.
 17. [ ] Add `MatchParticipantDataService` /
     `MatchParticipantDataServiceImpl`.
+    - [x] Start `MatchParticipantDataService` with the
+      `findConfirmedParticipants` operation needed by
+      `MatchNotificationServiceImpl`.
 18. [ ] Move `MatchParticipantDao` access in `MatchServiceImpl`,
     `MatchReservationServiceImpl`, `MatchParticipationServiceImpl`,
     `MatchNotificationServiceImpl`, and `ModerationServiceImpl` behind
     `MatchParticipantDataService`.
+    - [x] Move `MatchNotificationServiceImpl` behind
+      `MatchParticipantDataService`.
 19. [ ] Update affected `MatchParticipantDao`-based service tests.
+    - [x] Update `MatchNotificationServiceImplTest`.
 20. [ ] Run the final DAO ownership acceptance check:
 
     ```bash
