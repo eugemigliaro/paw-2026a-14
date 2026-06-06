@@ -68,8 +68,13 @@
 								</p>
 							</c:if>
 
-							<label class="account-profile-media account-profile-media--change" for="account-profile-image">
+							<label class="account-profile-media account-profile-media--change"
+								for="account-profile-image" data-image-preview-container="true">
 								<span class="account-profile-media__change-content">
+									<span class="image-upload-preview image-upload-preview--profile"
+										data-image-preview="true" hidden="hidden" aria-hidden="true">
+										<img class="image-upload-preview__image" alt="" />
+									</span>
 									<span class="upload-card__dropzone-icon" aria-hidden="true">
 										<icon:photoFrame />
 									</span>
@@ -82,7 +87,8 @@
 										</span>
 									</span>
 									<input id="account-profile-image" name="profileImage" type="file"
-										class="upload-card__file-input" accept="image/png,image/jpeg,image/webp,image/gif" />
+										class="upload-card__file-input" accept="image/*"
+										data-image-preview-input="true" />
 								</span>
 							</label>
 						</div>

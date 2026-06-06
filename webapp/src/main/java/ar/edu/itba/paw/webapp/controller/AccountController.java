@@ -221,6 +221,11 @@ public class AccountController {
             }
 
             @Override
+            public String getOriginalFilename() {
+                return profileImage.getOriginalFilename();
+            }
+
+            @Override
             public java.io.InputStream getContentStream() throws java.io.IOException {
                 return profileImage.getInputStream();
             }

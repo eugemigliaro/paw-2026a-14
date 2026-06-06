@@ -496,6 +496,11 @@ public class HostController {
             }
 
             @Override
+            public String getOriginalFilename() {
+                return bannerImage.getOriginalFilename();
+            }
+
+            @Override
             public java.io.InputStream getContentStream() throws java.io.IOException {
                 return bannerImage.getInputStream();
             }

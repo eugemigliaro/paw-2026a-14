@@ -525,7 +525,11 @@
 								<span class="field__label">
 									<spring:message code="host.form.bannerImage" />
 								</span>
-								<span class="upload-card__dropzone">
+								<span class="upload-card__dropzone" data-image-preview-container="true">
+									<span class="image-upload-preview image-upload-preview--banner"
+										data-image-preview="true" hidden="hidden" aria-hidden="true">
+										<img class="image-upload-preview__image" alt="" />
+									</span>
 									<span class="upload-card__dropzone-icon" aria-hidden="true">
 										<icon:photoFrame />
 									</span>
@@ -538,8 +542,9 @@
 										</span>
 									</span>
 									<form:input path="bannerImage" id="match-banner-image" type="file"
-										accept="image/png,image/jpeg,image/webp,image/gif"
-										cssClass="upload-card__file-input" />
+										accept="image/*"
+										cssClass="upload-card__file-input"
+										data-image-preview-input="true" />
 								</span>
 							</label>
 						</article>

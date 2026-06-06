@@ -346,6 +346,32 @@
 	width: 3rem;
 }
 
+.upload-card__dropzone.has-image-preview {
+	grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.image-upload-preview--banner {
+	aspect-ratio: 4 / 3;
+	background: #eef3ef;
+	border: 1px solid rgba(28, 46, 43, 0.08);
+	border-radius: 12px;
+	box-shadow: 0 14px 28px -24px rgba(24, 46, 42, 0.5);
+	display: block;
+	overflow: hidden;
+	width: 5.75rem;
+}
+
+.image-upload-preview--banner[hidden] {
+	display: none;
+}
+
+.image-upload-preview--banner .image-upload-preview__image {
+	display: block;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+
 .upload-card__dropzone-icon svg {
 	fill: none;
 	height: 1.45rem;

@@ -52,8 +52,42 @@ class ViewTemplateAssetsTest {
         assertFalse(eventsList.contains("<script>"));
         assertFalse(hostCreateMatch.contains("<script>"));
         assertTrue(head.contains("/js/account-edit-form.js"));
+        assertTrue(head.contains("/js/file-upload-preview.js"));
         assertTrue(head.contains("/js/events-toggle-filter.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
+    }
+
+    @Test
+    void imageUploadsExposeClientSidePreviewHooks() throws IOException {
+        final String accountIndex = read("src/main/webapp/WEB-INF/views/account/index.jsp");
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String hostTournamentCreate =
+                read("src/main/webapp/WEB-INF/views/host/tournaments/create.jsp");
+        final String script = read("src/main/webapp/js/file-upload-preview.js");
+        final String authCss = read("src/main/webapp/css/auth.css");
+        final String hostCreateCss = read("src/main/webapp/css/host-create.css");
+
+        assertTrue(accountIndex.contains("data-image-preview-container=\"true\""));
+        assertTrue(accountIndex.contains("data-image-preview-input=\"true\""));
+        assertTrue(accountIndex.contains("accept=\"image/*\""));
+        assertTrue(accountIndex.contains("image-upload-preview--profile"));
+        assertTrue(hostCreateMatch.contains("id=\"match-banner-image\""));
+        assertTrue(hostCreateMatch.contains("data-image-preview-container=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-image-preview-input=\"true\""));
+        assertTrue(hostCreateMatch.contains("accept=\"image/*\""));
+        assertTrue(hostCreateMatch.contains("image-upload-preview--banner"));
+        assertTrue(hostTournamentCreate.contains("id=\"tournament-banner-image\""));
+        assertTrue(hostTournamentCreate.contains("data-image-preview-container=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-image-preview-input=\"true\""));
+        assertTrue(hostTournamentCreate.contains("accept=\"image/*\""));
+        assertTrue(hostTournamentCreate.contains("image-upload-preview--banner"));
+        assertTrue(script.contains("URL.createObjectURL"));
+        assertTrue(script.contains("URL.revokeObjectURL"));
+        assertTrue(script.contains("data-image-preview-input"));
+        assertTrue(authCss.contains(".image-upload-preview--profile"));
+        assertTrue(authCss.contains("border-radius: 999px"));
+        assertTrue(hostCreateCss.contains(".image-upload-preview--banner"));
+        assertTrue(hostCreateCss.contains("border-radius: 12px"));
     }
 
     @Test
