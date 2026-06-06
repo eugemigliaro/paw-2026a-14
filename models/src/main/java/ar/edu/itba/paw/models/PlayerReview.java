@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import ar.edu.itba.paw.models.converters.PlayerReviewReactionConverter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -126,8 +127,16 @@ public class PlayerReview {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public void setUpdatedAt(final Instant updatedAt) {
@@ -144,6 +153,10 @@ public class PlayerReview {
 
     public Instant getDeletedAt() {
         return deletedAt;
+    }
+
+    public OffsetDateTime getDeletedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(deletedAt);
     }
 
     public void setDeletedAt(final Instant deletedAt) {

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import ar.edu.itba.paw.models.converters.SportConverter;
 import ar.edu.itba.paw.models.types.Sport;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -94,8 +95,16 @@ public class UserSportRating {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public void setUpdatedAt(final Instant updatedAt) {

@@ -292,6 +292,10 @@ public class Match {
         return deletedAt;
     }
 
+    public OffsetDateTime getDeletedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(deletedAt);
+    }
+
     public User getDeletedByUser() {
         return deletedByUser;
     }

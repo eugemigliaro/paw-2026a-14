@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.models;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -52,6 +53,10 @@ public class UserBan {
 
     public Instant getBannedUntil() {
         return bannedUntil;
+    }
+
+    public OffsetDateTime getBannedUntilDateTime() {
+        return PlatformTime.toOffsetDateTime(bannedUntil);
     }
 
     public void setBannedUntil(Instant bannedUntil) {

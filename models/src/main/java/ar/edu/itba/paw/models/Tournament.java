@@ -317,20 +317,40 @@ public class Tournament {
         return registrationClosedAt;
     }
 
+    public OffsetDateTime getRegistrationClosedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(registrationClosedAt);
+    }
+
     public Instant getBracketGeneratedAt() {
         return bracketGeneratedAt;
+    }
+
+    public OffsetDateTime getBracketGeneratedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(bracketGeneratedAt);
     }
 
     public Instant getStartedAt() {
         return startedAt;
     }
 
+    public OffsetDateTime getStartedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(startedAt);
+    }
+
     public Instant getCompletedAt() {
         return completedAt;
     }
 
+    public OffsetDateTime getCompletedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(completedAt);
+    }
+
     public Instant getCancelledAt() {
         return cancelledAt;
+    }
+
+    public OffsetDateTime getCancelledAtDateTime() {
+        return PlatformTime.toOffsetDateTime(cancelledAt);
     }
 
     public String getCancelReason() {
@@ -345,6 +365,10 @@ public class Tournament {
         return deletedAt;
     }
 
+    public OffsetDateTime getDeletedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(deletedAt);
+    }
+
     public User getDeletedByUser() {
         return deletedByUser;
     }
@@ -357,8 +381,16 @@ public class Tournament {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public Long getVersion() {
