@@ -385,6 +385,18 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
+    void submitGuardRestoresButtonStateWhenPageIsRestoredFromHistory() throws IOException {
+        final String script = read("src/main/webapp/js/form-submit-guard.js");
+
+        assertTrue(script.contains("window.addEventListener(\"pageshow\""));
+        assertTrue(script.contains("delete form.dataset.submitting"));
+        assertTrue(script.contains("restoreSubmitButtons(form)"));
+        assertTrue(
+                script.indexOf("disableSubmitButtons(form)")
+                        < script.indexOf("updateLoadingLabel(form)"));
+    }
+
+    @Test
     void matchDetailUsesHostActionCardInsteadOfOverflowMenuForHostActions() throws IOException {
         final String detailView = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
         final Properties english = properties("src/main/resources/i18n/messages.properties");
