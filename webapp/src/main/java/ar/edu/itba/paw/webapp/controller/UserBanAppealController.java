@@ -7,18 +7,21 @@ import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
+import ar.edu.itba.paw.webapp.form.ReportAppealForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -38,6 +41,11 @@ public class UserBanAppealController {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
         this.domainExceptionErrorResolver = domainExceptionErrorResolver;
+    }
+
+    @ModelAttribute("reportAppealForm")
+    public ReportAppealForm reportAppealForm() {
+        return new ReportAppealForm();
     }
 
     @GetMapping
@@ -82,15 +90,25 @@ public class UserBanAppealController {
     @PostMapping("/appeal")
     public ModelAndView appealBan(
             @AuthenticatedUser final User user,
-            @RequestParam("appealReason") final String appealReason,
+            @Valid @ModelAttribute("reportAppealForm") final ReportAppealForm reportAppealForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            return new ModelAndView("redirect:/account/ban");
+        }
+
         try {
-            moderationService.appealReport(activeBan.getModerationReport().getId(), appealReason);
+            moderationService.appealReport(
+                    activeBan.getModerationReport().getId(), reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
         } catch (final ModerationException exception) {

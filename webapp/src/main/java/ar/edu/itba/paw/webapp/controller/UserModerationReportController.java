@@ -11,17 +11,21 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
+import ar.edu.itba.paw.webapp.form.ReportAppealForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import java.util.List;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +52,11 @@ public class UserModerationReportController {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
         this.domainExceptionErrorResolver = domainExceptionErrorResolver;
+    }
+
+    @ModelAttribute("reportAppealForm")
+    public ReportAppealForm reportAppealForm() {
+        return new ReportAppealForm();
     }
 
     @GetMapping
@@ -147,11 +156,20 @@ public class UserModerationReportController {
     @PostMapping("/{reportId:\\d+}/appeal")
     public ModelAndView appealReport(
             @PathVariable("reportId") final Long reportId,
-            @RequestParam("appealReason") final String appealReason,
+            @Valid @ModelAttribute("reportAppealForm") final ReportAppealForm reportAppealForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
+
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            return new ModelAndView("redirect:/reports/mine/" + reportId);
+        }
+
         try {
-            moderationService.appealReport(reportId, appealReason);
+            moderationService.appealReport(reportId, reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
         } catch (final ModerationException exception) {
