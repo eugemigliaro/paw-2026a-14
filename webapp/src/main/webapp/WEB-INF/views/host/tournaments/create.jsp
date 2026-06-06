@@ -49,6 +49,7 @@
 						</c:if>
 						<form:errors path="*" cssClass="field__error create-form__global-error" element="p" />
 
+						<div class="create-form__column">
 						<article class="panel form-card">
 							<span class="detail-label"><spring:message code="tournament.create.section.basics" /></span>
 							<h2 class="form-card__title"><spring:message code="tournament.create.section.basics.subtitle" /></h2>
@@ -79,91 +80,6 @@
 									<form:errors path="description" cssClass="field__error" element="span" />
 								</label>
 							</div>
-						</article>
-
-						<article class="panel form-card">
-							<span class="detail-label"><spring:message code="tournament.create.section.logistics" /></span>
-							<h2 class="form-card__title"><spring:message code="tournament.create.section.logistics.subtitle" /></h2>
-							<div class="create-stack">
-								<label class="field" for="tournament-address">
-									<span class="field__label"><spring:message code="tournament.form.location.label" /></span>
-									<form:input path="address" id="tournament-address" cssClass="field__control" required="required" placeholder="${locationPlaceholder}" />
-									<form:errors path="address" cssClass="field__error" element="span" />
-								</label>
-								<form:hidden path="latitude" id="tournament-location-latitude" />
-								<form:hidden path="longitude" id="tournament-location-longitude" />
-								<form:errors path="latitude" cssClass="field__error" element="span" />
-								<form:errors path="longitude" cssClass="field__error" element="span" />
-								<c:if test="${mapPickerEnabled}">
-									<c:url var="appRootUrl" value="/" />
-									<c:set var="contextAwareMapTileUrlTemplate"
-										value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
-									<section
-										class="location-picker"
-										data-location-picker="true"
-										data-latitude-input="#tournament-location-latitude"
-										data-longitude-input="#tournament-location-longitude"
-										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
-										data-attribution="${mapAttribution}"
-										data-default-latitude="${mapDefaultLatitude}"
-										data-default-longitude="${mapDefaultLongitude}"
-										data-default-zoom="${mapDefaultZoom}">
-										<div class="location-picker__header">
-											<div>
-												<span class="field__label"><spring:message code="host.form.location.map" /></span>
-											</div>
-											<div class="location-picker__actions">
-												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
-													<spring:message code="host.form.location.zoomOut" />
-												</button>
-												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
-													<spring:message code="host.form.location.zoomIn" />
-												</button>
-												<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
-													<spring:message code="host.form.location.clear" />
-												</button>
-											</div>
-										</div>
-										<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
-										<c:if test="${not empty mapAttribution}">
-											<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
-										</c:if>
-									</section>
-								</c:if>
-							</div>
-						</article>
-
-						<article class="panel upload-card">
-							<span class="detail-label"><spring:message code="host.section.banner" /></span>
-							<h2 class="form-card__title"><spring:message code="host.section.banner.subtitle" /></h2>
-							<c:if test="${not empty currentBannerImageUrl}">
-								<c:url var="currentBannerSrc" value="${currentBannerImageUrl}" />
-								<div class="upload-card__preview">
-									<span class="upload-card__preview-label">
-										<spring:message code="host.form.bannerImage.current" />
-									</span>
-									<img class="upload-card__preview-image" src="${currentBannerSrc}" alt="" loading="lazy" decoding="async" />
-								</div>
-							</c:if>
-							<label class="field upload-card__field" for="tournament-banner-image">
-								<span class="field__label"><spring:message code="host.form.bannerImage" /></span>
-								<span class="upload-card__dropzone">
-									<span class="upload-card__dropzone-icon" aria-hidden="true">
-										<icon:photoFrame />
-									</span>
-									<span class="upload-card__dropzone-copy">
-										<span class="upload-card__dropzone-title">
-											<spring:message code="host.form.bannerImage.guidanceTitle" />
-										</span>
-										<span class="field__hint">
-											<spring:message code="host.form.bannerImage.hint" />
-										</span>
-									</span>
-									<form:input path="bannerImage" id="tournament-banner-image" type="file"
-										accept="image/png,image/jpeg,image/webp,image/gif"
-										cssClass="upload-card__file-input" />
-								</span>
-							</label>
 						</article>
 
 						<article class="panel form-card">
@@ -257,6 +173,93 @@
 							</div>
 						</article>
 
+						</div>
+						<div class="create-form__column">
+						<article class="panel form-card">
+							<span class="detail-label"><spring:message code="tournament.create.section.logistics" /></span>
+							<h2 class="form-card__title"><spring:message code="tournament.create.section.logistics.subtitle" /></h2>
+							<div class="create-stack">
+								<label class="field" for="tournament-address">
+									<span class="field__label"><spring:message code="tournament.form.location.label" /></span>
+									<form:input path="address" id="tournament-address" cssClass="field__control" required="required" placeholder="${locationPlaceholder}" />
+									<form:errors path="address" cssClass="field__error" element="span" />
+								</label>
+								<form:hidden path="latitude" id="tournament-location-latitude" />
+								<form:hidden path="longitude" id="tournament-location-longitude" />
+								<form:errors path="latitude" cssClass="field__error" element="span" />
+								<form:errors path="longitude" cssClass="field__error" element="span" />
+								<c:if test="${mapPickerEnabled}">
+									<c:url var="appRootUrl" value="/" />
+									<c:set var="contextAwareMapTileUrlTemplate"
+										value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
+									<section
+										class="location-picker"
+										data-location-picker="true"
+										data-latitude-input="#tournament-location-latitude"
+										data-longitude-input="#tournament-location-longitude"
+										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
+										data-attribution="${mapAttribution}"
+										data-default-latitude="${mapDefaultLatitude}"
+										data-default-longitude="${mapDefaultLongitude}"
+										data-default-zoom="${mapDefaultZoom}">
+										<div class="location-picker__header">
+											<div>
+												<span class="field__label"><spring:message code="host.form.location.map" /></span>
+											</div>
+											<div class="location-picker__actions">
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
+													<spring:message code="host.form.location.zoomOut" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
+													<spring:message code="host.form.location.zoomIn" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
+													<spring:message code="host.form.location.clear" />
+												</button>
+											</div>
+										</div>
+										<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
+										<c:if test="${not empty mapAttribution}">
+											<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
+										</c:if>
+									</section>
+								</c:if>
+							</div>
+						</article>
+
+						<article class="panel upload-card">
+							<span class="detail-label"><spring:message code="host.section.banner" /></span>
+							<h2 class="form-card__title"><spring:message code="host.section.banner.subtitle" /></h2>
+							<c:if test="${not empty currentBannerImageUrl}">
+								<c:url var="currentBannerSrc" value="${currentBannerImageUrl}" />
+								<div class="upload-card__preview">
+									<span class="upload-card__preview-label">
+										<spring:message code="host.form.bannerImage.current" />
+									</span>
+									<img class="upload-card__preview-image" src="${currentBannerSrc}" alt="" loading="lazy" decoding="async" />
+								</div>
+							</c:if>
+							<label class="field upload-card__field" for="tournament-banner-image">
+								<span class="field__label"><spring:message code="host.form.bannerImage" /></span>
+								<span class="upload-card__dropzone">
+									<span class="upload-card__dropzone-icon" aria-hidden="true">
+										<icon:photoFrame />
+									</span>
+									<span class="upload-card__dropzone-copy">
+										<span class="upload-card__dropzone-title">
+											<spring:message code="host.form.bannerImage.guidanceTitle" />
+										</span>
+										<span class="field__hint">
+											<spring:message code="host.form.bannerImage.hint" />
+										</span>
+									</span>
+									<form:input path="bannerImage" id="tournament-banner-image" type="file"
+										accept="image/png,image/jpeg,image/webp,image/gif"
+										cssClass="upload-card__file-input" />
+								</span>
+							</label>
+						</article>
+
 						<article class="panel form-card">
 							<span class="detail-label"><spring:message code="tournament.create.section.structure" /></span>
 							<h2 class="form-card__title"><spring:message code="tournament.create.section.structure.subtitle" /></h2>
@@ -300,6 +303,7 @@
 								</label>
 							</div>
 						</article>
+						</div>
 
 						<div class="create-layout__actions">
 							<ui:button label="${submitLabel}" type="submit" id="create-tournament-button" size="lg" fullWidth="${true}" className="create-layout__submit" />
