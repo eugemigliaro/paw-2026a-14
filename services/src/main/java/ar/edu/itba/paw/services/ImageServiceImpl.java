@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.persistence.ImageDao;
 import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
 import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.ImageUploadException;
 import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,7 +66,7 @@ public class ImageServiceImpl implements ImageService {
                             image.getContentStream());
             return new ImageMetadata(imageId, image.getContentType(), image.getContentLength());
         } catch (final IOException exception) {
-            throw new IllegalStateException("Unable to store tournament banner image", exception);
+            throw new ImageUploadException("exception.imageUpload.unavailable");
         }
     }
 
@@ -76,16 +77,16 @@ public class ImageServiceImpl implements ImageService {
     private static void validateContentType(final String contentType) {
         final String normalized = normalizeContentType(contentType);
         if (normalized.isBlank() || !ALLOWED_CONTENT_TYPES.contains(normalized)) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
     }
 
     private static void validateContentLength(final long contentLength) {
         if (contentLength <= 0) {
-            throw new EmptyImageFileException("Uploaded file is empty");
+            throw new EmptyImageFileException();
         }
         if (contentLength > MAX_IMAGE_SIZE_BYTES) {
-            throw new ImageTooLargeException("Uploaded file is too large");
+            throw new ImageTooLargeException();
         }
     }
 }

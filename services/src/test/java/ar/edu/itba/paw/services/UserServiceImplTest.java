@@ -15,7 +15,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceImplTest {
@@ -24,7 +23,6 @@ public class UserServiceImplTest {
 
     @Mock private UserDao userDao;
     @Mock private ImageService imageService;
-    @Mock private MessageSource messageSource;
 
     @Test
     public void testFindByIdWhenUserExists() {
@@ -120,13 +118,6 @@ public class UserServiceImplTest {
         final User conflictingUser =
                 new User(3L, "other@test.com", "new_user", "Other", "User", null, null, null);
         Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.of(conflictingUser));
-        Mockito.when(
-                        messageSource.getMessage(
-                                Mockito.anyString(),
-                                Mockito.isNull(),
-                                Mockito.any(),
-                                Mockito.any()))
-                .thenAnswer(invocation -> invocation.getArgument(0, String.class));
 
         Assertions.assertThrows(
                 AccountRegistrationException.class,

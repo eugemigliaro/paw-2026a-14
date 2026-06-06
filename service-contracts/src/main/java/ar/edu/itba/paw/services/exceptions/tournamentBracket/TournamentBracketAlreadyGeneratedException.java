@@ -1,8 +1,7 @@
 package ar.edu.itba.paw.services.exceptions.tournamentBracket;
 
 public class TournamentBracketAlreadyGeneratedException extends TournamentBracketException {
-
-    public TournamentBracketAlreadyGeneratedException(final String message) {
-        super(message);
+    public TournamentBracketAlreadyGeneratedException() {
+        super("tournament.bracket.error.alreadyGenerated");
     }
 }

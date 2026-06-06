@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.services.exceptions.moderation;
 
-public class ModerationReportNotFoundException extends ModerationException {
-    public ModerationReportNotFoundException(final String message) {
-        super(message);
+import ar.edu.itba.paw.services.exceptions.NotFoundException;
+
+public class ModerationReportNotFoundException extends NotFoundException {
+    public ModerationReportNotFoundException() {
+        super("exception.moderation.report.not.found");
     }
 }

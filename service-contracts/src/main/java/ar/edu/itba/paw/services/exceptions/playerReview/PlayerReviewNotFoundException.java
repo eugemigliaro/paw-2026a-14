@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.services.exceptions.playerReview;
 
-public class PlayerReviewNotFoundException extends PlayerReviewException {
-    public PlayerReviewNotFoundException(final String message) {
-        super(message);
+import ar.edu.itba.paw.services.exceptions.NotFoundException;
+
+public class PlayerReviewNotFoundException extends NotFoundException {
+    public PlayerReviewNotFoundException() {
+        super("exception.playerReview.notFound");
     }
 }

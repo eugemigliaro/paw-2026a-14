@@ -46,7 +46,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         nonNullUser(reviewer);
         nonNullUser(reviewed);
         if (!playerReviewDao.softDeleteReview(reviewer, reviewed)) {
-            throw new PlayerReviewNotFoundException("Player review not found.");
+            throw new PlayerReviewNotFoundException();
         }
     }
 
@@ -111,7 +111,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new PlayerReviewUserNotFoundException("User is required.");
+            throw new PlayerReviewUserNotFoundException();
         }
     }
 
@@ -120,14 +120,13 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         nonNullUser(reviewer);
         nonNullUser(reviewed);
         if (reaction == null) {
-            throw new PlayerReviewInvalidReactionException("Review reaction is required.");
+            throw new PlayerReviewInvalidReactionException();
         }
         if (reviewer != null && reviewer.getId().equals(reviewed.getId())) {
-            throw new PlayerReviewSelfReviewException("Users cannot review themselves.");
+            throw new PlayerReviewSelfReviewException();
         }
         if (!canReview(reviewer, reviewed)) {
-            throw new PlayerReviewNotEligibleException(
-                    "Users must share a completed match to review each other.");
+            throw new PlayerReviewNotEligibleException();
         }
     }
 
@@ -140,7 +139,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
             return null;
         }
         if (normalized.length() > MAX_COMMENT_LENGTH) {
-            throw new PlayerReviewCommentTooLongException("Review comment is too long.");
+            throw new PlayerReviewCommentTooLongException();
         }
         return normalized;
     }

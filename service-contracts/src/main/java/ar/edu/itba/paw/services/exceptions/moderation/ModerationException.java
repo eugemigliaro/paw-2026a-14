@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services.exceptions.moderation;
 
-public class ModerationException extends RuntimeException {
+import ar.edu.itba.paw.services.exceptions.DomainException;
+
+public class ModerationException extends DomainException {
 
     public ModerationException(final String message) {
         super(message);

@@ -16,7 +16,7 @@ import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
-import ar.edu.itba.paw.services.exceptions.matchCancelation.*;
+import ar.edu.itba.paw.services.exceptions.match.*;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.*;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
@@ -72,7 +72,6 @@ public class MatchServiceImplTest {
                         matchNotificationService,
                         securityService,
                         new RecurringMatchAsyncService(matchDao),
-                        messageSource,
                         clock);
         matchService = Mockito.spy(matchService);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
@@ -98,7 +97,6 @@ public class MatchServiceImplTest {
                         matchNotificationService,
                         securityService,
                         new RecurringMatchAsyncService(matchDao),
-                        messageSource,
                         clock);
     }
 
@@ -824,7 +822,7 @@ public class MatchServiceImplTest {
                                                 EventStatus.OPEN,
                                                 null)));
 
-        Assertions.assertEquals("match.schedule.error.startsAtPast", exception.getMessage());
+        Assertions.assertEquals("match.schedule.error.invalid", exception.getMessage());
     }
 
     @Test
@@ -861,7 +859,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDao.findById(13L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchUpdateNotFoundException.class,
+                MatchNotFoundException.class,
                 () ->
                         matchService.updateMatch(
                                 13L,
@@ -888,7 +886,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDao.findById(14L)).thenReturn(Optional.of(existingMatch));
 
         Assertions.assertThrows(
-                MatchUpdateForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () ->
                         matchService.updateMatch(
                                 14L,
@@ -1466,7 +1464,7 @@ public class MatchServiceImplTest {
                 .thenReturn(false);
 
         Assertions.assertThrows(
-                MatchUpdateForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () ->
                         matchService.updateMatch(
                                 16L,
@@ -1492,7 +1490,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDao.findById(21L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchCancellationNotFoundException.class,
+                MatchNotFoundException.class,
                 () -> matchService.cancelMatch(21L, UserUtils.getUser(1L)));
     }
 
@@ -1502,7 +1500,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDao.findById(22L)).thenReturn(Optional.of(existingMatch));
 
         Assertions.assertThrows(
-                MatchCancellationForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () -> matchService.cancelMatch(22L, UserUtils.getUser(1L)));
     }
 
@@ -1536,7 +1534,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDao.findById(29L)).thenReturn(Optional.of(completedMatch));
 
         Assertions.assertThrows(
-                MatchCancellationForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () -> matchService.cancelMatch(29L, UserUtils.getUser(1L)));
     }
 
@@ -1961,7 +1959,7 @@ public class MatchServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                MatchUpdateNotRecurringException.class,
+                MatchNotRecurringException.class,
                 () ->
                         matchService.updateSeriesFromOccurrence(
                                 46L,
@@ -2314,7 +2312,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDao.findById(27L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchUpdateException.class,
+                MatchNotFoundException.class,
                 () ->
                         matchService.updateMatch(
                                 27L,
@@ -2343,7 +2341,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDao.findById(28L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchCancellationException.class,
+                MatchNotFoundException.class,
                 () -> matchService.cancelMatch(28L, UserUtils.getUser(1L)));
 
         Assertions.assertTrue(mailDispatchService.actions.isEmpty());

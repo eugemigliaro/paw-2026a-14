@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
+import ar.edu.itba.paw.services.exceptions.tournament.TournamentForbiddenActionException;
 import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
@@ -240,7 +241,7 @@ public class TournamentServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentLifecycleForbiddenException.class,
+                TournamentForbiddenActionException.class,
                 () -> tournamentService.update(10L, UserUtils.getUser(2L), validUpdateRequest()));
     }
 

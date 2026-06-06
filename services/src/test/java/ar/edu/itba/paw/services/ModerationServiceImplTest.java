@@ -20,6 +20,7 @@ import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
@@ -387,7 +388,7 @@ public class ModerationServiceImplTest {
                 .thenReturn(false);
 
         Assertions.assertThrows(
-                ModerationException.class,
+                ModerationReportNotFoundException.class,
                 () -> moderationService.markReportUnderReview(77L, UserUtils.getUser(99L)));
     }
 

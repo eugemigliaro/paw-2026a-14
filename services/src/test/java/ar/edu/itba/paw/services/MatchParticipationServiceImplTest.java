@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import ar.edu.itba.paw.services.exceptions.match.*;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.*;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
@@ -238,7 +239,7 @@ public class MatchParticipationServiceImplTest {
 
         // Exercise + Assert
         Assertions.assertThrows(
-                MatchParticipationStartedException.class,
+                MatchStartedException.class,
                 () ->
                         matchParticipationService.removeParticipant(
                                 10L, UserUtils.getUser(20L), UserUtils.getUser(20L)));
@@ -281,7 +282,7 @@ public class MatchParticipationServiceImplTest {
 
         // Exercise + Assert
         Assertions.assertThrows(
-                MatchParticipationForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () ->
                         matchParticipationService.removeParticipant(
                                 10L, UserUtils.getUser(20L), UserUtils.getUser(30L)));
@@ -825,7 +826,7 @@ public class MatchParticipationServiceImplTest {
 
         // Exercise + Assert
         Assertions.assertThrows(
-                MatchParticipationNotRecurringException.class,
+                MatchNotRecurringException.class,
                 () -> matchParticipationService.requestToJoinSeries(10L, UserUtils.getUser(20L)));
     }
 
@@ -841,7 +842,7 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
 
         Assertions.assertThrows(
-                MatchParticipationClosedException.class,
+                MatchClosedException.class,
                 () -> matchParticipationService.requestToJoin(10L, UserUtils.getUser(2L)));
     }
 
@@ -858,8 +859,7 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchParticipantDao.hasPendingRequest(10L, u)).thenReturn(false);
 
         Assertions.assertThrows(
-                MatchParticipationFullException.class,
-                () -> matchParticipationService.requestToJoin(10L, u));
+                MatchFullException.class, () -> matchParticipationService.requestToJoin(10L, u));
     }
 
     @Test
@@ -874,7 +874,7 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
 
         Assertions.assertThrows(
-                MatchParticipationForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () ->
                         matchParticipationService.approveRequest(
                                 10L, UserUtils.getUser(3L), UserUtils.getUser(2L)));

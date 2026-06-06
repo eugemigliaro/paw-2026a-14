@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services.exceptions.matchParticipation;
 
-public class MatchParticipationException extends RuntimeException {
+import ar.edu.itba.paw.services.exceptions.match.MatchException;
+
+public class MatchParticipationException extends MatchException {
 
     public MatchParticipationException(final String message) {
         super(message);

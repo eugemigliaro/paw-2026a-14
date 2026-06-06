@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services.exceptions.imageUpload;
 
-public class ImageUploadException extends RuntimeException {
+import ar.edu.itba.paw.services.exceptions.DomainException;
+
+public class ImageUploadException extends DomainException {
 
     public ImageUploadException(final String message) {
         super(message);

@@ -1,0 +1,10 @@
+package ar.edu.itba.paw.services.exceptions.match;
+
+import ar.edu.itba.paw.services.exceptions.DomainException;
+
+public class MatchException extends DomainException {
+
+    public MatchException(String message) {
+        super(message);
+    }
+}

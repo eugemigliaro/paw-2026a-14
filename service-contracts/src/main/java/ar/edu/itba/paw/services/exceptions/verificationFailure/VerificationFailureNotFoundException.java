@@ -1,8 +1,9 @@
 package ar.edu.itba.paw.services.exceptions.verificationFailure;
 
-public class VerificationFailureNotFoundException extends VerificationFailureException {
+import ar.edu.itba.paw.services.exceptions.NotFoundException;
 
-    public VerificationFailureNotFoundException(final String message) {
-        super(message);
+public class VerificationFailureNotFoundException extends NotFoundException {
+    public VerificationFailureNotFoundException() {
+        super("verification.message.notFound");
     }
 }

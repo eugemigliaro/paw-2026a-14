@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services.exceptions.matchUpdate;
 
-public class MatchUpdateException extends RuntimeException {
+import ar.edu.itba.paw.services.exceptions.match.MatchException;
+
+public class MatchUpdateException extends MatchException {
 
     public MatchUpdateException(final String message) {
         super(message);

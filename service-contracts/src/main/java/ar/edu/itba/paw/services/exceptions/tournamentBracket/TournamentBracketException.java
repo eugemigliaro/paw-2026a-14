@@ -1,7 +1,8 @@
 package ar.edu.itba.paw.services.exceptions.tournamentBracket;
 
-public class TournamentBracketException extends RuntimeException {
+import ar.edu.itba.paw.services.exceptions.DomainException;
 
+public class TournamentBracketException extends DomainException {
     public TournamentBracketException(final String message) {
         super(message);
     }
