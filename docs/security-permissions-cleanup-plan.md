@@ -26,7 +26,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 1: Inventory controller permissions.
 - [x] Module 2: Establish shared authorization vocabulary.
 - [x] Module 3: Match detail visibility.
-- [ ] Module 4: Match detail action state.
+- [x] Module 4: Match detail action state.
 - [ ] Module 5: Tournament detail permissions.
 - [ ] Module 6: Tournament bracket permissions.
 - [ ] Module 7: Centralize admin/mod role checks.
@@ -357,17 +357,17 @@ Tests to add or update:
 - [x] Host edit/cancel affordances follow event status and time rules.
 - [x] Admin/mod edit/cancel affordances follow the same lifecycle limits while
   overriding ownership.
-- [ ] Reservation affordance follows visibility, join policy, capacity, event
+- [x] Reservation affordance follows visibility, join policy, capacity, event
   time, and user relationship rules.
-- [ ] Join request affordance follows approval-required policy.
-- [ ] Cancel reservation affordance follows event time and status rules.
-- [ ] Recurring-series affordances use the same service-computed state as
+- [x] Join request affordance follows approval-required policy.
+- [x] Cancel reservation affordance follows event time and status rules.
+- [x] Recurring-series affordances use the same service-computed state as
   single-match affordances.
 
 Acceptance criteria:
 
-- [ ] Controllers no longer compute match action permissions.
-- [ ] Existing POST paths still reject forbidden actions even when a button is
+- [x] Controllers no longer compute match action permissions.
+- [x] Existing POST paths still reject forbidden actions even when a button is
   manually submitted.
 - [x] Service tests cover host, unrelated user, and admin/mod paths for the
   moved management rules.
@@ -387,6 +387,19 @@ Partial implementation notes:
   enforce ownership/admin rules before persistence mutates a match.
 - Non-host, non-admin users are denied by the service for edit/cancel before the
   DAO write path is reached.
+- Added `MatchInteractionState` and
+  `MatchService.getMatchInteractionState(Match, List<Match>, User)` for
+  player-facing match detail actions.
+- Moved reservation, reservation cancellation, join request, invitation, pending
+  request, and recurring-series detail affordances from `EventPageSupport` into
+  `MatchServiceImpl`.
+- Kept reservation and participation POST paths enforced by
+  `MatchReservationService` and `MatchParticipationService`; `EventPageSupport`
+  now only maps service-computed state to existing JSP model attributes.
+- Added service tests for public direct reservation, confirmed-player
+  cancellation, approval-required join requests, pending join request display,
+  recurring-series reservation state, and recurring-series pending join request
+  state.
 
 ## Module 5: Tournament Detail Permissions
 

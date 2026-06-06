@@ -25,6 +25,9 @@ public interface MatchService {
 
     MatchManagementPermissions getMatchManagementPermissions(Match match, User viewer);
 
+    MatchInteractionState getMatchInteractionState(
+            Match match, List<Match> seriesOccurrences, User viewer);
+
     Optional<Match> findPublicMatchById(Long matchId);
 
     Match findEditableMatchForHost(Long matchId, User actingUser);

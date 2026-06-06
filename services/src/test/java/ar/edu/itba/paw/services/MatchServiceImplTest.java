@@ -2915,6 +2915,186 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testGetMatchInteractionStateAllowsAnonymousPublicDirectReservation() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        64L,
+                        "Open Direct Match",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+
+        // Exercise
+        final MatchInteractionState result =
+                matchService.getMatchInteractionState(match, List.of(), null);
+
+        // Assert
+        Assertions.assertTrue(result.isReservationEnabled());
+        Assertions.assertTrue(result.isReservationRequiresLogin());
+        Assertions.assertFalse(result.isJoinRequestEnabled());
+        Assertions.assertFalse(result.isReservationCancellationEnabled());
+    }
+
+    @Test
+    public void testGetMatchInteractionStateAllowsConfirmedPlayerToCancelFutureReservation() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        65L,
+                        "Joined Direct Match",
+                        "football",
+                        "public",
+                        "direct",
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+        final User player = UserUtils.getUser(2L);
+        Mockito.when(matchParticipantDao.hasActiveReservation(65L, player)).thenReturn(true);
+
+        // Exercise
+        final MatchInteractionState result =
+                matchService.getMatchInteractionState(match, List.of(), player);
+
+        // Assert
+        Assertions.assertTrue(result.isConfirmedParticipant());
+        Assertions.assertTrue(result.isReservationCancellationEnabled());
+        Assertions.assertFalse(result.isReservationRequiresLogin());
+    }
+
+    @Test
+    public void testGetMatchInteractionStateAllowsApprovalRequiredJoinRequest() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        66L,
+                        "Approval Match",
+                        "football",
+                        "public",
+                        "approval_required",
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+        final User player = UserUtils.getUser(2L);
+
+        // Exercise
+        final MatchInteractionState result =
+                matchService.getMatchInteractionState(match, List.of(), player);
+
+        // Assert
+        Assertions.assertTrue(result.isJoinRequestEnabled());
+        Assertions.assertFalse(result.isReservationEnabled());
+        Assertions.assertFalse(result.hasPendingJoinRequest());
+    }
+
+    @Test
+    public void testGetMatchInteractionStateExposesPendingJoinRequest() {
+        // Arrange
+        final Match match =
+                createTestMatch(
+                        67L,
+                        "Pending Approval Match",
+                        "football",
+                        "public",
+                        "approval_required",
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        null);
+        final User player = UserUtils.getUser(2L);
+        Mockito.when(matchParticipantDao.hasPendingRequest(67L, player)).thenReturn(true);
+
+        // Exercise
+        final MatchInteractionState result =
+                matchService.getMatchInteractionState(match, List.of(), player);
+
+        // Assert
+        Assertions.assertTrue(result.hasPendingJoinRequest());
+        Assertions.assertTrue(result.isJoinRequestEnabled());
+    }
+
+    @Test
+    public void testGetMatchInteractionStateMarksRecurringDirectSeriesAsJoinedAndCancellable() {
+        // Arrange
+        final Match pivot =
+                recurringMatch(
+                        68L,
+                        "Joined Recurring Match",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        EventStatus.OPEN,
+                        1);
+        final Match nextOccurrence =
+                recurringMatch(
+                        69L,
+                        "Joined Recurring Match",
+                        FIXED_NOW.plusSeconds(604800),
+                        FIXED_NOW.plusSeconds(608400),
+                        EventStatus.OPEN,
+                        2);
+        final User player = UserUtils.getUser(2L);
+        Mockito.when(
+                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                600L, player, FIXED_NOW))
+                .thenReturn(List.of(68L, 69L));
+
+        // Exercise
+        final MatchInteractionState result =
+                matchService.getMatchInteractionState(
+                        pivot, List.of(pivot, nextOccurrence), player);
+
+        // Assert
+        Assertions.assertFalse(result.isSeriesReservationEnabled());
+        Assertions.assertTrue(result.isSeriesReservationJoined());
+        Assertions.assertTrue(result.isSeriesCancellationEnabled());
+    }
+
+    @Test
+    public void testGetMatchInteractionStateSuppressesSingleJoinWhenSeriesRequestPending() {
+        // Arrange
+        final Match pivot =
+                recurringMatch(
+                        70L,
+                        "Pending Recurring Approval Match",
+                        FIXED_NOW.plusSeconds(3600),
+                        FIXED_NOW.plusSeconds(7200),
+                        EventStatus.OPEN,
+                        1);
+        final Match nextOccurrence =
+                recurringMatch(
+                        71L,
+                        "Pending Recurring Approval Match",
+                        FIXED_NOW.plusSeconds(604800),
+                        FIXED_NOW.plusSeconds(608400),
+                        EventStatus.OPEN,
+                        2);
+        pivot.setJoinPolicy(EventJoinPolicy.APPROVAL_REQUIRED);
+        nextOccurrence.setJoinPolicy(EventJoinPolicy.APPROVAL_REQUIRED);
+        final User player = UserUtils.getUser(2L);
+        Mockito.when(
+                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                600L, player, FIXED_NOW))
+                .thenReturn(List.of());
+        Mockito.when(
+                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                                600L, player, FIXED_NOW))
+                .thenReturn(List.of(70L, 71L));
+
+        // Exercise
+        final MatchInteractionState result =
+                matchService.getMatchInteractionState(
+                        pivot, List.of(pivot, nextOccurrence), player);
+
+        // Assert
+        Assertions.assertFalse(result.isJoinRequestEnabled());
+        Assertions.assertFalse(result.isSeriesJoinRequestEnabled());
+        Assertions.assertTrue(result.isSeriesJoinRequestPending());
+        Assertions.assertFalse(result.hasPendingJoinRequest());
+    }
+
+    @Test
     public void testFindConfirmedParticipantsDelegates() {
         final List<User> expectedParticipants =
                 List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -835,6 +836,243 @@ public class MatchServiceImpl implements MatchService {
                 canManageCurrentMatch && recurringOccurrence);
     }
 
+    @Override
+    public MatchInteractionState getMatchInteractionState(
+            final Match match, final List<Match> seriesOccurrences, final User viewer) {
+        if (match == null) {
+            return emptyInteractionState(viewer);
+        }
+
+        final boolean hostViewer = isMatchHost(match, viewer);
+        final boolean authenticated = viewer != null;
+        final boolean confirmedParticipant =
+                authenticated && matchParticipantDao.hasActiveReservation(match.getId(), viewer);
+        final boolean rawPendingJoinRequest =
+                authenticated
+                        && !hostViewer
+                        && EventJoinPolicy.APPROVAL_REQUIRED == match.getJoinPolicy()
+                        && matchParticipantDao.hasPendingRequest(match.getId(), viewer);
+        final boolean invitedPlayer =
+                authenticated
+                        && !hostViewer
+                        && EventJoinPolicy.INVITE_ONLY == match.getJoinPolicy()
+                        && matchParticipantDao.hasInvitation(match.getId(), viewer);
+        final List<Match> occurrences =
+                seriesOccurrences == null ? List.of() : List.copyOf(seriesOccurrences);
+        final SeriesReservationState seriesReservationState =
+                buildSeriesReservationState(match, occurrences, viewer, hostViewer);
+        final SeriesJoinRequestState seriesJoinRequestState =
+                hostViewer
+                        ? new SeriesJoinRequestState(false, false)
+                        : buildSeriesJoinRequestState(match, occurrences, viewer);
+
+        return new MatchInteractionState(
+                confirmedParticipant,
+                rawPendingJoinRequest && !seriesJoinRequestState.pending(),
+                invitedPlayer,
+                isMatchReservable(match, hostViewer),
+                confirmedParticipant && isReservationCancellable(match),
+                seriesReservationState.available(),
+                seriesReservationState.joined(),
+                seriesReservationState.cancellable(),
+                !hostViewer && isJoinRequestable(match) && !seriesJoinRequestState.pending(),
+                seriesJoinRequestState.available(),
+                seriesJoinRequestState.pending(),
+                !authenticated,
+                !authenticated,
+                !authenticated);
+    }
+
+    private static MatchInteractionState emptyInteractionState(final User viewer) {
+        if (viewer == null) {
+            return MatchInteractionState.anonymous();
+        }
+        return new MatchInteractionState(
+                false, false, false, false, false, false, false, false, false, false, false, false,
+                false, false);
+    }
+
+    private SeriesReservationState buildSeriesReservationState(
+            final Match match,
+            final List<Match> occurrences,
+            final User viewer,
+            final boolean hostViewer) {
+        if (!match.isRecurringOccurrence() || occurrences.isEmpty()) {
+            return new SeriesReservationState(false, false, false);
+        }
+
+        final Set<Long> activeFutureReservationMatchIds =
+                viewer == null
+                        ? Set.of()
+                        : Set.copyOf(
+                                matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                        match.getSeries().getId(), viewer, Instant.now(clock)));
+        final SeriesReservationEvaluation evaluation =
+                evaluateSeriesReservationTargets(
+                        occurrences, viewer, activeFutureReservationMatchIds, hostViewer);
+        return new SeriesReservationState(
+                !evaluation.targetMatchIds().isEmpty(),
+                evaluation.joined(),
+                evaluation.activeFutureReservationCount() > 0);
+    }
+
+    private SeriesReservationEvaluation evaluateSeriesReservationTargets(
+            final List<Match> occurrences,
+            final User viewer,
+            final Set<Long> activeFutureReservationMatchIds,
+            final boolean hostViewer) {
+        final List<Long> targetMatchIds = new ArrayList<>();
+        int futureOpenOccurrenceCount = 0;
+        int joinedFutureOpenOccurrenceCount = 0;
+        int activeFutureReservationCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)) {
+                continue;
+            }
+
+            final boolean alreadyJoined =
+                    activeFutureReservationMatchIds.contains(occurrence.getId());
+            if (alreadyJoined) {
+                activeFutureReservationCount++;
+            }
+
+            if (!isSeriesReservationOpenOccurrence(occurrence, hostViewer)) {
+                continue;
+            }
+
+            futureOpenOccurrenceCount++;
+            if (alreadyJoined) {
+                joinedFutureOpenOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getAvailableSpots() <= 0) {
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        final boolean joined =
+                viewer != null
+                        && futureOpenOccurrenceCount > 0
+                        && joinedFutureOpenOccurrenceCount == futureOpenOccurrenceCount;
+        return new SeriesReservationEvaluation(
+                List.copyOf(targetMatchIds), joined, activeFutureReservationCount);
+    }
+
+    private static boolean isSeriesReservationOpenOccurrence(
+            final Match occurrence, final boolean hostViewer) {
+        return EventStatus.OPEN == occurrence.getStatus()
+                && (hostViewer
+                        || (occurrence.getVisibility() == EventVisibility.PUBLIC
+                                && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));
+    }
+
+    private SeriesJoinRequestState buildSeriesJoinRequestState(
+            final Match match, final List<Match> occurrences, final User viewer) {
+        if (!match.isRecurringOccurrence()) {
+            return new SeriesJoinRequestState(false, false);
+        }
+
+        if (viewer != null
+                && matchParticipantDao.hasPendingSeriesRequest(match.getSeries().getId(), viewer)) {
+            return new SeriesJoinRequestState(false, true);
+        }
+
+        final Instant now = Instant.now(clock);
+        final Set<Long> activeFutureReservationMatchIds =
+                viewer == null
+                        ? Set.of()
+                        : Set.copyOf(
+                                matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                                        match.getSeries().getId(), viewer, now));
+        final Set<Long> pendingFutureRequestMatchIds =
+                viewer == null
+                        ? Set.of()
+                        : Set.copyOf(
+                                matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                                        match.getSeries().getId(), viewer, now));
+        final SeriesJoinRequestEvaluation evaluation =
+                evaluateSeriesJoinRequestTargets(
+                        occurrences,
+                        viewer,
+                        activeFutureReservationMatchIds,
+                        pendingFutureRequestMatchIds);
+        return new SeriesJoinRequestState(
+                !evaluation.targetMatchIds().isEmpty(), evaluation.pending());
+    }
+
+    private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
+            final List<Match> occurrences,
+            final User viewer,
+            final Set<Long> activeFutureReservationMatchIds,
+            final Set<Long> pendingFutureRequestMatchIds) {
+        final List<Long> targetMatchIds = new ArrayList<>();
+        int futureOpenApprovalOccurrenceCount = 0;
+        int pendingFutureOpenApprovalOccurrenceCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)
+                    || !isSeriesJoinRequestOpenOccurrence(occurrence)) {
+                continue;
+            }
+
+            futureOpenApprovalOccurrenceCount++;
+            if (activeFutureReservationMatchIds.contains(occurrence.getId())) {
+                continue;
+            }
+
+            if (pendingFutureRequestMatchIds.contains(occurrence.getId())) {
+                pendingFutureOpenApprovalOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getAvailableSpots() <= 0) {
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        final boolean pending =
+                viewer != null
+                        && futureOpenApprovalOccurrenceCount > 0
+                        && pendingFutureOpenApprovalOccurrenceCount
+                                == futureOpenApprovalOccurrenceCount;
+        return new SeriesJoinRequestEvaluation(List.copyOf(targetMatchIds), pending);
+    }
+
+    private static boolean isSeriesJoinRequestOpenOccurrence(final Match occurrence) {
+        return occurrence.getVisibility() == EventVisibility.PUBLIC
+                && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
+                && EventStatus.OPEN == occurrence.getStatus();
+    }
+
+    private boolean isMatchReservable(final Match match, final boolean hostViewer) {
+        return EventStatus.OPEN == match.getStatus()
+                && (hostViewer
+                        || (match.getVisibility() == EventVisibility.PUBLIC
+                                && match.getJoinPolicy() == EventJoinPolicy.DIRECT))
+                && !hasMatchStarted(match)
+                && match.getAvailableSpots() > 0;
+    }
+
+    private boolean isJoinRequestable(final Match match) {
+        return match.getVisibility() == EventVisibility.PUBLIC
+                && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
+                && EventStatus.OPEN == match.getStatus()
+                && !hasMatchStarted(match)
+                && match.getAvailableSpots() > 0;
+    }
+
+    private boolean isReservationCancellable(final Match match) {
+        return EventStatus.OPEN == match.getStatus() && !hasMatchStarted(match);
+    }
+
     private boolean hasMatchRelationship(final Match match, final User viewer) {
         return isMatchHost(match, viewer)
                 || (viewer != null
@@ -857,6 +1095,10 @@ public class MatchServiceImpl implements MatchService {
     private boolean hasMatchEnded(final Match match) {
         final Instant endsAt = match.getEndsAt() == null ? match.getStartsAt() : match.getEndsAt();
         return !endsAt.isAfter(Instant.now(clock));
+    }
+
+    private boolean hasMatchStarted(final Match match) {
+        return !match.getStartsAt().isAfter(Instant.now(clock));
     }
 
     @Override
@@ -1177,4 +1419,13 @@ public class MatchServiceImpl implements MatchService {
     private record DateRange(Instant start, Instant endExclusive) {}
 
     private record OccurrenceWindow(Instant startsAt, Instant endsAt) {}
+
+    private record SeriesReservationState(boolean available, boolean joined, boolean cancellable) {}
+
+    private record SeriesReservationEvaluation(
+            List<Long> targetMatchIds, boolean joined, int activeFutureReservationCount) {}
+
+    private record SeriesJoinRequestState(boolean available, boolean pending) {}
+
+    private record SeriesJoinRequestEvaluation(List<Long> targetMatchIds, boolean pending) {}
 }

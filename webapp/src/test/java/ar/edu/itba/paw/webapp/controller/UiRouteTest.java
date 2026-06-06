@@ -35,6 +35,8 @@ import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchCancellationFailureReason;
+import ar.edu.itba.paw.services.MatchInteractionState;
+import ar.edu.itba.paw.services.MatchManagementPermissions;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -622,6 +624,127 @@ class UiRouteTest {
                     @Override
                     public Optional<Match> findPublicMatchById(final Long matchId) {
                         return findMatchById(matchId);
+                    }
+
+                    @Override
+                    public Optional<Match> findVisibleMatchById(
+                            final Long matchId, final User viewer) {
+                        return findMatchById(matchId);
+                    }
+
+                    @Override
+                    public boolean canViewMatch(final Match match, final User viewer) {
+                        if (match.getStatus() == EventStatus.CANCELLED) {
+                            return viewer != null
+                                    && match.getHost() != null
+                                    && viewer.getId().equals(match.getHost().getId());
+                        }
+                        return true;
+                    }
+
+                    @Override
+                    public MatchManagementPermissions getMatchManagementPermissions(
+                            final Match match, final User viewer) {
+                        final boolean hostViewer =
+                                viewer != null
+                                        && match.getHost() != null
+                                        && viewer.getId().equals(match.getHost().getId());
+                        final boolean open =
+                                match.getStatus() != EventStatus.COMPLETED
+                                        && match.getStatus() != EventStatus.CANCELLED
+                                        && match.getStartsAt().isAfter(FIXED_NOW);
+                        return new MatchManagementPermissions(
+                                hostViewer,
+                                hostViewer,
+                                hostViewer && open,
+                                hostViewer && open,
+                                hostViewer && open,
+                                hostViewer && open && match.isRecurringOccurrence(),
+                                hostViewer && open && match.isRecurringOccurrence());
+                    }
+
+                    @Override
+                    public MatchInteractionState getMatchInteractionState(
+                            final Match match,
+                            final List<Match> seriesOccurrences,
+                            final User viewer) {
+                        final boolean hostViewer =
+                                viewer != null
+                                        && match.getHost() != null
+                                        && viewer.getId().equals(match.getHost().getId());
+                        final boolean authenticated = viewer != null;
+                        final boolean confirmedParticipant =
+                                authenticated
+                                        && (currentUserHasReservation
+                                                        && (viewer.getId() == 9L
+                                                                || viewer.getId() == 7L)
+                                                        && (match.getId() == 42L
+                                                                || match.getId() == 51L)
+                                                || currentUserHasSeriesReservation
+                                                        && viewer.getId() == 9L
+                                                        && (match.getId() == 46L
+                                                                || match.getId() == 47L));
+                        final boolean rawPendingJoinRequest =
+                                authenticated
+                                        && !hostViewer
+                                        && currentUserHasJoinRequest
+                                        && viewer.getId() == 9L
+                                        && (match.getId() == 52L
+                                                || match.getId() == 53L
+                                                || match.getId() == 56L);
+                        final boolean seriesJoinRequestPending =
+                                authenticated
+                                        && !hostViewer
+                                        && currentUserHasSeriesJoinRequest
+                                        && viewer.getId() == 9L
+                                        && (match.getId() == 52L || match.getId() == 53L);
+                        final boolean directReservable =
+                                match.getStatus() == EventStatus.OPEN
+                                        && (hostViewer
+                                                || (match.getVisibility() == EventVisibility.PUBLIC
+                                                        && match.getJoinPolicy()
+                                                                == EventJoinPolicy.DIRECT))
+                                        && match.getStartsAt().isAfter(FIXED_NOW)
+                                        && match.getAvailableSpots() > 0;
+                        final boolean joinRequestable =
+                                !hostViewer
+                                        && match.getStatus() == EventStatus.OPEN
+                                        && match.getVisibility() == EventVisibility.PUBLIC
+                                        && match.getJoinPolicy()
+                                                == EventJoinPolicy.APPROVAL_REQUIRED
+                                        && match.getStartsAt().isAfter(FIXED_NOW)
+                                        && match.getAvailableSpots() > 0;
+                        final boolean recurringDirectMatch =
+                                match.isRecurringOccurrence()
+                                        && match.getSeries() != null
+                                        && match.getSeries().getId() == 600L;
+                        final boolean recurringApprovalMatch =
+                                match.isRecurringOccurrence()
+                                        && match.getSeries() != null
+                                        && match.getSeries().getId() == 700L;
+                        final boolean seriesReservationAvailable =
+                                match.isRecurringOccurrence()
+                                        && (hostViewer || recurringDirectMatch)
+                                        && !currentUserHasSeriesReservation;
+                        return new MatchInteractionState(
+                                confirmedParticipant,
+                                rawPendingJoinRequest && !seriesJoinRequestPending,
+                                false,
+                                directReservable,
+                                confirmedParticipant
+                                        && match.getStatus() == EventStatus.OPEN
+                                        && match.getStartsAt().isAfter(FIXED_NOW),
+                                seriesReservationAvailable,
+                                recurringDirectMatch && currentUserHasSeriesReservation,
+                                recurringDirectMatch && currentUserHasSeriesReservation,
+                                joinRequestable && !seriesJoinRequestPending,
+                                !hostViewer
+                                        && recurringApprovalMatch
+                                        && !currentUserHasSeriesJoinRequest,
+                                seriesJoinRequestPending,
+                                !authenticated,
+                                !authenticated,
+                                !authenticated);
                     }
 
                     @Override
