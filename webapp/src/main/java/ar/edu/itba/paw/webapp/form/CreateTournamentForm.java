@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.webapp.validation.ValidCreateTournamentForm;
+import ar.edu.itba.paw.webapp.validation.ValidImage;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -95,7 +96,7 @@ public class CreateTournamentForm {
 
     private boolean allowTeamDraft = true;
 
-    private MultipartFile bannerImage;
+    @ValidImage private MultipartFile bannerImage;
 
     public String getTitle() {
         return title;
