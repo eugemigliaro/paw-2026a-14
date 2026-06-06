@@ -9,9 +9,8 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
@@ -39,12 +38,16 @@ public class UserModerationReportController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
+    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @Autowired
     public UserModerationReportController(
-            final ModerationService moderationService, final MessageSource messageSource) {
+            final ModerationService moderationService,
+            final MessageSource messageSource,
+            final DomainExceptionErrorResolver domainExceptionErrorResolver) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
+        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
     }
 
     @GetMapping
@@ -120,8 +123,7 @@ public class UserModerationReportController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         if (report.getReporter() == null || !report.getReporter().getId().equals(user.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND); // TODO: shouldn't it be 403 instead?
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
@@ -148,23 +150,17 @@ public class UserModerationReportController {
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        String exceptionReason;
-
         try {
             moderationService.appealReport(reportId, appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
-        } catch (
-                final ModerationReportNotFoundException
-                        exception) { // TODO: move message code to service (?) and catch generic
-            // exception here
-            exceptionReason = "report_not_found";
-        } catch (final ModerationAppealLimitException exception) {
-            exceptionReason = "appeal_limit";
-        } catch (final ModerationAppealRejectedException exception) {
-            exceptionReason = "appeal_rejected";
+        } catch (final ModerationException exception) {
+            return new ModelAndView(
+                    "redirect:/reports/mine/"
+                            + reportId
+                            + "?error="
+                            + domainExceptionErrorResolver.resolve(exception));
         }
-        return new ModelAndView("redirect:/reports/mine/" + reportId + "?error=" + exceptionReason);
     }
 
     private UserReportViewModel toViewModel(final ModerationReport report, final Locale locale) {
