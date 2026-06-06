@@ -18,7 +18,6 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,22 +89,13 @@ public class UserServiceImpl implements UserService {
             throw new UsernameTakenException();
         }
 
-        try {
-            userDao.updateProfile(
-                    user.getId(),
-                    normalizedUsername,
-                    normalizedName,
-                    normalizedLastName,
-                    normalizedPhone,
-                    profileImageMetadata);
-        } catch (final DataIntegrityViolationException exception) {
-            if (userDao.findByUsername(normalizedUsername)
-                    .filter(u -> !u.getId().equals(user.getId()))
-                    .isPresent()) {
-                throw new UsernameTakenException();
-            }
-            throw exception;
-        }
+        userDao.updateProfile(
+                user.getId(),
+                normalizedUsername,
+                normalizedName,
+                normalizedLastName,
+                normalizedPhone,
+                profileImageMetadata);
 
         return new User(
                 user.getId(),
