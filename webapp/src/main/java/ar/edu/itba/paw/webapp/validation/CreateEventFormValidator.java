@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.validation;
 
-import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.PlatformTime;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import java.time.Instant;
