@@ -57,6 +57,7 @@ import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
@@ -653,13 +654,12 @@ class HostTournamentControllerTest {
                 && schedules.get(1).getMatchId() == 11L;
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validCreatePost() {
+    private static MockHttpServletRequestBuilder validCreatePost() {
         return createPost("City Padel Cup");
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            editPost(final long tournamentId, final String title) {
+    private static MockHttpServletRequestBuilder editPost(
+            final long tournamentId, final String title) {
         return post("/host/tournaments/" + tournamentId + "/edit")
                 .locale(Locale.ENGLISH)
                 .param("title", title)
@@ -681,13 +681,11 @@ class HostTournamentControllerTest {
                 .param("_allowTeamDraft", "on");
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPost(final String title) {
+    private static MockHttpServletRequestBuilder createPost(final String title) {
         return createPost(title, true, true);
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPostWithoutTimezone(final String title) {
+    private static MockHttpServletRequestBuilder createPostWithoutTimezone(final String title) {
         return post("/host/tournaments")
                 .locale(Locale.ENGLISH)
                 .param("title", title)
@@ -709,21 +707,17 @@ class HostTournamentControllerTest {
                 .param("allowTeamDraft", "true");
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPost(
-                    final String title,
-                    final boolean allowSoloSignup,
-                    final boolean allowTeamDraft) {
+    private static MockHttpServletRequestBuilder createPost(
+            final String title, final boolean allowSoloSignup, final boolean allowTeamDraft) {
         return createPost(title, Sport.PADEL.getDbValue(), "1", allowSoloSignup, allowTeamDraft);
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPost(
-                    final String title,
-                    final String sport,
-                    final String teamSize,
-                    final boolean allowSoloSignup,
-                    final boolean allowTeamDraft) {
+    private static MockHttpServletRequestBuilder createPost(
+            final String title,
+            final String sport,
+            final String teamSize,
+            final boolean allowSoloSignup,
+            final boolean allowTeamDraft) {
         return createPostWithSchedule(
                 title,
                 sport,
@@ -736,13 +730,12 @@ class HostTournamentControllerTest {
                 "21:00");
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPostWithSchedule(
-                    final String title,
-                    final String startDate,
-                    final String startTime,
-                    final String endDate,
-                    final String endTime) {
+    private static MockHttpServletRequestBuilder createPostWithSchedule(
+            final String title,
+            final String startDate,
+            final String startTime,
+            final String endDate,
+            final String endTime) {
         return createPostWithSchedule(
                 title,
                 Sport.PADEL.getDbValue(),
@@ -755,18 +748,17 @@ class HostTournamentControllerTest {
                 endTime);
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            createPostWithSchedule(
-                    final String title,
-                    final String sport,
-                    final String teamSize,
-                    final boolean allowSoloSignup,
-                    final boolean allowTeamDraft,
-                    final String startDate,
-                    final String startTime,
-                    final String endDate,
-                    final String endTime) {
-        final org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder builder =
+    private static MockHttpServletRequestBuilder createPostWithSchedule(
+            final String title,
+            final String sport,
+            final String teamSize,
+            final boolean allowSoloSignup,
+            final boolean allowTeamDraft,
+            final String startDate,
+            final String startTime,
+            final String endDate,
+            final String endTime) {
+        final MockHttpServletRequestBuilder builder =
                 post("/host/tournaments")
                         .locale(Locale.ENGLISH)
                         .param("title", title)
@@ -797,8 +789,7 @@ class HostTournamentControllerTest {
         return builder;
     }
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validPublishPost() {
+    private static MockHttpServletRequestBuilder validPublishPost() {
         return post("/host/tournaments/77/bracket/publish")
                 .param("schedules[0].startDate", "2030-04-10")
                 .param("schedules[0].startTime", "18:00")
