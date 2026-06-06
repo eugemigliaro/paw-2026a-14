@@ -9,30 +9,6 @@ public final class UiViewModels {
         // Utility holder for immutable UI-only view models.
     }
 
-    public static final class NavItemViewModel {
-        private final String label;
-        private final String href;
-        private final boolean active;
-
-        public NavItemViewModel(final String label, final String href, final boolean active) {
-            this.label = label;
-            this.href = href;
-            this.active = active;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public String getHref() {
-            return href;
-        }
-
-        public boolean isActive() {
-            return active;
-        }
-    }
-
     public static final class FilterGroupViewModel {
         private final String title;
         private final List<FilterOptionViewModel> options;
@@ -199,37 +175,6 @@ public final class UiViewModels {
 
         public List<FilterGroupViewModel> getFilterGroups() {
             return filterGroups;
-        }
-    }
-
-    public static final class ChipViewModel {
-        private final String label;
-        private final String href;
-        private final boolean active;
-        private final String tone;
-
-        public ChipViewModel(
-                final String label, final String href, final boolean active, final String tone) {
-            this.label = label;
-            this.href = href;
-            this.active = active;
-            this.tone = tone;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public String getHref() {
-            return href;
-        }
-
-        public boolean isActive() {
-            return active;
-        }
-
-        public String getTone() {
-            return tone;
         }
     }
 
@@ -752,40 +697,6 @@ public final class UiViewModels {
 
         public String getRemoveUrl() {
             return removeUrl;
-        }
-    }
-
-    public static final class RosterParticipantViewModel {
-        private final String username;
-        private final String avatarLabel;
-        private final String removeUrl;
-        private final String profileHref;
-
-        public RosterParticipantViewModel(
-                final String username,
-                final String avatarLabel,
-                final String removeUrl,
-                final String profileHref) {
-            this.username = username;
-            this.avatarLabel = avatarLabel;
-            this.removeUrl = removeUrl;
-            this.profileHref = profileHref;
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        public String getAvatarLabel() {
-            return avatarLabel;
-        }
-
-        public String getRemoveUrl() {
-            return removeUrl;
-        }
-
-        public String getProfileHref() {
-            return profileHref;
         }
     }
 
