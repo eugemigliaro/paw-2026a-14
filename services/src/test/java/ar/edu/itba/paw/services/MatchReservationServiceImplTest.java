@@ -7,9 +7,9 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
@@ -32,7 +32,7 @@ public class MatchReservationServiceImplTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T18:00:00Z");
 
     @Mock private MatchDataService matchDataService;
-    @Mock private MatchParticipantDao matchParticipantDao;
+    @Mock private MatchParticipantDataService matchParticipantDataService;
     @Mock private MatchNotificationService matchNotificationService;
 
     private MatchReservationServiceImpl matchReservationService;
@@ -42,7 +42,7 @@ public class MatchReservationServiceImplTest {
         matchReservationService =
                 new MatchReservationServiceImpl(
                         matchDataService,
-                        matchParticipantDao,
+                        matchParticipantDataService,
                         matchNotificationService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -59,8 +59,8 @@ public class MatchReservationServiceImplTest {
                                         4,
                                         1)));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.createReservationIfSpace(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.createReservationIfSpace(10L, u)).thenReturn(true);
 
         Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSpot(10L, u));
     }
@@ -78,8 +78,8 @@ public class MatchReservationServiceImplTest {
                                         4,
                                         1)));
         final User u = UserUtils.getUser(1L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.createReservationIfSpace(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.createReservationIfSpace(10L, u)).thenReturn(true);
 
         // Exercise and Assert
         Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSpot(10L, u));
@@ -113,7 +113,7 @@ public class MatchReservationServiceImplTest {
         // Arrange
         final User u = UserUtils.getUser(20L);
         Mockito.when(
-                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                        matchParticipantDataService.findActiveFutureReservationMatchIdsForSeries(
                                 100L, u, FIXED_NOW))
                 .thenReturn(List.of(10L, 11L));
 
@@ -138,7 +138,7 @@ public class MatchReservationServiceImplTest {
                                         1)));
 
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -160,7 +160,7 @@ public class MatchReservationServiceImplTest {
                                         4,
                                         4)));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -246,8 +246,9 @@ public class MatchReservationServiceImplTest {
                 .thenReturn(Optional.of(initialMatch))
                 .thenReturn(Optional.of(fullMatch));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.createReservationIfSpace(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.createReservationIfSpace(10L, u))
+                .thenReturn(false);
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -269,9 +270,11 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(startedOccurrence, selectedOccurrence, secondOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.hasActiveReservation(11L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.createSeriesReservationsIfSpace(100L, u, FIXED_NOW))
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
+        Mockito.when(
+                        matchParticipantDataService.createSeriesReservationsIfSpace(
+                                100L, u, FIXED_NOW))
                 .thenReturn(2);
 
         Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSeries(10L, u));
@@ -302,9 +305,11 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(selectedOccurrence, secondOccurrence));
         final User u = UserUtils.getUser(1L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.hasActiveReservation(11L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.createSeriesReservationsIfSpace(100L, u, FIXED_NOW))
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
+        Mockito.when(
+                        matchParticipantDataService.createSeriesReservationsIfSpace(
+                                100L, u, FIXED_NOW))
                 .thenReturn(2);
 
         // Exercise and Assert
@@ -321,8 +326,8 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(selectedOccurrence, secondOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.hasActiveReservation(11L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(true);
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -342,8 +347,8 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(selectedOccurrence, secondOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.hasActiveReservation(11L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
 
         final MatchReservationException exception =
                 Assertions.assertThrows(
@@ -383,9 +388,9 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(pastOccurrence, selectedOccurrence, secondOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.hasActiveReservation(11L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.cancelFutureSeriesReservations(100L, u, FIXED_NOW))
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.cancelFutureSeriesReservations(100L, u, FIXED_NOW))
                 .thenReturn(2);
 
         Assertions.assertDoesNotThrow(
@@ -402,8 +407,8 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(selectedOccurrence, secondOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.hasActiveReservation(11L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
 
         final MatchReservationException exception =
                 Assertions.assertThrows(

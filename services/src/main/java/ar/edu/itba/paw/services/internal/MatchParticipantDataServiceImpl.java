@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.internal;
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,35 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     @Override
     public List<User> findConfirmedParticipants(final Long matchId) {
         return matchParticipantDao.findConfirmedParticipants(matchId);
+    }
+
+    @Override
+    public boolean hasActiveReservation(final Long matchId, final User user) {
+        return matchParticipantDao.hasActiveReservation(matchId, user);
+    }
+
+    @Override
+    public List<Long> findActiveFutureReservationMatchIdsForSeries(
+            final Long seriesId, final User user, final Instant startsAfter) {
+        return matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                seriesId, user, startsAfter);
+    }
+
+    @Override
+    public boolean createReservationIfSpace(final Long matchId, final User user) {
+        return matchParticipantDao.createReservationIfSpace(matchId, user);
+    }
+
+    @Override
+    public int createSeriesReservationsIfSpace(
+            final Long seriesId, final User user, final Instant startsAfter) {
+        return matchParticipantDao.createSeriesReservationsIfSpace(seriesId, user, startsAfter);
+    }
+
+    @Override
+    public int cancelFutureSeriesReservations(
+            final Long seriesId, final User user, final Instant startsAfter) {
+        return matchParticipantDao.cancelFutureSeriesReservations(seriesId, user, startsAfter);
     }
 
     @Override

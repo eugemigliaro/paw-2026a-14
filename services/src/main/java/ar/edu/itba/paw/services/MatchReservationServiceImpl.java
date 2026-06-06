@@ -5,9 +5,9 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchReservationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -24,18 +24,18 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MatchReservationServiceImpl.class);
     private final MatchDataService matchDataService;
-    private final MatchParticipantDao matchParticipantDao;
+    private final MatchParticipantDataService matchParticipantDataService;
     private final MatchNotificationService matchNotificationService;
     private final Clock clock;
 
     @Autowired
     public MatchReservationServiceImpl(
             final MatchDataService matchDataService,
-            final MatchParticipantDao matchParticipantDao,
+            final MatchParticipantDataService matchParticipantDataService,
             final MatchNotificationService matchNotificationService,
             final Clock clock) {
         this.matchDataService = matchDataService;
-        this.matchParticipantDao = matchParticipantDao;
+        this.matchParticipantDataService = matchParticipantDataService;
         this.matchNotificationService = matchNotificationService;
         this.clock = clock;
     }
@@ -43,7 +43,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     @Override
     public boolean hasActiveReservation(final Long matchId, final User user) {
 
-        return matchParticipantDao.hasActiveReservation(matchId, user);
+        return matchParticipantDataService.hasActiveReservation(matchId, user);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             return Set.of();
         }
         return Set.copyOf(
-                matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                matchParticipantDataService.findActiveFutureReservationMatchIdsForSeries(
                         seriesId, user, Instant.now(clock)));
     }
 
@@ -77,7 +77,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
         validateReservable(match, user);
 
-        if (!matchParticipantDao.createReservationIfSpace(matchId, user)) {
+        if (!matchParticipantDataService.createReservationIfSpace(matchId, user)) {
             final MatchReservationException failure = buildReservationFailure(matchId, user);
             LOGGER.warn(
                     "Reservation rejected code={} matchId={} userId={}",
@@ -137,7 +137,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         }
 
         final int reservedOccurrences =
-                matchParticipantDao.createSeriesReservationsIfSpace(
+                matchParticipantDataService.createSeriesReservationsIfSpace(
                         match.getSeries().getId(), user, Instant.now(clock));
         if (reservedOccurrences <= 0) {
             final SeriesReservationEvaluation currentEvaluation =
@@ -213,7 +213,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         }
 
         final int cancelledReservations =
-                matchParticipantDao.cancelFutureSeriesReservations(
+                matchParticipantDataService.cancelFutureSeriesReservations(
                         match.getSeries().getId(), user, Instant.now(clock));
         if (cancelledReservations <= 0) {
             final SeriesCancellationEvaluation currentEvaluation =
@@ -281,7 +281,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             throw new MatchReservationException("started", "The event has already started.");
         }
 
-        if (matchParticipantDao.hasActiveReservation(match.getId(), user)) {
+        if (matchParticipantDataService.hasActiveReservation(match.getId(), user)) {
             LOGGER.warn(
                     "Reservation rejected code=already_joined matchId={} userId={}",
                     match.getId(),
@@ -323,7 +323,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             return new MatchReservationException("started", "The event has already started.");
         }
 
-        if (matchParticipantDao.hasActiveReservation(matchId, user)) {
+        if (matchParticipantDataService.hasActiveReservation(matchId, user)) {
             return new MatchReservationException(
                     "already_joined",
                     "This email already has a confirmed reservation for the event.");
@@ -355,7 +355,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             futureOpenOccurrenceCount++;
             final boolean alreadyJoined =
                     user != null
-                            && matchParticipantDao.hasActiveReservation(occurrence.getId(), user);
+                            && matchParticipantDataService.hasActiveReservation(
+                                    occurrence.getId(), user);
             if (alreadyJoined) {
                 joinedFutureOpenOccurrenceCount++;
                 continue;
@@ -435,7 +436,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             }
 
             futureOccurrenceCount++;
-            if (matchParticipantDao.hasActiveReservation(occurrence.getId(), user)) {
+            if (matchParticipantDataService.hasActiveReservation(occurrence.getId(), user)) {
                 activeFutureReservationCount++;
             }
         }
