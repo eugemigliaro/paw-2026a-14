@@ -29,8 +29,8 @@ import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -157,10 +157,7 @@ class FeedControllerTournamentTest {
                         .andExpect(model().attribute("selectedType", "match"))
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-
-        Assertions.assertEquals("/matches/42", feedPage.getFeaturedEvents().get(0).getHref());
+        Assertions.assertEquals("/matches/42", featuredEvents(result).get(0).getHref());
     }
 
     @Test
@@ -196,15 +193,13 @@ class FeedControllerTournamentTest {
                         .andExpect(model().attribute("selectedType", "tournament"))
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        final EventCardViewModel card = feedPage.getFeaturedEvents().get(0);
+        final EventCardViewModel card = featuredEvents(result).get(0);
 
         Assertions.assertEquals("/tournaments/77", card.getHref());
         Assertions.assertEquals("Tournament", card.getBadge());
         Assertions.assertEquals("Registration", card.getLevel());
         Assertions.assertTrue(
-                feedPage.getPaginationItems().stream()
+                paginationItems(result).stream()
                         .filter(item -> item.getHref() != null)
                         .allMatch(item -> item.getHref().contains("type=tournament")));
     }
@@ -218,11 +213,9 @@ class FeedControllerTournamentTest {
                         .andExpect(status().isOk())
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
         final List<SelectOptionViewModel> sortOptions = sortOptions(result);
         final FilterGroupViewModel eventTypeGroup =
-                feedPage.getFilterGroups().stream()
+                filterGroups(result).stream()
                         .filter(group -> "Tipo de evento".equals(group.getTitle()))
                         .findFirst()
                         .orElseThrow();
@@ -243,10 +236,8 @@ class FeedControllerTournamentTest {
                         .andExpect(status().isOk())
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
         final FilterGroupViewModel sportGroup =
-                feedPage.getFilterGroups().stream()
+                filterGroups(result).stream()
                         .filter(group -> "Sports".equals(group.getTitle()))
                         .findFirst()
                         .orElseThrow();
@@ -306,16 +297,30 @@ class FeedControllerTournamentTest {
                         .andExpect(model().attribute("selectedType", "tournament"))
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-
-        Assertions.assertEquals(1, feedPage.getFeaturedEvents().size());
-        Assertions.assertEquals("/tournaments/78", feedPage.getFeaturedEvents().get(0).getHref());
+        Assertions.assertEquals(1, featuredEvents(result).size());
+        Assertions.assertEquals("/tournaments/78", featuredEvents(result).get(0).getHref());
     }
 
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {
         return group.getOptions().stream()
                 .anyMatch(option -> label.equals(option.getLabel()) && option.isActive());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<EventCardViewModel> featuredEvents(final MvcResult result) {
+        return (List<EventCardViewModel>) result.getModelAndView().getModel().get("featuredEvents");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<FilterGroupViewModel> filterGroups(final MvcResult result) {
+        return (List<FilterGroupViewModel>)
+                result.getModelAndView().getModel().get("feedFilterGroups");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<PaginationItemViewModel> paginationItems(final MvcResult result) {
+        return (List<PaginationItemViewModel>)
+                result.getModelAndView().getModel().get("feedPaginationItems");
     }
 
     @SuppressWarnings("unchecked")

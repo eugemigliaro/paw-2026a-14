@@ -84,7 +84,6 @@ import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
@@ -1650,7 +1649,7 @@ class UiRouteTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(model().attributeExists("feedPage"))
+                .andExpect(model().attributeExists("featuredEvents"))
                 .andExpect(model().attribute("nearMeUnavailable", false));
     }
 
@@ -1661,11 +1660,8 @@ class UiRouteTest {
                 .andExpect(view().name("feed/index"))
                 .andExpect(
                         model().attribute(
-                                        "feedPage",
-                                        Matchers.hasProperty(
-                                                "title",
-                                                Matchers.is(
-                                                        "Encontr\u00e1 tu pr\u00f3ximo partido."))));
+                                        "feedTitle",
+                                        Matchers.is("Encontr\u00e1 tu pr\u00f3ximo partido.")));
     }
 
     @Test
@@ -1739,9 +1735,7 @@ class UiRouteTest {
     void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
         final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        Assertions.assertNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+        Assertions.assertNull(featuredEvents(result).get(0).getDistanceLabel());
     }
 
     @Test
@@ -1753,9 +1747,7 @@ class UiRouteTest {
                         .andExpect(status().isOk())
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        Assertions.assertNotNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+        Assertions.assertNotNull(featuredEvents(result).get(0).getDistanceLabel());
     }
 
     @Test
@@ -3724,6 +3716,11 @@ class UiRouteTest {
     @SuppressWarnings("unchecked")
     private List<EventCardViewModel> getEventsModel(final MvcResult result) {
         return (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<EventCardViewModel> featuredEvents(final MvcResult result) {
+        return (List<EventCardViewModel>) result.getModelAndView().getModel().get("featuredEvents");
     }
 
     private static MessageSource messageSource() {

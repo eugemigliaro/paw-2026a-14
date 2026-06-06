@@ -18,7 +18,6 @@ import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
@@ -186,22 +185,21 @@ public class FeedController {
                             selectedPriceRange.maxPrice(),
                             exploreLocation != null ? exploreLocation.latitude() : null,
                             exploreLocation != null ? exploreLocation.longitude() : null);
-            mav.addObject(
-                    "feedPage",
-                    buildTournamentFeedPageViewModel(
-                            user,
-                            searchForm.getQ(),
-                            searchForm.getType(),
-                            selectedSort,
-                            selectedSports,
-                            selectedDateRange,
-                            selectedStartDateValue,
-                            selectedEndDateValue,
-                            selectedPriceRange,
-                            result,
-                            locale,
-                            email,
-                            exploreLocation));
+            addTournamentFeedAttributes(
+                    mav,
+                    user,
+                    searchForm.getQ(),
+                    searchForm.getType(),
+                    selectedSort,
+                    selectedSports,
+                    selectedDateRange,
+                    selectedStartDateValue,
+                    selectedEndDateValue,
+                    selectedPriceRange,
+                    result,
+                    locale,
+                    email,
+                    exploreLocation);
         } else {
             final PaginatedResult<Match> result =
                     matchService.searchPublicMatches(
@@ -216,22 +214,21 @@ public class FeedController {
                             selectedPriceRange.maxPrice(),
                             exploreLocation != null ? exploreLocation.latitude() : null,
                             exploreLocation != null ? exploreLocation.longitude() : null);
-            mav.addObject(
-                    "feedPage",
-                    buildMatchFeedPageViewModel(
-                            user,
-                            searchForm.getQ(),
-                            searchForm.getType(),
-                            selectedSort,
-                            selectedSports,
-                            selectedDateRange,
-                            selectedStartDateValue,
-                            selectedEndDateValue,
-                            selectedPriceRange,
-                            result,
-                            locale,
-                            email,
-                            exploreLocation));
+            addMatchFeedAttributes(
+                    mav,
+                    user,
+                    searchForm.getQ(),
+                    searchForm.getType(),
+                    selectedSort,
+                    selectedSports,
+                    selectedDateRange,
+                    selectedStartDateValue,
+                    selectedEndDateValue,
+                    selectedPriceRange,
+                    result,
+                    locale,
+                    email,
+                    exploreLocation);
         }
         mav.addObject("nearMeAvailable", exploreLocation != null);
         mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
@@ -266,7 +263,8 @@ public class FeedController {
         return new ModelAndView("redirect:" + redirect.build().encode().toUriString());
     }
 
-    private FeedPageViewModel buildMatchFeedPageViewModel(
+    private void addMatchFeedAttributes(
+            final ModelAndView mav,
             final User currentUser,
             final String query,
             final EventType selectedType,
@@ -281,13 +279,8 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        return new FeedPageViewModel(
-                "",
-                messageSource.getMessage("feed.hero.title", null, locale),
-                messageSource.getMessage("feed.hero.description", null, locale),
-                messageSource.getMessage("feed.search.placeholder", null, locale),
-                messageSource.getMessage("feed.search.button", null, locale),
-                List.of(),
+        addFeedPageAttributes(
+                mav,
                 buildFilterGroups(
                         query,
                         selectedType,
@@ -351,10 +344,12 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null);
+                        : null,
+                locale);
     }
 
-    private FeedPageViewModel buildTournamentFeedPageViewModel(
+    private void addTournamentFeedAttributes(
+            final ModelAndView mav,
             final User currentUser,
             final String query,
             final EventType selectedType,
@@ -369,13 +364,8 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        return new FeedPageViewModel(
-                "",
-                messageSource.getMessage("feed.hero.title", null, locale),
-                messageSource.getMessage("feed.hero.description", null, locale),
-                messageSource.getMessage("feed.search.placeholder", null, locale),
-                messageSource.getMessage("feed.search.button", null, locale),
-                List.of(),
+        addFeedPageAttributes(
+                mav,
                 buildFilterGroups(
                         query,
                         selectedType,
@@ -436,7 +426,37 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null);
+                        : null,
+                locale);
+    }
+
+    private void addFeedPageAttributes(
+            final ModelAndView mav,
+            final List<FilterGroupViewModel> filterGroups,
+            final List<?> featuredEvents,
+            final int page,
+            final int totalPages,
+            final List<?> paginationItems,
+            final String previousPageHref,
+            final String nextPageHref,
+            final Locale locale) {
+        mav.addObject("feedEyebrow", "");
+        mav.addObject("feedTitle", messageSource.getMessage("feed.hero.title", null, locale));
+        mav.addObject(
+                "feedDescription", messageSource.getMessage("feed.hero.description", null, locale));
+        mav.addObject(
+                "feedSearchPlaceholder",
+                messageSource.getMessage("feed.search.placeholder", null, locale));
+        mav.addObject(
+                "feedSearchButtonLabel",
+                messageSource.getMessage("feed.search.button", null, locale));
+        mav.addObject("feedFilterGroups", filterGroups);
+        mav.addObject("featuredEvents", featuredEvents);
+        mav.addObject("feedCurrentPage", page);
+        mav.addObject("feedTotalPages", totalPages);
+        mav.addObject("feedPaginationItems", paginationItems);
+        mav.addObject("feedPreviousPageHref", previousPageHref);
+        mav.addObject("feedNextPageHref", nextPageHref);
     }
 
     private List<SelectOptionViewModel> buildSortOptions(

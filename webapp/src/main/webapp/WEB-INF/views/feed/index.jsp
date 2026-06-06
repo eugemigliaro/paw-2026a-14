@@ -30,11 +30,11 @@
 						<div class="hero-and-search">
 
 						<section class="hero-panel">
-							<c:if test="${not empty feedPage.eyebrow}">
-								<p class="eyebrow"><c:out value="${feedPage.eyebrow}" /></p>
+							<c:if test="${not empty feedEyebrow}">
+								<p class="eyebrow"><c:out value="${feedEyebrow}" /></p>
 							</c:if>
-							<h1 class="hero-panel__title"><c:out value="${feedPage.title}" /></h1>
-							<p class="hero-panel__description"><c:out value="${feedPage.description}" /></p>
+							<h1 class="hero-panel__title"><c:out value="${feedTitle}" /></h1>
+							<p class="hero-panel__description"><c:out value="${feedDescription}" /></p>
 						</section>
 
 						<section class="search-panel" aria-label="${searchAriaLabel}">
@@ -61,16 +61,16 @@
 										<form:input
 											path="q"
 											cssClass="search-panel__control"
-											placeholder="${feedPage.searchPlaceholder}" />
+											placeholder="${feedSearchPlaceholder}" />
 									</div>
-									<ui:button label="${feedPage.searchButtonLabel}" type="submit" />
+									<ui:button label="${feedSearchButtonLabel}" type="submit" />
 								</div>
 								<form:errors path="q" cssClass="search-panel__error" element="p" />
 							</form:form>
 						</section>
 					</div>
 						<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
-							<c:forEach var="group" items="${feedPage.filterGroups}">
+							<c:forEach var="group" items="${feedFilterGroups}">
 									<c:choose>
 										<c:when test="${group.title eq eventTypeFilterTitle}">
 											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
@@ -459,7 +459,7 @@
 							</div>
 						</div>
 						<c:choose>
-							<c:when test="${empty feedPage.featuredEvents}">
+							<c:when test="${empty featuredEvents}">
 								<spring:message var="emptyFeedMessage" code="feed.empty.message" />
 								<div class="matches-empty-state feed-empty-state">
 									<div class="feed-empty-state__art" aria-hidden="true">
@@ -470,7 +470,7 @@
 							</c:when>
 							<c:otherwise>
 								<div class="event-grid">
-									<c:forEach var="event" items="${feedPage.featuredEvents}">
+									<c:forEach var="event" items="${featuredEvents}">
 										<c:url var="eventHref" value="${event.href}" />
 										<ui:card href="${eventHref}" className="event-card" ariaLabel="${event.title}">
 											<div class="event-card__media ${event.mediaClass}">
@@ -553,7 +553,7 @@
 									</c:forEach>
 								</div>
 
-								<c:if test="${feedPage.totalPages > 1}">
+								<c:if test="${feedTotalPages > 1}">
 									<spring:message var="paginationAriaLabel" code="pagination.aria" />
 									<spring:message var="feedPaginationPagesLabel" code="feed.pagination.pages" />
 									<spring:message var="previousLabel" code="pagination.previous" />
@@ -561,8 +561,8 @@
 									<section class="feed-pagination" aria-label="${paginationAriaLabel}">
 										<nav class="feed-pagination__nav" aria-label="${feedPaginationPagesLabel}">
 											<c:choose>
-												<c:when test="${not empty feedPage.previousPageHref}">
-													<c:url var="feedPrevHref" value="${feedPage.previousPageHref}" />
+												<c:when test="${not empty feedPreviousPageHref}">
+													<c:url var="feedPrevHref" value="${feedPreviousPageHref}" />
 														<a class="feed-pagination__control" href="${feedPrevHref}"><c:out value="${previousLabel}" /></a>
 												</c:when>
 												<c:otherwise>
@@ -571,7 +571,7 @@
 											</c:choose>
 
 											<div class="feed-pagination__pages">
-												<c:forEach var="item" items="${feedPage.paginationItems}">
+												<c:forEach var="item" items="${feedPaginationItems}">
 													<c:choose>
 														<c:when test="${item.ellipsis}">
 																<span class="feed-pagination__ellipsis" aria-hidden="true"><c:out value="${item.label}" /></span>
@@ -588,8 +588,8 @@
 											</div>
 
 											<c:choose>
-												<c:when test="${not empty feedPage.nextPageHref}">
-													<c:url var="feedNextHref" value="${feedPage.nextPageHref}" />
+												<c:when test="${not empty feedNextPageHref}">
+													<c:url var="feedNextHref" value="${feedNextPageHref}" />
 														<a class="feed-pagination__control" href="${feedNextHref}"><c:out value="${nextLabel}" /></a>
 												</c:when>
 												<c:otherwise>
