@@ -1,10 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
-
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.AppealDecision;
@@ -19,8 +16,10 @@ import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import javax.validation.Valid;
 import javax.validation.groups.Default;
@@ -84,8 +83,7 @@ public class ModerationAdminController {
 
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReports(typeFilters, statusFilters, page, PAGE_SIZE);
-        final List<ModerationReportViewModel> reports =
-                result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
+        final Map<Long, String> targetNames = targetNamesByReportId(result.getItems());
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
         mav.addObject(
@@ -101,7 +99,8 @@ public class ModerationAdminController {
                         "admin.reports.count", new Object[] {result.getTotalCount()}, locale));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("admin.reports.empty", null, locale));
-        mav.addObject("reports", reports);
+        mav.addObject("reports", result.getItems());
+        mav.addObject("targetNames", targetNames);
         mav.addObject("action", model.asMap().get("action"));
         mav.addObject(
                 "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
@@ -144,14 +143,11 @@ public class ModerationAdminController {
                         .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        final ModerationReportViewModel reportVm = toViewModel(report, locale);
-        return reportDetailModelAndView(report, reportVm, locale);
+        return reportDetailModelAndView(report, locale);
     }
 
     private ModelAndView reportDetailModelAndView(
-            final ModerationReport report,
-            final ModerationReportViewModel reportVm,
-            final Locale locale) {
+            final ModerationReport report, final Locale locale) {
         final ModelAndView mav = new ModelAndView("admin/reports/detail");
 
         mav.addObject(
@@ -164,7 +160,10 @@ public class ModerationAdminController {
                 "pageDescription",
                 messageSource.getMessage("admin.reports.detail.description", null, locale));
 
-        mav.addObject("report", reportVm);
+        mav.addObject("report", report);
+        mav.addObject(
+                "targetName",
+                moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()));
 
         final boolean showResolution =
                 report.getResolution() != null
@@ -180,7 +179,7 @@ public class ModerationAdminController {
         mav.addObject("showAppealResolution", showAppealResolution);
 
         if (showResolution) {
-            mav.addObject("userBan", userBanViewModel(report, locale));
+            mav.addObject("userBan", userBan(report));
         }
 
         String reporterUsername =
@@ -359,7 +358,7 @@ public class ModerationAdminController {
                 moderationService
                         .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        return reportDetailModelAndView(report, toViewModel(report, locale), locale)
+        return reportDetailModelAndView(report, locale)
                 .addObject("resolutionForm", form)
                 .addObject(BindingResult.MODEL_KEY_PREFIX + "resolutionForm", bindingResult);
     }
@@ -373,41 +372,23 @@ public class ModerationAdminController {
                 moderationService
                         .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        return reportDetailModelAndView(report, toViewModel(report, locale), locale)
+        return reportDetailModelAndView(report, locale)
                 .addObject("appealResolutionForm", form)
                 .addObject(BindingResult.MODEL_KEY_PREFIX + "appealResolutionForm", bindingResult);
     }
 
-    private ModerationReportViewModel toViewModel(
-            final ModerationReport report, final Locale locale) {
-        return new ModerationReportViewModel(
-                report.getId(),
-                report.getReporter(),
-                report.getTargetType() == null ? "" : report.getTargetType().getDbValue(),
-                moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()),
-                report.getReason() == null ? "" : report.getReason().getDbValue(),
-                report.getStatus() == null ? "" : report.getStatus().getDbValue(),
-                report.getResolution() == null ? "" : report.getResolution().getDbValue(),
-                report.getDetails(),
-                report.getAppealReason(),
-                report.getResolutionDetails(),
-                report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getUpdatedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getAppealedAt(), locale, PlatformTime.ZONE),
-                formatInstant(report.getReviewedAt(), locale, PlatformTime.ZONE),
-                report.getReviewer(),
-                report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
-                formatInstant(report.getAppealResolvedAt(), locale, PlatformTime.ZONE),
-                report.getAppealResolvedBy(),
-                isAppealed(report));
+    private Map<Long, String> targetNamesByReportId(final List<ModerationReport> reports) {
+        final Map<Long, String> targetNames = new LinkedHashMap<>();
+        for (final ModerationReport report : reports) {
+            targetNames.put(
+                    report.getId(),
+                    moderationService.resolveTargetName(
+                            report.getTargetType(), report.getTargetId()));
+        }
+        return targetNames;
     }
 
-    private boolean isAppealed(final ModerationReport report) {
-        return report.getStatus() == ReportStatus.APPEALED;
-    }
-
-    private UserBanViewModel userBanViewModel(final ModerationReport report, final Locale locale) {
+    private UserBan userBan(final ModerationReport report) {
         if (report.getTargetType() != ReportTargetType.USER) {
             return null;
         }
@@ -425,172 +406,6 @@ public class ModerationAdminController {
             return null;
         }
 
-        final UserBan ban = latestBanForUser.get();
-        return new UserBanViewModel(
-                ban.getId(), formatInstant(ban.getBannedUntil(), locale, PlatformTime.ZONE));
-    }
-
-    public static final class UserBanViewModel {
-        private final Long banId;
-        private final String bannedUntilLabel;
-
-        private UserBanViewModel(final Long banId, final String bannedUntilLabel) {
-            this.banId = banId;
-            this.bannedUntilLabel = bannedUntilLabel;
-        }
-
-        public Long getBanId() {
-            return banId;
-        }
-
-        public String getBannedUntilLabel() {
-            return bannedUntilLabel;
-        }
-    }
-
-    public static final class ModerationReportViewModel {
-        private final Long id;
-        private final User reporter;
-        private final String targetTypeCode;
-        private final String targetKey;
-        private final String reasonCode;
-        private final String statusCode;
-        private final String resolutionCode;
-        private final String details;
-        private final String appealReason;
-        private final String resolutionDetails;
-        private final int appealCount;
-        private final String createdAtLabel;
-        private final String updatedAtLabel;
-        private final String appealedAtLabel;
-        private final String reviewedAtLabel;
-        private final User reviewedBy;
-        private final String appealDecisionCode;
-        private final String appealResolvedAtLabel;
-        private final User appealResolvedBy;
-        private final boolean appealed;
-
-        private ModerationReportViewModel(
-                final Long id,
-                final User reporter,
-                final String targetTypeCode,
-                final String targetKey,
-                final String reasonCode,
-                final String statusCode,
-                final String resolutionCode,
-                final String details,
-                final String appealReason,
-                final String resolutionDetails,
-                final int appealCount,
-                final String createdAtLabel,
-                final String updatedAtLabel,
-                final String appealedAtLabel,
-                final String reviewedAtLabel,
-                final User reviewedByUser,
-                final String appealDecisionCode,
-                final String appealResolvedAtLabel,
-                final User appealResolvedByUser,
-                final boolean appealed) {
-            this.id = id;
-            this.reporter = reporter;
-            this.targetTypeCode = targetTypeCode;
-            this.targetKey = targetKey;
-            this.reasonCode = reasonCode;
-            this.statusCode = statusCode;
-            this.resolutionCode = resolutionCode;
-            this.details = details;
-            this.appealReason = appealReason;
-            this.resolutionDetails = resolutionDetails;
-            this.appealCount = appealCount;
-            this.createdAtLabel = createdAtLabel;
-            this.updatedAtLabel = updatedAtLabel;
-            this.appealedAtLabel = appealedAtLabel;
-            this.reviewedAtLabel = reviewedAtLabel;
-            this.reviewedBy = reviewedByUser;
-            this.appealDecisionCode = appealDecisionCode;
-            this.appealResolvedAtLabel = appealResolvedAtLabel;
-            this.appealResolvedBy = appealResolvedByUser;
-            this.appealed = appealed;
-        }
-
-        public Long getId() {
-            return id;
-        }
-
-        public User getReporter() {
-            return reporter;
-        }
-
-        public String getTargetTypeCode() {
-            return targetTypeCode;
-        }
-
-        public String getTargetKey() {
-            return targetKey;
-        }
-
-        public String getReasonCode() {
-            return reasonCode;
-        }
-
-        public String getStatusCode() {
-            return statusCode;
-        }
-
-        public String getResolutionCode() {
-            return resolutionCode;
-        }
-
-        public String getDetails() {
-            return details;
-        }
-
-        public String getAppealReason() {
-            return appealReason;
-        }
-
-        public String getResolutionDetails() {
-            return resolutionDetails;
-        }
-
-        public int getAppealCount() {
-            return appealCount;
-        }
-
-        public String getCreatedAtLabel() {
-            return createdAtLabel;
-        }
-
-        public String getUpdatedAtLabel() {
-            return updatedAtLabel;
-        }
-
-        public String getAppealedAtLabel() {
-            return appealedAtLabel;
-        }
-
-        public String getReviewedAtLabel() {
-            return reviewedAtLabel;
-        }
-
-        public User getReviewedBy() {
-            return reviewedBy;
-        }
-
-        public String getAppealDecisionCode() {
-            return appealDecisionCode;
-        }
-
-        public String getAppealResolvedAtLabel() {
-            return appealResolvedAtLabel;
-        }
-
-        public User getAppealResolvedBy() {
-            return appealResolvedBy;
-        }
-
-        public boolean isAppealed() {
-            return appealed;
-        }
+        return latestBanForUser.get();
     }
 }

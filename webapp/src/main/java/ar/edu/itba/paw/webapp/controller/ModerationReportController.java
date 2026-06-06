@@ -1,10 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.Match;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.ReportTargetType;
@@ -22,11 +20,6 @@ import ar.edu.itba.paw.services.exceptions.moderation.ModerationSelfReportExcept
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationValueTooLongException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportPageViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportReviewViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportUserViewModel;
-import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.function.Supplier;
 import javax.validation.Valid;
@@ -98,18 +91,10 @@ public class ModerationReportController {
                         locale),
                 messageOrDefault("report.page.user.title", null, "Report user", locale),
                 "/reports/users/" + username,
-                new ReportPageViewModel(
-                        ReportTargetType.USER.getDbValue(),
-                        new ReportUserViewModel(
-                                username,
-                                profileUrlFor(reportedUser),
-                                messageOrDefault(
-                                        "report.page.user.avatarAlt",
-                                        new Object[] {username},
-                                        username + " profile picture",
-                                        locale)),
-                        null,
-                        null));
+                ReportTargetType.USER,
+                reportedUser,
+                null,
+                null);
     }
 
     @GetMapping("/reports/reviews/{reviewId}")
@@ -143,26 +128,10 @@ public class ModerationReportController {
                         locale),
                 messageOrDefault("report.page.review.title", null, "Report review", locale),
                 "/reports/reviews/" + review.getId(),
-                new ReportPageViewModel(
-                        ReportTargetType.REVIEW.getDbValue(),
-                        null,
-                        new ReportReviewViewModel(
-                                author.getUsername(),
-                                author.getUsername() == null
-                                        ? null
-                                        : "/users/" + author.getUsername(),
-                                reviewedUser.getUsername(),
-                                reviewedUser.getUsername() == null
-                                        ? null
-                                        : "/users/" + reviewedUser.getUsername(),
-                                review.getComment(),
-                                formatInstant(
-                                        review.getUpdatedAt() == null
-                                                ? review.getCreatedAt()
-                                                : review.getUpdatedAt(),
-                                        locale,
-                                        PlatformTime.ZONE)),
-                        null));
+                ReportTargetType.REVIEW,
+                null,
+                review,
+                null);
     }
 
     @GetMapping("/reports/matches/{matchId}")
@@ -177,7 +146,6 @@ public class ModerationReportController {
                 matchService
                         .findMatchById(matchId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        final User host = match.getHost();
         return baseReportView(
                 locale,
                 model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
@@ -191,18 +159,10 @@ public class ModerationReportController {
                         locale),
                 messageOrDefault("report.page.match.title", null, "Report match", locale),
                 "/reports/matches/" + match.getId(),
-                new ReportPageViewModel(
-                        ReportTargetType.MATCH.getDbValue(),
-                        null,
-                        null,
-                        new ReportMatchViewModel(
-                                match.getTitle(),
-                                match.getDescription(),
-                                host.getUsername(),
-                                host.getUsername() == null ? null : "/users/" + host.getUsername(),
-                                formatInstant(match.getStartsAt(), locale, PlatformTime.ZONE),
-                                match.getAddress(),
-                                priceLabel(match.getPricePerPlayer(), locale))));
+                ReportTargetType.MATCH,
+                null,
+                null,
+                match);
     }
 
     @PostMapping("/reports/users/{username}")
@@ -360,13 +320,21 @@ public class ModerationReportController {
             final String pageDescription,
             final String pageTitleLabel,
             final String reportActionPath,
-            final ReportPageViewModel reportPage) {
+            final ReportTargetType targetType,
+            final User targetUser,
+            final PlayerReview targetReview,
+            final Match targetMatch) {
         final ModelAndView mav = new ModelAndView("reports/create");
         mav.addObject("pageTitle", pageTitle);
         mav.addObject("pageTitleLabel", pageTitleLabel);
         mav.addObject("pageDescription", pageDescription);
         mav.addObject("reportActionPath", reportActionPath);
-        mav.addObject("reportPage", reportPage);
+        mav.addObject("targetType", targetType);
+        mav.addObject("targetUser", targetUser);
+        mav.addObject(
+                "targetUserProfileImageUrl", targetUser == null ? null : profileUrlFor(targetUser));
+        mav.addObject("targetReview", targetReview);
+        mav.addObject("targetMatch", targetMatch);
         mav.addObject("reportSent", "sent".equalsIgnoreCase(reportStatus));
         mav.addObject(
                 "reportErrorMessage",
@@ -529,18 +497,5 @@ public class ModerationReportController {
                         "We could not submit the report.",
                         locale);
         }
-    }
-
-    private String priceLabel(final BigDecimal pricePerPlayer, final Locale locale) {
-        if (pricePerPlayer == null) {
-            return messageOrDefault("price.tbd", null, "Price TBD", locale);
-        }
-        return pricePerPlayer.compareTo(BigDecimal.ZERO) == 0
-                ? messageOrDefault("price.free", null, "Free", locale)
-                : messageOrDefault(
-                        "price.amount",
-                        new Object[] {pricePerPlayer},
-                        pricePerPlayer.toString(),
-                        locale);
     }
 }

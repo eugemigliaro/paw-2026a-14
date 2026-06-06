@@ -1,6 +1,8 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -99,21 +101,21 @@
 					<c:otherwise>
 						<div class="report-card-list" id="report-card-list">
 							<c:forEach var="report" items="${reports}">
-								<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetTypeCode}" />
-								<spring:message var="reasonLabel" code="admin.reports.reason.${report.reasonCode}" />
-								<spring:message var="statusLabel" code="admin.reports.status.${report.statusCode}" />
+								<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetType.dbValue}" />
+								<spring:message var="reasonLabel" code="admin.reports.reason.${report.reason.dbValue}" />
+								<spring:message var="statusLabel" code="admin.reports.status.${report.status.dbValue}" />
 
 								<div class="report-card">
 									<ui:card className="report-section report-card__inner">
 										<div class="report-card__header">
 											<div class="report-card__meta">
 												<span class="report-card__id">#<c:out value="${report.id}" /></span>
-												<span class="report-status-badge report-status-badge--${report.statusCode}">
+												<span class="report-status-badge report-status-badge--${report.status.dbValue}">
 													<c:out value="${statusLabel}" />
 												</span>
 											</div>
 											<div class="report-card__chips">
-												<span class="report-type-badge report-type-badge--${report.targetTypeCode}">
+												<span class="report-type-badge report-type-badge--${report.targetType.dbValue}">
 													<c:out value="${targetTypeLabel}" />
 												</span>
 												<span class="report-card__reason-chip"><c:out value="${reasonLabel}" /></span>
@@ -123,20 +125,20 @@
 										<dl class="report-card__body stack">
 											<div class="report-section-field report-section-field__row">
 												<dt class="detail-label"><spring:message code="reports.mine.target" /></dt>
-												<dd><c:out value="${report.targetKey}" /></dd>
+												<dd><c:out value="${targetNames[report.id]}" /></dd>
 											</div>
 											<div class="report-section-field report-section-field__row">
 												<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
-												<dd><c:out value="${report.createdAtLabel}" /></dd>
+												<dd><fmt:formatDate value="${tf:toDate(report.createdAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
 											</div>
-											<c:if test="${not empty report.updatedAtLabel and !report.updatedAtLabel.equals(report.createdAtLabel)}">
+											<c:if test="${not empty report.updatedAt and report.updatedAt ne report.createdAt}">
 												<div class="report-section-field report-section-field__row">
 													<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
-													<dd><c:out value="${report.updatedAtLabel}" /></dd>
+													<dd><fmt:formatDate value="${tf:toDate(report.updatedAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
 												</div>
 											</c:if>
-											<c:if test="${not empty report.resolutionCode}">
-												<spring:message var="resolutionLabel" code="reports.mine.resolution.${report.resolutionCode}" />
+											<c:if test="${not empty report.resolution}">
+												<spring:message var="resolutionLabel" code="reports.mine.resolution.${report.resolution.dbValue}" />
 												<div class="report-section-field report-section-field__row">
 													<dt class="detail-label"><spring:message code="reports.mine.resolution" /></dt>
 													<dd><c:out value="${resolutionLabel}" /></dd>
