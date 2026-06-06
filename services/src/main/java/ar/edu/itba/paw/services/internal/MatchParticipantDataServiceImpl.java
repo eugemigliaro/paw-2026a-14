@@ -24,6 +24,21 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     }
 
     @Override
+    public List<User> findInvitedUsers(final Long matchId) {
+        return matchParticipantDao.findInvitedUsers(matchId);
+    }
+
+    @Override
+    public List<User> findPendingRequests(final Long matchId) {
+        return matchParticipantDao.findPendingRequests(matchId);
+    }
+
+    @Override
+    public int countPendingRequests(final Long matchId) {
+        return matchParticipantDao.countPendingRequests(matchId);
+    }
+
+    @Override
     public boolean hasActiveReservation(final Long matchId, final User user) {
         return matchParticipantDao.hasActiveReservation(matchId, user);
     }
@@ -50,6 +65,21 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     public int cancelFutureSeriesReservations(
             final Long seriesId, final User user, final Instant startsAfter) {
         return matchParticipantDao.cancelFutureSeriesReservations(seriesId, user, startsAfter);
+    }
+
+    @Override
+    public int cancelPendingInvitations(final Long matchId) {
+        return matchParticipantDao.cancelPendingInvitations(matchId);
+    }
+
+    @Override
+    public int cancelPendingRequests(final Long matchId) {
+        return matchParticipantDao.cancelPendingRequests(matchId);
+    }
+
+    @Override
+    public int approveAllPendingRequests(final Long matchId) {
+        return matchParticipantDao.approveAllPendingRequests(matchId);
     }
 
     @Override

@@ -8,6 +8,12 @@ public interface MatchParticipantDataService {
 
     List<User> findConfirmedParticipants(Long matchId);
 
+    List<User> findInvitedUsers(Long matchId);
+
+    List<User> findPendingRequests(Long matchId);
+
+    int countPendingRequests(Long matchId);
+
     boolean hasActiveReservation(Long matchId, User user);
 
     List<Long> findActiveFutureReservationMatchIdsForSeries(
@@ -18,6 +24,12 @@ public interface MatchParticipantDataService {
     int createSeriesReservationsIfSpace(Long seriesId, User user, Instant startsAfter);
 
     int cancelFutureSeriesReservations(Long seriesId, User user, Instant startsAfter);
+
+    int cancelPendingInvitations(Long matchId);
+
+    int cancelPendingRequests(Long matchId);
+
+    int approveAllPendingRequests(Long matchId);
 
     boolean removeParticipant(Long matchId, User user);
 }

@@ -14,10 +14,10 @@ import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -51,7 +51,7 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchDataService matchDataService;
     private final ImageService imageService;
-    private final MatchParticipantDao matchParticipantDao;
+    private final MatchParticipantDataService matchParticipantDataService;
     private final SecurityService securityService;
     private final MatchNotificationService matchNotificationService;
     private final RecurringMatchAsyncService recurringMatchAsyncService;
@@ -62,7 +62,7 @@ public class MatchServiceImpl implements MatchService {
     public MatchServiceImpl(
             final MatchDataService matchDataService,
             final ImageService imageService,
-            final MatchParticipantDao matchParticipantDao,
+            final MatchParticipantDataService matchParticipantDataService,
             final MatchNotificationService matchNotificationService,
             final SecurityService securityService,
             final RecurringMatchAsyncService recurringMatchAsyncService,
@@ -70,7 +70,7 @@ public class MatchServiceImpl implements MatchService {
             final Clock clock) {
         this.matchDataService = matchDataService;
         this.imageService = imageService;
-        this.matchParticipantDao = matchParticipantDao;
+        this.matchParticipantDataService = matchParticipantDataService;
         this.matchNotificationService = matchNotificationService;
         this.securityService = securityService;
         this.recurringMatchAsyncService = recurringMatchAsyncService;
@@ -279,7 +279,7 @@ public class MatchServiceImpl implements MatchService {
         validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final int confirmedParticipants =
-                matchParticipantDao.findConfirmedParticipants(matchId).size();
+                matchParticipantDataService.findConfirmedParticipants(matchId).size();
         if (request.getMaxPlayers() < confirmedParticipants) {
             throw new MatchUpdateException(
                     MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
@@ -354,14 +354,15 @@ public class MatchServiceImpl implements MatchService {
             final Match match, final UpdateMatchRequest request, final int confirmedParticipants) {
         if (wasPrivate(match) && isPublic(request)) {
             return ParticipationPolicyTransition.cancelInvitations(
-                    matchParticipantDao.findInvitedUsers(match.getId()));
+                    matchParticipantDataService.findInvitedUsers(match.getId()));
         }
         if (wasApprovalRequired(match) && isPrivate(request)) {
             return ParticipationPolicyTransition.cancelPendingRequests(
-                    matchParticipantDao.findPendingRequests(match.getId()));
+                    matchParticipantDataService.findPendingRequests(match.getId()));
         }
         if (wasApprovalRequired(match) && isDirectPublic(request)) {
-            final int pendingRequests = matchParticipantDao.countPendingRequests(match.getId());
+            final int pendingRequests =
+                    matchParticipantDataService.countPendingRequests(match.getId());
             final int availableSpots = request.getMaxPlayers() - confirmedParticipants;
             if (pendingRequests > availableSpots) {
                 throw new MatchUpdateException(
@@ -369,7 +370,7 @@ public class MatchServiceImpl implements MatchService {
                         message("match.update.error.pendingRequestsExceedAvailable"));
             }
             return ParticipationPolicyTransition.approvePendingRequests(
-                    matchParticipantDao.findPendingRequests(match.getId()));
+                    matchParticipantDataService.findPendingRequests(match.getId()));
         }
         return ParticipationPolicyTransition.none();
     }
@@ -382,16 +383,16 @@ public class MatchServiceImpl implements MatchService {
         if (transition.type() == ParticipationPolicyTransitionType.CANCEL_INVITATIONS) {
             matchNotificationService.notifyInvitationOpenedToPublic(
                     updatedMatch, transition.affectedUsers());
-            matchParticipantDao.cancelPendingInvitations(updatedMatch.getId());
+            matchParticipantDataService.cancelPendingInvitations(updatedMatch.getId());
             return;
         }
         if (transition.type() == ParticipationPolicyTransitionType.CANCEL_PENDING_REQUESTS) {
             matchNotificationService.notifyPendingRequestClosedByPrivacyChange(
                     updatedMatch, transition.affectedUsers());
-            matchParticipantDao.cancelPendingRequests(updatedMatch.getId());
+            matchParticipantDataService.cancelPendingRequests(updatedMatch.getId());
             return;
         }
-        matchParticipantDao.approveAllPendingRequests(updatedMatch.getId());
+        matchParticipantDataService.approveAllPendingRequests(updatedMatch.getId());
         for (final User user : transition.affectedUsers()) {
             matchNotificationService.notifyPlayerRequestApproved(updatedMatch, user);
         }
@@ -495,7 +496,7 @@ public class MatchServiceImpl implements MatchService {
 
         for (final Match target : targets) {
             final int confirmedParticipants =
-                    matchParticipantDao.findConfirmedParticipants(target.getId()).size();
+                    matchParticipantDataService.findConfirmedParticipants(target.getId()).size();
             if (request.getMaxPlayers() < confirmedParticipants) {
                 throw new MatchUpdateException(
                         MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
@@ -775,7 +776,7 @@ public class MatchServiceImpl implements MatchService {
 
     @Override
     public List<User> findConfirmedParticipants(final Long matchId) {
-        return matchParticipantDao.findConfirmedParticipants(matchId);
+        return matchParticipantDataService.findConfirmedParticipants(matchId);
     }
 
     @Override
