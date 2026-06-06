@@ -147,10 +147,32 @@
 											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 												<c:choose>
 													<c:when test="${optionStatus.first}">
-														<c:set var="clearFilterHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="clearFilterHref" value="${feedFormAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:set var="clearFilterHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 													</c:when>
 													<c:otherwise>
-														<c:url var="optionHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="optionHref" value="${feedFormAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:url var="optionHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 														<a href="${optionHref}" class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
 															<c:out value="${option.label}" />
 														</a>
@@ -340,7 +362,10 @@
 									</c:if>
 								</div>
 
-							<c:url var="clearFiltersHref" value="${feedPath}" />
+							<c:url var="clearFiltersHref" value="${feedPath}">
+								<c:param name="type" value="${selectedType}" />
+								<c:param name="filter" value="${searchForm.filterName}" />
+							</c:url>
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
 							<ui:button
 								label="${clearAllLabel}"

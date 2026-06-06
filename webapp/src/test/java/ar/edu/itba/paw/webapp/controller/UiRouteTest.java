@@ -19,6 +19,7 @@ import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -62,6 +63,8 @@ import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotRecurringEx
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotEligibleException;
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
 import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureNotFoundException;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventCategoryConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
@@ -78,8 +81,12 @@ import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
+import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
+import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -91,6 +98,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorFactory;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -140,8 +149,13 @@ class UiRouteTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
         final MessageSource messageSource = messageSource();
-        final LocalValidatorFactoryBean validator = validator(messageSource);
+        final UserEmailValidator userEmailValidator =
+                new UserEmailValidator(Mockito.mock(UserService.class));
+        final UsernameValidator usernameValidator =
+                new UsernameValidator(Mockito.mock(UserService.class));
 
+        final LocalValidatorFactoryBean validator =
+                validator(messageSource, userEmailValidator, usernameValidator);
         lastSportsFilter = null;
         reservationFailure = null;
         reservationCancellationFailure = null;
@@ -3229,6 +3243,21 @@ class UiRouteTest {
     }
 
     @Test
+    void getEventsRouteRendersSortLinksAgainstEventsPath() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(get("/events")).andExpect(status().isOk()).andReturn();
+
+        final MatchListControlsViewModel listControls =
+                (MatchListControlsViewModel)
+                        result.getModelAndView().getModel().get("listControls");
+        final SelectOptionViewModel firstSortOption = listControls.getSortOptions().get(0);
+        Assertions.assertNull(firstSortOption.getHref());
+        Assertions.assertTrue(firstSortOption.getParams().containsKey("sort"));
+    }
+
+    @Test
     void getEventsRouteRejectsInvalidPageParameter() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
@@ -3261,6 +3290,20 @@ class UiRouteTest {
         Assertions.assertEquals(
                 List.of(EventVisibility.PUBLIC, EventVisibility.INVITE_ONLY),
                 searchForm.getVisibility());
+    }
+
+    @Test
+    void getEventsRoutePreservesPastFilterAsLowercaseQueryParam() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(get("/events").param("filter", "past"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final SearchForm searchForm =
+                (SearchForm) result.getModelAndView().getModel().get("searchForm");
+        Assertions.assertEquals(EventFilter.PAST, searchForm.getFilter());
     }
 
     @Test
@@ -3713,6 +3756,8 @@ class UiRouteTest {
         conversionService.addConverter(new StringToRecurrenceEndModeConverter());
         conversionService.addConverter(new StringToRecurrenceFrequencyConverter());
         conversionService.addConverter(new StringToEventJoinPolicyConverter());
+        conversionService.addConverter(new StringToEventFilterConverter());
+        conversionService.addConverter(new StringToEventCategoryConverter());
         return conversionService;
     }
 
@@ -3728,9 +3773,34 @@ class UiRouteTest {
         return localeChangeInterceptor;
     }
 
-    private static LocalValidatorFactoryBean validator(final MessageSource messageSource) {
+    private static LocalValidatorFactoryBean validator(
+            final MessageSource messageSource,
+            final UserEmailValidator userEmailValidator,
+            final UsernameValidator usernameValidator) {
+        ConstraintValidatorFactory customConstraintFactory =
+                new ConstraintValidatorFactory() {
+                    @Override
+                    public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
+                        if (key == UserEmailValidator.class) {
+                            return (T) userEmailValidator;
+                        } else if (key == UsernameValidator.class) {
+                            return (T) usernameValidator;
+                        }
+                        try {
+                            return key.getDeclaredConstructor().newInstance();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    @Override
+                    public void releaseInstance(ConstraintValidator<?, ?> instance) {}
+                }; // TODO: find a better way to inject the custom validator without having to
+        // reimplement the whole factory
+
         final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.setValidationMessageSource(messageSource);
+        validator.setConstraintValidatorFactory(customConstraintFactory);
         validator.afterPropertiesSet();
         return validator;
     }

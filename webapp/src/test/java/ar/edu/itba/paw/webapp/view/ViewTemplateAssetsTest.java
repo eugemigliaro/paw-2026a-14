@@ -130,7 +130,7 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void feedClearAllResetsToPublicExploreWithoutPreservingFilters() throws IOException {
+    void feedClearAllKeepsEventTypeAndFilter() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
         final int clearAllIndex = feedIndex.indexOf("var=\"clearFiltersHref\"");
         final int clearAllLabelIndex = feedIndex.indexOf("var=\"clearAllLabel\"");
@@ -138,14 +138,39 @@ class ViewTemplateAssetsTest {
         assertTrue(clearAllIndex >= 0);
         assertTrue(clearAllLabelIndex > clearAllIndex);
         assertTrue(feedIndex.contains("<c:set var=\"feedPath\" value=\"/\" />"));
-        assertTrue(feedIndex.contains("<c:url var=\"clearFiltersHref\" value=\"${feedPath}\" />"));
-        assertFalse(
+        assertTrue(feedIndex.contains("<c:url var=\"clearFiltersHref\" value=\"${feedPath}\">"));
+        assertTrue(feedIndex.contains("<c:param name=\"type\" value=\"${selectedType}\" />"));
+        assertTrue(
                 feedIndex.contains(
-                        "<c:url var=\"clearFiltersHref\" value=\"${feedFormAction}\" />"));
+                        "<c:param name=\"filter\" value=\"${searchForm.filterName}\" />"));
         final String clearAllBlock = feedIndex.substring(clearAllIndex, clearAllLabelIndex);
         assertFalse(clearAllBlock.contains("name=\"sort\""));
         assertFalse(clearAllBlock.contains("name=\"startDate\""));
         assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"minPrice\""));
+        assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
+    }
+
+    @Test
+    void eventsClearAllKeepsEventTypeSortAndFilterState() throws IOException {
+        final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+        final int clearAllIndex = eventsList.indexOf("var=\"clearSearchHref\"");
+        final int clearAllLabelIndex = eventsList.indexOf("var=\"clearAllLabel\"");
+
+        assertTrue(clearAllIndex >= 0);
+        assertTrue(clearAllLabelIndex > clearAllIndex);
+        assertTrue(
+                eventsList.contains(
+                        "<c:url var=\"clearSearchHref\" value=\"${listControls.cleanSearchAction}\">"));
+        assertTrue(eventsList.contains("<c:param name=\"type\" value=\"${searchForm.type}\" />"));
+        assertTrue(
+                eventsList.contains(
+                        "<c:param name=\"filter\" value=\"${searchForm.filterName}\" />"));
+        final String clearAllBlock = eventsList.substring(clearAllIndex, clearAllLabelIndex);
+        assertFalse(clearAllBlock.contains("name=\"sort\""));
+        assertFalse(clearAllBlock.contains("name=\"startDate\""));
+        assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"tz\""));
         assertFalse(clearAllBlock.contains("name=\"minPrice\""));
         assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
     }
@@ -166,6 +191,7 @@ class ViewTemplateAssetsTest {
         assertFalse(feedIndex.contains("data-filter-name=\"${eventTypeFilterTitle}\""));
         assertTrue(feedCss.contains(".feed-event-type-toggle"));
         assertTrue(feedCss.contains(".feed-event-type-toggle .events-toggle-icon"));
+        assertTrue(eventsToggleScript.contains("toUpperCase()"));
         assertTrue(eventsToggleScript.contains("optionCount === 2 && selectedIndex === 1"));
         assertTrue(toggleTag.contains("iconOnly"));
         assertTrue(toggleTag.contains("leftIcon"));

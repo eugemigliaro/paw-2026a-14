@@ -79,8 +79,8 @@
 										value="<c:out value='${searchForm.minPrice}' />" />
 									<input type="hidden" name="maxPrice"
 										value="<c:out value='${searchForm.maxPrice}' />" />
-									<c:if test="${searchForm.filter eq 'past'}">
-										<input type="hidden" name="filter" value="past" />
+									<c:if test="${searchForm.filterName eq 'PAST'}">
+										<input type="hidden" name="filter" value="${searchForm.filterName}" />
 									</c:if>
 									<input type="hidden" name="page" id="eventsSearchForm_page" value="${pageNumber}" />
 									<div class="filters-bar__search-row">
@@ -94,7 +94,7 @@
 							</div>
 
 							<!-- Toggle -->
-							<ui:eventsFilterToggle currentFilter="${searchForm.filter}" />
+							<ui:eventsFilterToggle currentFilter="${searchForm.filterName}" />
 						</div>
 					</div>
 
@@ -292,8 +292,8 @@
 												value="<c:out value='${searchForm.minPrice}' />" />
 											<input type="hidden" name="maxPrice"
 												value="<c:out value='${searchForm.maxPrice}' />" />
-											<c:if test="${searchForm.filter eq 'past'}">
-												<input type="hidden" name="filter" value="past" />
+											<c:if test="${searchForm.filterName eq 'PAST'}">
+												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
 
 											<div class="field filter-rail__field">
@@ -338,8 +338,8 @@
 													</c:forEach>
 													<c:param name="minPrice" value="${searchForm.minPrice}" />
 													<c:param name="maxPrice" value="${searchForm.maxPrice}" />
-													<c:if test="${searchForm.filter eq 'past'}">
-														<c:param name="filter" value="past" />
+													<c:if test="${searchForm.filterName eq 'PAST'}">
+														<c:param name="filter" value="${searchForm.filterName}" />
 													</c:if>
 												</c:url>
 												<spring:message var="applyDateLabel"
@@ -423,8 +423,8 @@
 												<input type="hidden" name="endDate"
 													value="<c:out value='${searchForm.endDate}' />" />
 											</c:if>
-											<c:if test="${searchForm.filter eq 'past'}">
-												<input type="hidden" name="filter" value="past" />
+											<c:if test="${searchForm.filterName eq 'PAST'}">
+												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
 
 											<div
@@ -488,8 +488,8 @@
 													</c:if>
 													<c:param name="minPrice" value="" />
 													<c:param name="maxPrice" value="" />
-													<c:if test="${searchForm.filter eq 'past'}">
-														<c:param name="filter" value="past" />
+													<c:if test="${searchForm.filterName eq 'PAST'}">
+														<c:param name="filter" value="${searchForm.filterName}" />
 													</c:if>
 												</c:url>
 												<spring:message var="applyPriceLabel"
@@ -521,13 +521,9 @@
 										</c:if>
 									</div>
 
-								<c:url var="clearSearchHref"
-									value="${listControls.cleanSearchAction}">
-									<c:param name="sort" value="${searchForm.sort}" />
-									<c:param name="tz" value="${searchForm.timezone}" />
-									<c:if test="${searchForm.filter eq 'past'}">
-										<c:param name="filter" value="past" />
-									</c:if>
+								<c:url var="clearSearchHref" value="${listControls.cleanSearchAction}">
+									<c:param name="type" value="${searchForm.type}" />
+									<c:param name="filter" value="${searchForm.filterName}" />
 								</c:url>
 									<spring:message var="clearAllLabel" code="filter.clearAll" />
 									<ui:button label="${clearAllLabel}" href="${clearSearchHref}"
