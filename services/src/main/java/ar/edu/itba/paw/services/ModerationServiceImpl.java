@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
@@ -51,7 +52,7 @@ public class ModerationServiceImpl implements ModerationService {
     private final MatchParticipantDao matchParticipantDao;
     private final PlayerReviewDao playerReviewDao;
     private final MailDispatchService mailDispatchService;
-    private final MatchService matchService;
+    private final MatchNotificationService matchNotificationService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -64,7 +65,7 @@ public class ModerationServiceImpl implements ModerationService {
             final MatchParticipantDao matchParticipantDao,
             final PlayerReviewDao playerReviewDao,
             final MailDispatchService mailDispatchService,
-            final MatchService matchService,
+            final MatchNotificationService matchNotificationService,
             final MessageSource messageSource,
             final Clock clock) {
         this.userBanDao = userBanDao;
@@ -74,7 +75,7 @@ public class ModerationServiceImpl implements ModerationService {
         this.matchParticipantDao = matchParticipantDao;
         this.playerReviewDao = playerReviewDao;
         this.mailDispatchService = mailDispatchService;
-        this.matchService = matchService;
+        this.matchNotificationService = matchNotificationService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -322,56 +323,15 @@ public class ModerationServiceImpl implements ModerationService {
     }
 
     private void cancelFutureContentForUser(final User user) {
-        final List<Long> participantMatchIds =
-                matchService
-                        .findDashboardMatches(
-                                user,
-                                true,
-                                true,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                1,
-                                DEFAULT_REPORT_PAGE_SIZE)
-                        .getItems()
-                        .stream()
-                        .map(Match::getId)
-                        .toList();
-        for (final Long matchId : participantMatchIds) {
-            matchParticipantDao.removeParticipant(matchId, user);
+        final Instant now = Instant.now(clock);
+        final List<Match> matchesToCancel = matchDao.findFutureHostedMatches(user, now);
+        matchParticipantDao.cancelFutureReservations(user, now);
+        if (matchDao.cancelFutureHostedMatches(user, now) <= 0) {
+            return;
         }
-
-        final List<Long> hostedMatchIds =
-                matchService
-                        .findDashboardMatches(
-                                user,
-                                true,
-                                true,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                1,
-                                DEFAULT_REPORT_PAGE_SIZE)
-                        .getItems()
-                        .stream()
-                        .map(Match::getId)
-                        .toList();
-        for (final Long matchId : hostedMatchIds) {
-            matchService.cancelMatch(matchId, user);
+        for (final Match matchToCancel : matchesToCancel) {
+            matchToCancel.setStatus(EventStatus.CANCELLED);
+            matchNotificationService.notifyMatchCancelled(matchToCancel);
         }
     }
 

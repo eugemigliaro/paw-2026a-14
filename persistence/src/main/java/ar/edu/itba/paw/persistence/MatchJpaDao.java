@@ -187,6 +187,43 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
+    public List<Match> findFutureHostedMatches(final User host, final Instant startsAfter) {
+        return em.createQuery(
+                        "FROM Match m"
+                                + " WHERE m.host.id = :hostId"
+                                + " AND m.startsAt > :startsAfter"
+                                + " AND m.deleted = FALSE"
+                                + " AND m.status NOT IN :terminalStatuses"
+                                + " ORDER BY m.startsAt ASC, m.id ASC",
+                        Match.class)
+                .setParameter("hostId", host.getId())
+                .setParameter("startsAfter", startsAfter)
+                .setParameter(
+                        "terminalStatuses", List.of(EventStatus.CANCELLED, EventStatus.COMPLETED))
+                .getResultList();
+    }
+
+    @Override
+    public int cancelFutureHostedMatches(final User host, final Instant startsAfter) {
+        final Instant now = Instant.now();
+        return em.createQuery(
+                        "UPDATE Match m"
+                                + " SET m.status = :cancelledStatus,"
+                                + " m.updatedAt = :updatedAt"
+                                + " WHERE m.host.id = :hostId"
+                                + " AND m.startsAt > :startsAfter"
+                                + " AND m.deleted = FALSE"
+                                + " AND m.status NOT IN :terminalStatuses")
+                .setParameter("cancelledStatus", EventStatus.CANCELLED)
+                .setParameter("updatedAt", now)
+                .setParameter("hostId", host.getId())
+                .setParameter("startsAfter", startsAfter)
+                .setParameter(
+                        "terminalStatuses", List.of(EventStatus.CANCELLED, EventStatus.COMPLETED))
+                .executeUpdate();
+    }
+
+    @Override
     public boolean softDeleteMatch(
             final Long matchId, final User deletedBy, final String deleteReason) {
         final Match match = em.find(Match.class, matchId);

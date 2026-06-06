@@ -1,8 +1,6 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.ModerationReport;
-import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
@@ -51,7 +49,7 @@ public class ModerationServiceImplTest {
     @Mock private MatchDao matchDao;
     @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private PlayerReviewDao playerReviewDao;
-    @Mock private MatchService matchService;
+    @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
     private ModerationService moderationService;
@@ -68,7 +66,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDao,
                         playerReviewDao,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -83,7 +81,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDao,
                         playerReviewDao,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -98,7 +96,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDao,
                         playerReviewDao,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -119,25 +117,6 @@ public class ModerationServiceImplTest {
     public void resolveReportWithUserBan_banExpiryIsInTheFuture() {
         final ModerationReport report = sampleUserReport();
         final Instant expectedBannedUntil = FIXED_NOW.plusSeconds(7L * 24L * 3600L);
-
-        Mockito.when(
-                        matchService.findDashboardMatches(
-                                Mockito.any(User.class),
-                                Mockito.anyBoolean(),
-                                Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
 
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
         Mockito.when(
@@ -178,25 +157,6 @@ public class ModerationServiceImplTest {
         final ModerationReport report = sampleUserReport();
         final Instant expectedBannedUntil = FIXED_NOW.plusSeconds(30L * 24L * 3600L);
 
-        Mockito.when(
-                        matchService.findDashboardMatches(
-                                Mockito.any(User.class),
-                                Mockito.anyBoolean(),
-                                Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
-
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
         Mockito.when(
                         moderationReportDao.resolveReport(
@@ -230,25 +190,6 @@ public class ModerationServiceImplTest {
         final ModerationReport report = sampleUserReport();
         final RecordingUserBanDao recordingUserBanDao = new RecordingUserBanDao();
         useUserBanDao(recordingUserBanDao);
-
-        Mockito.when(
-                        matchService.findDashboardMatches(
-                                Mockito.any(User.class),
-                                Mockito.anyBoolean(),
-                                Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
 
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
         Mockito.when(

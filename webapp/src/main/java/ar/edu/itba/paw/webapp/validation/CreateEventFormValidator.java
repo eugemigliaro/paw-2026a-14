@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.validation;
 
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import java.time.Instant;
@@ -80,6 +81,10 @@ public class CreateEventFormValidator
 
         if (form.getJoinPolicy() == null) {
             reject(context, "joinPolicy", "{host.validation.joinPolicy.required}");
+            return false;
+        }
+        if (EventJoinPolicy.INVITE_ONLY == form.getJoinPolicy()) {
+            reject(context, "joinPolicy", "{host.validation.joinPolicy.invalid}");
             return false;
         }
 

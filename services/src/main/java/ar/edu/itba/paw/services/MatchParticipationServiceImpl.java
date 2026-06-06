@@ -40,9 +40,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -352,13 +350,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         if (user == null) {
             throw new MatchParticipationInvalidUserException("User must be specified");
         }
-        final Long userId = user.getId();
-        return matchParticipantDao.findPendingMatchIds(user).stream()
-                .map(matchDao::findMatchById)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .filter(match -> !isHost(match, userId))
-                .collect(Collectors.toList());
+        return matchParticipantDao.findPendingRequestMatches(user);
     }
 
     // -------------------------------------------------------------------------
@@ -540,7 +532,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        requireApprovalBasedMatch(match);
+        requireInviteOnlyMatch(match);
         return matchParticipantDao.findInvitedUsers(matchId);
     }
 
@@ -549,18 +541,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
+        requireInviteOnlyMatch(match);
         return matchParticipantDao.findDeclinedInvitees(matchId);
     }
 
     @Override
     public List<Match> findInvitedMatches(final User user) {
         nonNullUser(user);
-        return matchParticipantDao.findInvitedMatchIds(user).stream()
-                .map(matchDao::findMatchById)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .filter(match -> !isHost(match, user.getId()))
-                .collect(Collectors.toList());
+        return matchParticipantDao.findInvitedMatches(user);
     }
 
     // -------------------------------------------------------------------------
@@ -589,6 +577,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationClosedException("The event is not open.");
         }
 
+        requireInviteOnlyMatch(match);
+    }
+
+    private static void requireInviteOnlyMatch(final Match match) {
         if (match.getVisibility() != EventVisibility.PRIVATE
                 || match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
             throw new MatchParticipationNotInviteOnlyException(

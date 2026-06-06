@@ -347,8 +347,12 @@ public class HostController {
         mav.addObject("mapDefaultLatitude", mapDefaultLatitude);
         mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
         mav.addObject("mapDefaultZoom", mapDefaultZoom);
-        mav.addObject("visibilityKey", "host.form.visibility." + form.getVisibility().getDbValue());
-        mav.addObject("joinPolicyKey", "host.form.joinPolicy." + form.getJoinPolicy().getDbValue());
+        final EventVisibility visibility =
+                form.getVisibility() == null ? EventVisibility.PUBLIC : form.getVisibility();
+        final EventJoinPolicy joinPolicy =
+                form.getJoinPolicy() == null ? EventJoinPolicy.INVITE_ONLY : form.getJoinPolicy();
+        mav.addObject("visibilityKey", "host.form.visibility." + visibility.getDbValue());
+        mav.addObject("joinPolicyKey", "host.form.joinPolicy." + joinPolicy.getDbValue());
         return mav;
     }
 
@@ -409,8 +413,8 @@ public class HostController {
         form.setLatitude(match.getLatitude());
         form.setLongitude(match.getLongitude());
         form.setSport(match.getSport());
-        form.setVisibility(match.getVisibility());
-        form.setJoinPolicy(match.getJoinPolicy());
+        form.setVisibility(formVisibility(match));
+        form.setJoinPolicy(formJoinPolicy(match));
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
         final LocalDateTime endsAt =
@@ -421,6 +425,16 @@ public class HostController {
         form.setPricePerPlayer(match.getPricePerPlayer());
         form.setTimezone(ZoneId.systemDefault());
         return form;
+    }
+
+    private static EventVisibility formVisibility(final Match match) {
+        return match.getVisibility() == EventVisibility.INVITE_ONLY
+                ? EventVisibility.PRIVATE
+                : match.getVisibility();
+    }
+
+    private static EventJoinPolicy formJoinPolicy(final Match match) {
+        return match.getJoinPolicy() == null ? EventJoinPolicy.INVITE_ONLY : match.getJoinPolicy();
     }
 
     private UpdateMatchRequest toUpdateRequest(
