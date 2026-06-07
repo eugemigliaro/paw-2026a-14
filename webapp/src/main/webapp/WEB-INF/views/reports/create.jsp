@@ -1,6 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
@@ -96,7 +95,7 @@
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.review.date" /></dt>
 										<dd>
-											<fmt:formatDate value="${tf:toDate(targetReview.updatedAtDateTime)}" type="date" dateStyle="medium" timeZone="America/Argentina/Buenos_Aires" />
+											<c:out value="${tf:date(targetReview.updatedAtDateTime)}" />
 										</dd>
 									</div>
 									<c:if test="${not empty targetReview.reviewed.username}">
@@ -148,7 +147,7 @@
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.match.date" /></dt>
 										<dd>
-											<fmt:formatDate value="${tf:toDate(targetMatch.startsAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" />
+											<c:out value="${tf:dateTime(targetMatch.startsAtDateTime)}" />
 										</dd>
 									</div>
 									<div class="report-section-field report-section-field__row">

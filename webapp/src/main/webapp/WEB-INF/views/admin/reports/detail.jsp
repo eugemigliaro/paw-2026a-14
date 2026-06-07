@@ -1,6 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
@@ -45,7 +44,19 @@
 						</div>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="admin.reports.target" /></dt>
-							<dd><c:out value="${targetName}" /></dd>
+							<dd>
+								<c:choose>
+									<c:when test="${targetSummary.found and targetSummary.targetType.dbValue eq 'review'}">
+										<spring:message code="moderation.target.review.label" arguments="${targetSummary.displayName}" />
+									</c:when>
+									<c:when test="${targetSummary.found}">
+										<c:out value="${targetSummary.displayName}" />
+									</c:when>
+									<c:otherwise>
+										<spring:message code="moderation.target.${targetSummary.targetType.dbValue}.fallback" arguments="${targetSummary.targetId}" />
+									</c:otherwise>
+								</c:choose>
+							</dd>
 						</div>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="moderation.report.reason" /></dt>
@@ -59,7 +70,7 @@
 						</c:if>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
-							<dd><fmt:formatDate value="${tf:toDate(report.createdAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
+							<dd><c:out value="${tf:dateTime(report.createdAtDateTime)}" /></dd>
 						</div>
 					</dl>
 				</ui:card>
@@ -92,13 +103,13 @@
 								<c:if test="${not empty report.reviewedAt}">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="admin.reports.reviewedAt" /></dt>
-										<dd><fmt:formatDate value="${tf:toDate(report.reviewedAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
+										<dd><c:out value="${tf:dateTime(report.reviewedAtDateTime)}" /></dd>
 									</div>
 								</c:if>
 								<c:if test="${not empty userBan}">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="admin.reports.ban.until" /></dt>
-										<dd><fmt:formatDate value="${tf:toDate(userBan.bannedUntilDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
+										<dd><c:out value="${tf:dateTime(userBan.bannedUntilDateTime)}" /></dd>
 									</div>
 								</c:if>
 							</dl>
@@ -162,7 +173,7 @@
 									<c:if test="${not empty report.appealedAt}">
 										<div class="report-section-field report-section-field__row">
 											<dt class="detail-label"><spring:message code="admin.reports.appeal.appealedAt" /></dt>
-											<dd><fmt:formatDate value="${tf:toDate(report.appealedAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
+											<dd><c:out value="${tf:dateTime(report.appealedAtDateTime)}" /></dd>
 										</div>
 									</c:if>
 								</dl>
@@ -229,7 +240,7 @@
 									<c:if test="${not empty report.appealResolvedAt}">
 										<div class="report-section-field report-section-field__row">
 											<dt class="detail-label"><spring:message code="admin.reports.appealResolvedAt" /></dt>
-											<dd><fmt:formatDate value="${tf:toDate(report.appealResolvedAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
+											<dd><c:out value="${tf:dateTime(report.appealResolvedAtDateTime)}" /></dd>
 										</div>
 									</c:if>
 								</dl>

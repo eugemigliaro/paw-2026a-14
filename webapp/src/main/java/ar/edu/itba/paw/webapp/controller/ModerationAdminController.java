@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.ModerationTargetSummary;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
@@ -83,7 +84,8 @@ public class ModerationAdminController {
 
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReports(typeFilters, statusFilters, page, PAGE_SIZE);
-        final Map<Long, String> targetNames = targetNamesByReportId(result.getItems());
+        final Map<Long, ModerationTargetSummary> targetSummaries =
+                targetSummariesByReportId(result.getItems());
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
         mav.addObject(
@@ -100,7 +102,7 @@ public class ModerationAdminController {
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("admin.reports.empty", null, locale));
         mav.addObject("reports", result.getItems());
-        mav.addObject("targetNames", targetNames);
+        mav.addObject("targetSummaries", targetSummaries);
         mav.addObject("action", model.asMap().get("action"));
         mav.addObject(
                 "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
@@ -162,8 +164,8 @@ public class ModerationAdminController {
 
         mav.addObject("report", report);
         mav.addObject(
-                "targetName",
-                moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()));
+                "targetSummary",
+                moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
 
         final boolean showResolution =
                 report.getResolution() != null
@@ -377,15 +379,15 @@ public class ModerationAdminController {
                 .addObject(BindingResult.MODEL_KEY_PREFIX + "appealResolutionForm", bindingResult);
     }
 
-    private Map<Long, String> targetNamesByReportId(final List<ModerationReport> reports) {
-        final Map<Long, String> targetNames = new LinkedHashMap<>();
+    private Map<Long, ModerationTargetSummary> targetSummariesByReportId(
+            final List<ModerationReport> reports) {
+        final Map<Long, ModerationTargetSummary> targetSummaries = new LinkedHashMap<>();
         for (final ModerationReport report : reports) {
-            targetNames.put(
+            targetSummaries.put(
                     report.getId(),
-                    moderationService.resolveTargetName(
-                            report.getTargetType(), report.getTargetId()));
+                    moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
         }
-        return targetNames;
+        return targetSummaries;
     }
 
     private UserBan userBan(final ModerationReport report) {

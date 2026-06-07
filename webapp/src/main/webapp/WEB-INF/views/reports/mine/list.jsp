@@ -1,6 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
@@ -104,6 +103,7 @@
 								<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetType.dbValue}" />
 								<spring:message var="reasonLabel" code="admin.reports.reason.${report.reason.dbValue}" />
 								<spring:message var="statusLabel" code="admin.reports.status.${report.status.dbValue}" />
+								<c:set var="targetSummary" value="${targetSummaries[report.id]}" />
 
 								<div class="report-card">
 									<ui:card className="report-section report-card__inner">
@@ -125,16 +125,28 @@
 										<dl class="report-card__body stack">
 											<div class="report-section-field report-section-field__row">
 												<dt class="detail-label"><spring:message code="reports.mine.target" /></dt>
-												<dd><c:out value="${targetNames[report.id]}" /></dd>
+												<dd>
+													<c:choose>
+														<c:when test="${targetSummary.found and targetSummary.targetType.dbValue eq 'review'}">
+															<spring:message code="moderation.target.review.label" arguments="${targetSummary.displayName}" />
+														</c:when>
+														<c:when test="${targetSummary.found}">
+															<c:out value="${targetSummary.displayName}" />
+														</c:when>
+														<c:otherwise>
+															<spring:message code="moderation.target.${targetSummary.targetType.dbValue}.fallback" arguments="${targetSummary.targetId}" />
+														</c:otherwise>
+													</c:choose>
+												</dd>
 											</div>
 											<div class="report-section-field report-section-field__row">
 												<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
-												<dd><fmt:formatDate value="${tf:toDate(report.createdAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
+												<dd><c:out value="${tf:dateTime(report.createdAtDateTime)}" /></dd>
 											</div>
 											<c:if test="${not empty report.updatedAt and report.updatedAt ne report.createdAt}">
 												<div class="report-section-field report-section-field__row">
 													<dt class="detail-label"><spring:message code="reports.mine.updatedAt" /></dt>
-													<dd><fmt:formatDate value="${tf:toDate(report.updatedAtDateTime)}" type="both" dateStyle="medium" timeStyle="short" timeZone="America/Argentina/Buenos_Aires" /></dd>
+													<dd><c:out value="${tf:dateTime(report.updatedAtDateTime)}" /></dd>
 												</div>
 											</c:if>
 											<c:if test="${not empty report.resolution}">

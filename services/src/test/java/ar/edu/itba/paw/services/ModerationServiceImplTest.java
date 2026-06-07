@@ -8,11 +8,15 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.models.types.EventStatus;
+import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
@@ -22,6 +26,7 @@ import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -392,6 +397,71 @@ public class ModerationServiceImplTest {
     }
 
     @Test
+    public void resolveTarget_returnsUserIdentityDataForExistingUser() {
+        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+
+        final ModerationTargetSummary summary =
+                moderationService.resolveTarget(ReportTargetType.USER, 88L);
+
+        Assertions.assertEquals(ReportTargetType.USER, summary.getTargetType());
+        Assertions.assertEquals(88L, summary.getTargetId());
+        Assertions.assertEquals(UserUtils.getUser(88L).getUsername(), summary.getDisplayName());
+        Assertions.assertTrue(summary.isFound());
+    }
+
+    @Test
+    public void resolveTarget_returnsMatchIdentityDataForExistingMatch() {
+        Mockito.when(matchDao.findById(42L)).thenReturn(Optional.of(sampleMatch()));
+
+        final ModerationTargetSummary summary =
+                moderationService.resolveTarget(ReportTargetType.MATCH, 42L);
+
+        Assertions.assertEquals(ReportTargetType.MATCH, summary.getTargetType());
+        Assertions.assertEquals(42L, summary.getTargetId());
+        Assertions.assertEquals("Friday football", summary.getDisplayName());
+        Assertions.assertTrue(summary.isFound());
+    }
+
+    @Test
+    public void resolveTarget_returnsReviewerIdentityDataForExistingReview() {
+        final PlayerReview review =
+                new PlayerReview(
+                        123L,
+                        UserUtils.getUser(7L),
+                        UserUtils.getUser(8L),
+                        PlayerReviewReaction.DISLIKE,
+                        "bad",
+                        FIXED_NOW,
+                        FIXED_NOW,
+                        false,
+                        null,
+                        null,
+                        null);
+        usePlayerReviewDao(new ModeratedPlayerReviewDao(review));
+
+        final ModerationTargetSummary summary =
+                moderationService.resolveTarget(ReportTargetType.REVIEW, 123L);
+
+        Assertions.assertEquals(ReportTargetType.REVIEW, summary.getTargetType());
+        Assertions.assertEquals(123L, summary.getTargetId());
+        Assertions.assertEquals(UserUtils.getUser(7L).getUsername(), summary.getDisplayName());
+        Assertions.assertTrue(summary.isFound());
+    }
+
+    @Test
+    public void resolveTarget_returnsMissingSummaryForMissingTarget() {
+        Mockito.when(matchDao.findById(42L)).thenReturn(Optional.empty());
+
+        final ModerationTargetSummary summary =
+                moderationService.resolveTarget(ReportTargetType.MATCH, 42L);
+
+        Assertions.assertEquals(ReportTargetType.MATCH, summary.getTargetType());
+        Assertions.assertEquals(42L, summary.getTargetId());
+        Assertions.assertNull(summary.getDisplayName());
+        Assertions.assertFalse(summary.isFound());
+    }
+
+    @Test
     public void appealReport_storesSuppliedAppealText() {
         final ModerationReport report = sampleUserReport(); // appealCount == 0
 
@@ -603,6 +673,33 @@ public class ModerationServiceImplTest {
                 null,
                 FIXED_NOW,
                 FIXED_NOW);
+    }
+
+    private static Match sampleMatch() {
+        return new Match(
+                42L,
+                Sport.FOOTBALL,
+                UserUtils.getUser(3L),
+                "Av. Siempre Viva 123",
+                null,
+                null,
+                "Friday football",
+                "Friendly match",
+                FIXED_NOW.plusSeconds(3600),
+                FIXED_NOW.plusSeconds(7200),
+                10,
+                BigDecimal.ZERO,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT,
+                EventStatus.OPEN,
+                2,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null);
     }
 
     private static class ModeratedPlayerReviewDao implements PlayerReviewDao {
