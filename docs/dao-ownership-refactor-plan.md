@@ -75,7 +75,7 @@ relevant focused Maven test pass.
     - [x] Update `MatchServiceImplTest` create/update/cancel stubs.
     - [x] Update `MatchReservationServiceImplTest`.
     - [x] Update `MatchParticipationServiceImplTest`.
-17. [ ] Add `MatchParticipantDataService` /
+17. [x] Add `MatchParticipantDataService` /
     `MatchParticipantDataServiceImpl`.
     - [x] Start `MatchParticipantDataService` with the
       `findConfirmedParticipants` operation needed by
