@@ -217,6 +217,20 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void postCreateWithOtherSportReturnsForm() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        failIfTournamentCreationIsAttempted();
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(createPost("City Football Cup", Sport.OTHER.getDbValue(), "1", true, true))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attributeHasFieldErrors("createTournamentForm", "sport"));
+    }
+
+    @Test
     void postCloseRegistrationByNonHostReturnsForbidden() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
@@ -341,6 +355,41 @@ class HostTournamentControllerTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(editPost(77L, "Updated City Cup")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void postEditWithOtherSportReturnsForm() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findTournamentForHost(Mockito.eq(77L), Mockito.any()))
+                .thenReturn(Optional.of(tournament(77L, host, TournamentStatus.REGISTRATION)));
+        failIfTournamentCreationIsAttempted();
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/host/tournaments/77/edit")
+                                .locale(Locale.ENGLISH)
+                                .param("title", "Title")
+                                .param("sport", Sport.OTHER.getDbValue())
+                                .param("description", "Updated tournament")
+                                .param("address", "Updated Club")
+                                .param("registrationOpensDate", "2030-04-01")
+                                .param("registrationOpensTime", "09:00")
+                                .param("registrationClosesDate", "2030-04-09")
+                                .param("registrationClosesTime", "20:00")
+                                .param("startDate", "2030-04-10")
+                                .param("startTime", "18:00")
+                                .param("endDate", "2030-04-10")
+                                .param("endTime", "21:00")
+                                .param("bracketSize", "16")
+                                .param("teamSize", "2")
+                                .param("pricePerPlayer", "15.00")
+                                .param("allowSoloSignup", "true")
+                                .param("_allowTeamDraft", "on"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attributeHasFieldErrors("createTournamentForm", "sport"));
     }
 
     @Test

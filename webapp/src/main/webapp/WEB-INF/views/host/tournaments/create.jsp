@@ -21,7 +21,6 @@
 			<spring:message var="sportFootball" code="sport.football" />
 			<spring:message var="sportTennis" code="sport.tennis" />
 			<spring:message var="sportBasketball" code="sport.basketball" />
-			<spring:message var="sportOther" code="sport.other" />
 			<c:url var="resolvedFormAction" value="${formAction}" />
 
 			<main class="page-shell">
@@ -68,7 +67,6 @@
 											<form:option value="football" label="${sportFootball}" />
 											<form:option value="tennis" label="${sportTennis}" />
 											<form:option value="basketball" label="${sportBasketball}" />
-											<form:option value="other" label="${sportOther}" />
 										</form:select>
 									</span>
 									<form:errors path="sport" cssClass="field__error" element="span" />
