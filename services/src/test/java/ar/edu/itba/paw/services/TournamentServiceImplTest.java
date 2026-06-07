@@ -40,8 +40,6 @@ public class TournamentServiceImplTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @Mock private TournamentDataService tournamentDataService;
-    @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
-    @Mock private TournamentTeamDao tournamentTeamDao;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
     @Mock private MessageSource messageSource;
