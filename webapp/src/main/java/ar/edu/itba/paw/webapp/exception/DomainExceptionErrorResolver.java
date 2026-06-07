@@ -3,13 +3,10 @@ package ar.edu.itba.paw.webapp.exception;
 import ar.edu.itba.paw.services.exceptions.match.*;
 import ar.edu.itba.paw.services.exceptions.match.MatchException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.*;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.*;
 import ar.edu.itba.paw.services.exceptions.playerReview.*;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,6 +15,9 @@ public class DomainExceptionErrorResolver {
         return switch (e) {
             case ModerationAppealLimitException ignored -> "appeal_limit";
             case ModerationAppealRejectedException ignored -> "appeal_rejected";
+            case ModerationInvalidBanDurationException ignored -> "invalid_ban_duration";
+            case ModerationTargetNotFoundException ignored -> "target_not_found";
+            case ModerationReportErrorException ignored -> "report_error";
             default -> e.getMessage();
         };
     }
