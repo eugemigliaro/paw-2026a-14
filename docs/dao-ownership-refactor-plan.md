@@ -80,7 +80,7 @@ relevant focused Maven test pass.
     - [x] Start `MatchParticipantDataService` with the
       `findConfirmedParticipants` operation needed by
       `MatchNotificationServiceImpl`.
-18. [ ] Move `MatchParticipantDao` access in `MatchServiceImpl`,
+18. [x] Move `MatchParticipantDao` access in `MatchServiceImpl`,
     `MatchReservationServiceImpl`, `MatchParticipationServiceImpl`,
     `MatchNotificationServiceImpl`, and `ModerationServiceImpl` behind
     `MatchParticipantDataService`.
@@ -90,12 +90,15 @@ relevant focused Maven test pass.
     - [x] Move `MatchReservationServiceImpl` behind
       `MatchParticipantDataService`.
     - [x] Move `MatchServiceImpl` behind `MatchParticipantDataService`.
-19. [ ] Update affected `MatchParticipantDao`-based service tests.
+    - [x] Move `MatchParticipationServiceImpl` behind
+      `MatchParticipantDataService`.
+19. [x] Update affected `MatchParticipantDao`-based service tests.
     - [x] Update `MatchNotificationServiceImplTest`.
     - [x] Update `ModerationServiceImplTest`.
     - [x] Update `MatchReservationServiceImplTest`.
     - [x] Update `MatchServiceImplTest`.
-20. [ ] Run the final DAO ownership acceptance check:
+    - [x] Update `MatchParticipationServiceImplTest`.
+20. [x] Run the final DAO ownership acceptance check:
 
     ```bash
     rg "private final .*Dao" services/src/main/java
@@ -103,8 +106,8 @@ relevant focused Maven test pass.
 
     Expected result: only the final owner classes listed in the DAO ownership map.
 
-21. [ ] Run `mvn spotless:apply`.
-22. [ ] Run `mvn test`.
+21. [x] Run `mvn spotless:apply`.
+22. [x] Run `mvn test`.
 
 ## DAO Ownership Map
 

@@ -6,9 +6,9 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.time.Clock;
 import java.time.Instant;
@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MatchParticipationServiceImpl implements MatchParticipationService {
 
     private final MatchDataService matchDataService;
-    private final MatchParticipantDao matchParticipantDao;
+    private final MatchParticipantDataService matchParticipantDataService;
     private final UserService userService;
     private final Clock clock;
     private final MailDispatchService mailDispatchService;
@@ -34,12 +34,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     public MatchParticipationServiceImpl(
             final MatchDataService matchDataService,
-            final MatchParticipantDao matchParticipantDao,
+            final MatchParticipantDataService matchParticipantDataService,
             final UserService userService,
             final Clock clock) {
         this(
                 matchDataService,
-                matchParticipantDao,
+                matchParticipantDataService,
                 userService,
                 clock,
                 new MailDispatchService() {},
@@ -49,13 +49,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Autowired
     public MatchParticipationServiceImpl(
             final MatchDataService matchDataService,
-            final MatchParticipantDao matchParticipantDao,
+            final MatchParticipantDataService matchParticipantDataService,
             final UserService userService,
             final Clock clock,
             final MailDispatchService mailDispatchService,
             final MatchNotificationService matchNotificationService) {
         this.matchDataService = matchDataService;
-        this.matchParticipantDao = matchParticipantDao;
+        this.matchParticipantDataService = matchParticipantDataService;
         this.userService = userService;
         this.clock = clock;
         this.mailDispatchService = mailDispatchService;
@@ -96,12 +96,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("started", "The event has already started.");
         }
 
-        if (matchParticipantDao.hasActiveReservation(matchId, user)) {
+        if (matchParticipantDataService.hasActiveReservation(matchId, user)) {
             throw new MatchParticipationException(
                     "already_joined", "You are already a confirmed participant.");
         }
 
-        if (matchParticipantDao.hasPendingRequest(matchId, user)) {
+        if (matchParticipantDataService.hasPendingRequest(matchId, user)) {
             throw new MatchParticipationException(
                     "already_pending", "You already have a pending join request for this event.");
         }
@@ -110,7 +110,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("full", "The event is already full.");
         }
 
-        if (!matchParticipantDao.createJoinRequest(matchId, user)) {
+        if (!matchParticipantDataService.createJoinRequest(matchId, user)) {
             throw new MatchParticipationException(
                     "already_pending", "You already have a pending join request for this event.");
         }
@@ -143,11 +143,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Instant now = Instant.now(clock);
         final Set<Long> activeFutureReservationMatchIds =
                 Set.copyOf(
-                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                        matchParticipantDataService.findActiveFutureReservationMatchIdsForSeries(
                                 match.getSeries().getId(), user, now));
         final Set<Long> pendingFutureRequestMatchIds =
                 Set.copyOf(
-                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                        matchParticipantDataService.findPendingFutureRequestMatchIdsForSeries(
                                 match.getSeries().getId(), user, now));
         final SeriesJoinRequestEvaluation evaluation =
                 evaluateSeriesJoinRequestTargets(
@@ -155,7 +155,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                         activeFutureReservationMatchIds,
                         pendingFutureRequestMatchIds,
                         now);
-        if (matchParticipantDao.hasPendingSeriesRequest(match.getSeries().getId(), user)) {
+        if (matchParticipantDataService.hasPendingSeriesRequest(match.getSeries().getId(), user)) {
             throw buildSeriesJoinRequestFailure(evaluation.asPending());
         }
         if (evaluation.requestableOccurrenceCount() == 0) {
@@ -166,18 +166,19 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 pendingFutureRequestMatchIds.contains(matchId)
                         ? matchId
                         : evaluation.targetMatchIds().get(0);
-        if (!matchParticipantDao.createSeriesJoinRequestIfSpace(requestMatchId, user)) {
+        if (!matchParticipantDataService.createSeriesJoinRequestIfSpace(requestMatchId, user)) {
             final Instant currentNow = Instant.now(clock);
             final SeriesJoinRequestEvaluation currentEvaluation =
                     evaluateSeriesJoinRequestTargets(
                             matchDataService.findSeriesOccurrences(match.getSeries().getId()),
                             Set.copyOf(
-                                    matchParticipantDao
+                                    matchParticipantDataService
                                             .findActiveFutureReservationMatchIdsForSeries(
                                                     match.getSeries().getId(), user, currentNow)),
                             Set.copyOf(
-                                    matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
-                                            match.getSeries().getId(), user, currentNow)),
+                                    matchParticipantDataService
+                                            .findPendingFutureRequestMatchIdsForSeries(
+                                                    match.getSeries().getId(), user, currentNow)),
                             currentNow);
             throw buildSeriesJoinRequestFailure(currentEvaluation);
         }
@@ -188,12 +189,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     @Transactional
     public void cancelJoinRequest(final Long matchId, final User user) {
-        if (!matchParticipantDao.hasPendingRequest(matchId, user)) {
+        if (!matchParticipantDataService.hasPendingRequest(matchId, user)) {
             throw new MatchParticipationException(
                     "no_pending_request", "No pending join request found for this event.");
         }
 
-        if (!matchParticipantDao.cancelJoinRequest(matchId, user)) {
+        if (!matchParticipantDataService.cancelJoinRequest(matchId, user)) {
             throw new MatchParticipationException(
                     "no_pending_request", "No pending join request found for this event.");
         }
@@ -201,14 +202,15 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     @Override
     public boolean hasPendingRequest(final Long matchId, final User user) {
-        return matchParticipantDao.hasPendingRequest(matchId, user);
+        return matchParticipantDataService.hasPendingRequest(matchId, user);
     }
 
     @Override
     public boolean hasPendingSeriesRequest(final Long matchId, final User user) {
         final Match match = requireMatch(matchId);
         return match.isRecurringOccurrence()
-                && matchParticipantDao.hasPendingSeriesRequest(match.getSeries().getId(), user);
+                && matchParticipantDataService.hasPendingSeriesRequest(
+                        match.getSeries().getId(), user);
     }
 
     @Override
@@ -218,7 +220,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             return Set.of();
         }
         return Set.copyOf(
-                matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                matchParticipantDataService.findPendingFutureRequestMatchIdsForSeries(
                         seriesId, user, Instant.now(clock)));
     }
 
@@ -235,9 +237,9 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         requireHost(match, host.getId());
 
         if (match.isRecurringOccurrence()
-                && matchParticipantDao.isSeriesJoinRequest(matchId, targetUser)) {
+                && matchParticipantDataService.isSeriesJoinRequest(matchId, targetUser)) {
             final int approvedRows =
-                    matchParticipantDao.approveSeriesJoinRequest(
+                    matchParticipantDataService.approveSeriesJoinRequest(
                             match.getSeries().getId(), targetUser, Instant.now(clock));
             if (approvedRows <= 0) {
                 throw new MatchParticipationException(
@@ -256,7 +258,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     "full", "The event is full; cannot approve more participants.");
         }
 
-        if (!matchParticipantDao.approveRequest(matchId, targetUser)) {
+        if (!matchParticipantDataService.approveRequest(matchId, targetUser)) {
             throw new MatchParticipationException(
                     "no_pending_request", "No pending join request found for the specified user.");
         }
@@ -272,7 +274,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(targetUser);
         requireHost(match, host.getId());
 
-        if (!matchParticipantDao.rejectRequest(matchId, targetUser)) {
+        if (!matchParticipantDataService.rejectRequest(matchId, targetUser)) {
             throw new MatchParticipationException(
                     "no_pending_request", "No pending join request found for the specified user.");
         }
@@ -294,7 +296,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
         requireHost(match, host.getId());
 
-        if (!matchParticipantDao.removeParticipant(matchId, targetUser)) {
+        if (!matchParticipantDataService.removeParticipant(matchId, targetUser)) {
             throw new MatchParticipationException(
                     "not_participant",
                     "The specified user is not a confirmed participant of this event.");
@@ -312,13 +314,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        return matchParticipantDao.findPendingRequests(matchId);
+        return matchParticipantDataService.findPendingRequests(matchId);
     }
 
     @Override
     public List<PendingJoinRequest> findPendingRequestsForHost(final User host) {
         nonNullUser(host);
-        return matchParticipantDao.findPendingRequestsForHost(host);
+        return matchParticipantDataService.findPendingRequestsForHost(host);
     }
 
     @Override
@@ -326,7 +328,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        return matchParticipantDao.findConfirmedParticipants(matchId);
+        return matchParticipantDataService.findConfirmedParticipants(matchId);
     }
 
     @Override
@@ -335,7 +337,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("invalid_user", "User must be specified");
         }
         final Long userId = user.getId();
-        return matchParticipantDao.findPendingMatchIds(user).stream()
+        return matchParticipantDataService.findPendingMatchIds(user).stream()
                 .map(matchDataService::findById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -388,12 +390,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private void inviteUserToMatch(final Match match, final User target) {
         final Long matchId = match.getId();
         nonNullUser(target);
-        if (matchParticipantDao.hasActiveReservation(matchId, target)) {
+        if (matchParticipantDataService.hasActiveReservation(matchId, target)) {
             throw new MatchParticipationException(
                     "already_joined", "That user is already a confirmed participant.");
         }
 
-        if (matchParticipantDao.hasInvitation(matchId, target)) {
+        if (matchParticipantDataService.hasInvitation(matchId, target)) {
             throw new MatchParticipationException(
                     "already_invited", "That user already has a pending invitation.");
         }
@@ -402,7 +404,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("full", "The event is already full.");
         }
 
-        if (!matchParticipantDao.inviteUser(matchId, target)) {
+        if (!matchParticipantDataService.inviteUser(matchId, target)) {
             throw new MatchParticipationException(
                     "already_invited", "Could not send the invitation.");
         }
@@ -421,7 +423,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
         int invitedCount = 0;
         for (final Long targetMatchId : evaluation.targetMatchIds()) {
-            if (matchParticipantDao.inviteUser(targetMatchId, target, true)) {
+            if (matchParticipantDataService.inviteUser(targetMatchId, target, true)) {
                 invitedCount++;
             }
         }
@@ -447,15 +449,16 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     "is_host", "The host cannot accept an invitation to their own event.");
         }
 
-        if (!matchParticipantDao.hasInvitation(matchId, user)) {
+        if (!matchParticipantDataService.hasInvitation(matchId, user)) {
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
         }
 
         if (match.isRecurringOccurrence()
-                && matchParticipantDao.isSeriesInvitation(matchId, user)) {
+                && matchParticipantDataService.isSeriesInvitation(matchId, user)) {
             final int acceptedRows =
-                    matchParticipantDao.acceptSeriesInvite(match.getSeries().getId(), user, now);
+                    matchParticipantDataService.acceptSeriesInvite(
+                            match.getSeries().getId(), user, now);
             if (acceptedRows <= 0) {
                 throw new MatchParticipationException(
                         "no_invitation", "No pending invitation found for this series.");
@@ -472,7 +475,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("started", "The event has already started.");
         }
 
-        if (!matchParticipantDao.acceptInvite(matchId, user)) {
+        if (!matchParticipantDataService.acceptInvite(matchId, user)) {
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
         }
@@ -486,15 +489,16 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(user);
 
-        if (!matchParticipantDao.hasInvitation(matchId, user)) {
+        if (!matchParticipantDataService.hasInvitation(matchId, user)) {
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
         }
 
         if (match.isRecurringOccurrence()
-                && matchParticipantDao.isSeriesInvitation(matchId, user)) {
+                && matchParticipantDataService.isSeriesInvitation(matchId, user)) {
             final int declinedRows =
-                    matchParticipantDao.declineSeriesInvite(match.getSeries().getId(), user);
+                    matchParticipantDataService.declineSeriesInvite(
+                            match.getSeries().getId(), user);
             if (declinedRows <= 0) {
                 throw new MatchParticipationException(
                         "no_invitation", "No pending invitation found for this series.");
@@ -503,7 +507,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             return;
         }
 
-        if (!matchParticipantDao.declineInvite(matchId, user)) {
+        if (!matchParticipantDataService.declineInvite(matchId, user)) {
             throw new MatchParticipationException(
                     "no_invitation", "No pending invitation found for this event.");
         }
@@ -513,12 +517,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     @Override
     public boolean hasInvitation(final Long matchId, final User user) {
-        return matchParticipantDao.hasInvitation(matchId, user);
+        return matchParticipantDataService.hasInvitation(matchId, user);
     }
 
     @Override
     public boolean isSeriesInvitation(final Long matchId, final User user) {
-        return matchParticipantDao.isSeriesInvitation(matchId, user);
+        return matchParticipantDataService.isSeriesInvitation(matchId, user);
     }
 
     @Override
@@ -526,7 +530,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        return matchParticipantDao.findInvitedUsers(matchId);
+        return matchParticipantDataService.findInvitedUsers(matchId);
     }
 
     @Override
@@ -534,13 +538,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        return matchParticipantDao.findDeclinedInvitees(matchId);
+        return matchParticipantDataService.findDeclinedInvitees(matchId);
     }
 
     @Override
     public List<Match> findInvitedMatches(final User user) {
         nonNullUser(user);
-        return matchParticipantDao.findInvitedMatchIds(user).stream()
+        return matchParticipantDataService.findInvitedMatchIds(user).stream()
                 .map(matchDataService::findById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -606,12 +610,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     "not_cancellable", "This reservation can no longer be cancelled.");
         }
 
-        if (!matchParticipantDao.hasActiveReservation(match.getId(), user)) {
+        if (!matchParticipantDataService.hasActiveReservation(match.getId(), user)) {
             throw new MatchParticipationException(
                     "not_joined", "This account does not have an active reservation.");
         }
 
-        if (!matchParticipantDao.removeParticipant(match.getId(), user)) {
+        if (!matchParticipantDataService.removeParticipant(match.getId(), user)) {
             throw new MatchParticipationException(
                     "not_cancellable", "This reservation can no longer be cancelled.");
         }
@@ -715,12 +719,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             }
 
             futureOpenInviteOnlyOccurrenceCount++;
-            if (matchParticipantDao.hasActiveReservation(occurrence.getId(), user)) {
+            if (matchParticipantDataService.hasActiveReservation(occurrence.getId(), user)) {
                 joinedFutureOpenInviteOnlyOccurrenceCount++;
                 continue;
             }
 
-            if (matchParticipantDao.hasInvitation(occurrence.getId(), user)) {
+            if (matchParticipantDataService.hasInvitation(occurrence.getId(), user)) {
                 invitedFutureOpenInviteOnlyOccurrenceCount++;
                 continue;
             }

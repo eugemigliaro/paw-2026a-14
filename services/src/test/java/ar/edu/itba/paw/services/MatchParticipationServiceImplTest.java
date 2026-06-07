@@ -8,7 +8,6 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
@@ -38,7 +37,6 @@ public class MatchParticipationServiceImplTest {
 
     @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDataService matchParticipantDataService;
-    @Mock private MatchParticipantDao matchParticipantDao;
     @Mock private UserService userService;
 
     private RecordingMailDispatchService mailDispatchService;
@@ -55,7 +53,7 @@ public class MatchParticipationServiceImplTest {
         matchParticipationService =
                 new MatchParticipationServiceImpl(
                         matchDataService,
-                        matchParticipantDao,
+                        matchParticipantDataService,
                         userService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
                         mailDispatchService,
@@ -67,7 +65,7 @@ public class MatchParticipationServiceImplTest {
         // Arrange
         final User u = UserUtils.getUser(20L);
         Mockito.when(
-                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                        matchParticipantDataService.findPendingFutureRequestMatchIdsForSeries(
                                 100L, u, FIXED_NOW))
                 .thenReturn(List.of(10L, 11L));
 
@@ -192,9 +190,9 @@ public class MatchParticipationServiceImplTest {
                                         EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
 
-        Mockito.when(matchParticipantDao.removeParticipant(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.removeParticipant(10L, u)).thenReturn(true);
 
         // Exercise and Assert
         Assertions.assertDoesNotThrow(() -> matchParticipationService.removeParticipant(10L, u, u));
@@ -213,8 +211,8 @@ public class MatchParticipationServiceImplTest {
                                         EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.removeParticipant(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.removeParticipant(10L, u)).thenReturn(true);
 
         // Exercise and Assert
         Assertions.assertDoesNotThrow(() -> matchParticipationService.removeParticipant(10L, u, u));
@@ -234,8 +232,9 @@ public class MatchParticipationServiceImplTest {
                                         FIXED_NOW.plusSeconds(3600))));
         final User player = UserUtils.getUser(20L);
         final User host = UserUtils.getUser(1L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, player)).thenReturn(true);
-        Mockito.when(matchParticipantDao.removeParticipant(10L, player)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, player))
+                .thenReturn(true);
+        Mockito.when(matchParticipantDataService.removeParticipant(10L, player)).thenReturn(true);
 
         // Exercise
         matchParticipationService.removeParticipant(10L, player, player);
@@ -284,7 +283,7 @@ public class MatchParticipationServiceImplTest {
                                         FIXED_NOW.plusSeconds(3600))));
 
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
 
         // Exercise
         final MatchParticipationException exception =
@@ -334,7 +333,7 @@ public class MatchParticipationServiceImplTest {
                                         EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         final User u = UserUtils.getUser(30L);
-        Mockito.when(matchParticipantDao.removeParticipant(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.removeParticipant(10L, u)).thenReturn(true);
 
         // Exercise and Assert
         Assertions.assertDoesNotThrow(
@@ -354,7 +353,7 @@ public class MatchParticipationServiceImplTest {
                                         EventStatus.OPEN,
                                         FIXED_NOW.plusSeconds(3600))));
         final User player = UserUtils.getUser(30L);
-        Mockito.when(matchParticipantDao.removeParticipant(10L, player)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.removeParticipant(10L, player)).thenReturn(true);
 
         // Exercise
         matchParticipationService.removeParticipant(10L, UserUtils.getUser(1L), player);
@@ -384,7 +383,8 @@ public class MatchParticipationServiceImplTest {
                         EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.findPendingMatchIds(u)).thenReturn(List.of(10L, 11L));
+        Mockito.when(matchParticipantDataService.findPendingMatchIds(u))
+                .thenReturn(List.of(10L, 11L));
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(hostedMatch));
         Mockito.when(matchDataService.findById(11L)).thenReturn(Optional.of(otherMatch));
 
@@ -415,7 +415,8 @@ public class MatchParticipationServiceImplTest {
                         EventStatus.OPEN,
                         FIXED_NOW.plusSeconds(7200));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.findInvitedMatchIds(u)).thenReturn(List.of(10L, 11L));
+        Mockito.when(matchParticipantDataService.findInvitedMatchIds(u))
+                .thenReturn(List.of(10L, 11L));
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(hostedMatch));
         Mockito.when(matchDataService.findById(11L)).thenReturn(Optional.of(otherMatch));
 
@@ -468,14 +469,15 @@ public class MatchParticipationServiceImplTest {
 
         final User u = UserUtils.getUser(20L);
         Mockito.when(
-                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                        matchParticipantDataService.findActiveFutureReservationMatchIdsForSeries(
                                 100L, u, FIXED_NOW))
                 .thenReturn(List.of());
         Mockito.when(
-                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                        matchParticipantDataService.findPendingFutureRequestMatchIdsForSeries(
                                 100L, u, FIXED_NOW))
                 .thenReturn(List.of());
-        Mockito.when(matchParticipantDao.createSeriesJoinRequestIfSpace(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.createSeriesJoinRequestIfSpace(10L, u))
+                .thenReturn(true);
 
         // Exercise and Assert
         Assertions.assertDoesNotThrow(() -> matchParticipationService.requestToJoinSeries(10L, u));
@@ -497,8 +499,8 @@ public class MatchParticipationServiceImplTest {
                         1);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(selectedOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.isSeriesJoinRequest(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.approveSeriesJoinRequest(100L, u, FIXED_NOW))
+        Mockito.when(matchParticipantDataService.isSeriesJoinRequest(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.approveSeriesJoinRequest(100L, u, FIXED_NOW))
                 .thenReturn(2);
 
         // Exercise and Assert
@@ -522,8 +524,8 @@ public class MatchParticipationServiceImplTest {
                         1);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(staleOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.isSeriesJoinRequest(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.approveSeriesJoinRequest(100L, u, FIXED_NOW))
+        Mockito.when(matchParticipantDataService.isSeriesJoinRequest(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.approveSeriesJoinRequest(100L, u, FIXED_NOW))
                 .thenReturn(1);
 
         // Exercise and Assert
@@ -612,12 +614,14 @@ public class MatchParticipationServiceImplTest {
                                 publicOccurrence));
         final User u = UserUtils.getUser(20L);
         Mockito.when(userService.findByEmail("player@test.com")).thenReturn(Optional.of(u));
-        Mockito.when(matchParticipantDao.hasInvitation(Mockito.anyLong(), Mockito.eq(u)))
+        Mockito.when(matchParticipantDataService.hasInvitation(Mockito.anyLong(), Mockito.eq(u)))
                 .thenAnswer(invocation -> Long.valueOf(12L).equals(invocation.getArgument(0)));
-        Mockito.when(matchParticipantDao.hasActiveReservation(Mockito.anyLong(), Mockito.eq(u)))
+        Mockito.when(
+                        matchParticipantDataService.hasActiveReservation(
+                                Mockito.anyLong(), Mockito.eq(u)))
                 .thenAnswer(invocation -> Long.valueOf(13L).equals(invocation.getArgument(0)));
         Mockito.when(
-                        matchParticipantDao.inviteUser(
+                        matchParticipantDataService.inviteUser(
                                 Mockito.anyLong(), Mockito.eq(u), Mockito.eq(true)))
                 .thenAnswer(
                         invocation -> {
@@ -659,9 +663,10 @@ public class MatchParticipationServiceImplTest {
                         UserLanguages.SPANISH);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(match));
         Mockito.when(userService.findByEmail("player@test.com")).thenReturn(Optional.of(target));
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, target)).thenReturn(false);
-        Mockito.when(matchParticipantDao.hasInvitation(10L, target)).thenReturn(false);
-        Mockito.when(matchParticipantDao.inviteUser(10L, target)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, target))
+                .thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasInvitation(10L, target)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.inviteUser(10L, target)).thenReturn(true);
 
         matchParticipationService.inviteUser(10L, UserUtils.getUser(1L), "player@test.com");
 
@@ -699,9 +704,11 @@ public class MatchParticipationServiceImplTest {
                 .thenReturn(List.of(selectedOccurrence, alreadyJoinedOccurrence));
         final User u = UserUtils.getUser(20L);
         Mockito.when(userService.findByEmail(u.getEmail())).thenReturn(Optional.of(u));
-        Mockito.when(matchParticipantDao.hasInvitation(Mockito.anyLong(), Mockito.eq(u)))
+        Mockito.when(matchParticipantDataService.hasInvitation(Mockito.anyLong(), Mockito.eq(u)))
                 .thenAnswer(invocation -> Long.valueOf(10L).equals(invocation.getArgument(0)));
-        Mockito.when(matchParticipantDao.hasActiveReservation(Mockito.anyLong(), Mockito.eq(u)))
+        Mockito.when(
+                        matchParticipantDataService.hasActiveReservation(
+                                Mockito.anyLong(), Mockito.eq(u)))
                 .thenAnswer(invocation -> Long.valueOf(11L).equals(invocation.getArgument(0)));
 
         // Exercise
@@ -733,9 +740,10 @@ public class MatchParticipationServiceImplTest {
                         1);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(selectedOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.isSeriesInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, u, FIXED_NOW)).thenReturn(2);
+        Mockito.when(matchParticipantDataService.hasInvitation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.isSeriesInvitation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.acceptSeriesInvite(100L, u, FIXED_NOW))
+                .thenReturn(2);
 
         // Exercise
         matchParticipationService.acceptInvite(10L, u);
@@ -762,9 +770,10 @@ public class MatchParticipationServiceImplTest {
                         1);
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(staleOccurrence));
-        Mockito.when(matchParticipantDao.hasInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.isSeriesInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.acceptSeriesInvite(100L, u, FIXED_NOW)).thenReturn(1);
+        Mockito.when(matchParticipantDataService.hasInvitation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.isSeriesInvitation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.acceptSeriesInvite(100L, u, FIXED_NOW))
+                .thenReturn(1);
 
         // Exercise
         matchParticipationService.acceptInvite(10L, u);
@@ -791,9 +800,9 @@ public class MatchParticipationServiceImplTest {
                         1);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(selectedOccurrence));
         final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDao.hasInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.isSeriesInvitation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDao.declineSeriesInvite(100L, u)).thenReturn(2);
+        Mockito.when(matchParticipantDataService.hasInvitation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.isSeriesInvitation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.declineSeriesInvite(100L, u)).thenReturn(2);
 
         // Exercise
         matchParticipationService.declineInvite(10L, u);
@@ -834,11 +843,11 @@ public class MatchParticipationServiceImplTest {
                 .thenReturn(List.of(selectedOccurrence, secondOccurrence));
         final User u = UserUtils.getUser(20L);
         Mockito.when(
-                        matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                        matchParticipantDataService.findActiveFutureReservationMatchIdsForSeries(
                                 100L, u, FIXED_NOW))
                 .thenReturn(List.of());
         Mockito.when(
-                        matchParticipantDao.findPendingFutureRequestMatchIdsForSeries(
+                        matchParticipantDataService.findPendingFutureRequestMatchIdsForSeries(
                                 100L, u, FIXED_NOW))
                 .thenReturn(List.of(10L, 11L));
 
@@ -904,8 +913,8 @@ public class MatchParticipationServiceImplTest {
 
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(match));
         final User u = UserUtils.getUser(2L);
-        Mockito.when(matchParticipantDao.hasActiveReservation(10L, u)).thenReturn(false);
-        Mockito.when(matchParticipantDao.hasPendingRequest(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
+        Mockito.when(matchParticipantDataService.hasPendingRequest(10L, u)).thenReturn(false);
 
         final MatchParticipationException ex =
                 Assertions.assertThrows(
