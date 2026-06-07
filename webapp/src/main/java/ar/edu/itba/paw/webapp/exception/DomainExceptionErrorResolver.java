@@ -19,6 +19,12 @@ public class DomainExceptionErrorResolver {
             case ModerationInvalidBanDurationException ignored -> "invalid_ban_duration";
             case ModerationTargetNotFoundException ignored -> "target_not_found";
             case ModerationReportErrorException ignored -> "report_error";
+            case ModerationDuplicateReportException ignored -> "duplicate_report";
+            case ModerationReportLimitException ignored -> "report_limit";
+            case ModerationInvalidReportException ignored -> "invalid_report";
+            case ModerationSelfReportException ignored -> "self_report";
+            case ModerationValueTooLongException ignored -> "value_too_long";
+            case ModerationReportFailedException ignored -> "report_failed";
             default -> e.getMessage();
         };
     }
