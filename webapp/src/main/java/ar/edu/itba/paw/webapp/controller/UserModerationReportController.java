@@ -4,17 +4,20 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -36,32 +39,23 @@ public class UserModerationReportController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
-    @org.springframework.beans.factory.annotation.Autowired
-    public UserModerationReportController(
-            final ModerationService moderationService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
-        this.moderationService = moderationService;
-        this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
+    @Autowired
     public UserModerationReportController(
             final ModerationService moderationService, final MessageSource messageSource) {
-        this(moderationService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
+        this.moderationService = moderationService;
+        this.messageSource = messageSource;
     }
 
     @GetMapping
     public ModelAndView showMyReports(
+            @CurrentUser final User user,
             @RequestParam(value = "type", required = false, defaultValue = "")
                     final List<ReportTargetType> typeFilters,
             @RequestParam(value = "status", required = false, defaultValue = "")
                     final List<ReportStatus> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
-        final User user = SecurityControllerUtils.currentUserOrNull();
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
                         user, typeFilters, statusFilters, page, PAGE_SIZE);
@@ -116,13 +110,19 @@ public class UserModerationReportController {
 
     @GetMapping("/{reportId:\\d+}")
     public ModelAndView showMyReportDetail(
-            @PathVariable("reportId") final Long reportId, final Model model, final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+            @AuthenticatedUser final User user,
+            @PathVariable("reportId") final Long reportId,
+            final Model model,
+            final Locale locale) {
         final ModerationReport report =
                 moderationService
-                        .findReportById(reportId) // TODO: move to service/security.
-                        .filter(found -> found.getReporter().getId().equals(user.getId()))
+                        .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (report.getReporter() == null || !report.getReporter().getId().equals(user.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND); // TODO: shouldn't it be 403 instead?
+        }
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
         mav.addObject(
@@ -148,14 +148,23 @@ public class UserModerationReportController {
             @RequestParam("appealReason") final String appealReason,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
+        String exceptionReason;
+
         try {
             moderationService.appealReport(reportId, appealReason);
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
-        } catch (final ModerationException exception) {
-            return new ModelAndView(
-                    "redirect:/reports/mine/" + reportId + "?error=" + exception.getCode());
+        } catch (
+                final ModerationReportNotFoundException
+                        exception) { // TODO: move message code to service (?) and catch generic
+            // exception here
+            exceptionReason = "report_not_found";
+        } catch (final ModerationAppealLimitException exception) {
+            exceptionReason = "appeal_limit";
+        } catch (final ModerationAppealRejectedException exception) {
+            exceptionReason = "appeal_rejected";
         }
+        return new ModelAndView("redirect:/reports/mine/" + reportId + "?error=" + exceptionReason);
     }
 
     private UserReportViewModel toViewModel(final ModerationReport report, final Locale locale) {
@@ -171,16 +180,11 @@ public class UserModerationReportController {
                 report.getAppealReason(),
                 report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
                 report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(report.getUpdatedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getReviewedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getAppealedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getAppealResolvedAt(),
-                        locale,
-                        platformTimeZoneService.defaultZone()));
+                formatInstant(report.getCreatedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getUpdatedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getReviewedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getAppealedAt(), locale, PlatformTime.ZONE),
+                formatInstant(report.getAppealResolvedAt(), locale, PlatformTime.ZONE));
     }
 
     public static final class UserReportViewModel {

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
@@ -8,28 +9,26 @@ import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
+import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,10 +40,9 @@ public class TournamentServiceImplTest {
 
     @Mock private TournamentDataService tournamentDataService;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
-    @Mock private TournamentTeamDao tournamentTeamDao;
+    @Mock private TournamentTeamDataService tournamentTeamDataService;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
-    @Mock private MessageSource messageSource;
 
     private TournamentServiceImpl tournamentService;
 
@@ -55,16 +53,7 @@ public class TournamentServiceImplTest {
                         tournamentDataService,
                         tournamentMailService,
                         imageService,
-                        messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
-        Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.isNull(),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
         SecurityContextHolder.clearContext();
     }
 
@@ -88,8 +77,9 @@ public class TournamentServiceImplTest {
                                 request.getAddress(),
                                 request.getLatitude(),
                                 request.getLongitude(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
+                                PlatformTime.toInstant(
+                                        request.getStartDate(), request.getStartTime()),
+                                PlatformTime.toInstant(request.getEndDate(), request.getEndTime()),
                                 request.getPricePerPlayer(),
                                 null,
                                 request.getFormat(),
@@ -97,8 +87,12 @@ public class TournamentServiceImplTest {
                                 request.getTeamSize(),
                                 request.isAllowSoloSignup(),
                                 request.isAllowTeamDraft(),
-                                request.getRegistrationOpensAt(),
-                                request.getRegistrationClosesAt(),
+                                PlatformTime.toInstant(
+                                        request.getRegistrationOpensDate(),
+                                        request.getRegistrationOpensTime()),
+                                PlatformTime.toInstant(
+                                        request.getRegistrationClosesDate(),
+                                        request.getRegistrationClosesTime()),
                                 TournamentStatus.REGISTRATION))
                 .thenReturn(tournament);
 
@@ -117,15 +111,10 @@ public class TournamentServiceImplTest {
                 createRequest(
                         5, 1, true, false, futureRegistrationOpen(), futureRegistrationClose());
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_BRACKET_SIZE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidBracketSizeException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -135,15 +124,10 @@ public class TournamentServiceImplTest {
                 createRequest(
                         4, 0, true, false, futureRegistrationOpen(), futureRegistrationClose());
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_TEAM_SIZE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidTeamSizeException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -158,16 +142,10 @@ public class TournamentServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         FIXED_NOW.plusSeconds(3600));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidRegistrationWindowException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -182,16 +160,71 @@ public class TournamentServiceImplTest {
                         FIXED_NOW.minusSeconds(7200),
                         FIXED_NOW.minusSeconds(3600));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidRegistrationWindowException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+    }
 
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                exception.getReason());
+    @Test
+    public void createFailsWithMissingSchedule() {
+        // 1. Arrange
+        final CreateTournamentRequest request =
+                createRequest(
+                        4,
+                        1,
+                        true,
+                        false,
+                        futureRegistrationOpen(),
+                        futureRegistrationClose(),
+                        null,
+                        null);
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+    }
+
+    @Test
+    public void createFailsWithStartBeforeRegistrationClose() {
+        // 1. Arrange
+        final CreateTournamentRequest request =
+                createRequest(
+                        4,
+                        1,
+                        true,
+                        false,
+                        futureRegistrationOpen(),
+                        futureRegistrationClose(),
+                        futureRegistrationClose(),
+                        futureRegistrationClose().plusSeconds(3600));
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+    }
+
+    @Test
+    public void createFailsWithEndBeforeStart() {
+        // 1. Arrange
+        final Instant startsAt = FIXED_NOW.plusSeconds(86400);
+        final CreateTournamentRequest request =
+                createRequest(
+                        4,
+                        1,
+                        true,
+                        false,
+                        futureRegistrationOpen(),
+                        futureRegistrationClose(),
+                        startsAt,
+                        startsAt);
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -205,16 +238,10 @@ public class TournamentServiceImplTest {
                                         UserUtils.getUser(1L),
                                         TournamentStatus.REGISTRATION)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () ->
-                                tournamentService.update(
-                                        10L, UserUtils.getUser(2L), validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentLifecycleFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleForbiddenException.class,
+                () -> tournamentService.update(10L, UserUtils.getUser(2L), validUpdateRequest()));
     }
 
     @Test
@@ -233,12 +260,19 @@ public class TournamentServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(request.getTitle(), result.getTitle());
         Assertions.assertEquals(request.getAddress(), result.getAddress());
-        Assertions.assertEquals(request.getStartsAt(), result.getStartsAt());
+        Assertions.assertEquals(
+                PlatformTime.toInstant(request.getStartDate(), request.getStartTime()),
+                result.getStartsAt());
         Assertions.assertEquals(request.getBracketSize(), result.getBracketSize());
         Assertions.assertEquals(request.getTeamSize(), result.getTeamSize());
-        Assertions.assertEquals(request.getRegistrationOpensAt(), result.getRegistrationOpensAt());
         Assertions.assertEquals(
-                request.getRegistrationClosesAt(), result.getRegistrationClosesAt());
+                PlatformTime.toInstant(
+                        request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                result.getRegistrationOpensAt());
+        Assertions.assertEquals(
+                PlatformTime.toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()),
+                result.getRegistrationClosesAt());
         Assertions.assertEquals(FIXED_NOW, result.getUpdatedAt());
     }
 
@@ -262,21 +296,62 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void updateFailsWithMissingSchedule() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        Mockito.when(tournamentDataService.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.update(10L, host, updateRequest(null, null)));
+    }
+
+    @Test
+    public void updateFailsWithStartBeforeRegistrationClose() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        Mockito.when(tournamentDataService.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () ->
+                        tournamentService.update(
+                                10L,
+                                host,
+                                updateRequest(
+                                        futureRegistrationClose(),
+                                        futureRegistrationClose().plusSeconds(3600))));
+    }
+
+    @Test
+    public void updateFailsWithEndBeforeStart() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Instant startsAt = FIXED_NOW.plusSeconds(86400);
+        Mockito.when(tournamentDataService.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.update(10L, host, updateRequest(startsAt, startsAt)));
+    }
+
+    @Test
     public void updateFailsWhenTournamentIsCompleted() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
         Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.update(10L, host, validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_EDITABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotEditableException.class,
+                () -> tournamentService.update(10L, host, validUpdateRequest()));
     }
 
     @Test
@@ -286,15 +361,10 @@ public class TournamentServiceImplTest {
         Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.BRACKET_SETUP)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.update(10L, host, validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_EDITABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotEditableException.class,
+                () -> tournamentService.update(10L, host, validUpdateRequest()));
     }
 
     @Test
@@ -304,15 +374,10 @@ public class TournamentServiceImplTest {
         Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.cancel(10L, host, "No longer available"));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_CANCELLABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotCancellableException.class,
+                () -> tournamentService.cancel(10L, host, "No longer available"));
     }
 
     @Test
@@ -342,8 +407,13 @@ public class TournamentServiceImplTest {
                         tournamentDataService.countPublicTournaments(
                                 "cup",
                                 List.of(Sport.PADEL),
-                                Instant.parse("2026-04-06T00:00:00Z"),
-                                Instant.parse("2026-04-10T00:00:00Z"),
+                                LocalDate.parse("2026-04-06")
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
+                                LocalDate.parse("2026-04-10")
+                                        .plusDays(1)
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
                                 BigDecimal.ZERO,
                                 BigDecimal.TEN))
                 .thenReturn(25);
@@ -351,8 +421,13 @@ public class TournamentServiceImplTest {
                         tournamentDataService.findPublicTournaments(
                                 "cup",
                                 List.of(Sport.PADEL),
-                                Instant.parse("2026-04-06T00:00:00Z"),
-                                Instant.parse("2026-04-10T00:00:00Z"),
+                                LocalDate.parse("2026-04-06")
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
+                                LocalDate.parse("2026-04-10")
+                                        .plusDays(1)
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
                                 BigDecimal.ZERO,
                                 BigDecimal.TEN,
                                 EventSort.SOONEST,
@@ -367,12 +442,11 @@ public class TournamentServiceImplTest {
                 tournamentService.searchPublicTournaments(
                         "cup",
                         List.of(Sport.PADEL),
-                        Instant.parse("2026-04-06T00:00:00Z"),
-                        Instant.parse("2026-04-10T00:00:00Z"),
+                        LocalDate.parse("2026-04-06"),
+                        LocalDate.parse("2026-04-10"),
                         EventSort.SOONEST,
                         9,
                         10,
-                        ZoneId.of("UTC"),
                         BigDecimal.ZERO,
                         BigDecimal.TEN,
                         null,
@@ -419,7 +493,6 @@ public class TournamentServiceImplTest {
                         EventSort.DISTANCE,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         -34.60,
@@ -480,7 +553,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -542,7 +614,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -595,7 +666,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -618,6 +688,26 @@ public class TournamentServiceImplTest {
             final boolean allowTeamDraft,
             final Instant registrationOpensAt,
             final Instant registrationClosesAt) {
+        return createRequest(
+                bracketSize,
+                teamSize,
+                allowSoloSignup,
+                allowTeamDraft,
+                registrationOpensAt,
+                registrationClosesAt,
+                FIXED_NOW.plusSeconds(86400),
+                FIXED_NOW.plusSeconds(90000));
+    }
+
+    private static CreateTournamentRequest createRequest(
+            final int bracketSize,
+            final int teamSize,
+            final boolean allowSoloSignup,
+            final boolean allowTeamDraft,
+            final Instant registrationOpensAt,
+            final Instant registrationClosesAt,
+            final Instant startsAt,
+            final Instant endsAt) {
         return new CreateTournamentRequest(
                 Sport.FOOTBALL,
                 "Saturday Cup",
@@ -625,8 +715,10 @@ public class TournamentServiceImplTest {
                 "Club Street 123",
                 -34.60,
                 -58.38,
-                FIXED_NOW.plusSeconds(86400),
-                FIXED_NOW.plusSeconds(90000),
+                dateOf(startsAt),
+                timeOf(startsAt),
+                dateOf(endsAt),
+                timeOf(endsAt),
                 BigDecimal.ZERO,
                 null,
                 TournamentFormat.SINGLE_ELIMINATION,
@@ -634,11 +726,26 @@ public class TournamentServiceImplTest {
                 teamSize,
                 allowSoloSignup,
                 allowTeamDraft,
-                registrationOpensAt,
-                registrationClosesAt);
+                dateOf(registrationOpensAt),
+                timeOf(registrationOpensAt),
+                dateOf(registrationClosesAt),
+                timeOf(registrationClosesAt));
+    }
+
+    private static LocalDate dateOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalDate();
+    }
+
+    private static LocalTime timeOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalTime();
     }
 
     private static UpdateTournamentRequest validUpdateRequest() {
+        return updateRequest(FIXED_NOW.plusSeconds(172800), FIXED_NOW.plusSeconds(176400));
+    }
+
+    private static UpdateTournamentRequest updateRequest(
+            final Instant startsAt, final Instant endsAt) {
         return new UpdateTournamentRequest(
                 Sport.PADEL,
                 "Updated Cup",
@@ -646,14 +753,18 @@ public class TournamentServiceImplTest {
                 "Updated Street 456",
                 -34.61,
                 -58.39,
-                FIXED_NOW.plusSeconds(172800),
-                FIXED_NOW.plusSeconds(176400),
+                dateOf(startsAt),
+                timeOf(startsAt),
+                dateOf(endsAt),
+                timeOf(endsAt),
                 BigDecimal.TEN,
                 null,
                 8,
                 2,
-                FIXED_NOW.plusSeconds(3600),
-                FIXED_NOW.plusSeconds(7200));
+                dateOf(FIXED_NOW.plusSeconds(3600)),
+                timeOf(FIXED_NOW.plusSeconds(3600)),
+                dateOf(FIXED_NOW.plusSeconds(7200)),
+                timeOf(FIXED_NOW.plusSeconds(7200)));
     }
 
     private static Tournament tournament(

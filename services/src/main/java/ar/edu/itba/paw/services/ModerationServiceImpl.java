@@ -8,13 +8,14 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.AppealDecision;
+import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.*;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
@@ -51,7 +52,7 @@ public class ModerationServiceImpl implements ModerationService {
     private final MatchParticipantDataService matchParticipantDataService;
     private final PlayerReviewDataService playerReviewDataService;
     private final MailDispatchService mailDispatchService;
-    private final MatchService matchService;
+    private final MatchNotificationService matchNotificationService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -64,7 +65,7 @@ public class ModerationServiceImpl implements ModerationService {
             final MatchParticipantDataService matchParticipantDataService,
             final PlayerReviewDataService playerReviewDataService,
             final MailDispatchService mailDispatchService,
-            final MatchService matchService,
+            final MatchNotificationService matchNotificationService,
             final MessageSource messageSource,
             final Clock clock) {
         this.userBanDao = userBanDao;
@@ -74,7 +75,7 @@ public class ModerationServiceImpl implements ModerationService {
         this.matchParticipantDataService = matchParticipantDataService;
         this.playerReviewDataService = playerReviewDataService;
         this.mailDispatchService = mailDispatchService;
-        this.matchService = matchService;
+        this.matchNotificationService = matchNotificationService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -103,12 +104,12 @@ public class ModerationServiceImpl implements ModerationService {
 
         if (ReportTargetType.USER.equals(targetType) && targetId.equals(reporter.getId())) {
             LOGGER.warn("Self report attempt by userId={}", reporter.getId());
-            throw new ModerationException("self_report", "Cannot report yourself.");
+            throw new ModerationSelfReportException("Cannot report yourself.");
         }
 
         if (moderationReportDao.countActiveReportsByReporter(reporter) >= MAX_ACTIVE_REPORTS) {
             LOGGER.warn("Report limit reached for userId={}", reporter.getId());
-            throw new ModerationException("report_limit", "Report limit reached.");
+            throw new ModerationReportLimitException("Report limit reached.");
         }
 
         if (moderationReportDao.existsReportForTarget(reporter, targetType, targetId)) {
@@ -117,7 +118,7 @@ public class ModerationServiceImpl implements ModerationService {
                     reporter.getId(),
                     targetType,
                     targetId);
-            throw new ModerationException("duplicate_report", "Report already exists.");
+            throw new ModerationDuplicateReportException("Report already exists.");
         }
 
         try {
@@ -137,7 +138,7 @@ public class ModerationServiceImpl implements ModerationService {
                     reporter.getId(),
                     targetType,
                     targetId);
-            throw new ModerationException("duplicate_report", "Report already exists.");
+            throw new ModerationDuplicateReportException("Report already exists.");
         } catch (DataIntegrityViolationException e) {
             LOGGER.error(
                     "Data integrity violation creating report by userId={} targetType={} targetId={}",
@@ -145,7 +146,7 @@ public class ModerationServiceImpl implements ModerationService {
                     targetType,
                     targetId,
                     e);
-            throw new ModerationException("invalid_report", "Invalid report data.");
+            throw new ModerationInvalidReportException("Invalid report data.");
         } catch (DataAccessException e) {
             LOGGER.error(
                     "DB error creating report by userId={} targetType={} targetId={}",
@@ -153,7 +154,7 @@ public class ModerationServiceImpl implements ModerationService {
                     targetType,
                     targetId,
                     e);
-            throw new ModerationException("report_failed", "Failed to create report.");
+            throw new ModerationReportFailedException("Failed to create report.");
         } catch (ModerationException e) {
             throw e;
         } catch (Exception e) {
@@ -163,7 +164,7 @@ public class ModerationServiceImpl implements ModerationService {
                     targetType,
                     targetId,
                     e);
-            throw new ModerationException("report_error", "An unexpected error occurred.");
+            throw new ModerationReportErrorException("An unexpected error occurred.");
         }
     }
 
@@ -202,7 +203,7 @@ public class ModerationServiceImpl implements ModerationService {
     public ModerationReport markReportUnderReview(final Long reportId, final User adminUser) {
         nonNullUser(adminUser);
         if (!moderationReportDao.markUnderReview(reportId, adminUser, Instant.now(clock))) {
-            throw new ModerationException("report_not_found", "Report not found.");
+            throw new ModerationReportNotFoundException("Report not found.");
         }
         return moderationReportDao.findById(reportId).orElseThrow();
     }
@@ -218,15 +219,13 @@ public class ModerationServiceImpl implements ModerationService {
             final int banDurationDays) {
         nonNullUser(adminUser);
         if (resolution == ReportResolution.USER_BANNED && banDurationDays <= 0) {
-            throw new ModerationException("invalid_ban_duration", "Ban duration must be positive.");
+            throw new ModerationInvalidBanDurationException("Ban duration must be positive.");
         }
         final ModerationReport report =
                 moderationReportDao
                         .findById(reportId)
                         .orElseThrow(
-                                () ->
-                                        new ModerationException(
-                                                "report_not_found", "Report not found."));
+                                () -> new ModerationReportNotFoundException("Report not found."));
         applyResolutionEffect(
                 report,
                 adminUser,
@@ -241,7 +240,7 @@ public class ModerationServiceImpl implements ModerationService {
                 normalizeText(resolutionDetails, 4000),
                 Instant.now(clock),
                 nextStatus)) {
-            throw new ModerationException("report_not_found", "Report not found.");
+            throw new ModerationReportNotFoundException("Report not found.");
         }
         return moderationReportDao.findById(reportId).orElseThrow();
     }
@@ -253,15 +252,13 @@ public class ModerationServiceImpl implements ModerationService {
                 moderationReportDao
                         .findById(reportId)
                         .orElseThrow(
-                                () ->
-                                        new ModerationException(
-                                                "report_not_found", "Report not found."));
+                                () -> new ModerationReportNotFoundException("Report not found."));
         if (report.getAppealCount() >= 1) {
-            throw new ModerationException("appeal_limit", "Report appeal limit reached.");
+            throw new ModerationAppealLimitException("Report appeal limit reached.");
         }
         if (!moderationReportDao.appealReport(
                 reportId, normalizeText(appealReason, 4000), Instant.now(clock))) {
-            throw new ModerationException("appeal_rejected", "Report appeal could not be stored.");
+            throw new ModerationAppealRejectedException("Report appeal could not be stored.");
         }
         return moderationReportDao.findById(reportId).orElseThrow();
     }
@@ -275,9 +272,7 @@ public class ModerationServiceImpl implements ModerationService {
                 moderationReportDao
                         .findById(reportId)
                         .orElseThrow(
-                                () ->
-                                        new ModerationException(
-                                                "report_not_found", "Report not found."));
+                                () -> new ModerationReportNotFoundException("Report not found."));
 
         if (appealDecision == AppealDecision.LIFTED) {
             upliftReportDecision(report);
@@ -285,8 +280,7 @@ public class ModerationServiceImpl implements ModerationService {
 
         if (!moderationReportDao.finalizeAppeal(
                 reportId, adminUser, appealDecision, Instant.now(clock))) {
-            throw new ModerationException(
-                    "appeal_finalization_failed", "Appeal could not be finalized.");
+            throw new ModerationAppealRejectedException("Appeal could not be finalized.");
         }
         return moderationReportDao.findById(reportId).orElseThrow();
     }
@@ -324,61 +318,20 @@ public class ModerationServiceImpl implements ModerationService {
             final Long targetId,
             final ReportReason reason) {
         if (reporter == null || targetType == null || targetId == null || reason == null) {
-            throw new ModerationException("invalid_report", "Report is incomplete.");
+            throw new ModerationReportErrorException("Report is incomplete.");
         }
     }
 
     private void cancelFutureContentForUser(final User user) {
-        final List<Long> participantMatchIds =
-                matchService
-                        .findDashboardMatches(
-                                user,
-                                true,
-                                true,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                1,
-                                DEFAULT_REPORT_PAGE_SIZE)
-                        .getItems()
-                        .stream()
-                        .map(Match::getId)
-                        .toList();
-        for (final Long matchId : participantMatchIds) {
-            matchParticipantDataService.removeParticipant(matchId, user);
+        final Instant now = Instant.now(clock);
+        final List<Match> matchesToCancel = matchDataService.findFutureHostedMatches(user, now);
+        matchParticipantDataService.cancelFutureReservations(user, now);
+        if (matchDataService.cancelFutureHostedMatches(user, now) <= 0) {
+            return;
         }
-
-        final List<Long> hostedMatchIds =
-                matchService
-                        .findDashboardMatches(
-                                user,
-                                true,
-                                true,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                1,
-                                DEFAULT_REPORT_PAGE_SIZE)
-                        .getItems()
-                        .stream()
-                        .map(Match::getId)
-                        .toList();
-        for (final Long matchId : hostedMatchIds) {
-            matchService.cancelMatch(matchId, user);
+        for (final Match matchToCancel : matchesToCancel) {
+            matchToCancel.setStatus(EventStatus.CANCELLED);
+            matchNotificationService.notifyMatchCancelled(matchToCancel);
         }
     }
 
@@ -470,7 +423,7 @@ public class ModerationServiceImpl implements ModerationService {
         }
 
         if (normalized.length() > maxLength) {
-            throw new ModerationException("value_too_long", "Value is too long.");
+            throw new ModerationValueTooLongException("Value is too long.");
         }
 
         return normalized;
@@ -500,16 +453,14 @@ public class ModerationServiceImpl implements ModerationService {
                     userDataService
                             .findById(report.getTargetId())
                             .orElseThrow(
-                                    () ->
-                                            new ModerationException(
-                                                    "user_not_found", "User not found."));
+                                    () -> new ModerationReportNotFoundException("User not found."));
             banUser(report, bannedUntil, user, resolutionDetails);
         }
     }
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new ModerationException("invalid_report", "Reporter user is required.");
+            throw new ModerationReportErrorException("Reporter user is required.");
         }
     }
 
@@ -535,7 +486,7 @@ public class ModerationServiceImpl implements ModerationService {
             return;
         }
         if (sourceReportId != null) {
-            throw new ModerationException("invalid_report", "Invalid content report target.");
+            throw new ModerationReportErrorException("Invalid content report target.");
         }
     }
 
@@ -551,9 +502,7 @@ public class ModerationServiceImpl implements ModerationService {
                     userDataService
                             .findById(report.getTargetId())
                             .orElseThrow(
-                                    () ->
-                                            new ModerationException(
-                                                    "user_not_found", "User not found."));
+                                    () -> new ModerationTargetNotFoundException("User not found."));
             final Optional<UserBan> ban = userBanDao.findActiveBanForUser(user, Instant.now(clock));
             ban.ifPresent(found -> userBanDao.upliftBan(found.getId()));
             sendUnbanEmail(user);
@@ -565,7 +514,7 @@ public class ModerationServiceImpl implements ModerationService {
                 return;
             }
             if (!match.get().isDeleted()) {
-                throw new ModerationException("invalid_report", "Invalid match report target.");
+                throw new ModerationReportErrorException("Invalid match report target.");
             }
             matchDataService.restoreMatch(match.get().getId());
             return;

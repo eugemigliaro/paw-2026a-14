@@ -17,9 +17,10 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
-import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
@@ -67,6 +68,7 @@ class PublicProfileControllerTest {
                                         userSportRatingService,
                                         messageSource))
                         .setConversionService(conversionService())
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
 
@@ -162,9 +164,7 @@ class PublicProfileControllerTest {
         AuthenticationUtils.authenticateUser(1L);
         final User user = UserUtils.getUser(42L);
         Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
-        Mockito.doThrow(
-                        new PlayerReviewException(
-                                PlayerReviewException.NOT_FOUND, "Player review not found."))
+        Mockito.doThrow(new PlayerReviewNotFoundException("Player review not found."))
                 .when(playerReviewService)
                 .deleteReview(Mockito.any(), Mockito.eq(user));
 

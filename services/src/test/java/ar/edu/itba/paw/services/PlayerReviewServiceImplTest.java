@@ -6,7 +6,7 @@ import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
-import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import ar.edu.itba.paw.services.exceptions.playerReview.*;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Instant;
@@ -88,17 +88,14 @@ public class PlayerReviewServiceImplTest {
 
     @Test
     public void testSubmitReviewRejectsSelfReview() {
-        final PlayerReviewException exception =
-                Assertions.assertThrows(
-                        PlayerReviewException.class,
-                        () ->
-                                playerReviewService.submitReview(
-                                        UserUtils.getUser(2L),
-                                        UserUtils.getUser(2L),
-                                        PlayerReviewReaction.LIKE,
-                                        "Great"));
-
-        Assertions.assertEquals(PlayerReviewException.SELF_REVIEW, exception.getCode());
+        Assertions.assertThrows(
+                PlayerReviewSelfReviewException.class,
+                () ->
+                        playerReviewService.submitReview(
+                                UserUtils.getUser(2L),
+                                UserUtils.getUser(2L),
+                                PlayerReviewReaction.LIKE,
+                                "Great"));
     }
 
     @Test
@@ -108,32 +105,23 @@ public class PlayerReviewServiceImplTest {
                                 UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenReturn(false);
 
-        final PlayerReviewException exception =
-                Assertions.assertThrows(
-                        PlayerReviewException.class,
-                        () ->
-                                playerReviewService.submitReview(
-                                        UserUtils.getUser(2L),
-                                        UserUtils.getUser(3L),
-                                        PlayerReviewReaction.LIKE,
-                                        "Great"));
-
-        Assertions.assertEquals(PlayerReviewException.NOT_ELIGIBLE, exception.getCode());
+        Assertions.assertThrows(
+                PlayerReviewNotEligibleException.class,
+                () ->
+                        playerReviewService.submitReview(
+                                UserUtils.getUser(2L),
+                                UserUtils.getUser(3L),
+                                PlayerReviewReaction.LIKE,
+                                "Great"));
     }
 
     @Test
     public void testSubmitReviewRejectsMissingReaction() {
-        final PlayerReviewException exception =
-                Assertions.assertThrows(
-                        PlayerReviewException.class,
-                        () ->
-                                playerReviewService.submitReview(
-                                        UserUtils.getUser(2L),
-                                        UserUtils.getUser(3L),
-                                        null,
-                                        "Great"));
-
-        Assertions.assertEquals(PlayerReviewException.INVALID_REACTION, exception.getCode());
+        Assertions.assertThrows(
+                PlayerReviewInvalidReactionException.class,
+                () ->
+                        playerReviewService.submitReview(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L), null, "Great"));
     }
 
     @Test
@@ -169,25 +157,21 @@ public class PlayerReviewServiceImplTest {
                 .thenReturn(true);
         final String tooLongComment = "a".repeat(PlayerReviewService.MAX_COMMENT_LENGTH + 1);
 
-        final PlayerReviewException exception =
-                Assertions.assertThrows(
-                        PlayerReviewException.class,
-                        () ->
-                                playerReviewService.submitReview(
-                                        UserUtils.getUser(2L),
-                                        UserUtils.getUser(3L),
-                                        PlayerReviewReaction.LIKE,
-                                        tooLongComment));
-
-        Assertions.assertEquals(PlayerReviewException.COMMENT_TOO_LONG, exception.getCode());
+        Assertions.assertThrows(
+                PlayerReviewCommentTooLongException.class,
+                () ->
+                        playerReviewService.submitReview(
+                                UserUtils.getUser(2L),
+                                UserUtils.getUser(3L),
+                                PlayerReviewReaction.LIKE,
+                                tooLongComment));
     }
 
     @Test
     public void testDeleteReviewRemovesExistingReviewFromLookup() {
         final PlayerReview persisted =
                 review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great teammate", null);
-        playerReviewService =
-                new PlayerReviewServiceImpl(new StatefulPlayerReviewDataService(persisted));
+        playerReviewService = new PlayerReviewServiceImpl(new StatefulPlayerReviewDao(persisted));
 
         playerReviewService.deleteReview(UserUtils.getUser(2L), UserUtils.getUser(3L));
 
@@ -204,14 +188,11 @@ public class PlayerReviewServiceImplTest {
                                 UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenReturn(false);
 
-        final PlayerReviewException exception =
-                Assertions.assertThrows(
-                        PlayerReviewException.class,
-                        () ->
-                                playerReviewService.deleteReview(
-                                        UserUtils.getUser(2L), UserUtils.getUser(3L)));
-
-        Assertions.assertEquals(PlayerReviewException.NOT_FOUND, exception.getCode());
+        Assertions.assertThrows(
+                PlayerReviewNotFoundException.class,
+                () ->
+                        playerReviewService.deleteReview(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L)));
     }
 
     @Test
@@ -341,11 +322,11 @@ public class PlayerReviewServiceImplTest {
                 null);
     }
 
-    private static class StatefulPlayerReviewDataService implements PlayerReviewDataService {
+    private static class StatefulPlayerReviewDao implements PlayerReviewDataService {
 
         private final PlayerReview review;
 
-        private StatefulPlayerReviewDataService(final PlayerReview review) {
+        private StatefulPlayerReviewDao(final PlayerReview review) {
             this.review = review;
         }
 

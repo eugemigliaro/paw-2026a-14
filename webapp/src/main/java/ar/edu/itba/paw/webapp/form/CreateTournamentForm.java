@@ -22,6 +22,8 @@ public class CreateTournamentForm {
         final LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
         registrationOpensDate = now.toLocalDate();
         registrationOpensTime = now.toLocalTime();
+        startDate = registrationClosesDate.plusDays(1);
+        endDate = startDate;
     }
 
     @NotBlank(message = "{CreateTournamentForm.title.NotBlank}")
@@ -58,6 +60,22 @@ public class CreateTournamentForm {
     @DateTimeFormat(pattern = "HH:mm")
     private LocalTime registrationClosesTime = LocalTime.of(20, 0);
 
+    @NotNull(message = "{CreateTournamentForm.startDate.NotNull}")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate startDate;
+
+    @NotNull(message = "{CreateTournamentForm.startTime.NotNull}")
+    @DateTimeFormat(pattern = "HH:mm")
+    private LocalTime startTime = LocalTime.of(18, 0);
+
+    @NotNull(message = "{CreateTournamentForm.endDate.NotNull}")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate endDate = startDate;
+
+    @NotNull(message = "{CreateTournamentForm.endTime.NotNull}")
+    @DateTimeFormat(pattern = "HH:mm")
+    private LocalTime endTime = LocalTime.of(21, 0);
+
     @NotNull(message = "{CreateTournamentForm.bracketSize.NotNull}")
     private Integer bracketSize = 8;
 
@@ -78,8 +96,6 @@ public class CreateTournamentForm {
     private boolean allowTeamDraft = true;
 
     private MultipartFile bannerImage;
-
-    private String tz = "";
 
     public String getTitle() {
         return title;
@@ -161,6 +177,38 @@ public class CreateTournamentForm {
         this.registrationClosesTime = registrationClosesTime;
     }
 
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(final LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(final LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(final LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(final LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
     public Integer getBracketSize() {
         return bracketSize;
     }
@@ -207,13 +255,5 @@ public class CreateTournamentForm {
 
     public void setBannerImage(final MultipartFile bannerImage) {
         this.bannerImage = bannerImage;
-    }
-
-    public String getTz() {
-        return tz;
-    }
-
-    public void setTz(final String tz) {
-        this.tz = tz;
     }
 }

@@ -1,26 +1,33 @@
 package ar.edu.itba.paw.services;
 
-import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 public class TournamentMatchScheduleRequest {
 
     private final long matchId;
-    private final Instant startsAt;
-    private final Instant endsAt;
+    private final LocalDate startDate;
+    private final LocalTime startTime;
+    private final LocalDate endDate;
+    private final LocalTime endTime;
     private final String address;
     private final Double latitude;
     private final Double longitude;
 
     public TournamentMatchScheduleRequest(
             final long matchId,
-            final Instant startsAt,
-            final Instant endsAt,
+            final LocalDate startDate,
+            final LocalTime startTime,
+            final LocalDate endDate,
+            final LocalTime endTime,
             final String address,
             final Double latitude,
             final Double longitude) {
         this.matchId = matchId;
-        this.startsAt = startsAt;
-        this.endsAt = endsAt;
+        this.startDate = startDate;
+        this.startTime = startTime;
+        this.endDate = endDate;
+        this.endTime = endTime;
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -30,12 +37,20 @@ public class TournamentMatchScheduleRequest {
         return matchId;
     }
 
-    public Instant getStartsAt() {
-        return startsAt;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public Instant getEndsAt() {
-        return endsAt;
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
     }
 
     public String getAddress() {

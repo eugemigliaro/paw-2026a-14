@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
@@ -14,8 +15,8 @@ import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.services.exceptions.MatchCancellationException;
-import ar.edu.itba.paw.services.exceptions.MatchUpdateException;
+import ar.edu.itba.paw.services.exceptions.matchCancelation.*;
+import ar.edu.itba.paw.services.exceptions.matchUpdate.*;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import java.math.BigDecimal;
@@ -24,7 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -82,8 +83,8 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public Match createMatch(final CreateMatchRequest request) {
         validateScheduleOrThrow(
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 new IllegalArgumentException(message("match.schedule.error.startsAtPast")),
                 new IllegalArgumentException(message("match.schedule.error.endBeforeStart")));
         validateCreateCapacityOrThrow(request.getMaxPlayers());
@@ -104,9 +105,9 @@ public class MatchServiceImpl implements MatchService {
                 matchDataService.createMatchSeries(
                         request.getHost(),
                         recurrence.getFrequency(),
-                        request.getStartsAt(),
-                        request.getEndsAt(),
-                        resolveZone(recurrence.getZoneId()).getId(),
+                        toInstant(request.getStartDate(), request.getStartTime()),
+                        toInstant(request.getEndDate(), request.getEndTime()),
+                        PlatformTime.ZONE.getId(),
                         recurrence.getEndMode() == RecurrenceEndMode.UNTIL_DATE
                                 ? recurrence.getUntilDate()
                                 : null,
@@ -119,9 +120,9 @@ public class MatchServiceImpl implements MatchService {
                         seriesId,
                         request.getHost(),
                         recurrence.getFrequency(),
-                        request.getStartsAt(),
-                        request.getEndsAt(),
-                        resolveZone(recurrence.getZoneId()).getId(),
+                        toInstant(request.getStartDate(), request.getStartTime()),
+                        toInstant(request.getEndDate(), request.getEndTime()),
+                        PlatformTime.ZONE.getId(),
                         recurrence.getEndMode() == RecurrenceEndMode.UNTIL_DATE
                                 ? recurrence.getUntilDate()
                                 : null,
@@ -187,8 +188,8 @@ public class MatchServiceImpl implements MatchService {
                 request.getAddress(),
                 request.getTitle(),
                 request.getDescription(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 request.getMaxPlayers(),
                 request.getPricePerPlayer(),
                 request.getSport(),
@@ -230,6 +231,8 @@ public class MatchServiceImpl implements MatchService {
             final Long matchId,
             final User actingUser,
             final UpdateMatchRequest request,
+            final Instant startsAt,
+            final Instant endsAt,
             final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
@@ -239,8 +242,8 @@ public class MatchServiceImpl implements MatchService {
                 request.getAddress(),
                 request.getTitle(),
                 request.getDescription(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                startsAt,
+                endsAt,
                 request.getMaxPlayers(),
                 request.getPricePerPlayer(),
                 request.getSport(),
@@ -257,6 +260,10 @@ public class MatchServiceImpl implements MatchService {
         return EventVisibility.PRIVATE == visibility ? EventJoinPolicy.INVITE_ONLY : joinPolicy;
     }
 
+    private static Instant toInstant(final LocalDate date, final LocalTime time) {
+        return date == null || time == null ? null : PlatformTime.toInstant(date, time);
+    }
+
     private static boolean hasCoordinates(final Double latitude, final Double longitude) {
         return latitude != null && longitude != null;
     }
@@ -267,22 +274,22 @@ public class MatchServiceImpl implements MatchService {
             final Long matchId, final User actingUser, final UpdateMatchRequest request) {
         final Match match = findEditableMatchForHost(matchId, actingUser);
 
+        final Instant startsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant endsAt = toInstant(request.getEndDate(), request.getEndTime());
+
         validateScheduleOrThrow(
-                request.getStartsAt(),
-                request.getEndsAt(),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                startsAt,
+                endsAt,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.startsAtPast")),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.endBeforeStart")));
         validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final int confirmedParticipants =
                 matchParticipantDataService.findConfirmedParticipants(matchId).size();
         if (request.getMaxPlayers() < confirmedParticipants) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+            throw new MatchUpdateCapacityBelowConfirmedException(
                     message("match.update.error.capacityBelowConfirmed"));
         }
         final ParticipationPolicyTransition participationPolicyTransition =
@@ -303,13 +310,14 @@ public class MatchServiceImpl implements MatchService {
                         matchId,
                         actingUser,
                         request,
+                        startsAt,
+                        endsAt,
                         bannerImageMetadata,
                         joinPolicy,
                         request.getStatus());
 
         if (!updated) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+            throw new MatchUpdateForbiddenException(message("match.update.error.forbidden"));
         }
 
         final Match updatedMatch =
@@ -317,8 +325,7 @@ public class MatchServiceImpl implements MatchService {
                         .findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                        new MatchUpdateNotFoundException(
                                                 message("match.update.error.notFound")));
         applyParticipationPolicyTransition(updatedMatch, participationPolicyTransition);
         matchNotificationService.notifyMatchUpdated(updatedMatch);
@@ -332,8 +339,7 @@ public class MatchServiceImpl implements MatchService {
                         .findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                        new MatchUpdateNotFoundException(
                                                 message("match.update.error.notFound")));
         validateMatchUpdateAccess(match, actingUser);
         return match;
@@ -343,9 +349,7 @@ public class MatchServiceImpl implements MatchService {
     public Match findEditableRecurringMatchForHost(final Long matchId, final User actingUser) {
         final Match match = findEditableMatchForHost(matchId, actingUser);
         if (!match.isRecurringOccurrence()) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_RECURRING,
-                    message("match.update.error.notRecurring"));
+            throw new MatchUpdateNotRecurringException(message("match.update.error.notRecurring"));
         }
         return match;
     }
@@ -365,8 +369,7 @@ public class MatchServiceImpl implements MatchService {
                     matchParticipantDataService.countPendingRequests(match.getId());
             final int availableSpots = request.getMaxPlayers() - confirmedParticipants;
             if (pendingRequests > availableSpots) {
-                throw new MatchUpdateException(
-                        MatchUpdateFailureReason.PENDING_REQUESTS_EXCEED_AVAILABLE,
+                throw new MatchUpdatePendingRequestsExceedAvailableException(
                         message("match.update.error.pendingRequestsExceedAvailable"));
             }
             return ParticipationPolicyTransition.approvePendingRequests(
@@ -471,44 +474,40 @@ public class MatchServiceImpl implements MatchService {
                         .findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchUpdateException(
-                                                MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                        new MatchUpdateNotFoundException(
                                                 message("match.update.error.notFound")));
 
         validateSeriesUpdateAccess(pivot, actingUser);
+
+        final Instant requestStartsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant requestEndsAt = toInstant(request.getEndDate(), request.getEndTime());
+
         validateScheduleOrThrow(
-                request.getStartsAt(),
-                request.getEndsAt(),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                requestStartsAt,
+                requestEndsAt,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.startsAtPast")),
-                new MatchUpdateException(
-                        MatchUpdateFailureReason.INVALID_SCHEDULE,
+                new MatchUpdateInvalidScheduleException(
                         message("match.schedule.error.endBeforeStart")));
         validateUpdateCapacityOrThrow(request.getMaxPlayers());
 
         final List<Match> targets = editableFutureSeriesTargets(pivot);
         if (targets.isEmpty()) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_EDITABLE,
-                    message("match.update.error.notEditable"));
+            throw new MatchUpdateNotEditableException(message("match.update.error.notEditable"));
         }
 
         for (final Match target : targets) {
             final int confirmedParticipants =
                     matchParticipantDataService.findConfirmedParticipants(target.getId()).size();
             if (request.getMaxPlayers() < confirmedParticipants) {
-                throw new MatchUpdateException(
-                        MatchUpdateFailureReason.CAPACITY_BELOW_CONFIRMED,
+                throw new MatchUpdateCapacityBelowConfirmedException(
                         message("match.update.error.capacityBelowConfirmed"));
             }
         }
 
-        final Duration startOffset = Duration.between(pivot.getStartsAt(), request.getStartsAt());
+        final Duration startOffset = Duration.between(pivot.getStartsAt(), requestStartsAt);
         final Duration requestedDuration =
-                request.getEndsAt() == null
-                        ? null
-                        : Duration.between(request.getStartsAt(), request.getEndsAt());
+                requestEndsAt == null ? null : Duration.between(requestStartsAt, requestEndsAt);
         final List<Match> updatedMatches = new ArrayList<>();
 
         ImageMetadata bannerImageMetadata =
@@ -524,41 +523,22 @@ public class MatchServiceImpl implements MatchService {
             validateScheduleOrThrow(
                     targetStartsAt,
                     targetEndsAt,
-                    new MatchUpdateException(
-                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                    new MatchUpdateInvalidScheduleException(
                             message("match.schedule.error.startsAtPast")),
-                    new MatchUpdateException(
-                            MatchUpdateFailureReason.INVALID_SCHEDULE,
+                    new MatchUpdateInvalidScheduleException(
                             message("match.schedule.error.endBeforeStart")));
-            final UpdateMatchRequest targetRequest =
-                    new UpdateMatchRequest(
-                            request.getAddress(),
-                            request.getTitle(),
-                            request.getDescription(),
-                            targetStartsAt,
-                            targetEndsAt,
-                            request.getMaxPlayers(),
-                            request.getPricePerPlayer(),
-                            request.getSport(),
-                            request.getVisibility(),
-                            request.getJoinPolicy(),
-                            target.getStatus(),
-                            request.getBannerImage(),
-                            request.getLatitude(),
-                            request.getLongitude());
             final boolean updated =
                     updateStoredMatch(
                             target.getId(),
                             actingUser,
-                            targetRequest,
+                            request,
+                            targetStartsAt,
+                            targetEndsAt,
                             bannerImageMetadata,
-                            resolveJoinPolicy(
-                                    targetRequest.getVisibility(), targetRequest.getJoinPolicy()),
+                            resolveJoinPolicy(request.getVisibility(), request.getJoinPolicy()),
                             target.getStatus());
             if (!updated) {
-                throw new MatchUpdateException(
-                        MatchUpdateFailureReason.FORBIDDEN,
-                        message("match.update.error.forbidden"));
+                throw new MatchUpdateForbiddenException(message("match.update.error.forbidden"));
             }
 
             final Match updatedMatch =
@@ -566,8 +546,7 @@ public class MatchServiceImpl implements MatchService {
                             .findById(target.getId())
                             .orElseThrow(
                                     () ->
-                                            new MatchUpdateException(
-                                                    MatchUpdateFailureReason.MATCH_NOT_FOUND,
+                                            new MatchUpdateNotFoundException(
                                                     message("match.update.error.notFound")));
             updatedMatches.add(updatedMatch);
         }
@@ -584,22 +563,17 @@ public class MatchServiceImpl implements MatchService {
                         .findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchCancellationException(
-                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                        new MatchCancellationNotFoundException(
                                                 message("match.cancel.error.notFound")));
 
         final User currentUser = securityService.currentUser();
         if (!match.getHost().getId().equals(actingUser.getId())
                 && (currentUser == null || !currentUser.getId().equals(actingUser.getId()))) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         if (EventStatus.COMPLETED.equals(match.getStatus())) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         if (EventStatus.CANCELLED.equals(match.getStatus())) {
@@ -608,9 +582,7 @@ public class MatchServiceImpl implements MatchService {
 
         final boolean updated = matchDataService.cancelMatch(matchId, actingUser);
         if (!updated) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         final Match cancelledMatch =
@@ -618,8 +590,7 @@ public class MatchServiceImpl implements MatchService {
                         .findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchCancellationException(
-                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                        new MatchCancellationNotFoundException(
                                                 message("match.cancel.error.notFound")));
         matchNotificationService.notifyMatchCancelled(cancelledMatch);
         return cancelledMatch;
@@ -633,25 +604,21 @@ public class MatchServiceImpl implements MatchService {
                         .findById(matchId)
                         .orElseThrow(
                                 () ->
-                                        new MatchCancellationException(
-                                                MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                        new MatchCancellationNotFoundException(
                                                 message("match.cancel.error.notFound")));
 
         validateSeriesCancellationAccess(pivot, actingUser);
 
         final List<Match> targets = cancellableFutureSeriesTargets(pivot);
         if (targets.isEmpty()) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         final List<Match> cancelledMatches = new ArrayList<>();
         for (final Match target : targets) {
             final boolean updated = matchDataService.cancelMatch(target.getId(), actingUser);
             if (!updated) {
-                throw new MatchCancellationException(
-                        MatchCancellationFailureReason.FORBIDDEN,
+                throw new MatchCancellationForbiddenException(
                         message("match.cancel.error.forbidden"));
             }
 
@@ -660,8 +627,7 @@ public class MatchServiceImpl implements MatchService {
                             .findById(target.getId())
                             .orElseThrow(
                                     () ->
-                                            new MatchCancellationException(
-                                                    MatchCancellationFailureReason.MATCH_NOT_FOUND,
+                                            new MatchCancellationNotFoundException(
                                                     message("match.cancel.error.notFound")));
             cancelledMatches.add(cancelledMatch);
         }
@@ -673,9 +639,7 @@ public class MatchServiceImpl implements MatchService {
     private void validateSeriesUpdateAccess(final Match pivot, final User actingUser) {
         validateMatchHostAccess(pivot, actingUser);
         if (!pivot.isRecurringOccurrence()) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_RECURRING,
-                    message("match.update.error.notRecurring"));
+            throw new MatchUpdateNotRecurringException(message("match.update.error.notRecurring"));
         }
         validateEditableMatch(pivot);
     }
@@ -687,29 +651,23 @@ public class MatchServiceImpl implements MatchService {
 
     private void validateEditableMatch(final Match match) {
         if (!isEditableMatch(match)) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.NOT_EDITABLE,
-                    message("match.update.error.notEditable"));
+            throw new MatchUpdateNotEditableException(message("match.update.error.notEditable"));
         }
     }
 
     private void validateMatchHostAccess(final Match match, final User actingUser) {
         if (!match.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.FORBIDDEN, message("match.update.error.forbidden"));
+            throw new MatchUpdateForbiddenException(message("match.update.error.forbidden"));
         }
     }
 
     private void validateSeriesCancellationAccess(final Match pivot, final User actingUser) {
         if (!pivot.getHost().getId().equals(actingUser.getId())) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.FORBIDDEN,
-                    message("match.cancel.error.forbidden"));
+            throw new MatchCancellationForbiddenException(message("match.cancel.error.forbidden"));
         }
 
         if (!pivot.isRecurringOccurrence()) {
-            throw new MatchCancellationException(
-                    MatchCancellationFailureReason.NOT_RECURRING,
+            throw new MatchCancellationNotRecurringException(
                     message("match.cancel.error.notRecurring"));
         }
     }
@@ -725,7 +683,7 @@ public class MatchServiceImpl implements MatchService {
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() != null)
                 .filter(occurrence -> occurrence.getSeriesOccurrenceIndex() >= pivotIndex)
                 .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
-                .filter(MatchServiceImpl::isEditableMatch)
+                .filter(this::isEditableMatch)
                 .toList();
     }
 
@@ -737,13 +695,16 @@ public class MatchServiceImpl implements MatchService {
         final Instant now = Instant.now(clock);
         return matchDataService.findSeriesOccurrences(pivot.getSeries().getId()).stream()
                 .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
-                .filter(MatchServiceImpl::isEditableMatch)
+                .filter(this::isEditableMatch)
                 .toList();
     }
 
-    private static boolean isEditableMatch(final Match match) {
+    private boolean isEditableMatch(final Match match) {
+        final Instant startsAt = match.getStartsAt();
         return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
+                && match.getStatus() != EventStatus.CANCELLED
+                && startsAt != null
+                && startsAt.isAfter(Instant.now(clock));
     }
 
     @Override
@@ -783,19 +744,18 @@ public class MatchServiceImpl implements MatchService {
     public PaginatedResult<Match> searchPublicMatches(
             final String query,
             final List<Sport> sport,
-            final Instant startDate,
-            final Instant endDate,
+            final LocalDate startDate,
+            final LocalDate endDate,
             final EventSort sort,
             final int page,
             final int pageSize,
-            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,
             final Double longitude) {
         final EventSort sortFilter =
                 hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
-        final DateRange dateRange = new DateRange(startDate, endDate);
+        final DateRange dateRange = DateRange.of(startDate, endDate);
 
         return paginate(
                 page,
@@ -809,8 +769,7 @@ public class MatchServiceImpl implements MatchService {
                                 dateRange.start(),
                                 dateRange.endExclusive(),
                                 minPrice,
-                                maxPrice,
-                                timezone),
+                                maxPrice),
                 (offset, safePageSize) ->
                         matchDataService.findPublicMatches(
                                 query,
@@ -821,7 +780,6 @@ public class MatchServiceImpl implements MatchService {
                                 minPrice,
                                 maxPrice,
                                 sortFilter,
-                                timezone,
                                 latitude,
                                 longitude,
                                 offset,
@@ -836,12 +794,11 @@ public class MatchServiceImpl implements MatchService {
             String query,
             List<Sport> sports,
             List<EventStatus> statuses,
-            Instant startDate,
-            Instant endDate,
+            LocalDate startDate,
+            LocalDate endDate,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId timezone,
             List<ParticipantStatus> participantStatuses,
             int page,
             int pageSize) {
@@ -851,6 +808,8 @@ public class MatchServiceImpl implements MatchService {
         final int offset = (page - 1) * pageSize;
         final int limit = pageSize;
 
+        final DateRange dateRange = DateRange.of(startDate, endDate);
+
         final List<Match> paginatedItems =
                 matchDataService.findDashboardMatches(
                         user,
@@ -859,12 +818,11 @@ public class MatchServiceImpl implements MatchService {
                         query,
                         sports,
                         statuses,
-                        startDate,
-                        endDate,
+                        dateRange.start(),
+                        dateRange.endExclusive(),
                         minPrice,
                         maxPrice,
                         sort,
-                        timezone,
                         participantStatuses,
                         offset,
                         limit);
@@ -877,12 +835,11 @@ public class MatchServiceImpl implements MatchService {
                         query,
                         sports,
                         statuses,
-                        startDate,
-                        endDate,
+                        dateRange.start(),
+                        dateRange.endExclusive(),
                         minPrice,
                         maxPrice,
                         sort,
-                        timezone,
                         participantStatuses);
         return new PaginatedResult<>(paginatedItems, totalCount, page, pageSize);
     }
@@ -909,13 +866,12 @@ public class MatchServiceImpl implements MatchService {
             throw new IllegalArgumentException(message("match.recurrence.error.invalid"));
         }
 
-        final ZoneId zoneId = resolveZone(recurrence.getZoneId());
         final LocalDateTime firstLocalStart =
-                LocalDateTime.ofInstant(request.getStartsAt(), zoneId);
+                LocalDateTime.of(request.getStartDate(), request.getStartTime());
+        final Instant requestStartsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant requestEndsAt = toInstant(request.getEndDate(), request.getEndTime());
         final Duration duration =
-                request.getEndsAt() == null
-                        ? null
-                        : Duration.between(request.getStartsAt(), request.getEndsAt());
+                requestEndsAt == null ? null : Duration.between(requestStartsAt, requestEndsAt);
         final int occurrenceCount = resolveOccurrenceCount(firstLocalStart, recurrence);
 
         return IntStream.range(0, occurrenceCount)
@@ -924,7 +880,7 @@ public class MatchServiceImpl implements MatchService {
                             final LocalDateTime occurrenceLocalStart =
                                     addFrequency(firstLocalStart, recurrence.getFrequency(), index);
                             final Instant startsAt =
-                                    occurrenceLocalStart.atZone(zoneId).toInstant();
+                                    occurrenceLocalStart.atZone(PlatformTime.ZONE).toInstant();
                             final Instant endsAt =
                                     duration == null ? null : startsAt.plus(duration);
                             return new OccurrenceWindow(startsAt, endsAt);
@@ -994,10 +950,6 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
-    private static ZoneId resolveZone(final ZoneId zoneId) {
-        return zoneId == null ? ZoneId.systemDefault() : zoneId;
-    }
-
     private String message(final String code) {
         final Locale locale = LocaleContextHolder.getLocale();
         return messageSource.getMessage(
@@ -1032,8 +984,7 @@ public class MatchServiceImpl implements MatchService {
 
     private void validateUpdateCapacityOrThrow(final int maxPlayers) {
         if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
-            throw new MatchUpdateException(
-                    MatchUpdateFailureReason.CAPACITY_ABOVE_MAX,
+            throw new MatchUpdateCapacityAboveMaxException(
                     message("match.update.error.capacityAboveMax"));
         }
     }
@@ -1066,7 +1017,15 @@ public class MatchServiceImpl implements MatchService {
         List<Match> items(int offset, int safePageSize);
     }
 
-    private record DateRange(Instant start, Instant endExclusive) {}
+    private record DateRange(Instant start, Instant endExclusive) {
+        static DateRange of(final LocalDate start, final LocalDate end) {
+            return new DateRange(
+                    start == null ? null : start.atStartOfDay(PlatformTime.ZONE).toInstant(),
+                    end == null
+                            ? null
+                            : end.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
+        }
+    }
 
     private record OccurrenceWindow(Instant startsAt, Instant endsAt) {}
 }

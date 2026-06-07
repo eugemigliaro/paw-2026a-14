@@ -10,17 +10,14 @@ import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,19 +33,16 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     private final TournamentDataService tournamentDataService;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
     private final TournamentTeamDataService tournamentTeamDataService;
-    private final MessageSource messageSource;
     private final Clock clock;
 
     public TournamentRegistrationServiceImpl(
             final TournamentDataService tournamentDataService,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
             final TournamentTeamDataService tournamentTeamDataService,
-            final MessageSource messageSource,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
         this.tournamentTeamDataService = tournamentTeamDataService;
-        this.messageSource = messageSource;
         this.clock = clock;
     }
 
@@ -60,15 +54,13 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         requireRegistrationOpen(tournament);
 
         if (!tournament.isAllowSoloSignup()) {
-            throw registrationException(
-                    TournamentJoinFailureReason.SOLO_SIGNUP_DISABLED,
-                    "tournament.registration.error.soloDisabled");
+            throw new TournamentRegistrationSoloSignupDisabledException(
+                    "Solo signup is disabled for this tournament");
         }
 
         if (tournamentTeamDataService.findUserTeam(tournamentId, user.getId()).isPresent()) {
-            throw registrationException(
-                    TournamentJoinFailureReason.ALREADY_ON_TEAM,
-                    "tournament.registration.error.alreadyOnTeam");
+            throw new TournamentRegistrationAlreadyOnTeamException(
+                    "User is already on a team in this tournament");
         }
 
         final Optional<TournamentSoloEntry> existing =
@@ -79,16 +71,14 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 return soloEntry;
             }
             if (TournamentSoloEntryStatus.ASSIGNED == soloEntry.getStatus()) {
-                throw registrationException(
-                        TournamentJoinFailureReason.ALREADY_ASSIGNED,
-                        "tournament.registration.error.alreadyAssigned");
+                throw new TournamentRegistrationAlreadyAssignedException(
+                        "User is already assigned to a team in this tournament");
             }
         }
 
         if (isSoloPoolFull(tournament)) {
-            throw registrationException(
-                    TournamentJoinFailureReason.SOLO_POOL_FULL,
-                    "tournament.registration.error.soloPoolFull");
+            throw new TournamentRegistrationSoloPoolFullException(
+                    "Solo pool is full for this tournament");
         }
 
         if (existing.isEmpty()) {
@@ -117,9 +107,8 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                         .filter(entry -> TournamentSoloEntryStatus.IN_POOL == entry.getStatus())
                         .orElseThrow(
                                 () ->
-                                        registrationException(
-                                                TournamentJoinFailureReason.NOT_IN_SOLO_POOL,
-                                                "tournament.registration.error.notInSoloPool"));
+                                        new TournamentRegistrationNotInSoloPoolException(
+                                                "User is not in the solo pool for this tournament"));
 
         soloEntry.setStatus(TournamentSoloEntryStatus.LEFT);
         soloEntry.setAssignedTeam(null);
@@ -202,9 +191,8 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
         final int finalTeamCount = existingTeamCount + soloTeamCount;
         if (finalTeamCount < 2) {
-            throw registrationException(
-                    TournamentJoinFailureReason.UNDER_CAPACITY,
-                    "tournament.registration.error.underCapacity");
+            throw new TournamentRegistrationUnderCapacityException(
+                    "Tournament does not have enough teams to start");
         }
 
         final int assignableEntries = soloTeamCount * tournament.getTeamSize();
@@ -240,17 +228,15 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 .filter(tournament -> !tournament.isDeleted())
                 .orElseThrow(
                         () ->
-                                registrationException(
-                                        TournamentJoinFailureReason.TOURNAMENT_NOT_FOUND,
-                                        "tournament.registration.error.notFound"));
+                                new TournamentRegistrationTournamentNotFoundException(
+                                        "Tournament not found"));
     }
 
     private void requireRegistrationOpen(final Tournament tournament) {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()
                 || !isRegistrationOpenNow(tournament)) {
-            throw registrationException(
-                    TournamentJoinFailureReason.REGISTRATION_NOT_OPEN,
-                    "tournament.registration.error.notOpen");
+            throw new TournamentRegistrationNotOpenException(
+                    "Registration is not open for this tournament");
         }
     }
 
@@ -266,9 +252,8 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
         if (!canMutate(tournament, actingUser)) {
-            throw registrationException(
-                    TournamentJoinFailureReason.FORBIDDEN,
-                    "tournament.registration.error.forbidden");
+            throw new TournamentRegistrationForbiddenException(
+                    "You are not allowed to modify this tournament");
         }
     }
 
@@ -293,7 +278,8 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateUser(final User user) {
         if (user == null || user.getId() == null) {
-            throw new IllegalArgumentException(message("user.error.null"));
+            throw new TournamentRegistrationInvalidUserException(
+                    "User must be authenticated to perform this action");
         }
     }
 
@@ -310,16 +296,5 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 tournamentSoloEntryDao.countActiveByTournament(tournament.getId());
         final long maxSoloEntries = (long) tournament.getBracketSize() * tournament.getTeamSize();
         return currentSoloEntries >= maxSoloEntries;
-    }
-
-    private TournamentRegistrationException registrationException(
-            final TournamentJoinFailureReason reason, final String messageCode) {
-        return new TournamentRegistrationException(reason, message(messageCode));
-    }
-
-    private String message(final String code) {
-        final Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(
-                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
 }

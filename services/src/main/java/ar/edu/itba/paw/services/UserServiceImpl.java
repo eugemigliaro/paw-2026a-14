@@ -3,7 +3,12 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import ar.edu.itba.paw.services.exceptions.registration.AccountRegistrationException;
+import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
+import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import java.io.IOException;
 import java.util.Collection;
@@ -89,8 +94,7 @@ public class UserServiceImpl implements UserService {
 
         final Optional<User> userWithUsername = userDataService.findByUsername(normalizedUsername);
         if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(user.getId())) {
-            throw new AccountRegistrationException(
-                    "username_taken", message("profile.edit.error.usernameTaken", locale));
+            throw new UsernameTakenException(message("profile.edit.error.usernameTaken", locale));
         }
 
         try {
@@ -106,8 +110,8 @@ public class UserServiceImpl implements UserService {
                     .findByUsername(normalizedUsername)
                     .filter(u -> !u.getId().equals(user.getId()))
                     .isPresent()) {
-                throw new AccountRegistrationException(
-                        "username_taken", message("profile.edit.error.usernameTaken", locale));
+                throw new UsernameTakenException(
+                        message("profile.edit.error.usernameTaken", locale));
             }
             throw exception;
         }
@@ -134,8 +138,8 @@ public class UserServiceImpl implements UserService {
     private String normalizeUsername(
             final User existingUser, final String username, final Locale locale) {
         if (username == null) {
-            throw new AccountRegistrationException(
-                    "username_invalid", message("profile.edit.error.usernameInvalid", locale));
+            throw new UsernameInvalidException(
+                    message("profile.edit.error.usernameInvalid", locale));
         }
 
         final String normalized = username.trim().toLowerCase(Locale.ROOT);
@@ -144,8 +148,8 @@ public class UserServiceImpl implements UserService {
             return existingUser.getUsername();
         }
         if (!USERNAME_PATTERN.matcher(normalized).matches()) {
-            throw new AccountRegistrationException(
-                    "username_invalid", message("profile.edit.error.usernameInvalid", locale));
+            throw new UsernameInvalidException(
+                    message("profile.edit.error.usernameInvalid", locale));
         }
         return normalized;
     }
@@ -159,15 +163,25 @@ public class UserServiceImpl implements UserService {
     private String normalizeRequiredText(
             final String value, final int maxLength, final String fieldCode, final Locale locale) {
         if (value == null) {
+            if ("name".equals(fieldCode)) {
+                throw new NameInvalidException(message("profile.edit.error.nameInvalid", locale));
+            } else if ("lastName".equals(fieldCode)) {
+                throw new LastNameInvalidException(
+                        message("profile.edit.error.lastNameInvalid", locale));
+            }
             throw new AccountRegistrationException(
-                    fieldCode + "_invalid",
                     message("profile.edit.error." + fieldCode + "Invalid", locale));
         }
 
         final String normalized = value.trim();
         if (normalized.isBlank() || normalized.length() > maxLength) {
+            if ("name".equals(fieldCode)) {
+                throw new NameInvalidException(message("profile.edit.error.nameInvalid", locale));
+            } else if ("lastName".equals(fieldCode)) {
+                throw new LastNameInvalidException(
+                        message("profile.edit.error.lastNameInvalid", locale));
+            }
             throw new AccountRegistrationException(
-                    fieldCode + "_invalid",
                     message("profile.edit.error." + fieldCode + "Invalid", locale));
         }
         return normalized;
@@ -184,8 +198,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (normalized.length() > 50 || !normalized.matches("^[0-9+()\\-\\s]{6,50}$")) {
-            throw new AccountRegistrationException(
-                    "phone_invalid", message("profile.edit.error.phoneInvalid", locale));
+            throw new PhoneInvalidException(message("profile.edit.error.phoneInvalid", locale));
         }
         return normalized;
     }

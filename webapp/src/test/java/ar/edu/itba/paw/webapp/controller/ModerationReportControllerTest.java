@@ -17,7 +17,7 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationDuplicateReportException;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -119,7 +119,7 @@ class ModerationReportControllerTest {
                                 Mockito.eq(12L),
                                 Mockito.any(),
                                 Mockito.any()))
-                .thenThrow(new ModerationException("duplicate_report", "Duplicate report"));
+                .thenThrow(new ModerationDuplicateReportException("Duplicate report"));
 
         mockMvc.perform(post("/reports/reviews/12").param("reason", "inappropriate_content"))
                 .andExpect(status().isOk())

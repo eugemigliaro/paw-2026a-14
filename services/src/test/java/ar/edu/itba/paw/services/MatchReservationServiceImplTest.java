@@ -7,7 +7,7 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.services.exceptions.MatchReservationException;
+import ar.edu.itba.paw.services.exceptions.matchReservation.*;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
@@ -98,14 +98,10 @@ public class MatchReservationServiceImplTest {
                                         4,
                                         1)));
 
-        // Exercise
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
-
-        // Assert
-        Assertions.assertEquals("closed", exception.getCode());
+        // Exercise + Assert
+        Assertions.assertThrows(
+                MatchReservationClosedException.class,
+                () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
     }
 
     @Test
@@ -140,12 +136,9 @@ public class MatchReservationServiceImplTest {
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSpot(10L, u));
-
-        Assertions.assertEquals("already_joined", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationAlreadyJoinedException.class,
+                () -> matchReservationService.reserveSpot(10L, u));
     }
 
     @Test
@@ -162,12 +155,9 @@ public class MatchReservationServiceImplTest {
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSpot(10L, u));
-
-        Assertions.assertEquals("full", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationFullException.class,
+                () -> matchReservationService.reserveSpot(10L, u));
     }
 
     @Test
@@ -182,12 +172,9 @@ public class MatchReservationServiceImplTest {
                                         4,
                                         1)));
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
-
-        Assertions.assertEquals("started", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationStartedException.class,
+                () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
     }
 
     @Test
@@ -203,26 +190,19 @@ public class MatchReservationServiceImplTest {
                                         4,
                                         1)));
 
-        // Exercise
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
-
-        // Assert
-        Assertions.assertEquals("closed", exception.getCode());
+        // Exercise + Assert
+        Assertions.assertThrows(
+                MatchReservationClosedException.class,
+                () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
     }
 
     @Test
     public void testReserveSpotRejectsMissingMatch() {
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.empty());
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
-
-        Assertions.assertEquals("not_found", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationNotFoundException.class,
+                () -> matchReservationService.reserveSpot(10L, UserUtils.getUser(20L)));
     }
 
     @Test
@@ -250,12 +230,9 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.createReservationIfSpace(10L, u))
                 .thenReturn(false);
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSpot(10L, u));
-
-        Assertions.assertEquals("full", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationFullException.class,
+                () -> matchReservationService.reserveSpot(10L, u));
     }
 
     @Test
@@ -329,12 +306,9 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
         Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(true);
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSeries(10L, u));
-
-        Assertions.assertEquals("series_already_joined", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationSeriesAlreadyJoinedException.class,
+                () -> matchReservationService.reserveSeries(10L, u));
     }
 
     @Test
@@ -350,12 +324,9 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
         Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSeries(10L, u));
-
-        Assertions.assertEquals("series_full", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationSeriesFullException.class,
+                () -> matchReservationService.reserveSeries(10L, u));
     }
 
     @Test
@@ -368,12 +339,9 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(earlierOccurrence, selectedOccurrence));
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.reserveSeries(10L, UserUtils.getUser(20L)));
-
-        Assertions.assertEquals("series_started", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationSeriesStartedException.class,
+                () -> matchReservationService.reserveSeries(10L, UserUtils.getUser(20L)));
     }
 
     @Test
@@ -410,12 +378,9 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
         Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () -> matchReservationService.cancelSeriesReservations(10L, u));
-
-        Assertions.assertEquals("series_not_joined", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationSeriesNotJoinedException.class,
+                () -> matchReservationService.cancelSeriesReservations(10L, u));
     }
 
     @Test
@@ -428,14 +393,11 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchDataService.findSeriesOccurrences(100L))
                 .thenReturn(List.of(earlierOccurrence, selectedOccurrence));
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () ->
-                                matchReservationService.cancelSeriesReservations(
-                                        10L, UserUtils.getUser(20L)));
-
-        Assertions.assertEquals("series_started", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationSeriesStartedException.class,
+                () ->
+                        matchReservationService.cancelSeriesReservations(
+                                10L, UserUtils.getUser(20L)));
     }
 
     @Test
@@ -450,14 +412,11 @@ public class MatchReservationServiceImplTest {
                                         4,
                                         1)));
 
-        final MatchReservationException exception =
-                Assertions.assertThrows(
-                        MatchReservationException.class,
-                        () ->
-                                matchReservationService.cancelSeriesReservations(
-                                        10L, UserUtils.getUser(20L)));
-
-        Assertions.assertEquals("not_recurring", exception.getCode());
+        Assertions.assertThrows(
+                MatchReservationNotRecurringException.class,
+                () ->
+                        matchReservationService.cancelSeriesReservations(
+                                10L, UserUtils.getUser(20L)));
     }
 
     private static Match createMatch(

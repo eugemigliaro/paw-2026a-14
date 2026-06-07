@@ -1,8 +1,6 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.ModerationReport;
-import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
@@ -15,7 +13,7 @@ import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
@@ -51,7 +49,7 @@ public class ModerationServiceImplTest {
     @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDataService matchParticipantDataService;
     @Mock private PlayerReviewDataService playerReviewDataService;
-    @Mock private MatchService matchService;
+    @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
     private ModerationService moderationService;
@@ -68,12 +66,12 @@ public class ModerationServiceImplTest {
                         matchParticipantDataService,
                         playerReviewDataService,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
-    private void usePlayerReviewDataService(final PlayerReviewDataService playerReviewDataService) {
+    private void usePlayerReviewDao(final PlayerReviewDataService playerReviewDataService) {
         moderationService =
                 new ModerationServiceImpl(
                         userBanDao,
@@ -83,7 +81,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDataService,
                         playerReviewDataService,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -98,7 +96,7 @@ public class ModerationServiceImplTest {
                         matchParticipantDataService,
                         playerReviewDataService,
                         mailDispatchService,
-                        matchService,
+                        matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -119,25 +117,6 @@ public class ModerationServiceImplTest {
     public void resolveReportWithUserBan_banExpiryIsInTheFuture() {
         final ModerationReport report = sampleUserReport();
         final Instant expectedBannedUntil = FIXED_NOW.plusSeconds(7L * 24L * 3600L);
-
-        Mockito.when(
-                        matchService.findDashboardMatches(
-                                Mockito.any(User.class),
-                                Mockito.anyBoolean(),
-                                Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
 
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
         Mockito.when(
@@ -178,25 +157,6 @@ public class ModerationServiceImplTest {
         final ModerationReport report = sampleUserReport();
         final Instant expectedBannedUntil = FIXED_NOW.plusSeconds(30L * 24L * 3600L);
 
-        Mockito.when(
-                        matchService.findDashboardMatches(
-                                Mockito.any(User.class),
-                                Mockito.anyBoolean(),
-                                Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
-
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
         Mockito.when(
                         moderationReportDao.resolveReport(
@@ -230,25 +190,6 @@ public class ModerationServiceImplTest {
         final ModerationReport report = sampleUserReport();
         final RecordingUserBanDao recordingUserBanDao = new RecordingUserBanDao();
         useUserBanDao(recordingUserBanDao);
-
-        Mockito.when(
-                        matchService.findDashboardMatches(
-                                Mockito.any(User.class),
-                                Mockito.anyBoolean(),
-                                Mockito.anyBoolean(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.any(),
-                                Mockito.anyInt(),
-                                Mockito.anyInt()))
-                .thenReturn(new PaginatedResult<>(List.<Match>of(), 0, 1, 10));
 
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
         Mockito.when(
@@ -296,7 +237,7 @@ public class ModerationServiceImplTest {
                         null,
                         null,
                         null);
-        usePlayerReviewDataService(new ModeratedPlayerReviewDataService(review));
+        usePlayerReviewDao(new ModeratedPlayerReviewDao(review));
 
         Mockito.when(moderationReportDao.findById(45L)).thenReturn(Optional.of(report));
         Mockito.when(
@@ -458,7 +399,7 @@ public class ModerationServiceImplTest {
                         null,
                         null,
                         null);
-        usePlayerReviewDataService(new ModeratedPlayerReviewDataService(review));
+        usePlayerReviewDao(new ModeratedPlayerReviewDao(review));
 
         final boolean result =
                 moderationService.softDeleteReview(
@@ -488,7 +429,7 @@ public class ModerationServiceImplTest {
                         FIXED_NOW,
                         UserUtils.getUser(3L),
                         "SPAM");
-        usePlayerReviewDataService(new ModeratedPlayerReviewDataService(review));
+        usePlayerReviewDao(new ModeratedPlayerReviewDao(review));
 
         final boolean result =
                 moderationService.restoreReview(UserUtils.getUser(1L), UserUtils.getUser(2L));
@@ -608,11 +549,11 @@ public class ModerationServiceImplTest {
                 FIXED_NOW);
     }
 
-    private static class ModeratedPlayerReviewDataService implements PlayerReviewDataService {
+    private static class ModeratedPlayerReviewDao implements PlayerReviewDataService {
 
         private final PlayerReview review;
 
-        private ModeratedPlayerReviewDataService(final PlayerReview review) {
+        private ModeratedPlayerReviewDao(final PlayerReview review) {
             this.review = review;
         }
 

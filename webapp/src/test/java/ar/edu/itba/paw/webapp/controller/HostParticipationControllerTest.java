@@ -13,10 +13,15 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationClosedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationForbiddenException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationStartedException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import java.util.Locale;
 import java.util.Optional;
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +30,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 class HostParticipationControllerTest {
 
@@ -41,6 +47,8 @@ class HostParticipationControllerTest {
         messageSource = Mockito.mock(MessageSource.class);
         userService = Mockito.mock(UserService.class);
 
+        UserEmailValidator userEmailValidator = new UserEmailValidator(userService);
+
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostParticipationController(
@@ -48,6 +56,7 @@ class HostParticipationControllerTest {
                                         matchParticipationService,
                                         userService,
                                         messageSource))
+                        .setValidator(validator(userEmailValidator))
                         .build();
     }
 
@@ -93,7 +102,7 @@ class HostParticipationControllerTest {
                         Mockito.isNull(),
                         Mockito.<Locale>any()))
                 .thenReturn("This event is closed.");
-        Mockito.doThrow(new MatchParticipationException("closed", "The event is not open."))
+        Mockito.doThrow(new MatchParticipationClosedException("The event is not open."))
                 .when(matchParticipationService)
                 .approveRequest(
                         Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
@@ -115,7 +124,7 @@ class HostParticipationControllerTest {
         when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
-        Mockito.doThrow(new MatchParticipationException("forbidden", "Only the host can approve."))
+        Mockito.doThrow(new MatchParticipationForbiddenException("Only the host can approve."))
                 .when(matchParticipationService)
                 .approveRequest(
                         Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
@@ -160,6 +169,7 @@ class HostParticipationControllerTest {
 
         when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
+        when(userService.findByEmail("test@test.com")).thenReturn(Optional.of(requestedUser));
 
         mockMvc.perform(post("/host/matches/42/invites").param("email", "test@test.com"))
                 .andExpect(status().is3xxRedirection())
@@ -191,9 +201,7 @@ class HostParticipationControllerTest {
                         Mockito.isNull(),
                         Mockito.<Locale>any()))
                 .thenReturn("This event has already started.");
-        Mockito.doThrow(
-                        new MatchParticipationException(
-                                "started", "The event has already started."))
+        Mockito.doThrow(new MatchParticipationStartedException("The event has already started."))
                 .when(matchParticipationService)
                 .removeParticipant(
                         Mockito.eq(42L), Mockito.any(User.class), Mockito.eq(requestedUser));
@@ -211,8 +219,34 @@ class HostParticipationControllerTest {
         Mockito.when(
                         matchParticipationService.findConfirmedParticipants(
                                 Mockito.eq(42L), Mockito.any(User.class)))
-                .thenThrow(new MatchParticipationException("forbidden", "Only the host can view."));
+                .thenThrow(new MatchParticipationForbiddenException("Only the host can view."));
 
         mockMvc.perform(get("/host/matches/42/participants")).andExpect(status().isForbidden());
+    }
+
+    private LocalValidatorFactoryBean validator(UserEmailValidator userEmailValidator) {
+        ConstraintValidatorFactory customConstraintFactory =
+                new ConstraintValidatorFactory() {
+                    @Override
+                    public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
+                        if (key == UserEmailValidator.class) {
+                            return (T) userEmailValidator;
+                        }
+                        try {
+                            return key.getDeclaredConstructor().newInstance();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    @Override
+                    public void releaseInstance(ConstraintValidator<?, ?> instance) {}
+                }; // TODO: find a better way to inject the custom validator without having to
+        // reimplement the whole factory
+
+        LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
+        factoryBean.setConstraintValidatorFactory(customConstraintFactory);
+        factoryBean.afterPropertiesSet();
+        return factoryBean;
     }
 }

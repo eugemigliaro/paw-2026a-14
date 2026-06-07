@@ -9,7 +9,7 @@ import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import ar.edu.itba.paw.services.exceptions.registration.*;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
@@ -87,9 +87,9 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRegisterCreatesUnverifiedAccountAndSendsVerificationMail() {
-        final FakeUserDataService fakeUserDataService = new FakeUserDataService();
+        final FakeUserDao fakeUserDao = new FakeUserDao();
         final FakeEmailActionRequestDao fakeEmailActionRequestDao = new FakeEmailActionRequestDao();
-        accountAuthService = accountAuthService(fakeUserDataService, fakeEmailActionRequestDao);
+        accountAuthService = accountAuthService(fakeUserDao, fakeEmailActionRequestDao);
 
         final VerificationRequestResult result =
                 accountAuthService.register(
@@ -104,7 +104,7 @@ public class AccountAuthServiceImplTest {
         Assertions.assertEquals("new@test.com", result.getEmail());
         Assertions.assertEquals(FIXED_NOW.plusSeconds(24 * 3600L), result.getExpiresAt());
         final UserAccount createdAccount =
-                fakeUserDataService.findAccountByEmail("new@test.com").orElseThrow();
+                fakeUserDao.findAccountByEmail("new@test.com").orElseThrow();
         Assertions.assertEquals("new_user", createdAccount.getUsername());
         Assertions.assertEquals("Jamie", createdAccount.getName());
         Assertions.assertEquals("Rivera", createdAccount.getLastName());
@@ -144,20 +144,17 @@ public class AccountAuthServiceImplTest {
                                         FIXED_NOW.minusSeconds(300),
                                         UserLanguages.ENGLISH)));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "player@test.com",
-                                                "player",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("email_taken", exception.getCode());
+        Assertions.assertThrows(
+                EmailTakenException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "player@test.com",
+                                        "player",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
@@ -178,20 +175,17 @@ public class AccountAuthServiceImplTest {
                                         null,
                                         UserLanguages.ENGLISH)));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "pending@test.com",
-                                                "pending",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("email_pending_verification", exception.getCode());
+        Assertions.assertThrows(
+                EmailPendingVerificationException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "pending@test.com",
+                                        "pending",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
@@ -202,20 +196,17 @@ public class AccountAuthServiceImplTest {
         Mockito.when(userDataService.findByUsername("user7"))
                 .thenReturn(Optional.of(userWithTakenName));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "new@test.com",
-                                                "user7",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("username_taken", exception.getCode());
+        Assertions.assertThrows(
+                UsernameTakenException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "new@test.com",
+                                        "user7",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
@@ -353,7 +344,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testConfirmVerificationMarksAccountAsVerified() {
-        final FakeUserDataService fakeUserDataService = new FakeUserDataService();
+        final FakeUserDao fakeUserDao = new FakeUserDao();
         final FakeEmailActionRequestDao fakeEmailActionRequestDao = new FakeEmailActionRequestDao();
         final UserAccount account =
                 new UserAccount(
@@ -381,9 +372,9 @@ public class AccountAuthServiceImplTest {
                         null,
                         FIXED_NOW,
                         FIXED_NOW);
-        fakeUserDataService.accounts.add(account);
+        fakeUserDao.accounts.add(account);
         fakeEmailActionRequestDao.requests.add(request);
-        accountAuthService = accountAuthService(fakeUserDataService, fakeEmailActionRequestDao);
+        accountAuthService = accountAuthService(fakeUserDao, fakeEmailActionRequestDao);
 
         final VerificationConfirmationResult result =
                 accountAuthService.confirmVerification("raw-token");
@@ -512,7 +503,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testResetPasswordUpdatesHashAndCompletesRequest() {
-        final FakeUserDataService fakeUserDataService = new FakeUserDataService();
+        final FakeUserDao fakeUserDao = new FakeUserDao();
         final FakeEmailActionRequestDao fakeEmailActionRequestDao = new FakeEmailActionRequestDao();
         final UserAccount account =
                 new UserAccount(
@@ -540,9 +531,9 @@ public class AccountAuthServiceImplTest {
                         null,
                         FIXED_NOW,
                         FIXED_NOW);
-        fakeUserDataService.accounts.add(account);
+        fakeUserDao.accounts.add(account);
         fakeEmailActionRequestDao.requests.add(request);
-        accountAuthService = accountAuthService(fakeUserDataService, fakeEmailActionRequestDao);
+        accountAuthService = accountAuthService(fakeUserDao, fakeEmailActionRequestDao);
 
         final VerificationConfirmationResult result =
                 accountAuthService.resetPassword("raw-token", "EvenBetter123!");
@@ -702,7 +693,7 @@ public class AccountAuthServiceImplTest {
         }
     }
 
-    private static class FakeUserDataService implements UserDataService {
+    private static class FakeUserDao implements UserDataService {
 
         private final List<UserAccount> accounts = new ArrayList<>();
         private long nextAccountId = 9L;

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services.internal;
 
+import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.time.Instant;
@@ -55,9 +56,13 @@ public interface MatchParticipantDataService {
 
     boolean removeParticipant(Long matchId, User user);
 
+    int cancelFutureReservations(User user, Instant startsAfter);
+
     boolean cancelJoinRequest(Long matchId, User user);
 
     List<Long> findPendingMatchIds(User user);
+
+    List<Match> findPendingRequestMatches(User user);
 
     boolean inviteUser(Long matchId, User user);
 
@@ -78,4 +83,6 @@ public interface MatchParticipantDataService {
     List<User> findDeclinedInvitees(Long matchId);
 
     List<Long> findInvitedMatchIds(User user);
+
+    List<Match> findInvitedMatches(User user);
 }

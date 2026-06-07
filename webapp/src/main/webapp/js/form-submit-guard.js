@@ -2,12 +2,35 @@
 	function disableSubmitButtons(form) {
 		var submitButtons = form.querySelectorAll("button[type='submit'], input[type='submit']");
 		submitButtons.forEach(function(button) {
-			if (!button.disabled) {
-				button.dataset.originalLabel = button.tagName === "INPUT" ? button.value : button.textContent;
-			}
+			button.dataset.originalDisabled = button.disabled ? "true" : "false";
+			button.dataset.originalLabel = button.tagName === "INPUT" ? button.value : button.textContent;
 			button.disabled = true;
 			button.setAttribute("aria-disabled", "true");
 		});
+	}
+
+	function restoreSubmitButtons(form) {
+		var submitButtons = form.querySelectorAll("button[type='submit'], input[type='submit']");
+		submitButtons.forEach(function(button) {
+			if (button.dataset.originalLabel) {
+				if (button.tagName === "INPUT") {
+					button.value = button.dataset.originalLabel;
+				} else {
+					button.textContent = button.dataset.originalLabel;
+				}
+			}
+
+			if (button.dataset.originalDisabled) {
+				button.disabled = button.dataset.originalDisabled === "true";
+				button.setAttribute("aria-disabled", button.disabled ? "true" : "false");
+			}
+		});
+	}
+
+	function resetSubmitGuard(form) {
+		delete form.dataset.submitting;
+		form.removeAttribute("aria-busy");
+		restoreSubmitButtons(form);
 	}
 
 	function updateLoadingLabel(form) {
@@ -44,13 +67,18 @@
 
 			form.dataset.submitting = "true";
 			form.setAttribute("aria-busy", "true");
-			updateLoadingLabel(form);
 			disableSubmitButtons(form);
+			updateLoadingLabel(form);
 		});
 	}
 
 	document.addEventListener("DOMContentLoaded", function() {
 		var guardedForms = document.querySelectorAll("form[data-submit-guard='true']");
 		guardedForms.forEach(guardFormSubmit);
+	});
+
+	window.addEventListener("pageshow", function() {
+		var guardedForms = document.querySelectorAll("form[data-submit-guard='true']");
+		guardedForms.forEach(resetSubmitGuard);
 	});
 })();

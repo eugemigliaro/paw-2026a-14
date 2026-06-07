@@ -17,7 +17,6 @@ import ar.edu.itba.paw.persistence.MatchDao;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -162,6 +161,16 @@ public class MatchDataServiceImpl implements MatchDataService {
     }
 
     @Override
+    public List<Match> findFutureHostedMatches(final User host, final Instant startsAfter) {
+        return matchDao.findFutureHostedMatches(host, startsAfter);
+    }
+
+    @Override
+    public int cancelFutureHostedMatches(final User host, final Instant startsAfter) {
+        return matchDao.cancelFutureHostedMatches(host, startsAfter);
+    }
+
+    @Override
     public Optional<Match> findById(final Long matchId) {
         return matchDao.findById(matchId);
     }
@@ -192,7 +201,6 @@ public class MatchDataServiceImpl implements MatchDataService {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final Double latitude,
             final Double longitude,
             final int offset,
@@ -206,7 +214,6 @@ public class MatchDataServiceImpl implements MatchDataService {
                 minPrice,
                 maxPrice,
                 sort,
-                zoneId,
                 latitude,
                 longitude,
                 offset,
@@ -221,10 +228,9 @@ public class MatchDataServiceImpl implements MatchDataService {
             final Instant startsAtFrom,
             final Instant startsAtTo,
             final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final ZoneId zoneId) {
+            final BigDecimal maxPrice) {
         return matchDao.countPublicMatches(
-                query, sports, timeFilter, startsAtFrom, startsAtTo, minPrice, maxPrice, zoneId);
+                query, sports, timeFilter, startsAtFrom, startsAtTo, minPrice, maxPrice);
     }
 
     @Override
@@ -240,7 +246,6 @@ public class MatchDataServiceImpl implements MatchDataService {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final List<ParticipantStatus> participantStatuses,
             final int offset,
             final int limit) {
@@ -256,7 +261,6 @@ public class MatchDataServiceImpl implements MatchDataService {
                 minPrice,
                 maxPrice,
                 sort,
-                zoneId,
                 participantStatuses,
                 offset,
                 limit);
@@ -275,7 +279,6 @@ public class MatchDataServiceImpl implements MatchDataService {
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final EventSort sort,
-            final ZoneId zoneId,
             final List<ParticipantStatus> participantStatuses) {
         return matchDao.countDashboardMatches(
                 user,
@@ -289,7 +292,6 @@ public class MatchDataServiceImpl implements MatchDataService {
                 minPrice,
                 maxPrice,
                 sort,
-                zoneId,
                 participantStatuses);
     }
 

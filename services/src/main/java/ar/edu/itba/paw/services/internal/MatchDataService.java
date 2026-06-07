@@ -16,7 +16,6 @@ import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -87,6 +86,10 @@ public interface MatchDataService {
 
     boolean cancelMatch(Long matchId, User host);
 
+    List<Match> findFutureHostedMatches(User host, Instant startsAfter);
+
+    int cancelFutureHostedMatches(User host, Instant startsAfter);
+
     Optional<Match> findById(Long matchId);
 
     Optional<Match> findPublicMatchById(Long matchId);
@@ -104,7 +107,6 @@ public interface MatchDataService {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             Double latitude,
             Double longitude,
             int offset,
@@ -117,8 +119,7 @@ public interface MatchDataService {
             Instant startsAtFrom,
             Instant startsAtTo,
             BigDecimal minPrice,
-            BigDecimal maxPrice,
-            ZoneId zoneId);
+            BigDecimal maxPrice);
 
     List<Match> findDashboardMatches(
             User user,
@@ -132,7 +133,6 @@ public interface MatchDataService {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             List<ParticipantStatus> participantStatuses,
             int offset,
             int limit);
@@ -149,7 +149,6 @@ public interface MatchDataService {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId zoneId,
             List<ParticipantStatus> participantStatuses);
 
     boolean softDeleteMatch(Long matchId, User deletedBy, String deleteReason);

@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.webapp.validation.ValidRegisterForm;
+import ar.edu.itba.paw.webapp.validation.ValidUserEmail;
+import ar.edu.itba.paw.webapp.validation.ValidUsername;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
@@ -12,10 +14,12 @@ public class RegisterForm {
     @NotBlank(message = "{RegisterForm.email.NotBlank}")
     @Email(message = "{RegisterForm.email.Email}")
     @Size(max = 255, message = "{RegisterForm.email.Size}")
+    @ValidUserEmail(message = "{auth.registration.error.emailTaken}", mustExist = false)
     private String email = "";
 
     @NotBlank(message = "{RegisterForm.username.NotBlank}")
     @Pattern(regexp = "^[a-z0-9_]{3,50}$", message = "{RegisterForm.username.Pattern}")
+    @ValidUsername(message = "{auth.registration.error.usernameTaken}", mustExist = false)
     private String username = "";
 
     @NotBlank(message = "{RegisterForm.name.NotBlank}")

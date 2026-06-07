@@ -281,13 +281,14 @@ public class TournamentJpaDao implements TournamentDao {
     private static QueryParts dashboardSearchParts(
             final User user, final Boolean upcoming, final Boolean includeHosted) {
         final QueryParts parts = new QueryParts();
+        parts.where.add("t.deleted = FALSE");
         if (includeHosted != null && includeHosted) {
             parts.where.add("t.host = :user");
             parts.params.put("user", user);
         }
         if (upcoming != null) {
             if (upcoming) {
-                parts.where.add("t.endsAt >= :now");
+                parts.where.add("(t.endsAt IS NULL OR t.endsAt >= :now)");
             } else {
                 parts.where.add("t.endsAt < :now");
             }

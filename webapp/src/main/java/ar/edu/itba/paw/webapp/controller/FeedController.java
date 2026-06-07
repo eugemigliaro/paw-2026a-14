@@ -5,6 +5,7 @@ import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
@@ -15,8 +16,8 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
@@ -24,7 +25,6 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -99,9 +99,13 @@ public class FeedController {
 
     @GetMapping("/")
     public ModelAndView showFeed(
+            @CurrentUser final User user,
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult,
-            @RequestParam(value = "email", required = false) final String email,
+            @RequestParam(value = "email", required = false)
+                    final String
+                            email, // TODO: remove - I don't know what it's being used for (just url
+            // building apparently)
             final HttpSession session,
             final Locale locale) {
         if (bindingResult.hasErrors()) {
@@ -109,15 +113,17 @@ public class FeedController {
         }
 
         final ExploreLocation exploreLocation = exploreLocation(session);
-        final ZoneId selectedTimezone =
-                searchForm.getTimezone() == null
-                        ? ZoneId.systemDefault()
-                        : searchForm.getTimezone();
         final DateRange selectedDateRange =
-                normalizeDateRange(
-                        searchForm.getStartDate(), searchForm.getEndDate(), selectedTimezone);
-        final PriceRange selectedPriceRange =
-                normalizePriceRange(searchForm.getMinPrice(), searchForm.getMaxPrice());
+                new DateRange(searchForm.getStartDate(), searchForm.getEndDate());
+        final BigDecimal minPrice =
+                searchForm.getMinPrice() != null
+                        ? searchForm.getMinPrice().stripTrailingZeros()
+                        : null;
+        final BigDecimal maxPrice =
+                searchForm.getMaxPrice() != null
+                        ? searchForm.getMaxPrice().stripTrailingZeros()
+                        : null;
+        final PriceRange selectedPriceRange = new PriceRange(minPrice, maxPrice);
         final boolean nearMeUnavailable =
                 exploreLocation == null && searchForm.getSort() == EventSort.DISTANCE;
         final EventSort selectedSort =
@@ -135,8 +141,6 @@ public class FeedController {
                                 .map(Sport::getDbValue)
                                 .collect(Collectors.toList())
                         : null;
-        String selectedTimezoneValue =
-                searchForm.getTimezone() != null ? searchForm.getTimezone().getId() : null;
         String selectedMinPriceValue = formatNullablePriceValue(searchForm.getMinPrice());
         String selectedMaxPriceValue = formatNullablePriceValue(searchForm.getMaxPrice());
         String selectedStartDateValue =
@@ -148,12 +152,11 @@ public class FeedController {
         mav.addObject("selectedType", selectedTypeValue);
         mav.addObject("selectedSort", selectedSortValue);
         mav.addObject("selectedSports", selectedSports);
-        mav.addObject("selectedTimezone", selectedTimezoneValue);
         mav.addObject("selectedMinPrice", selectedPriceRange.minPrice());
         mav.addObject("selectedMaxPrice", selectedPriceRange.maxPrice());
         mav.addObject("selectedMinPriceValue", selectedMinPriceValue);
         mav.addObject("selectedMaxPriceValue", selectedMaxPriceValue);
-        mav.addObject("selectedDateMinValue", LocalDate.now(selectedTimezone).toString());
+        mav.addObject("selectedDateMinValue", LocalDate.now(PlatformTime.ZONE).toString());
         mav.addObject("selectedStartDateValue", selectedStartDateValue);
         mav.addObject("selectedEndDateValue", selectedEndDateValue);
         mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
@@ -165,7 +168,6 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedPriceRange,
                         locale,
                         email));
@@ -175,38 +177,26 @@ public class FeedController {
                     tournamentService.searchPublicTournaments(
                             searchForm.getQ(),
                             searchForm.getSport(),
-                            selectedDateRange.startDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .startDate()
-                                            .atStartOfDay(selectedTimezone)
-                                            .toInstant(),
-                            selectedDateRange.endDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .endDate()
-                                            .atStartOfDay(selectedTimezone)
-                                            .toInstant(),
+                            selectedDateRange.startDate(),
+                            selectedDateRange.endDate(),
                             selectedSort,
                             searchForm.getPage(),
                             PAGE_SIZE,
-                            searchForm.getTimezone(),
                             selectedPriceRange.minPrice(),
                             selectedPriceRange.maxPrice(),
-                            searchForm.getLatitude(),
-                            searchForm.getLongitude());
+                            exploreLocation != null ? exploreLocation.latitude() : null,
+                            exploreLocation != null ? exploreLocation.longitude() : null);
             mav.addObject(
                     "feedPage",
                     buildTournamentFeedPageViewModel(
+                            user,
                             searchForm.getQ(),
                             searchForm.getType(),
                             selectedSort,
                             selectedSports,
                             selectedDateRange,
-                            selectedTimezone,
                             selectedStartDateValue,
                             selectedEndDateValue,
-                            selectedTimezoneValue,
                             selectedPriceRange,
                             result,
                             locale,
@@ -217,22 +207,11 @@ public class FeedController {
                     matchService.searchPublicMatches(
                             searchForm.getQ(),
                             searchForm.getSport(),
-                            selectedDateRange.startDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .startDate()
-                                            .atStartOfDay(selectedTimezone)
-                                            .toInstant(),
-                            selectedDateRange.endDate() == null
-                                    ? null
-                                    : selectedDateRange
-                                            .endDate()
-                                            .atStartOfDay(selectedTimezone)
-                                            .toInstant(),
+                            selectedDateRange.startDate(),
+                            selectedDateRange.endDate(),
                             selectedSort,
                             searchForm.getPage(),
                             PAGE_SIZE,
-                            selectedTimezone,
                             selectedPriceRange.minPrice(),
                             selectedPriceRange.maxPrice(),
                             exploreLocation != null ? exploreLocation.latitude() : null,
@@ -240,15 +219,14 @@ public class FeedController {
             mav.addObject(
                     "feedPage",
                     buildMatchFeedPageViewModel(
+                            user,
                             searchForm.getQ(),
                             searchForm.getType(),
                             selectedSort,
                             selectedSports,
                             selectedDateRange,
-                            selectedTimezone,
                             selectedStartDateValue,
                             selectedEndDateValue,
-                            selectedTimezoneValue,
                             selectedPriceRange,
                             result,
                             locale,
@@ -289,23 +267,19 @@ public class FeedController {
     }
 
     private FeedPageViewModel buildMatchFeedPageViewModel(
+            final User currentUser,
             final String query,
             final EventType selectedType,
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final ZoneId selectedTimezone,
             final String selectedStartDateValue,
             final String selectedEndDateValue,
-            final String selectedTimezoneValue,
             final PriceRange selectedPriceRange,
             final PaginatedResult<Match> result,
             final Locale locale,
             final String email,
             final ExploreLocation exploreLocation) {
-
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
                 "",
@@ -320,10 +294,8 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedStartDateValue,
                         selectedEndDateValue,
-                        selectedTimezoneValue,
                         selectedPriceRange,
                         locale,
                         email),
@@ -332,7 +304,6 @@ public class FeedController {
                                 match ->
                                         toCard(
                                                 match,
-                                                zoneId,
                                                 locale,
                                                 currentUser,
                                                 messageSource.getMessage(
@@ -356,7 +327,6 @@ public class FeedController {
                                         selectedSort,
                                         selectedSports,
                                         selectedDateRange,
-                                        selectedTimezone,
                                         selectedPriceRange,
                                         page,
                                         email)),
@@ -367,7 +337,6 @@ public class FeedController {
                                 selectedSort,
                                 selectedSports,
                                 selectedDateRange,
-                                selectedTimezone,
                                 selectedPriceRange,
                                 result.getPage() - 1,
                                 email)
@@ -379,7 +348,6 @@ public class FeedController {
                                 selectedSort,
                                 selectedSports,
                                 selectedDateRange,
-                                selectedTimezone,
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
@@ -387,23 +355,19 @@ public class FeedController {
     }
 
     private FeedPageViewModel buildTournamentFeedPageViewModel(
+            final User currentUser,
             final String query,
             final EventType selectedType,
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final ZoneId selectedTimezone,
             final String selectedStartDateValue,
             final String selectedEndDateValue,
-            final String selectedTimezoneValue,
             final PriceRange selectedPriceRange,
             final PaginatedResult<Tournament> result,
             final Locale locale,
             final String email,
             final ExploreLocation exploreLocation) {
-
-        final ZoneId zoneId = parseZone(selectedTimezoneValue);
-        final User currentUser = SecurityControllerUtils.currentUserOrNull();
 
         return new FeedPageViewModel(
                 "",
@@ -418,10 +382,8 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedStartDateValue,
                         selectedEndDateValue,
-                        selectedTimezoneValue,
                         selectedPriceRange,
                         locale,
                         email),
@@ -430,7 +392,6 @@ public class FeedController {
                                 tournament ->
                                         toCard(
                                                 tournament,
-                                                zoneId,
                                                 locale,
                                                 currentUser,
                                                 messageSource.getMessage(
@@ -451,7 +412,6 @@ public class FeedController {
                                         selectedSort,
                                         selectedSports,
                                         selectedDateRange,
-                                        selectedTimezone,
                                         selectedPriceRange,
                                         page,
                                         email)),
@@ -462,7 +422,6 @@ public class FeedController {
                                 selectedSort,
                                 selectedSports,
                                 selectedDateRange,
-                                selectedTimezone,
                                 selectedPriceRange,
                                 result.getPage() - 1,
                                 email)
@@ -474,7 +433,6 @@ public class FeedController {
                                 selectedSort,
                                 selectedSports,
                                 selectedDateRange,
-                                selectedTimezone,
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
@@ -487,7 +445,6 @@ public class FeedController {
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final ZoneId selectedTimezone,
             final PriceRange selectedPriceRange,
             final Locale locale,
             final String email) {
@@ -499,7 +456,6 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedPriceRange,
                         locale,
                         email,
@@ -512,7 +468,6 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedPriceRange,
                         locale,
                         email,
@@ -526,7 +481,6 @@ public class FeedController {
                             selectedSort,
                             selectedSports,
                             selectedDateRange,
-                            selectedTimezone,
                             selectedPriceRange,
                             locale,
                             email,
@@ -540,7 +494,6 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedPriceRange,
                         locale,
                         email,
@@ -555,7 +508,6 @@ public class FeedController {
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final ZoneId selectedTimezone,
             final PriceRange selectedPriceRange,
             final Locale locale,
             final String email,
@@ -572,7 +524,6 @@ public class FeedController {
                         sort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedPriceRange),
                 sort == selectedSort);
     }
@@ -583,10 +534,8 @@ public class FeedController {
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final ZoneId selectedTimezone,
             final String selectedStartDateValue,
             final String selectedEndDateValue,
-            final String selectedTimezoneValue,
             final PriceRange selectedPriceRange,
             final Locale locale,
             final String email) {
@@ -607,7 +556,6 @@ public class FeedController {
                                                 selectedSort,
                                                 selectedSports,
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         selectedType == EventType.MATCH),
@@ -623,7 +571,6 @@ public class FeedController {
                                                 selectedSort,
                                                 selectedSports,
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         selectedType == EventType.TOURNAMENT))));
@@ -638,11 +585,10 @@ public class FeedController {
                                                 query,
                                                 1,
                                                 email,
-                                                EventType.MATCH,
+                                                selectedType,
                                                 selectedSort,
                                                 List.of(),
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         selectedSports.isEmpty()),
@@ -653,11 +599,10 @@ public class FeedController {
                                                 query,
                                                 1,
                                                 email,
-                                                EventType.MATCH,
+                                                selectedType,
                                                 selectedSort,
                                                 toggleSport(selectedSports, Sport.FOOTBALL),
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         isSportSelected(selectedSports, Sport.FOOTBALL)),
@@ -668,11 +613,10 @@ public class FeedController {
                                                 query,
                                                 1,
                                                 email,
-                                                EventType.MATCH,
+                                                selectedType,
                                                 selectedSort,
                                                 toggleSport(selectedSports, Sport.TENNIS),
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         isSportSelected(selectedSports, Sport.TENNIS)),
@@ -683,11 +627,10 @@ public class FeedController {
                                                 query,
                                                 1,
                                                 email,
-                                                EventType.MATCH,
+                                                selectedType,
                                                 selectedSort,
                                                 toggleSport(selectedSports, Sport.BASKETBALL),
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         isSportSelected(selectedSports, Sport.BASKETBALL)),
@@ -698,11 +641,10 @@ public class FeedController {
                                                 query,
                                                 1,
                                                 email,
-                                                EventType.MATCH,
+                                                selectedType,
                                                 selectedSort,
                                                 toggleSport(selectedSports, Sport.PADEL),
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         isSportSelected(selectedSports, Sport.PADEL)),
@@ -713,11 +655,10 @@ public class FeedController {
                                                 query,
                                                 1,
                                                 email,
-                                                EventType.MATCH,
+                                                selectedType,
                                                 selectedSort,
                                                 toggleSport(selectedSports, Sport.OTHER),
                                                 selectedDateRange,
-                                                selectedTimezone,
                                                 selectedPriceRange),
                                         null,
                                         isSportSelected(selectedSports, Sport.OTHER)))));
@@ -778,11 +719,13 @@ public class FeedController {
                 "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
-    private static double distanceInKilometers(
-            final double fromLatitude,
-            final double fromLongitude,
-            final double toLatitude,
-            final double toLongitude) {
+    private static double
+            distanceInKilometers( // TODO: add as an attribute to Match and Tournament and compute
+                    // it in the service layer
+                    final double fromLatitude,
+                    final double fromLongitude,
+                    final double toLatitude,
+                    final double toLongitude) {
         final double earthRadiusKm = 6371.0088;
         final double fromLatRad = Math.toRadians(fromLatitude);
         final double toLatRad = Math.toRadians(toLatitude);
@@ -797,18 +740,6 @@ public class FeedController {
         return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    private static ZoneId parseZone(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
-    }
-
     private static ExploreLocation exploreLocation(final HttpSession session) {
         if (session == null) {
             return null;
@@ -819,44 +750,6 @@ public class FeedController {
             return new ExploreLocation((Double) latitude, (Double) longitude);
         }
         return null;
-    }
-
-    private static DateRange normalizeDateRange(
-            final LocalDate rawStartDate, final LocalDate rawEndDate, final ZoneId zoneId) {
-        LocalDate startDate = rawStartDate;
-        LocalDate endDate = rawEndDate;
-        final LocalDate today = LocalDate.now(zoneId);
-
-        if (startDate != null && startDate.isBefore(today)) {
-            startDate = today;
-        }
-        if (endDate != null && endDate.isBefore(today)) {
-            endDate = today;
-        }
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            return new DateRange(endDate, startDate);
-        }
-
-        return new DateRange(startDate, endDate);
-    }
-
-    private static PriceRange normalizePriceRange(
-            final BigDecimal rawMinPrice, final BigDecimal rawMaxPrice) {
-        final BigDecimal minPrice =
-                rawMinPrice == null || rawMinPrice.compareTo(BigDecimal.ZERO) < 0
-                        ? null
-                        : rawMinPrice.stripTrailingZeros();
-        final BigDecimal maxPrice =
-                rawMaxPrice == null || rawMaxPrice.compareTo(BigDecimal.ZERO) < 0
-                        ? null
-                        : rawMaxPrice.stripTrailingZeros();
-
-        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
-            return new PriceRange(maxPrice, minPrice);
-        }
-
-        return new PriceRange(minPrice, maxPrice);
     }
 
     private static boolean isSportSelected(final List<String> selectedSports, final Sport sport) {
@@ -884,7 +777,6 @@ public class FeedController {
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final ZoneId selectedTimezone,
             final PriceRange selectedPriceRange) {
         final Map<String, String> params = new LinkedHashMap<>();
         params.put("q", query == null ? "" : query);
@@ -910,9 +802,6 @@ public class FeedController {
         if (selectedDateRange.endDate() != null) {
             params.put("endDate", selectedDateRange.endDate().toString());
         }
-        if (selectedTimezone != null) {
-            params.put("tz", selectedTimezone.getId());
-        }
         if (selectedPriceRange.minPrice() != null) {
             params.put("minPrice", formatPriceValue(selectedPriceRange.minPrice()));
         }
@@ -928,7 +817,6 @@ public class FeedController {
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final ZoneId selectedTimezone,
             final PriceRange selectedPriceRange,
             final int page,
             final String email) {
@@ -941,7 +829,6 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedTimezone,
                         selectedPriceRange)
                 .forEach(builder::queryParam);
         return builder.build().encode().toUriString();

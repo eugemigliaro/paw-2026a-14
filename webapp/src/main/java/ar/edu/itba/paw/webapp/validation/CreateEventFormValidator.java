@@ -1,9 +1,10 @@
 package ar.edu.itba.paw.webapp.validation;
 
+import ar.edu.itba.paw.models.PlatformTime;
+import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import java.time.Instant;
-import java.time.ZoneId;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
@@ -48,20 +49,13 @@ public class CreateEventFormValidator
     }
 
     private static boolean isScheduledInFuture(final CreateEventForm form) {
-        final ZoneId timezone =
-                form.getTimezone() == null ? ZoneId.systemDefault() : form.getTimezone();
-        final Instant startsAt =
-                form.getEventDate().atTime(form.getEventTime()).atZone(timezone).toInstant();
+        final Instant startsAt = PlatformTime.toInstant(form.getEventDate(), form.getEventTime());
         return startsAt.isAfter(Instant.now());
     }
 
     private static boolean isEndAfterStart(final CreateEventForm form) {
-        final ZoneId timezone =
-                form.getTimezone() == null ? ZoneId.systemDefault() : form.getTimezone();
-        final Instant startsAt =
-                form.getEventDate().atTime(form.getEventTime()).atZone(timezone).toInstant();
-        final Instant endsAt =
-                form.getEndDate().atTime(form.getEndTime()).atZone(timezone).toInstant();
+        final Instant startsAt = PlatformTime.toInstant(form.getEventDate(), form.getEventTime());
+        final Instant endsAt = PlatformTime.toInstant(form.getEndDate(), form.getEndTime());
         return endsAt.isAfter(startsAt);
     }
 
@@ -80,6 +74,10 @@ public class CreateEventFormValidator
 
         if (form.getJoinPolicy() == null) {
             reject(context, "joinPolicy", "{host.validation.joinPolicy.required}");
+            return false;
+        }
+        if (EventJoinPolicy.INVITE_ONLY == form.getJoinPolicy()) {
+            reject(context, "joinPolicy", "{host.validation.joinPolicy.invalid}");
             return false;
         }
 

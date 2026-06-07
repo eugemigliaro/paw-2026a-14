@@ -1,14 +1,15 @@
 package ar.edu.itba.paw.webapp.form;
 
+import ar.edu.itba.paw.webapp.validation.ValidUserEmail;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
 public class InviteForm {
-
     @NotBlank(message = "{InviteForm.email.NotBlank}")
-    @Email
-    @Size(max = 255)
+    @Email(message = "{InviteForm.email.Email}")
+    @Size(max = 255, message = "{InviteForm.email.Size}")
+    @ValidUserEmail(message = "{validation.user.email.mustExist}", mustExist = true)
     private String email;
 
     private boolean inviteSeries;

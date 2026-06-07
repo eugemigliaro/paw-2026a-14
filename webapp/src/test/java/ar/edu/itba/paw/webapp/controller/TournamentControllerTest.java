@@ -21,16 +21,15 @@ import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
-import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
-import ar.edu.itba.paw.services.TournamentJoinFailureReason;
 import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
-import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
-import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
+import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketForbiddenException;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloPoolFullException;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
@@ -79,6 +78,7 @@ class TournamentControllerTest {
                                         tournamentBracketService,
                                         messageSource(),
                                         Clock.fixed(NOW, ZoneId.of("UTC"))))
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
 
@@ -292,9 +292,7 @@ class TournamentControllerTest {
         final User player = UserUtils.getUser(9L);
         AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
         Mockito.when(tournamentRegistrationService.joinSolo(77L, player))
-                .thenThrow(
-                        new TournamentRegistrationException(
-                                TournamentJoinFailureReason.SOLO_POOL_FULL, "Tournament is full"));
+                .thenThrow(new TournamentRegistrationSoloPoolFullException("Tournament is full"));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/tournaments/77/solo-entry"))
@@ -387,9 +385,7 @@ class TournamentControllerTest {
     void publicBracketBeforePublishIsForbidden() throws Exception {
         // 1. Arrange
         Mockito.when(tournamentBracketService.getBracket(77L, null))
-                .thenThrow(
-                        new TournamentBracketException(
-                                TournamentBracketFailureReason.FORBIDDEN, "Forbidden"));
+                .thenThrow(new TournamentBracketForbiddenException("Forbidden"));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77/bracket")).andExpect(status().isForbidden());
@@ -430,9 +426,7 @@ class TournamentControllerTest {
                                 Mockito.eq(10L),
                                 Mockito.any(TournamentWinnerDeclarationRequest.class),
                                 Mockito.eq(user)))
-                .thenThrow(
-                        new TournamentBracketException(
-                                TournamentBracketFailureReason.FORBIDDEN, "Forbidden"));
+                .thenThrow(new TournamentBracketForbiddenException("Forbidden"));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/matches/10/winner").param("winnerTeamId", "1"))

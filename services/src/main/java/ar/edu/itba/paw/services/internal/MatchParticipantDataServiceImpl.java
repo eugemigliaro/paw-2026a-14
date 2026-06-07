@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services.internal;
 
+import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
@@ -142,6 +143,11 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     }
 
     @Override
+    public int cancelFutureReservations(final User user, final Instant startsAfter) {
+        return matchParticipantDao.cancelFutureReservations(user, startsAfter);
+    }
+
+    @Override
     public boolean cancelJoinRequest(final Long matchId, final User user) {
         return matchParticipantDao.cancelJoinRequest(matchId, user);
     }
@@ -149,6 +155,11 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     @Override
     public List<Long> findPendingMatchIds(final User user) {
         return matchParticipantDao.findPendingMatchIds(user);
+    }
+
+    @Override
+    public List<Match> findPendingRequestMatches(final User user) {
+        return matchParticipantDao.findPendingRequestMatches(user);
     }
 
     @Override
@@ -199,5 +210,10 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     @Override
     public List<Long> findInvitedMatchIds(final User user) {
         return matchParticipantDao.findInvitedMatchIds(user);
+    }
+
+    @Override
+    public List<Match> findInvitedMatches(final User user) {
+        return matchParticipantDao.findInvitedMatches(user);
     }
 }

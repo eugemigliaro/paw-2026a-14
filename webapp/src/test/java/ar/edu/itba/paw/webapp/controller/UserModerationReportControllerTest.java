@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
@@ -53,6 +54,7 @@ class UserModerationReportControllerTest {
                                 new UserModerationReportController(
                                         moderationService, messageSource))
                         .setConversionService(conversionService())
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
 

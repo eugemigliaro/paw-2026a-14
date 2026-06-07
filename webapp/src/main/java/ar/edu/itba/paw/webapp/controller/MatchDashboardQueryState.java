@@ -1,13 +1,13 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.normalizeCsvValues;
-
+import ar.edu.itba.paw.models.PlatformTime;
+import ar.edu.itba.paw.models.query.EventCategory;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,32 +19,25 @@ final class MatchDashboardQueryState {
         final SearchForm normalizedForm = copy(sourceForm);
         normalizedForm.normalizeDefaults();
 
-        final ZoneId selectedTimezone =
-                normalizedForm.getTimezone() == null
-                        ? ZoneId.systemDefault()
-                        : normalizedForm.getTimezone();
-        normalizedForm.setTimezone(selectedTimezone);
-
         final boolean tournament = normalizedForm.getType() == EventType.TOURNAMENT;
-        final boolean upcoming = !"past".equalsIgnoreCase(normalizedForm.getFilter());
-        final DateRangeContext context =
-                upcoming ? DateRangeContext.UPCOMING : DateRangeContext.PAST;
+        final boolean context =
+                normalizedForm.getFilter() == null
+                        || normalizedForm.getFilter() == EventFilter.UPCOMING;
         final DateRange dateRange =
                 tournament
                         ? new DateRange(null, null)
                         : normalizeDateRange(
                                 normalizedForm.getStartDate(),
                                 normalizedForm.getEndDate(),
-                                context,
-                                selectedTimezone);
+                                normalizedForm.getFilter());
 
-        final List<String> selectedCategories =
-                tournament ? List.of() : normalizeCsvValues(normalizedForm.getCategory());
+        final List<EventCategory> selectedCategories =
+                tournament ? List.of() : normalizedForm.getCategory();
         final List<EventStatus> selectedStatuses =
                 tournament ? List.of() : normalizedForm.getStatus();
         final List<ParticipantStatus> participantStatuses =
                 tournament ? List.of() : participantStatuses(selectedCategories);
-        final Boolean includeHosted = tournament ? null : includeHosted(selectedCategories);
+        final Boolean includeHosted = tournament ? Boolean.TRUE : includeHosted(selectedCategories);
 
         normalizedForm.setCategory(selectedCategories);
         normalizedForm.setStatus(selectedStatuses);
@@ -52,13 +45,7 @@ final class MatchDashboardQueryState {
         normalizedForm.setEndDate(dateRange.endDate());
 
         return new DashboardSelection(
-                normalizedForm,
-                tournament,
-                upcoming,
-                selectedTimezone,
-                dateRange,
-                includeHosted,
-                participantStatuses);
+                normalizedForm, tournament, context, dateRange, includeHosted, participantStatuses);
     }
 
     private static SearchForm copy(final SearchForm sourceForm) {
@@ -71,7 +58,6 @@ final class MatchDashboardQueryState {
         copy.setEndDate(sourceForm.getEndDate());
         copy.setMinPrice(sourceForm.getMinPrice());
         copy.setMaxPrice(sourceForm.getMaxPrice());
-        copy.setTimezone(sourceForm.getTimezone());
         copy.setSport(sourceForm.getSport());
         copy.setStatus(sourceForm.getStatus());
         copy.setCategory(sourceForm.getCategory());
@@ -80,15 +66,15 @@ final class MatchDashboardQueryState {
         return copy;
     }
 
-    private static Boolean includeHosted(final List<String> selectedCategories) {
+    private static Boolean includeHosted(final List<EventCategory> selectedCategories) {
         if (selectedCategories.isEmpty()) {
             return Boolean.FALSE;
         }
-        return selectedCategories.contains("hosted") ? Boolean.TRUE : Boolean.FALSE;
+        return selectedCategories.contains(EventCategory.HOSTED) ? Boolean.TRUE : Boolean.FALSE;
     }
 
     private static List<ParticipantStatus> participantStatuses(
-            final List<String> selectedCategories) {
+            final List<EventCategory> selectedCategories) {
         if (selectedCategories.isEmpty()) {
             return List.of(
                     ParticipantStatus.JOINED,
@@ -97,52 +83,33 @@ final class MatchDashboardQueryState {
         }
 
         final List<ParticipantStatus> participantStatuses = new ArrayList<>();
-        if (selectedCategories.contains("joined")) {
+        if (selectedCategories.contains(EventCategory.JOINED)) {
             participantStatuses.add(ParticipantStatus.JOINED);
             participantStatuses.add(ParticipantStatus.CHECKED_IN);
         }
-        if (selectedCategories.contains("invited")) {
+        if (selectedCategories.contains(EventCategory.INVITED)) {
             participantStatuses.add(ParticipantStatus.INVITED);
         }
-        if (selectedCategories.contains("pending")) {
+        if (selectedCategories.contains(EventCategory.PENDING)) {
             participantStatuses.add(ParticipantStatus.PENDING_APPROVAL);
         }
         return List.copyOf(participantStatuses);
     }
 
     private static DateRange normalizeDateRange(
-            final LocalDate rawStartDate,
-            final LocalDate rawEndDate,
-            final DateRangeContext context,
-            final ZoneId zoneId) {
+            final LocalDate rawStartDate, final LocalDate rawEndDate, final EventFilter context) {
         LocalDate startDate = rawStartDate;
         LocalDate endDate = rawEndDate;
-        final LocalDate today = LocalDate.now(zoneId);
+        final LocalDate today = LocalDate.now(PlatformTime.ZONE);
 
-        if (context == DateRangeContext.UPCOMING) {
+        if (context == EventFilter.UPCOMING) {
             if (startDate == null) {
                 startDate = today;
-            } else if (startDate.isBefore(today)) {
-                startDate = today;
             }
-            if (endDate != null && !endDate.isAfter(today)) {
-                endDate = null;
-            }
-        } else if (context == DateRangeContext.PAST) {
+        } else if (context == EventFilter.PAST) {
             if (endDate == null) {
                 endDate = today;
-            } else if (endDate.isAfter(today)) {
-                endDate = today;
             }
-            if (startDate != null && !startDate.isBefore(today)) {
-                startDate = null;
-            }
-        }
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            final LocalDate temporary = startDate;
-            startDate = endDate;
-            endDate = temporary;
         }
 
         return new DateRange(startDate, endDate);
@@ -153,7 +120,6 @@ final class MatchDashboardQueryState {
         private final SearchForm searchForm;
         private final boolean tournament;
         private final boolean upcoming;
-        private final ZoneId selectedTimezone;
         private final DateRange dateRange;
         private final Boolean includeHosted;
         private final List<ParticipantStatus> participantStatuses;
@@ -162,14 +128,12 @@ final class MatchDashboardQueryState {
                 final SearchForm searchForm,
                 final boolean tournament,
                 final boolean upcoming,
-                final ZoneId selectedTimezone,
                 final DateRange dateRange,
                 final Boolean includeHosted,
                 final List<ParticipantStatus> participantStatuses) {
             this.searchForm = searchForm;
             this.tournament = tournament;
             this.upcoming = upcoming;
-            this.selectedTimezone = selectedTimezone;
             this.dateRange = dateRange;
             this.includeHosted = includeHosted;
             this.participantStatuses = participantStatuses;
@@ -187,10 +151,6 @@ final class MatchDashboardQueryState {
             return upcoming;
         }
 
-        ZoneId selectedTimezone() {
-            return selectedTimezone;
-        }
-
         DateRange dateRange() {
             return dateRange;
         }
@@ -205,9 +165,4 @@ final class MatchDashboardQueryState {
     }
 
     private record DateRange(LocalDate startDate, LocalDate endDate) {}
-
-    private enum DateRangeContext {
-        UPCOMING,
-        PAST
-    }
 }

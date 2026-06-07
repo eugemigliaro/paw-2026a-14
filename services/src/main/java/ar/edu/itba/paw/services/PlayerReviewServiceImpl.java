@@ -6,8 +6,7 @@ import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.services.exceptions.PlayerReviewException;
+import ar.edu.itba.paw.services.exceptions.playerReview.*;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import java.util.HashSet;
 import java.util.List;
@@ -48,8 +47,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         nonNullUser(reviewer);
         nonNullUser(reviewed);
         if (!playerReviewDataService.softDeleteReview(reviewer, reviewed)) {
-            throw new PlayerReviewException(
-                    PlayerReviewException.NOT_FOUND, "Player review not found.");
+            throw new PlayerReviewNotFoundException("Player review not found.");
         }
     }
 
@@ -115,7 +113,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new ModerationException("invalid_report", "Reporter user is required.");
+            throw new PlayerReviewUserNotFoundException("User is required.");
         }
     }
 
@@ -124,16 +122,13 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
         nonNullUser(reviewer);
         nonNullUser(reviewed);
         if (reaction == null) {
-            throw new PlayerReviewException(
-                    PlayerReviewException.INVALID_REACTION, "Review reaction is required.");
+            throw new PlayerReviewInvalidReactionException("Review reaction is required.");
         }
         if (reviewer != null && reviewer.getId().equals(reviewed.getId())) {
-            throw new PlayerReviewException(
-                    PlayerReviewException.SELF_REVIEW, "Users cannot review themselves.");
+            throw new PlayerReviewSelfReviewException("Users cannot review themselves.");
         }
         if (!canReview(reviewer, reviewed)) {
-            throw new PlayerReviewException(
-                    PlayerReviewException.NOT_ELIGIBLE,
+            throw new PlayerReviewNotEligibleException(
                     "Users must share a completed match to review each other.");
         }
     }
@@ -147,8 +142,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
             return null;
         }
         if (normalized.length() > MAX_COMMENT_LENGTH) {
-            throw new PlayerReviewException(
-                    PlayerReviewException.COMMENT_TOO_LONG, "Review comment is too long.");
+            throw new PlayerReviewCommentTooLongException("Review comment is too long.");
         }
         return normalized;
     }
