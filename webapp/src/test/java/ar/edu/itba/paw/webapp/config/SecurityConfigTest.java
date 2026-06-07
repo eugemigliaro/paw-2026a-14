@@ -126,6 +126,32 @@ class SecurityConfigTest {
         mockMvc.perform(get("/users/player")).andExpect(status().isOk());
     }
 
+    @Test
+    void cssRouteIsNotSecured() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        // web.ignoring() bypasses the filter chain, so an anonymous request reaches the
+        // dispatcher (404, no handler) instead of being redirected to /login.
+        mockMvc.perform(get("/css/app.css")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void jsRouteIsNotSecured() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/js/app.js")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void assetsRouteIsNotSecured() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/assets/logo.png")).andExpect(status().isNotFound());
+    }
+
     private static RequestPostProcessor authenticatedUser() {
         return authentication(authenticationFor(UserRole.USER, "ROLE_USER"));
     }
