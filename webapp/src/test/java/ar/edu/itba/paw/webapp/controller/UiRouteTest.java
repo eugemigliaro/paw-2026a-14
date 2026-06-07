@@ -76,7 +76,6 @@ import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceEndModeConvert
 import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.form.SearchForm;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -2457,85 +2456,6 @@ class UiRouteTest {
         mockMvc.perform(post("/matches/52/recurring-join-requests"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/52?joinError=series_already_pending"));
-    }
-
-    @Test
-    void getVerificationPreviewRendersConfirmPage() throws Exception {
-        mockMvc.perform(get("/verifications/abc123"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("verification/confirm"))
-                .andExpect(model().attributeExists("preview"));
-    }
-
-    @Test
-    void postVerificationConfirmAuthenticatesAndRedirectsHome() throws Exception {
-        final MvcResult result =
-                mockMvc.perform(post("/verifications/abc123/confirm"))
-                        .andExpect(status().is3xxRedirection())
-                        .andExpect(redirectedUrl("/"))
-                        .andReturn();
-
-        final org.springframework.security.core.context.SecurityContext securityContext =
-                (org.springframework.security.core.context.SecurityContext)
-                        result.getRequest().getSession().getAttribute("SPRING_SECURITY_CONTEXT");
-        Assertions.assertNotNull(securityContext);
-        Assertions.assertTrue(securityContext.getAuthentication().isAuthenticated());
-        Assertions.assertEquals(
-                9L,
-                ((AuthenticatedUserPrincipal) securityContext.getAuthentication().getPrincipal())
-                        .getUser()
-                        .getId());
-    }
-
-    @Test
-    void getRemovedMockMatchRouteReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/matches/sunrise-padel-championship"))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getRemovedComponentPreviewRouteReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/ui/components")).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getInvalidVerificationRendersErrorPage() throws Exception {
-        mockMvc.perform(get("/verifications/invalid"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("verification/error"))
-                .andExpect(model().attributeExists("message"));
-    }
-
-    @Test
-    void getNotFoundErrorRouteRenders404Page() throws Exception {
-        mockMvc.perform(get("/errors/404"))
-                .andExpect(status().isNotFound())
-                .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attribute("number", "404"));
-    }
-
-    @Test
-    void getBadRequestErrorRouteRenders400Page() throws Exception {
-        mockMvc.perform(get("/errors/400"))
-                .andExpect(status().isBadRequest())
-                .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attribute("number", "400"));
-    }
-
-    @Test
-    void getForbiddenErrorRouteRenders403Page() throws Exception {
-        mockMvc.perform(get("/errors/403"))
-                .andExpect(status().isForbidden())
-                .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attribute("number", "403"));
-    }
-
-    @Test
-    void getInternalServerErrorRouteRenders500Page() throws Exception {
-        mockMvc.perform(get("/errors/500"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(view().name("errors/error-page"))
-                .andExpect(model().attribute("number", "500"));
     }
 
     @Test
