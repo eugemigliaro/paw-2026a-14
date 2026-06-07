@@ -14,17 +14,17 @@ import org.springframework.stereotype.Component;
 public class DomainExceptionErrorResolver {
     public String resolve(ModerationException e) {
         return switch (e) {
-            case ModerationAppealLimitException ignored -> "appeal_limit";
-            case ModerationAppealRejectedException ignored -> "appeal_rejected";
-            case ModerationInvalidBanDurationException ignored -> "invalid_ban_duration";
-            case ModerationTargetNotFoundException ignored -> "target_not_found";
-            case ModerationReportErrorException ignored -> "report_error";
-            case ModerationDuplicateReportException ignored -> "duplicate_report";
-            case ModerationReportLimitException ignored -> "report_limit";
-            case ModerationInvalidReportException ignored -> "invalid_report";
-            case ModerationSelfReportException ignored -> "self_report";
-            case ModerationValueTooLongException ignored -> "value_too_long";
-            case ModerationReportFailedException ignored -> "report_failed";
+            case ModerationAppealLimitException ignored -> "appealLimit";
+            case ModerationAppealRejectedException ignored -> "appealRejected";
+            case ModerationInvalidBanDurationException ignored -> "invalidBanDuration";
+            case ModerationTargetNotFoundException ignored -> "targetNotFound";
+            case ModerationReportErrorException ignored -> "reportError";
+            case ModerationDuplicateReportException ignored -> "duplicateReport";
+            case ModerationReportLimitException ignored -> "reportLimit";
+            case ModerationInvalidReportException ignored -> "invalidReport";
+            case ModerationSelfReportException ignored -> "selfReport";
+            case ModerationValueTooLongException ignored -> "valueTooLong";
+            case ModerationReportFailedException ignored -> "reportFailed";
             default -> e.getMessage();
         };
     }
@@ -36,10 +36,10 @@ public class DomainExceptionErrorResolver {
         return switch (e) {
             case MatchClosedException ignored -> "closed";
             case MatchFullException ignored -> "full";
-            case MatchNotRecurringException ignored -> "not_recurring";
-            case MatchSeriesClosedException ignored -> "series_closed";
-            case MatchSeriesFullException ignored -> "series_full";
-            case MatchSeriesStartedException ignored -> "series_started";
+            case MatchNotRecurringException ignored -> "notRecurring";
+            case MatchSeriesClosedException ignored -> "seriesClosed";
+            case MatchSeriesFullException ignored -> "seriesFull";
+            case MatchSeriesStartedException ignored -> "seriesStarted";
             case MatchStartedException ignored -> "started";
             default -> e.getMessage();
         };
@@ -47,24 +47,21 @@ public class DomainExceptionErrorResolver {
 
     public String resolve(MatchParticipationException e) {
         return switch (e) {
-            case MatchParticipationAlreadyInvitedException ignored -> "already_invited";
-            case MatchParticipationAlreadyJoinedException ignored -> "already_joined";
-            case MatchParticipationAlreadyPendingException ignored -> "already_pending";
-            case MatchParticipationIsHostException ignored -> "is_host";
-            case MatchParticipationNoInvitationException ignored -> "no_invitation";
-            case MatchParticipationNoPendingRequestException ignored -> "no_pending_request";
-            case MatchParticipationNotCancellableException ignored -> "not_cancellable";
-            case MatchParticipationNotInviteOnlyException ignored -> "not_invite_only";
-            case MatchParticipationNotJoinedException ignored -> "not_joined";
-            case MatchParticipationNotParticipantException ignored -> "not_joined";
-            case MatchParticipationSeriesAlreadyCoveredException ignored ->
-                    "series_already_covered";
-            case MatchParticipationSeriesAlreadyInvitedException ignored ->
-                    "series_already_invited";
-            case MatchParticipationSeriesAlreadyJoinedException ignored -> "series_already_joined";
-            case MatchParticipationSeriesAlreadyPendingException ignored ->
-                    "series_already_pending";
-            case MatchParticipationSeriesNotJoinedException ignored -> "series_not_joined";
+            case MatchParticipationAlreadyInvitedException ignored -> "alreadyInvited";
+            case MatchParticipationAlreadyJoinedException ignored -> "alreadyJoined";
+            case MatchParticipationAlreadyPendingException ignored -> "alreadyPending";
+            case MatchParticipationIsHostException ignored -> "isHost";
+            case MatchParticipationNoInvitationException ignored -> "noInvitation";
+            case MatchParticipationNoPendingRequestException ignored -> "noPendingRequest";
+            case MatchParticipationNotCancellableException ignored -> "notCancellable";
+            case MatchParticipationNotInviteOnlyException ignored -> "notInviteOnly";
+            case MatchParticipationNotJoinedException ignored -> "notJoined";
+            case MatchParticipationNotParticipantException ignored -> "notParticipant";
+            case MatchParticipationSeriesAlreadyCoveredException ignored -> "seriesAlreadyCovered";
+            case MatchParticipationSeriesAlreadyInvitedException ignored -> "seriesAlreadyInvited";
+            case MatchParticipationSeriesAlreadyJoinedException ignored -> "seriesAlreadyJoined";
+            case MatchParticipationSeriesAlreadyPendingException ignored -> "seriesAlreadyPending";
+            case MatchParticipationSeriesNotJoinedException ignored -> "seriesNotJoined";
             default -> e.getMessage();
         };
     }
@@ -118,11 +115,11 @@ public class DomainExceptionErrorResolver {
 
     public String resolve(PlayerReviewException e) {
         return switch (e) {
-            case PlayerReviewInvalidReactionException ignored -> "invalid_reaction";
-            case PlayerReviewSelfReviewException ignored -> "self_review";
-            case PlayerReviewNotEligibleException ignored -> "not_eligible";
-            case PlayerReviewCommentTooLongException ignored -> "comment_too_long";
-            case PlayerReviewUserNotFoundException ignored -> "user_not_found";
+            case PlayerReviewInvalidReactionException ignored -> "invalidReaction";
+            case PlayerReviewSelfReviewException ignored -> "selfReview";
+            case PlayerReviewNotEligibleException ignored -> "notEligible";
+            case PlayerReviewCommentTooLongException ignored -> "commentTooLong";
+            case PlayerReviewUserNotFoundException ignored -> "userNotFound";
             default -> e.getMessage();
         };
     }
