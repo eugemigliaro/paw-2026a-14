@@ -83,7 +83,6 @@ import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
@@ -95,6 +94,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.validation.ConstraintValidator;
@@ -1735,7 +1735,8 @@ class UiRouteTest {
     void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
         final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
 
-        Assertions.assertNull(featuredEvents(result).get(0).getDistanceLabel());
+        Assertions.assertFalse(
+                eventDistanceLabels(result).containsKey(featuredEvents(result).get(0).getId()));
     }
 
     @Test
@@ -1747,7 +1748,8 @@ class UiRouteTest {
                         .andExpect(status().isOk())
                         .andReturn();
 
-        Assertions.assertNotNull(featuredEvents(result).get(0).getDistanceLabel());
+        Assertions.assertTrue(
+                eventDistanceLabels(result).containsKey(featuredEvents(result).get(0).getId()));
     }
 
     @Test
@@ -3269,9 +3271,12 @@ class UiRouteTest {
                 (SearchForm) result.getModelAndView().getModel().get("searchForm");
         Assertions.assertTrue(searchForm.getCategory().isEmpty());
 
-        final List<EventCardViewModel> events = getEventsModel(result);
+        final List<Object> events = getEventsModel(result);
         Assertions.assertTrue(
-                events.stream().anyMatch(event -> "Hosted Tournament".equals(event.getTitle())));
+                events.stream()
+                        .filter(Tournament.class::isInstance)
+                        .map(Tournament.class::cast)
+                        .anyMatch(event -> "Hosted Tournament".equals(event.getTitle())));
     }
 
     @Test
@@ -3285,9 +3290,11 @@ class UiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events = getEventsModel(result);
+        final List<Object> events = getEventsModel(result);
         Assertions.assertTrue(
                 events.stream()
+                        .filter(Match.class::isInstance)
+                        .map(Match.class::cast)
                         .noneMatch(event -> "Approval Future Padel".equals(event.getTitle())));
     }
 
@@ -3302,9 +3309,11 @@ class UiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events = getEventsModel(result);
+        final List<Object> events = getEventsModel(result);
         Assertions.assertTrue(
                 events.stream()
+                        .filter(Match.class::isInstance)
+                        .map(Match.class::cast)
                         .anyMatch(event -> "Approval Future Padel".equals(event.getTitle())));
     }
 
@@ -3319,18 +3328,17 @@ class UiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events = getEventsModel(result);
-        final EventCardViewModel hostedEvent =
+        final List<Object> events = getEventsModel(result);
+        final Match hostedEvent =
                 events.stream()
+                        .filter(Match.class::isInstance)
+                        .map(Match.class::cast)
                         .filter(event -> "Sunrise Padel".equals(event.getTitle()))
                         .findFirst()
                         .orElseThrow(AssertionError::new);
-        Assertions.assertTrue(
-                hostedEvent.getRelationshipBadges().stream()
-                        .anyMatch(badge -> "my_event".equals(badge.getType())));
-        Assertions.assertTrue(
-                hostedEvent.getRelationshipBadges().stream()
-                        .anyMatch(badge -> "going".equals(badge.getType())));
+        final Map<Long, List<String>> relationshipBadgeCodes = eventRelationshipBadgeCodes(result);
+        Assertions.assertTrue(relationshipBadgeCodes.get(hostedEvent.getId()).contains("my_event"));
+        Assertions.assertTrue(relationshipBadgeCodes.get(hostedEvent.getId()).contains("going"));
     }
 
     @Test
@@ -3664,13 +3672,24 @@ class UiRouteTest {
     }
 
     @SuppressWarnings("unchecked")
-    private List<EventCardViewModel> getEventsModel(final MvcResult result) {
-        return (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+    private List<Object> getEventsModel(final MvcResult result) {
+        return (List<Object>) result.getModelAndView().getModel().get("events");
     }
 
     @SuppressWarnings("unchecked")
-    private List<EventCardViewModel> featuredEvents(final MvcResult result) {
-        return (List<EventCardViewModel>) result.getModelAndView().getModel().get("featuredEvents");
+    private List<Match> featuredEvents(final MvcResult result) {
+        return (List<Match>) result.getModelAndView().getModel().get("featuredEvents");
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Long, String> eventDistanceLabels(final MvcResult result) {
+        return (Map<Long, String>) result.getModelAndView().getModel().get("eventDistanceLabels");
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Long, List<String>> eventRelationshipBadgeCodes(final MvcResult result) {
+        return (Map<Long, List<String>>)
+                result.getModelAndView().getModel().get("eventRelationshipBadgeCodes");
     }
 
     private static MessageSource messageSource() {

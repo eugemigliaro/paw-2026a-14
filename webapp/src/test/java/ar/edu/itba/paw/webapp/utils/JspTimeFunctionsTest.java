@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.utils;
 
+import ar.edu.itba.paw.models.types.Sport;
 import java.time.OffsetDateTime;
 import java.util.Locale;
 import org.junit.jupiter.api.AfterEach;
@@ -47,6 +48,32 @@ class JspTimeFunctionsTest {
     }
 
     @Test
+    void cardDateUsesCompactWeekdayFormat() {
+        // 1. Arrange
+        final OffsetDateTime value = OffsetDateTime.parse("2026-05-25T23:30:00-03:00");
+
+        // 2. Exercise
+        final String result = JspTimeFunctions.cardDate(value);
+
+        // 3. Assert
+        Assertions.assertEquals("Mon, May 25", result);
+    }
+
+    @Test
+    void timeFormatsUsingTheCarriedOffsetWithoutShiftingTheWallClock() {
+        // 1. Arrange
+        final OffsetDateTime value = OffsetDateTime.parse("2026-05-25T23:30:00-03:00");
+
+        // 2. Exercise
+        final String result = JspTimeFunctions.time(value);
+
+        // 3. Assert
+        Assertions.assertTrue(
+                result.contains("11:30") && result.contains("PM"),
+                "expected formatted time to contain the local time, was: " + result);
+    }
+
+    @Test
     void dateReturnsEmptyStringForNullValue() {
         // 1. Arrange
 
@@ -55,5 +82,16 @@ class JspTimeFunctionsTest {
 
         // 3. Assert
         Assertions.assertEquals("", result);
+    }
+
+    @Test
+    void mediaClassUsesSharedViewFormatMapping() {
+        // 1. Arrange
+
+        // 2. Exercise
+        final String result = JspTimeFunctions.mediaClass(Sport.PADEL);
+
+        // 3. Assert
+        Assertions.assertEquals(ViewFormatUtils.mediaClassFor(Sport.PADEL), result);
     }
 }

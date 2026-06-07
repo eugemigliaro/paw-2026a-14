@@ -33,6 +33,10 @@ public final class ViewFormatUtils {
         return temporal == null ? "" : scheduleFormatter(locale).format(temporal);
     }
 
+    public static String formatCardDate(final TemporalAccessor temporal, final Locale locale) {
+        return temporal == null ? "" : cardDateFormatter(locale).format(temporal);
+    }
+
     public static String priceLabel(
             final BigDecimal pricePerPlayer,
             final Locale locale,
@@ -85,6 +89,10 @@ public final class ViewFormatUtils {
     public static DateTimeFormatter dateFormatter(final Locale locale) {
         return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
                 .withLocale(resolvedLocale(locale));
+    }
+
+    public static DateTimeFormatter cardDateFormatter(final Locale locale) {
+        return DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale(locale));
     }
 
     public static DateTimeFormatter timeFormatter(final Locale locale) {

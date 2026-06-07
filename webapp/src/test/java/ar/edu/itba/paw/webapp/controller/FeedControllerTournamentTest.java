@@ -28,7 +28,6 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
@@ -37,6 +36,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -157,7 +157,7 @@ class FeedControllerTournamentTest {
                         .andExpect(model().attribute("selectedType", "match"))
                         .andReturn();
 
-        Assertions.assertEquals("/matches/42", featuredEvents(result).get(0).getHref());
+        Assertions.assertEquals(42L, ((Match) featuredEvents(result).get(0)).getId());
     }
 
     @Test
@@ -193,11 +193,10 @@ class FeedControllerTournamentTest {
                         .andExpect(model().attribute("selectedType", "tournament"))
                         .andReturn();
 
-        final EventCardViewModel card = featuredEvents(result).get(0);
+        final Tournament card = (Tournament) featuredEvents(result).get(0);
 
-        Assertions.assertEquals("/tournaments/77", card.getHref());
-        Assertions.assertEquals("Tournament", card.getBadge());
-        Assertions.assertEquals("Registration", card.getLevel());
+        Assertions.assertEquals(77L, card.getId());
+        Assertions.assertEquals("Tournament", eventBadgeLabels(result).get(77L));
         Assertions.assertTrue(
                 paginationItems(result).stream()
                         .filter(item -> item.getHref() != null)
@@ -298,7 +297,7 @@ class FeedControllerTournamentTest {
                         .andReturn();
 
         Assertions.assertEquals(1, featuredEvents(result).size());
-        Assertions.assertEquals("/tournaments/78", featuredEvents(result).get(0).getHref());
+        Assertions.assertEquals(78L, ((Tournament) featuredEvents(result).get(0)).getId());
     }
 
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {
@@ -307,8 +306,13 @@ class FeedControllerTournamentTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<EventCardViewModel> featuredEvents(final MvcResult result) {
-        return (List<EventCardViewModel>) result.getModelAndView().getModel().get("featuredEvents");
+    private static List<Object> featuredEvents(final MvcResult result) {
+        return (List<Object>) result.getModelAndView().getModel().get("featuredEvents");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Long, String> eventBadgeLabels(final MvcResult result) {
+        return (Map<Long, String>) result.getModelAndView().getModel().get("eventBadgeLabels");
     }
 
     @SuppressWarnings("unchecked")

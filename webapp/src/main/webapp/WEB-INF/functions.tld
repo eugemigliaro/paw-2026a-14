@@ -16,4 +16,19 @@
         <function-class>ar.edu.itba.paw.webapp.utils.JspTimeFunctions</function-class>
         <function-signature>java.lang.String dateTime(java.time.temporal.TemporalAccessor)</function-signature>
     </function>
+    <function>
+        <name>cardDate</name>
+        <function-class>ar.edu.itba.paw.webapp.utils.JspTimeFunctions</function-class>
+        <function-signature>java.lang.String cardDate(java.time.temporal.TemporalAccessor)</function-signature>
+    </function>
+    <function>
+        <name>time</name>
+        <function-class>ar.edu.itba.paw.webapp.utils.JspTimeFunctions</function-class>
+        <function-signature>java.lang.String time(java.time.temporal.TemporalAccessor)</function-signature>
+    </function>
+    <function>
+        <name>mediaClass</name>
+        <function-class>ar.edu.itba.paw.webapp.utils.JspTimeFunctions</function-class>
+        <function-signature>java.lang.String mediaClass(ar.edu.itba.paw.models.types.Sport)</function-signature>
+    </function>
 </taglib>

@@ -471,85 +471,24 @@
 							<c:otherwise>
 								<div class="event-grid">
 									<c:forEach var="event" items="${featuredEvents}">
-										<c:url var="eventHref" value="${event.href}" />
-										<ui:card href="${eventHref}" className="event-card" ariaLabel="${event.title}">
-											<div class="event-card__media ${event.mediaClass}">
-												<c:if test="${not empty event.bannerImageUrl}">
-													<c:url var="eventBannerSrc" value="${event.bannerImageUrl}" />
-													<img class="event-card__image" src="${eventBannerSrc}" alt="" loading="lazy" decoding="async" />
-												</c:if>
-												<div class="event-card__media-badges">
-													<span class="event-card__badge"><c:out value="${event.badge}" /></span>
-													<c:forEach var="relationshipBadge" items="${event.relationshipBadges}">
-														<span class="event-badge event-badge--${relationshipBadge.type}">
-															<c:out value="${relationshipBadge.label}" />
-														</span>
-													</c:forEach>
-												</div>
-											</div>
-
-											<div class="event-card__body">
-												<div class="event-card__sport-row">
-													<span class="event-card__sport"><c:out value="${event.sport}" /></span>
-													<c:if test="${event.recurring}">
-														<span class="event-card__recurring"><c:out value="${event.recurringLabel}" /></span>
-													</c:if>
-												</div>
-												<h3 class="event-card__title"><c:out value="${event.title}" /></h3>
-												<div class="event-card__meta">
-													<span class="event-card__meta-item">
-														<span class="event-card__meta-icon" aria-hidden="true">
-															<icon:locationPin fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-														</span>
-														<span class="event-card__meta-text">
-															<c:out value="${event.venue}" />
-														</span>
-
-													</span>
-													<c:if test="${not empty event.distanceLabel}">
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon" aria-hidden="true">
-																<icon:ruler fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-															</span>
-															<span class="event-card__meta-text">
-																<c:out value="${event.distanceLabel}" />
-															</span>
-														</span>
-													</c:if>
-													<span class="event-card__meta-item">
-														<span class="event-card__meta-icon" aria-hidden="true">
-															<icon:calendar fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-														</span>
-														<c:out value="${empty event.dateLabel ? event.schedule : event.dateLabel}" />
-													</span>
-													<c:if test="${not empty event.timeLabel}">
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon" aria-hidden="true">
-																<icon:clock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-															</span>
-															<c:out value="${event.timeLabel}" />
-														</span>
-													</c:if>
-													<c:if test="${not empty event.hostLabel}">
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon" aria-hidden="true">
-																<icon:profile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-															</span>
-															<span class="event-card__meta-text">
-																<spring:message code="event.card.hostedBy" />
-																<c:out value="${event.hostLabel}" />
-															</span>
-														</span>
-													</c:if>
-												</div>
-
-												<div class="event-card__footer">
-													<div class="event-card__cta">
-														<span><c:out value="${event.priceLabel}" /></span>
-													</div>
-												</div>
-											</div>
-										</ui:card>
+										<c:choose>
+											<c:when test="${featuredEventType.dbValue == 'tournament'}">
+												<ui:eventCard
+													tournament="${event}"
+													badgeLabel="${eventBadgeLabels[event.id]}"
+													distanceLabel="${eventDistanceLabels[event.id]}"
+													relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+													headingLevel="h3" />
+											</c:when>
+											<c:otherwise>
+												<ui:eventCard
+													match="${event}"
+													badgeLabel="${eventBadgeLabels[event.id]}"
+													distanceLabel="${eventDistanceLabels[event.id]}"
+													relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+													headingLevel="h3" />
+											</c:otherwise>
+										</c:choose>
 									</c:forEach>
 								</div>
 

@@ -19,10 +19,10 @@
 				<section class="detail-top ${hostViewer ? 'detail-top--host-view' : ''}">
 					<div class="detail-top__main">
 						<section
-							class="event-hero ${event.mediaClass} ${not empty event.bannerImageUrl ? 'event-hero--with-image' : ''}"
+							class="event-hero ${eventMediaClass} ${not empty eventBannerImageUrl ? 'event-hero--with-image' : ''}"
 							>
-								<c:if test="${not empty event.bannerImageUrl}">
-									<c:url var="eventHeroBannerSrc" value="${event.bannerImageUrl}" />
+								<c:if test="${not empty eventBannerImageUrl}">
+									<c:url var="eventHeroBannerSrc" value="${eventBannerImageUrl}" />
 									<img
 										class="event-hero__image"
 										src="${eventHeroBannerSrc}"
@@ -32,7 +32,7 @@
 								/>
 							</c:if>
 							<div class="event-heading">
-								<span class="event-heading__badge"><c:out value="${event.sport}" /></span>
+								<span class="event-heading__badge"><spring:message code="sport.${event.sport.dbValue}" /></span>
 								<h1 class="event-heading__title"><c:out value="${event.title}" /></h1>
 							</div>
 						</section>
@@ -1319,97 +1319,7 @@
 							var="event"
 							items="${nearbyEvents}"
 						>
-							<c:url var="nearbyCardHref" value="${event.href}" />
-							<ui:card
-								href="${nearbyCardHref}"
-								className="event-card"
-								ariaLabel="${event.title}"
-							>
-								<div
-									class="event-card__media ${event.mediaClass}"
-								>
-									<c:if
-										test="${not empty event.bannerImageUrl}"
-									>
-										<c:url var="nearbyBannerSrc" value="${event.bannerImageUrl}" />
-										<img
-											class="event-card__image"
-											src="${nearbyBannerSrc}"
-											alt=""
-											loading="lazy"
-											decoding="async"
-										/>
-									</c:if>
-									<div class="event-card__media-badges">
-										<span class="event-card__badge"
-											><c:out value="${event.badge}"
-										/></span>
-										<c:forEach var="relationshipBadge" items="${event.relationshipBadges}">
-											<span class="event-badge event-badge--${relationshipBadge.type}">
-												<c:out value="${relationshipBadge.label}" />
-											</span>
-										</c:forEach>
-									</div>
-								</div>
-
-								<div class="event-card__body">
-									<div class="event-card__sport-row">
-										<span class="event-card__sport"
-											><c:out value="${event.sport}"
-										/></span>
-										<c:if test="${event.recurring}">
-											<span class="event-card__recurring">
-												<c:out value="${event.recurringLabel}" />
-											</span>
-										</c:if>
-									</div>
-									<h3 class="event-card__title">
-										<c:out value="${event.title}" />
-									</h3>
-									<div class="event-card__meta">
-										<span class="event-card__meta-item">
-											<span class="event-card__meta-icon" aria-hidden="true">
-												<icon:locationPin fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-											</span>
-											<span class="event-card__meta-text">
-												<c:out value="${event.venue}" />
-											</span>
-
-										</span>
-										<span class="event-card__meta-item">
-											<span class="event-card__meta-icon" aria-hidden="true">
-												<icon:calendar fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-											</span>
-											<c:out value="${empty event.dateLabel ? event.schedule : event.dateLabel}" />
-										</span>
-										<c:if test="${not empty event.timeLabel}">
-											<span class="event-card__meta-item">
-												<span class="event-card__meta-icon" aria-hidden="true">
-													<icon:clock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-												</span>
-												<c:out value="${event.timeLabel}" />
-											</span>
-										</c:if>
-										<c:if test="${not empty event.hostLabel}">
-											<span class="event-card__meta-item">
-												<span class="event-card__meta-icon" aria-hidden="true">
-													<icon:profile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-												</span>
-												<span class="event-card__meta-text">
-													<spring:message code="event.card.hostedBy" />
-													<c:out value="${event.hostLabel}" />
-												</span>
-											</span>
-										</c:if>
-									</div>
-
-									<div class="event-card__footer">
-										<div class="event-card__cta">
-											<span><c:out value="${event.priceLabel}" /></span>
-										</div>
-									</div>
-								</div>
-							</ui:card>
+							<ui:eventCard match="${event}" headingLevel="h3" />
 						</c:forEach>
 					</div>
 				</section>

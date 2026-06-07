@@ -1,8 +1,9 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
+import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.mediaClassFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
@@ -346,16 +347,9 @@ final class EventPageSupport {
                         : Optional.ofNullable(
                                         playerReviewService.findReviewableUserIds(currentUser))
                                 .orElseGet(Set::of);
-        mav.addObject(
-                "event",
-                toCard(
-                        match,
-                        locale,
-                        currentUser,
-                        buildAvailabilityLabel(match, locale),
-                        messageSource,
-                        matchParticipationService,
-                        matchReservationService));
+        mav.addObject("event", match);
+        mav.addObject("eventMediaClass", mediaClassFor(match.getSport()));
+        mav.addObject("eventBannerImageUrl", bannerUrlFor(match));
         mav.addObject(
                 "hostLabel",
                 host.getUsername() != null

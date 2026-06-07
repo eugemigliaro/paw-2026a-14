@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.encodeCsv;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
@@ -18,6 +17,7 @@ import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
+import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
@@ -117,40 +117,26 @@ final class MatchDashboardPageSupport {
         mav.addObject(
                 "events",
                 selectedType == EventType.TOURNAMENT
-                        ? tournamentResult.getItems().stream()
-                                .map(
-                                        tournament ->
-                                                toCard(
-                                                        tournament,
-                                                        locale,
-                                                        currentUser,
-                                                        messageSource.getMessage(
-                                                                "tournament.card.badge",
-                                                                null,
-                                                                locale),
-                                                        tournamentStatusLabel(
-                                                                tournament, locale, messageSource),
-                                                        null,
-                                                        messageSource))
-                                .toList()
-                        : result.getItems().stream()
-                                .map(
-                                        match ->
-                                                toCard(
-                                                        match,
-                                                        locale,
-                                                        currentUser,
-                                                        messageSource.getMessage(
-                                                                "match.status."
-                                                                        + match.getStatus()
-                                                                                .getValue(),
-                                                                null,
-                                                                match.getStatus().getValue(),
-                                                                locale),
-                                                        messageSource,
-                                                        matchParticipationService,
-                                                        matchReservationService))
-                                .toList());
+                        ? tournamentResult.getItems()
+                        : result.getItems());
+        mav.addObject("eventType", selectedType);
+        mav.addObject(
+                "eventBadgeLabels",
+                selectedType == EventType.TOURNAMENT
+                        ? EventCardAttributeUtils.tournamentBadgeLabels(
+                                tournamentResult.getItems(), locale, messageSource)
+                        : EventCardAttributeUtils.matchStatusBadgeLabels(
+                                result.getItems(), locale, messageSource));
+        mav.addObject(
+                "eventRelationshipBadgeCodes",
+                selectedType == EventType.TOURNAMENT
+                        ? EventCardAttributeUtils.tournamentRelationshipBadgeCodes(
+                                tournamentResult.getItems(), currentUser)
+                        : EventCardAttributeUtils.matchRelationshipBadgeCodes(
+                                result.getItems(),
+                                currentUser,
+                                matchParticipationService,
+                                matchReservationService));
         final PaginatedResult<?> pageResult =
                 selectedType == EventType.TOURNAMENT ? tournamentResult : result;
         mav.addObject("pageResult", pageResult);
@@ -934,15 +920,6 @@ final class MatchDashboardPageSupport {
                         toggleValue(selectedCategories, "hosted"),
                         selectedCategories.contains("hosted"),
                         messageSource.getMessage("category.hosted", null, locale)));
-    }
-
-    private static String tournamentStatusLabel(
-            final Tournament tournament, final Locale locale, final MessageSource messageSource) {
-        if (tournament == null || tournament.getStatus() == null) {
-            return null;
-        }
-        return messageSource.getMessage(
-                "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
     }
 
     private static DateRangeBounds dateRangeBounds(final EventFilter selectedFilter) {
