@@ -99,130 +99,64 @@ class HostControllerTest {
                 validator(messageSource, userEmailValidator, usernameValidator);
 
         realMatch =
-                new Match(
-                        42L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        -34.61,
-                        -58.38,
-                        "Sunrise Padel",
-                        "Friendly\\n doubles session",
-                        Instant.parse("2026-04-06T10:00:00Z"),
-                        Instant.parse("2026-04-06T12:00:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        2,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(42L)
+                        .address("Downtown Club")
+                        .coords(-34.61, -58.38)
+                        .title("Sunrise Padel")
+                        .description("Friendly\\n doubles session")
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(2)
+                        .build();
         completedMatch =
-                new Match(
-                        44L,
-                        Sport.BASKETBALL,
-                        UserUtils.getUser(7L),
-                        "South Sports Center",
-                        null,
-                        null,
-                        "Weekend Basketball",
-                        "Completed tournament",
-                        Instant.parse("2026-04-03T19:00:00Z"),
-                        Instant.parse("2026-04-03T21:00:00Z"),
-                        10,
-                        BigDecimal.ZERO,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.COMPLETED,
-                        10,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(44L)
+                        .sport(Sport.BASKETBALL)
+                        .address("South Sports Center")
+                        .title("Weekend Basketball")
+                        .description("Completed tournament")
+                        .startsAt(Instant.parse("2026-04-03T19:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-03T21:00:00Z"))
+                        .maxPlayers(10)
+                        .price(BigDecimal.ZERO)
+                        .status(EventStatus.COMPLETED)
+                        .joinedPlayers(10)
+                        .build();
         cancelledFutureMatch =
-                new Match(
-                        45L,
-                        Sport.TENNIS,
-                        UserUtils.getUser(7L),
-                        "City Tennis Club",
-                        null,
-                        null,
-                        "Sunday Tennis",
-                        "Cancelled due to weather",
-                        Instant.parse("2026-04-08T12:00:00Z"),
-                        Instant.parse("2026-04-08T14:00:00Z"),
-                        6,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.CANCELLED,
-                        2,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(45L)
+                        .sport(Sport.TENNIS)
+                        .address("City Tennis Club")
+                        .title("Sunday Tennis")
+                        .description("Cancelled due to weather")
+                        .startsAt(Instant.parse("2026-04-08T12:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-08T14:00:00Z"))
+                        .maxPlayers(6)
+                        .price(BigDecimal.TEN)
+                        .status(EventStatus.CANCELLED)
+                        .joinedPlayers(2)
+                        .build();
         privateInviteOnlyMatch =
-                new Match(
-                        51L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Members Club",
-                        null,
-                        null,
-                        "Invite Night Padel",
-                        "Private doubles session",
-                        Instant.parse("2026-04-10T21:00:00Z"),
-                        Instant.parse("2026-04-10T22:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PRIVATE,
-                        EventJoinPolicy.INVITE_ONLY,
-                        EventStatus.OPEN,
-                        2,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(51L)
+                        .address("Members Club")
+                        .title("Invite Night Padel")
+                        .description("Private doubles session")
+                        .startsAt(Instant.parse("2026-04-10T21:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-10T22:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .visibility(EventVisibility.PRIVATE)
+                        .joinPolicy(EventJoinPolicy.INVITE_ONLY)
+                        .joinedPlayers(2)
+                        .build();
         recurringSecondOccurrence =
-                new Match(
-                        47L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Weekly Padel",
-                        "Friendly recurring session",
-                        Instant.parse("2026-04-16T18:00:00Z"),
-                        Instant.parse("2026-04-16T19:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        0,
-                        null,
-                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
-                        2,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(47L)
+                        .address("Downtown Club")
+                        .title("Weekly Padel")
+                        .description("Friendly recurring session")
+                        .startsAt(Instant.parse("2026-04-16T18:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-16T19:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(0)
+                        .series(MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(2)
+                        .build();
 
         configureMatchServiceStubs();
 
@@ -255,34 +189,30 @@ class HostControllerTest {
                                     EventVisibility.PRIVATE.equals(request.getVisibility())
                                             ? EventJoinPolicy.INVITE_ONLY
                                             : request.getJoinPolicy();
-                            return new Match(
-                                    43L,
-                                    request.getSport(),
-                                    request.getHost(),
-                                    request.getAddress(),
-                                    null,
-                                    null,
-                                    request.getTitle(),
-                                    request.getDescription(),
-                                    PlatformTime.toInstant(
-                                            request.getStartDate(), request.getStartTime()),
-                                    PlatformTime.toInstant(
-                                            request.getEndDate(), request.getEndTime()),
-                                    request.getMaxPlayers(),
-                                    request.getPricePerPlayer(),
-                                    request.getVisibility(),
-                                    joinPolicy,
-                                    request.getStatus(),
-                                    0,
-                                    null,
-                                    request.isRecurring()
-                                            ? MatchUtils.getMatchSeries(700L, request.getHost())
-                                            : null,
-                                    request.isRecurring() ? 1 : null,
-                                    false,
-                                    null,
-                                    null,
-                                    null);
+                            return MatchUtils.match(43L)
+                                    .sport(request.getSport())
+                                    .host(request.getHost())
+                                    .address(request.getAddress())
+                                    .title(request.getTitle())
+                                    .description(request.getDescription())
+                                    .startsAt(
+                                            PlatformTime.toInstant(
+                                                    request.getStartDate(), request.getStartTime()))
+                                    .endsAt(
+                                            PlatformTime.toInstant(
+                                                    request.getEndDate(), request.getEndTime()))
+                                    .maxPlayers(request.getMaxPlayers())
+                                    .price(request.getPricePerPlayer())
+                                    .visibility(request.getVisibility())
+                                    .joinPolicy(joinPolicy)
+                                    .status(request.getStatus())
+                                    .series(
+                                            request.isRecurring()
+                                                    ? MatchUtils.getMatchSeries(
+                                                            700L, request.getHost())
+                                                    : null)
+                                    .seriesOccurrenceIndex(request.isRecurring() ? 1 : null)
+                                    .build();
                         });
 
         // findEditableMatchForHost: id-based mapping mirroring the original impl.
@@ -430,30 +360,20 @@ class HostControllerTest {
                 EventVisibility.PRIVATE == request.getVisibility()
                         ? EventJoinPolicy.INVITE_ONLY
                         : request.getJoinPolicy();
-        return new Match(
-                matchId,
-                request.getSport(),
-                actingUser,
-                request.getAddress(),
-                null,
-                null,
-                request.getTitle(),
-                request.getDescription(),
-                PlatformTime.toInstant(request.getStartDate(), request.getStartTime()),
-                PlatformTime.toInstant(request.getEndDate(), request.getEndTime()),
-                request.getMaxPlayers(),
-                request.getPricePerPlayer(),
-                request.getVisibility(),
-                joinPolicy,
-                request.getStatus(),
-                0,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null);
+        return MatchUtils.match(matchId)
+                .sport(request.getSport())
+                .host(actingUser)
+                .address(request.getAddress())
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .startsAt(PlatformTime.toInstant(request.getStartDate(), request.getStartTime()))
+                .endsAt(PlatformTime.toInstant(request.getEndDate(), request.getEndTime()))
+                .maxPlayers(request.getMaxPlayers())
+                .price(request.getPricePerPlayer())
+                .visibility(request.getVisibility())
+                .joinPolicy(joinPolicy)
+                .status(request.getStatus())
+                .build();
     }
 
     @Test

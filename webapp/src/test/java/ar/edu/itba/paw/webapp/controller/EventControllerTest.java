@@ -87,380 +87,188 @@ class EventControllerTest {
         seriesReservationCancellationUsed = false;
 
         final Match realMatch =
-                new Match(
-                        42L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        -34.61,
-                        -58.38,
-                        "Sunrise Padel",
-                        "Friendly\\n doubles session",
-                        Instant.parse("2026-04-06T10:00:00Z"),
-                        Instant.parse("2026-04-06T12:00:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        2,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(42L)
+                        .address("Downtown Club")
+                        .coords(-34.61, -58.38)
+                        .title("Sunrise Padel")
+                        .description("Friendly\\n doubles session")
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(2)
+                        .build();
         final Match footballMatch =
-                new Match(
-                        43L,
-                        Sport.FOOTBALL,
-                        UserUtils.getUser(8L),
-                        "North Arena",
-                        null,
-                        null,
-                        "Afterwork Football",
-                        "Fast 5v5",
-                        Instant.parse("2026-04-07T19:00:00Z"),
-                        Instant.parse("2026-04-07T20:30:00Z"),
-                        10,
-                        BigDecimal.ZERO,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        4,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(43L)
+                        .sport(Sport.FOOTBALL)
+                        .hostId(8L)
+                        .address("North Arena")
+                        .title("Afterwork Football")
+                        .description("Fast 5v5")
+                        .startsAt(Instant.parse("2026-04-07T19:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-07T20:30:00Z"))
+                        .maxPlayers(10)
+                        .price(BigDecimal.ZERO)
+                        .joinedPlayers(4)
+                        .build();
         final Match completedMatch =
-                new Match(
-                        44L,
-                        Sport.BASKETBALL,
-                        UserUtils.getUser(7L),
-                        "South Sports Center",
-                        null,
-                        null,
-                        "Weekend Basketball",
-                        "Completed tournament",
-                        Instant.parse("2026-04-03T19:00:00Z"),
-                        Instant.parse("2026-04-03T21:00:00Z"),
-                        10,
-                        BigDecimal.ZERO,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.COMPLETED,
-                        10,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(44L)
+                        .sport(Sport.BASKETBALL)
+                        .address("South Sports Center")
+                        .title("Weekend Basketball")
+                        .description("Completed tournament")
+                        .startsAt(Instant.parse("2026-04-03T19:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-03T21:00:00Z"))
+                        .maxPlayers(10)
+                        .price(BigDecimal.ZERO)
+                        .status(EventStatus.COMPLETED)
+                        .joinedPlayers(10)
+                        .build();
         final Match cancelledFutureMatch =
-                new Match(
-                        45L,
-                        Sport.TENNIS,
-                        UserUtils.getUser(7L),
-                        "City Tennis Club",
-                        null,
-                        null,
-                        "Sunday Tennis",
-                        "Cancelled due to weather",
-                        Instant.parse("2026-04-08T12:00:00Z"),
-                        Instant.parse("2026-04-08T14:00:00Z"),
-                        6,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.CANCELLED,
-                        2,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(45L)
+                        .sport(Sport.TENNIS)
+                        .address("City Tennis Club")
+                        .title("Sunday Tennis")
+                        .description("Cancelled due to weather")
+                        .startsAt(Instant.parse("2026-04-08T12:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-08T14:00:00Z"))
+                        .maxPlayers(6)
+                        .price(BigDecimal.TEN)
+                        .status(EventStatus.CANCELLED)
+                        .joinedPlayers(2)
+                        .build();
         final Match privateInviteOnlyMatch =
-                new Match(
-                        51L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Members Club",
-                        null,
-                        null,
-                        "Invite Night Padel",
-                        "Private doubles session",
-                        Instant.parse("2026-04-10T21:00:00Z"),
-                        Instant.parse("2026-04-10T22:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PRIVATE,
-                        EventJoinPolicy.INVITE_ONLY,
-                        EventStatus.OPEN,
-                        2,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(51L)
+                        .address("Members Club")
+                        .title("Invite Night Padel")
+                        .description("Private doubles session")
+                        .startsAt(Instant.parse("2026-04-10T21:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-10T22:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .visibility(EventVisibility.PRIVATE)
+                        .joinPolicy(EventJoinPolicy.INVITE_ONLY)
+                        .joinedPlayers(2)
+                        .build();
         final Match recurringMatch =
-                new Match(
-                        46L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Weekly Padel",
-                        "Friendly recurring session",
-                        Instant.parse("2026-04-09T18:00:00Z"),
-                        Instant.parse("2026-04-09T19:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        1,
-                        null,
-                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
-                        1,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(46L)
+                        .address("Downtown Club")
+                        .title("Weekly Padel")
+                        .description("Friendly recurring session")
+                        .startsAt(Instant.parse("2026-04-09T18:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-09T19:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(1)
+                        .series(MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(1)
+                        .build();
         final Match recurringSecondOccurrence =
-                new Match(
-                        47L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Weekly Padel",
-                        "Friendly recurring session",
-                        Instant.parse("2026-04-16T18:00:00Z"),
-                        Instant.parse("2026-04-16T19:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        0,
-                        null,
-                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
-                        2,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(47L)
+                        .address("Downtown Club")
+                        .title("Weekly Padel")
+                        .description("Friendly recurring session")
+                        .startsAt(Instant.parse("2026-04-16T18:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-16T19:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(0)
+                        .series(MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(2)
+                        .build();
         final Match recurringPastOccurrence =
-                new Match(
-                        48L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Weekly Padel",
-                        "Friendly recurring session",
-                        Instant.parse("2026-03-26T18:00:00Z"),
-                        Instant.parse("2026-03-26T19:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        4,
-                        null,
-                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
-                        0,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(48L)
+                        .address("Downtown Club")
+                        .title("Weekly Padel")
+                        .description("Friendly recurring session")
+                        .startsAt(Instant.parse("2026-03-26T18:00:00Z"))
+                        .endsAt(Instant.parse("2026-03-26T19:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(4)
+                        .series(MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(0)
+                        .build();
         final Match recurringInProgressOccurrence =
-                new Match(
-                        55L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Weekly Padel",
-                        "Friendly recurring session",
-                        Instant.parse("2026-04-04T23:00:00Z"),
-                        Instant.parse("2026-04-05T01:00:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        4,
-                        null,
-                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
-                        1,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(55L)
+                        .address("Downtown Club")
+                        .title("Weekly Padel")
+                        .description("Friendly recurring session")
+                        .startsAt(Instant.parse("2026-04-04T23:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-05T01:00:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(4)
+                        .series(MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(1)
+                        .build();
         final Match recurringFullOccurrence =
-                new Match(
-                        49L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Weekly Padel",
-                        "Friendly recurring session",
-                        Instant.parse("2026-04-23T18:00:00Z"),
-                        Instant.parse("2026-04-23T19:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        8,
-                        null,
-                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
-                        3,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(49L)
+                        .address("Downtown Club")
+                        .title("Weekly Padel")
+                        .description("Friendly recurring session")
+                        .startsAt(Instant.parse("2026-04-23T18:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-23T19:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinedPlayers(8)
+                        .series(MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(3)
+                        .build();
         final Match recurringCancelledOccurrence =
-                new Match(
-                        50L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Weekly Padel",
-                        "Friendly recurring session",
-                        Instant.parse("2026-04-30T18:00:00Z"),
-                        Instant.parse("2026-04-30T19:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.CANCELLED,
-                        0,
-                        null,
-                        MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)),
-                        4,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(50L)
+                        .address("Downtown Club")
+                        .title("Weekly Padel")
+                        .description("Friendly recurring session")
+                        .startsAt(Instant.parse("2026-04-30T18:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-30T19:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .status(EventStatus.CANCELLED)
+                        .joinedPlayers(0)
+                        .series(MatchUtils.getMatchSeries(600L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(4)
+                        .build();
         final Match approvalRecurringMatch =
-                new Match(
-                        52L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Approval Weekly Padel",
-                        "Recurring session with host approval",
-                        Instant.parse("2026-04-09T20:00:00Z"),
-                        Instant.parse("2026-04-09T21:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.APPROVAL_REQUIRED,
-                        EventStatus.OPEN,
-                        1,
-                        null,
-                        MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)),
-                        1,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(52L)
+                        .address("Downtown Club")
+                        .title("Approval Weekly Padel")
+                        .description("Recurring session with host approval")
+                        .startsAt(Instant.parse("2026-04-09T20:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-09T21:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
+                        .joinedPlayers(1)
+                        .series(MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(1)
+                        .build();
         final Match approvalRecurringSecondOccurrence =
-                new Match(
-                        53L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Approval Weekly Padel",
-                        "Recurring session with host approval",
-                        Instant.parse("2026-04-16T20:00:00Z"),
-                        Instant.parse("2026-04-16T21:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.APPROVAL_REQUIRED,
-                        EventStatus.OPEN,
-                        0,
-                        null,
-                        MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)),
-                        2,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(53L)
+                        .address("Downtown Club")
+                        .title("Approval Weekly Padel")
+                        .description("Recurring session with host approval")
+                        .startsAt(Instant.parse("2026-04-16T20:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-16T21:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
+                        .joinedPlayers(0)
+                        .series(MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(2)
+                        .build();
         final Match approvalRecurringPastOccurrence =
-                new Match(
-                        54L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Approval Weekly Padel",
-                        "Recurring session with host approval",
-                        Instant.parse("2026-03-26T20:00:00Z"),
-                        Instant.parse("2026-03-26T21:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.APPROVAL_REQUIRED,
-                        EventStatus.OPEN,
-                        4,
-                        null,
-                        MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)),
-                        0,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(54L)
+                        .address("Downtown Club")
+                        .title("Approval Weekly Padel")
+                        .description("Recurring session with host approval")
+                        .startsAt(Instant.parse("2026-03-26T20:00:00Z"))
+                        .endsAt(Instant.parse("2026-03-26T21:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
+                        .joinedPlayers(4)
+                        .series(MatchUtils.getMatchSeries(700L, UserUtils.getUser(7L)))
+                        .seriesOccurrenceIndex(0)
+                        .build();
         final Match pendingFutureMatch =
-                new Match(
-                        56L,
-                        Sport.PADEL,
-                        UserUtils.getUser(7L),
-                        "Downtown Club",
-                        null,
-                        null,
-                        "Approval Future Padel",
-                        "Future session with host approval",
-                        Instant.parse("2030-04-09T20:00:00Z"),
-                        Instant.parse("2030-04-09T21:30:00Z"),
-                        8,
-                        BigDecimal.TEN,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.APPROVAL_REQUIRED,
-                        EventStatus.OPEN,
-                        1,
-                        null,
-                        null,
-                        null,
-                        false,
-                        null,
-                        null,
-                        null);
+                MatchUtils.match(56L)
+                        .address("Downtown Club")
+                        .title("Approval Future Padel")
+                        .description("Future session with host approval")
+                        .startsAt(Instant.parse("2030-04-09T20:00:00Z"))
+                        .endsAt(Instant.parse("2030-04-09T21:30:00Z"))
+                        .price(BigDecimal.TEN)
+                        .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
+                        .joinedPlayers(1)
+                        .build();
 
         matchService = Mockito.mock(MatchService.class);
 
