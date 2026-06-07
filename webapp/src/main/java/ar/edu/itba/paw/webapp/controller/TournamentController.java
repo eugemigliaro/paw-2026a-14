@@ -24,22 +24,10 @@ import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketForbiddenException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketMatchAlreadyDecidedException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketMatchNotFoundException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketMatchNotReadyException;
+import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotGeneratedException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotInProgressException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketTournamentNotFoundException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketWinnerNotInMatchException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationAlreadyAssignedException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationAlreadyOnTeamException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationInvalidUserException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationNotInSoloPoolException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationNotOpenException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloPoolFullException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloSignupDisabledException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationTournamentNotFoundException;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
@@ -78,6 +66,7 @@ public class TournamentController {
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
+    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final Clock clock;
 
     @Autowired
@@ -86,11 +75,13 @@ public class TournamentController {
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource,
+            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final Clock clock) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
+        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.clock = clock;
     }
 
@@ -139,29 +130,11 @@ public class TournamentController {
             @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        String tournamentErrorCode = null;
         try {
             tournamentRegistrationService.joinSolo(tournamentId, user);
-        } catch (final TournamentRegistrationTournamentNotFoundException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (TournamentRegistrationInvalidUserException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (
-                final TournamentRegistrationNotOpenException
-                        exception) { // TODO: move message code to service (?) and catch generic
-            // exception here
-            tournamentErrorCode = "tournament.registration.error.notOpen";
-        } catch (final TournamentRegistrationSoloSignupDisabledException exception) {
-            tournamentErrorCode = "tournament.registration.error.soloDisabled";
-        } catch (final TournamentRegistrationAlreadyOnTeamException exception) {
-            tournamentErrorCode = "tournament.registration.error.alreadyOnTeam";
-        } catch (final TournamentRegistrationAlreadyAssignedException exception) {
-            tournamentErrorCode = "tournament.registration.error.alreadyAssigned";
-        } catch (final TournamentRegistrationSoloPoolFullException exception) {
-            tournamentErrorCode = "tournament.registration.error.soloPoolFull";
-        }
-
-        if (tournamentErrorCode != null) {
+        } catch (TournamentRegistrationException e) {
+            final String tournamentErrorCode =
+                    "tournament.registration.error." + domainExceptionErrorResolver.resolve(e);
             redirectAttributes.addFlashAttribute("tournamentErrorCode", tournamentErrorCode);
         }
         return new ModelAndView("redirect:/tournaments/" + tournamentId);
@@ -176,11 +149,8 @@ public class TournamentController {
         TournamentBracketView bracketView;
         try {
             bracketView = tournamentBracketService.getBracket(tournamentId, user);
-        } catch (final TournamentBracketTournamentNotFoundException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final TournamentBracketForbiddenException
-                | TournamentBracketNotGeneratedException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        } catch (final TournamentBracketNotGeneratedException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
         final ModelAndView mav = new ModelAndView("tournaments/bracket");
@@ -211,7 +181,6 @@ public class TournamentController {
             @PathVariable("matchId") final Long matchId,
             @RequestParam("winnerTeamId") final Long winnerTeamId,
             final RedirectAttributes redirectAttributes) {
-        String errorCode = null;
         try {
             tournamentBracketService.declareWinner(
                     tournamentId,
@@ -220,27 +189,12 @@ public class TournamentController {
                     user);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.result.saved");
-        } catch (final TournamentBracketTournamentNotFoundException
-                | TournamentBracketMatchNotFoundException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final TournamentBracketForbiddenException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (
-                final TournamentBracketNotInProgressException
-                        exception) { // TODO: move message code to service (?) and catch generic
-            // exception here
-            errorCode = "tournament.bracket.error.notInProgress";
-        } catch (final TournamentBracketMatchNotReadyException exception) {
-            errorCode = "tournament.bracket.error.matchNotReady";
-        } catch (final TournamentBracketMatchAlreadyDecidedException exception) {
-            errorCode = "tournament.bracket.error.matchAlreadyDecided";
-        } catch (final TournamentBracketWinnerNotInMatchException exception) {
-            errorCode = "tournament.bracket.error.winnerNotInMatch";
-        }
-
-        if (errorCode != null) {
+        } catch (final TournamentBracketException exception) {
+            final String errorCode =
+                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(exception);
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
         }
+
         return new ModelAndView("redirect:/tournaments/" + tournamentId + "/bracket");
     }
 
@@ -249,25 +203,14 @@ public class TournamentController {
             @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-        String errorCode = null;
         try {
             tournamentRegistrationService.leaveSolo(tournamentId, user);
-        } catch (final TournamentRegistrationInvalidUserException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final TournamentRegistrationTournamentNotFoundException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (
-                final TournamentRegistrationNotOpenException
-                        exception) { // TODO: move message code to service (?) and catch generic
-            // exception here
-            errorCode = "tournament.registration.error.notOpen";
-        } catch (final TournamentRegistrationNotInSoloPoolException exception) {
-            errorCode = "tournament.registration.error.notInSoloPool";
-        }
-
-        if (errorCode != null) {
+        } catch (final TournamentRegistrationException e) {
+            final String errorCode =
+                    "tournament.registration.error." + domainExceptionErrorResolver.resolve(e);
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
         }
+
         return new ModelAndView("redirect:/tournaments/" + tournamentId);
     }
 

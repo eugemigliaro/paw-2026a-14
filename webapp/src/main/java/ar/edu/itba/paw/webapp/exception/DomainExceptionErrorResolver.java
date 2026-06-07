@@ -6,6 +6,9 @@ import ar.edu.itba.paw.services.exceptions.matchParticipation.*;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
+import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -54,6 +57,28 @@ public class DomainExceptionErrorResolver {
             case MatchParticipationSeriesAlreadyPendingException ignored ->
                     "series_already_pending";
             case MatchParticipationSeriesNotJoinedException ignored -> "series_not_joined";
+            default -> e.getMessage();
+        };
+    }
+
+    public String resolve(TournamentRegistrationException e) {
+        return switch (e) {
+            case TournamentRegistrationNotOpenException ignored -> "notOpen";
+            case TournamentRegistrationSoloSignupDisabledException ignored -> "soloDisabled";
+            case TournamentRegistrationAlreadyOnTeamException ignored -> "alreadyOnTeam";
+            case TournamentRegistrationAlreadyAssignedException ignored -> "alreadyAssigned";
+            case TournamentRegistrationSoloPoolFullException ignored -> "soloPoolFull";
+            default -> e.getMessage();
+        };
+    }
+
+    public String resolve(TournamentBracketException e) {
+        return switch (e) {
+            case TournamentBracketNotGeneratedException ignored -> "notGenerated";
+            case TournamentBracketNotInProgressException ignored -> "notInProgress";
+            case TournamentBracketMatchNotReadyException ignored -> "matchNotReady";
+            case TournamentBracketWinnerNotInMatchException ignored -> "winnerNotInMatch";
+            case TournamentBracketMatchAlreadyDecidedException ignored -> "matchAlreadyDecided";
             default -> e.getMessage();
         };
     }
