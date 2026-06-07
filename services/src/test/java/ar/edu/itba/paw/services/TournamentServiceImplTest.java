@@ -8,10 +8,8 @@ import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
-import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -39,8 +37,6 @@ public class TournamentServiceImplTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @Mock private TournamentDataService tournamentDataService;
-    @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
-    @Mock private TournamentTeamDataService tournamentTeamDataService;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
 
