@@ -118,9 +118,7 @@ public class SecurityConfig {
                                                         "/tournaments/*/solo-entry/leave",
                                                         HttpMethod.POST.name()))
                                         .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers(
-                                                new AntPathRequestMatcher(
-                                                        "/reports/**", HttpMethod.POST.name()))
+                                        .requestMatchers(new AntPathRequestMatcher("/reports/**"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(new AntPathRequestMatcher("/admin/**"))
                                         .hasRole("ADMIN_MOD")

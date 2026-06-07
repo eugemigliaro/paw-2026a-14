@@ -9,12 +9,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.types.ReportReason;
+import ar.edu.itba.paw.models.types.ReportStatus;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,6 +106,73 @@ class SecurityConfigTest {
     }
 
     @Test
+    void moderationRouteRejectsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/moderation/queue").with(authenticatedUser()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void moderationRouteAllowsAdminMod() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/moderation/queue").with(authenticatedAdminMod()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void myReportsRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/reports/mine"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void myReportsRouteAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/reports/mine").with(authenticatedUser())).andExpect(status().isOk());
+    }
+
+    @Test
+    void reportCreationRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/reports/users/player"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void reportCreationRouteAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/reports/users/player").with(authenticatedUser()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void bannedUserIsRedirectedBySecurityFilterForProtectedRoute() throws Exception {
+        // 1. Arrange
+        Mockito.when(moderationService.findActiveBan(UserUtils.getUser(1L)))
+                .thenReturn(Optional.of(sampleBan()));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/reports/mine").with(authenticatedUser()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/account/ban"));
+    }
+
+    @Test
     void inviteAcceptRouteRedirectsAnonymousToLogin() throws Exception {
         // 1. Arrange
 
@@ -141,6 +214,33 @@ class SecurityConfigTest {
                 List.of(authorities).stream().map(SimpleGrantedAuthority::new).toList();
         return new UsernamePasswordAuthenticationToken(
                 new AuthenticatedUserPrincipal(user, role), null, grantedAuthorities);
+    }
+
+    private static UserBan sampleBan() {
+        return new UserBan(11L, sampleReport(), Instant.now().plusSeconds(600));
+    }
+
+    private static ModerationReport sampleReport() {
+        return new ModerationReport(
+                1L,
+                UserUtils.getUser(1L),
+                ReportTargetType.USER,
+                1L,
+                ReportReason.SPAM,
+                "Details",
+                ReportStatus.RESOLVED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                (short) 0,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                Instant.now());
     }
 
     @Configuration
@@ -187,6 +287,24 @@ class SecurityConfigTest {
         @ResponseBody
         String adminReports() {
             return "admin";
+        }
+
+        @GetMapping("/moderation/queue")
+        @ResponseBody
+        String moderationQueue() {
+            return "moderation";
+        }
+
+        @GetMapping("/reports/mine")
+        @ResponseBody
+        String myReports() {
+            return "my-reports";
+        }
+
+        @GetMapping("/reports/users/{username}")
+        @ResponseBody
+        String reportUser(@PathVariable("username") final String username) {
+            return "report-" + username;
         }
 
         @PostMapping("/matches/{matchId}/invites/accept")

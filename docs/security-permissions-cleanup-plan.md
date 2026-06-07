@@ -32,7 +32,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 7: Centralize admin/mod role checks.
 - [x] Module 8: Public profile, reviews, and report affordances.
 - [x] Module 9: Host controllers and mutating paths.
-- [ ] Module 10: `SecurityConfig` route audit.
+- [x] Module 10: `SecurityConfig` route audit.
 - [ ] Module 11: JSP and view model sweep.
 - [ ] Module 12: Final verification.
 
@@ -696,13 +696,26 @@ Review:
 
 Acceptance criteria:
 
-- [ ] Static route authentication and role rules are expressed in
+- [x] Static route authentication and role rules are expressed in
   `SecurityConfig`.
-- [ ] Per-resource authorization is not attempted through URL pattern hacks.
-- [ ] Banned-account restrictions remain centralized in
+- [x] Per-resource authorization is not attempted through URL pattern hacks.
+- [x] Banned-account restrictions remain centralized in
   `BannedAccountAuthorizationFilter`.
-- [ ] Controller tests or route tests cover at least one authenticated and denied
+- [x] Controller tests or route tests cover at least one authenticated and denied
   path for changed access rules.
+
+Implemented in Module 10:
+
+- Made `/reports/**` an explicit authenticated user/admin route rule in
+  `SecurityConfig`, covering report forms, report submissions, and
+  `/reports/mine/**` without resource-specific URL authorization.
+- Confirmed `/host/**` is authenticated for regular users/admins and
+  `/admin/**` plus `/moderation/**` require admin/mod role in `SecurityConfig`.
+- Confirmed banned-account restrictions remain in
+  `BannedAccountAuthorizationFilter`, not in controllers or URL pattern hacks.
+- Added route tests for anonymous/authenticated `/reports/mine`, report creation
+  route access, regular-user/admin `/moderation/**`, and banned-user redirect
+  through the configured Spring Security filter chain.
 
 ## Module 11: JSP And View Model Sweep
 
