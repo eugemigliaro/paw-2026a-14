@@ -39,7 +39,6 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,28 +101,18 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             throw new UsernameTakenException();
         }
 
-        try {
-            final UserAccount createdAccount =
-                    userDao.createAccount(
-                            normalizedEmail,
-                            normalizedUsername,
-                            normalizedName,
-                            normalizedLastName,
-                            normalizedPhone,
-                            UserLanguages.fromLocale(locale),
-                            passwordEncoder.encode(request.getPassword()),
-                            UserRole.USER,
-                            null);
-            return createAccountVerificationRequest(createdAccount, locale);
-        } catch (final DataIntegrityViolationException exception) {
-            if (userDao.findAccountByEmail(normalizedEmail).isPresent()) {
-                throw new EmailTakenException();
-            }
-            if (userDao.findByUsername(normalizedUsername).isPresent()) {
-                throw new UsernameTakenException();
-            }
-            throw exception;
-        }
+        final UserAccount createdAccount =
+                userDao.createAccount(
+                        normalizedEmail,
+                        normalizedUsername,
+                        normalizedName,
+                        normalizedLastName,
+                        normalizedPhone,
+                        UserLanguages.fromLocale(locale),
+                        passwordEncoder.encode(request.getPassword()),
+                        UserRole.USER,
+                        null);
+        return createAccountVerificationRequest(createdAccount, locale);
     }
 
     @Override
