@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -37,10 +38,12 @@ class UserModerationReportControllerTest {
 
     private MockMvc mockMvc;
     private ModerationService moderationService;
+    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
         moderationService = Mockito.mock(ModerationService.class);
+        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
         final MessageSource messageSource = Mockito.mock(MessageSource.class);
         Mockito.when(
                         messageSource.getMessage(
@@ -52,7 +55,9 @@ class UserModerationReportControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new UserModerationReportController(
-                                        moderationService, messageSource))
+                                        moderationService,
+                                        messageSource,
+                                        domainExceptionErrorResolver))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();

@@ -27,8 +27,9 @@ import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketForbiddenException;
+import ar.edu.itba.paw.services.exceptions.tournament.TournamentForbiddenActionException;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloPoolFullException;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -61,6 +62,7 @@ class TournamentControllerTest {
     private TournamentRegistrationService tournamentRegistrationService;
     private TournamentBracketService tournamentBracketService;
     private User host;
+    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
@@ -69,6 +71,7 @@ class TournamentControllerTest {
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         tournamentBracketService = Mockito.mock(TournamentBracketService.class);
         host = UserUtils.getUser(7L);
+        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -77,6 +80,7 @@ class TournamentControllerTest {
                                         tournamentRegistrationService,
                                         tournamentBracketService,
                                         messageSource(),
+                                        domainExceptionErrorResolver,
                                         Clock.fixed(NOW, ZoneId.of("UTC"))))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
@@ -292,7 +296,7 @@ class TournamentControllerTest {
         final User player = UserUtils.getUser(9L);
         AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
         Mockito.when(tournamentRegistrationService.joinSolo(77L, player))
-                .thenThrow(new TournamentRegistrationSoloPoolFullException("Tournament is full"));
+                .thenThrow(new TournamentRegistrationSoloPoolFullException());
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/tournaments/77/solo-entry"))
@@ -385,7 +389,7 @@ class TournamentControllerTest {
     void publicBracketBeforePublishIsForbidden() throws Exception {
         // 1. Arrange
         Mockito.when(tournamentBracketService.getBracket(77L, null))
-                .thenThrow(new TournamentBracketForbiddenException("Forbidden"));
+                .thenThrow(new TournamentForbiddenActionException());
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77/bracket")).andExpect(status().isForbidden());
@@ -426,7 +430,7 @@ class TournamentControllerTest {
                                 Mockito.eq(10L),
                                 Mockito.any(TournamentWinnerDeclarationRequest.class),
                                 Mockito.eq(user)))
-                .thenThrow(new TournamentBracketForbiddenException("Forbidden"));
+                .thenThrow(new TournamentForbiddenActionException());
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/matches/10/winner").param("winnerTeamId", "1"))

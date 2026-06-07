@@ -65,8 +65,8 @@ class AuthFlowControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new AuthController(accountAuthService, messageSource),
-                                new PasswordResetController(accountAuthService, messageSource),
-                                new VerificationController(accountAuthService, messageSource))
+                                new PasswordResetController(accountAuthService),
+                                new VerificationController(accountAuthService))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
@@ -169,7 +169,7 @@ class AuthFlowControllerTest {
         Mockito.when(
                         accountAuthService.register(
                                 ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new NameInvalidException("Invalid name"));
+                .thenThrow(new NameInvalidException());
 
         mockMvc.perform(validRegisterRequest())
                 .andExpect(status().isOk())
@@ -183,7 +183,7 @@ class AuthFlowControllerTest {
         Mockito.when(
                         accountAuthService.register(
                                 ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new LastNameInvalidException("Invalid last name"));
+                .thenThrow(new LastNameInvalidException());
 
         mockMvc.perform(validRegisterRequest())
                 .andExpect(status().isOk())
@@ -196,7 +196,7 @@ class AuthFlowControllerTest {
         Mockito.when(
                         accountAuthService.register(
                                 ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new PhoneInvalidException("Invalid phone"));
+                .thenThrow(new PhoneInvalidException());
 
         mockMvc.perform(validRegisterRequest())
                 .andExpect(status().isOk())
@@ -265,7 +265,7 @@ class AuthFlowControllerTest {
     @Test
     void getPasswordResetWithExpiredTokenRendersErrorPage() throws Exception {
         Mockito.when(accountAuthService.getPasswordResetPreview("expired-token"))
-                .thenThrow(new VerificationFailureExpiredException("Expired token"));
+                .thenThrow(new VerificationFailureExpiredException());
 
         mockMvc.perform(get("/password-reset/expired-token"))
                 .andExpect(status().isOk())

@@ -15,6 +15,7 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import java.time.Clock;
@@ -36,6 +37,7 @@ class EventControllerTest {
     private MatchReservationService matchReservationService;
     private MatchParticipationService matchParticipationService;
     private PlayerReviewService playerReviewService;
+    private DomainExceptionErrorResolver domainExceptionErrorResolver;
     private MessageSource messageSource;
     private Clock clock;
 
@@ -49,6 +51,7 @@ class EventControllerTest {
         playerReviewService = Mockito.mock(PlayerReviewService.class);
         messageSource = Mockito.mock(MessageSource.class);
         clock = Mockito.mock(Clock.class);
+        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -58,6 +61,7 @@ class EventControllerTest {
                                         matchParticipationService,
                                         playerReviewService,
                                         messageSource,
+                                        domainExceptionErrorResolver,
                                         clock,
                                         false,
                                         "",

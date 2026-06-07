@@ -20,6 +20,7 @@ import ar.edu.itba.paw.services.UserSportRatingService;
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConverter;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -46,6 +47,7 @@ class PublicProfileControllerTest {
     private PlayerReviewService playerReviewService;
     private ModerationService moderationService;
     private UserSportRatingService userSportRatingService;
+    private DomainExceptionErrorResolver domainExceptionErrorResolver;
     private MessageSource messageSource;
 
     @BeforeEach
@@ -55,6 +57,7 @@ class PublicProfileControllerTest {
         moderationService = Mockito.mock(ModerationService.class);
         userSportRatingService = Mockito.mock(UserSportRatingService.class);
         messageSource = Mockito.mock(MessageSource.class);
+        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
 
         Mockito.when(userSportRatingService.findRatingsForUser(Mockito.any()))
                 .thenReturn(java.util.List.of());
@@ -66,6 +69,7 @@ class PublicProfileControllerTest {
                                         playerReviewService,
                                         moderationService,
                                         userSportRatingService,
+                                        domainExceptionErrorResolver,
                                         messageSource))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
@@ -164,7 +168,7 @@ class PublicProfileControllerTest {
         AuthenticationUtils.authenticateUser(1L);
         final User user = UserUtils.getUser(42L);
         Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(user));
-        Mockito.doThrow(new PlayerReviewNotFoundException("Player review not found."))
+        Mockito.doThrow(new PlayerReviewNotFoundException())
                 .when(playerReviewService)
                 .deleteReview(Mockito.any(), Mockito.eq(user));
 
