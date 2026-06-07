@@ -542,7 +542,7 @@
 										</span>
 									</span>
 									<form:input path="bannerImage" id="match-banner-image" type="file"
-										accept="image/*"
+										accept="image/png,image/jpeg,image/webp,image/gif"
 										cssClass="upload-card__file-input"
 										data-image-preview-input="true" />
 								</span>

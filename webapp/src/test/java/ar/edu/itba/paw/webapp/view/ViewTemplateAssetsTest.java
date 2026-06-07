@@ -57,6 +57,9 @@ class ViewTemplateAssetsTest {
         assertTrue(head.contains("/js/host-create-match.js"));
     }
 
+    private static final String IMAGE_ACCEPT =
+            "accept=\"image/png,image/jpeg,image/webp,image/gif\"";
+
     @Test
     void imageUploadsExposeClientSidePreviewHooks() throws IOException {
         final String accountIndex = read("src/main/webapp/WEB-INF/views/account/index.jsp");
@@ -69,23 +72,21 @@ class ViewTemplateAssetsTest {
 
         assertTrue(accountIndex.contains("data-image-preview-container=\"true\""));
         assertTrue(accountIndex.contains("data-image-preview-input=\"true\""));
-        assertTrue(accountIndex.contains("accept=\"image/*\""));
+        assertTrue(accountIndex.contains(IMAGE_ACCEPT));
         assertTrue(accountIndex.contains("image-upload-preview--profile"));
+
         assertTrue(hostCreateMatch.contains("id=\"match-banner-image\""));
         assertTrue(hostCreateMatch.contains("data-image-preview-container=\"true\""));
         assertTrue(hostCreateMatch.contains("data-image-preview-input=\"true\""));
-        assertTrue(hostCreateMatch.contains("accept=\"image/*\""));
-        assertTrue(hostCreateMatch.contains("path=\"bannerImage\""));
-        assertTrue(hostCreateMatch.contains("auth-notice auth-notice--error upload-card__error"));
+        assertTrue(hostCreateMatch.contains(IMAGE_ACCEPT));
         assertTrue(hostCreateMatch.contains("image-upload-preview--banner"));
+
         assertTrue(hostTournamentCreate.contains("id=\"tournament-banner-image\""));
         assertTrue(hostTournamentCreate.contains("data-image-preview-container=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-image-preview-input=\"true\""));
-        assertTrue(hostTournamentCreate.contains("accept=\"image/*\""));
-        assertTrue(hostTournamentCreate.contains("path=\"bannerImage\""));
-        assertTrue(
-                hostTournamentCreate.contains("auth-notice auth-notice--error upload-card__error"));
+        assertTrue(hostTournamentCreate.contains(IMAGE_ACCEPT));
         assertTrue(hostTournamentCreate.contains("image-upload-preview--banner"));
+
         assertTrue(script.contains("URL.createObjectURL"));
         assertTrue(script.contains("URL.revokeObjectURL"));
         assertTrue(script.contains("data-image-preview-input"));

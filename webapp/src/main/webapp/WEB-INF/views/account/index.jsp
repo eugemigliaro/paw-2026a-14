@@ -87,7 +87,7 @@
 										</span>
 									</span>
 									<input id="account-profile-image" name="profileImage" type="file"
-										class="upload-card__file-input" accept="image/*"
+										class="upload-card__file-input" accept="image/png,image/jpeg,image/webp,image/gif"
 										data-image-preview-input="true" />
 								</span>
 							</label>
