@@ -6,6 +6,7 @@ import ar.edu.itba.paw.services.exceptions.matchParticipation.*;
 import ar.edu.itba.paw.services.exceptions.moderation.*;
 import ar.edu.itba.paw.services.exceptions.playerReview.*;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
+import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
 import org.springframework.stereotype.Component;
 
@@ -69,6 +70,8 @@ public class DomainExceptionErrorResolver {
             case TournamentRegistrationAlreadyOnTeamException ignored -> "alreadyOnTeam";
             case TournamentRegistrationAlreadyAssignedException ignored -> "alreadyAssigned";
             case TournamentRegistrationSoloPoolFullException ignored -> "soloPoolFull";
+            case TournamentRegistrationNotInSoloPoolException ignored -> "notInSoloPool";
+            case TournamentRegistrationUnderCapacityException ignored -> "underCapacity";
             default -> e.getMessage();
         };
     }
@@ -80,6 +83,29 @@ public class DomainExceptionErrorResolver {
             case TournamentBracketMatchNotReadyException ignored -> "matchNotReady";
             case TournamentBracketWinnerNotInMatchException ignored -> "winnerNotInMatch";
             case TournamentBracketMatchAlreadyDecidedException ignored -> "matchAlreadyDecided";
+            case TournamentBracketNotReadyForBracketException ignored -> "notReady";
+            case TournamentBracketAlreadyGeneratedException ignored -> "alreadyGenerated";
+            case TournamentBracketPairingStrategyRequiredException ignored ->
+                    "pairingStrategyRequired";
+            case TournamentBracketInvalidPairingsException ignored -> "invalidPairings";
+            case TournamentBracketUnderCapacityException ignored -> "underCapacity";
+            case TournamentBracketMissingMatchScheduleException ignored -> "missingMatchSchedule";
+            case TournamentBracketInvalidRoundOrderException ignored -> "invalidRoundOrder";
+            default -> e.getMessage();
+        };
+    }
+
+    public String resolve(TournamentLifecycleException e) {
+        return switch (e) {
+            case TournamentLifecycleInvalidScheduleException ignored -> "invalidSchedule";
+            case TournamentLifecycleInvalidFormatException ignored -> "invalidFormat";
+            case TournamentLifecycleNotEditableException ignored -> "notEditable";
+            case TournamentLifecycleNotCancellableException ignored -> "notCancellable";
+            case TournamentLifecycleInvalidBracketSizeException ignored -> "invalidBracketSize";
+            case TournamentLifecycleInvalidTeamSizeException ignored -> "invalidTeamSize";
+            case TournamentLifecycleInvalidJoinModeException ignored -> "invalidJoinMode";
+            case TournamentLifecycleInvalidRegistrationWindowException ignored ->
+                    "invalidRegistrationWindow";
             default -> e.getMessage();
         };
     }

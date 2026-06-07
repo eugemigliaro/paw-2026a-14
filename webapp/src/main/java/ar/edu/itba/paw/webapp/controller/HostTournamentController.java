@@ -19,43 +19,11 @@ import ar.edu.itba.paw.services.TournamentMatchScheduleRequest;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.UpdateTournamentRequest;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketAlreadyGeneratedException;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketForbiddenException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketInvalidPairingsException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketInvalidRoundOrderException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketInvalidScheduleException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketMatchAlreadyDecidedException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketMatchNotFoundException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketMatchNotReadyException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketMissingMatchScheduleException;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotGeneratedException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotInProgressException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotReadyForBracketException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketPairingStrategyRequiredException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketTournamentNotFoundException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketUnderCapacityException;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketWinnerNotInMatchException;
 import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleForbiddenException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleInvalidBracketSizeException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleInvalidFormatException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleInvalidJoinModeException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleInvalidRegistrationWindowException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleInvalidScheduleException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleInvalidTeamSizeException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleNotCancellableException;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleNotEditableException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationAlreadyAssignedException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationAlreadyOnTeamException;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationForbiddenException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationNotInSoloPoolException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationNotOpenException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloPoolFullException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloSignupDisabledException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationTournamentNotFoundException;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationUnderCapacityException;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.BracketManualPairingsForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishScheduleForm;
@@ -109,6 +77,7 @@ public class HostTournamentController {
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
+    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
@@ -122,6 +91,7 @@ public class HostTournamentController {
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
+            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
@@ -134,6 +104,7 @@ public class HostTournamentController {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
+        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
@@ -189,16 +160,8 @@ public class HostTournamentController {
                         createTournamentForm.getRegistrationClosesDate(),
                         createTournamentForm.getRegistrationClosesTime());
 
-        try {
-            final Tournament createdTournament = tournamentService.createTournament(user, request);
-            return seeOther("/tournaments/" + createdTournament.getId());
-        } catch (final TournamentLifecycleException exception) {
-            applyServiceError(exception, bindingResult, locale);
-            return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
-        } catch (final IllegalArgumentException exception) {
-            return createFormView(
-                    createTournamentForm, exception.getMessage(), locale, createFormConfig(locale));
-        }
+        final Tournament createdTournament = tournamentService.createTournament(user, request);
+        return seeOther("/tournaments/" + createdTournament.getId());
     }
 
     @GetMapping("/host/tournaments/{tournamentId:\\d+}/edit")
@@ -210,8 +173,8 @@ public class HostTournamentController {
                 tournamentService
                         .findTournamentForHost(tournamentId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!isEditable(tournament)) { // TODO: is not found the correct response here?
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (!isEditable(tournament)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
         return createFormView(toForm(tournament), null, locale, editFormConfig(tournament, locale));
     }
@@ -235,6 +198,10 @@ public class HostTournamentController {
             return createFormView(createTournamentForm, null, locale, formConfig);
         }
 
+        if (!isEditable(tournament)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+
         final UpdateTournamentRequest request =
                 new UpdateTournamentRequest(
                         createTournamentForm.getSport(),
@@ -256,18 +223,7 @@ public class HostTournamentController {
                         createTournamentForm.getRegistrationClosesDate(),
                         createTournamentForm.getRegistrationClosesTime());
 
-        try {
-            tournamentService.update(
-                    tournamentId,
-                    user,
-                    request); // TODO: check if it's editable before calling service
-        } catch (final TournamentLifecycleForbiddenException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final TournamentLifecycleException exception) {
-            applyServiceError(exception, bindingResult, locale);
-            return createFormView(createTournamentForm, null, locale, formConfig);
-        }
-
+        tournamentService.update(tournamentId, user, request);
         redirectAttributes.addFlashAttribute(
                 "tournamentNoticeCode", "tournament.host.edit.success");
         return seeOther("/tournaments/" + tournamentId);
@@ -278,7 +234,6 @@ public class HostTournamentController {
             @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
-
         try {
             final Tournament tournament =
                     tournamentRegistrationService.closeRegistration(tournamentId, user);
@@ -293,13 +248,10 @@ public class HostTournamentController {
                         "tournamentNoticeCode", "tournament.host.close.success");
             }
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
-        } catch (final TournamentRegistrationTournamentNotFoundException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final TournamentRegistrationForbiddenException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final TournamentRegistrationException exception) {
-            redirectAttributes.addFlashAttribute(
-                    "tournamentErrorCode", registrationErrorCode(exception));
+        } catch (final TournamentRegistrationException e) {
+            final String errorMsg =
+                    "tournament.registration.error." + domainExceptionErrorResolver.resolve(e);
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
         }
     }
@@ -308,14 +260,17 @@ public class HostTournamentController {
     public ModelAndView updateBracketStrategy(
             @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
-            @RequestParam("pairingStrategy") final TournamentPairingStrategy pairingStrategy,
+            @RequestParam(value = "pairingStrategy", required = true)
+                    final TournamentPairingStrategy pairingStrategy,
             final RedirectAttributes redirectAttributes) {
         try {
             tournamentBracketService.updatePairingStrategy(tournamentId, user, pairingStrategy);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.strategy.updated");
-        } catch (final TournamentBracketException exception) {
-            handleBracketException(exception, redirectAttributes);
+        } catch (final TournamentBracketException e) {
+            final String errorMsg =
+                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
         return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
     }
@@ -330,14 +285,12 @@ public class HostTournamentController {
                     tournamentId, user, "Host cancelled tournament"); // TODO: reason not localized
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.host.cancel.success");
-            return new ModelAndView("redirect:/tournaments/" + tournamentId);
-        } catch (final TournamentLifecycleForbiddenException exception) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        } catch (final TournamentLifecycleException exception) {
-            redirectAttributes.addFlashAttribute(
-                    "tournamentErrorCode", lifecycleErrorCode(exception));
-            return new ModelAndView("redirect:/tournaments/" + tournamentId);
+        } catch (final TournamentLifecycleException e) {
+            final String errorMsg =
+                    "tournament.lifecycle.error." + domainExceptionErrorResolver.resolve(e);
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
+        return new ModelAndView("redirect:/tournaments/" + tournamentId);
     }
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/bracket/generate")
@@ -349,13 +302,12 @@ public class HostTournamentController {
             tournamentBracketService.generateBracket(tournamentId, user);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.generate.success");
-            return new ModelAndView(
-                    "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
-        } catch (final TournamentBracketException exception) {
-            handleBracketException(exception, redirectAttributes);
-            return new ModelAndView(
-                    "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
+        } catch (final TournamentBracketException e) {
+            final String errorMsg =
+                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
+        return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
     }
 
     @GetMapping("/host/tournaments/{tournamentId:\\d+}/bracket/setup")
@@ -365,28 +317,15 @@ public class HostTournamentController {
             final Model model,
             final Locale locale) {
         final Tournament tournament =
-                tournamentService
-                        .findTournamentForHost(tournamentId, user)
-                        .orElseGet(
-                                () -> {
-                                    if (tournamentService
-                                            .findPublicTournament(tournamentId)
-                                            .isPresent()) {
-                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-                                    }
-                                    throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-                                });
-
+                tournamentService.findTournamentForHost(tournamentId, user).get();
         TournamentBracketViewModel bracketPage;
+
         try {
             bracketPage =
                     buildBracketPage(
                             tournamentBracketService.getBracket(tournamentId, user), locale);
         } catch (final TournamentBracketNotGeneratedException exception) {
             bracketPage = buildUngeneratedBracketPage(tournament, user, locale);
-        } catch (final TournamentBracketException exception) {
-            handleBracketException(exception, null);
-            throw exception;
         }
 
         final List<TournamentTeam> manualPairingTeams =
@@ -446,11 +385,10 @@ public class HostTournamentController {
                     tournamentId, user, manualPairingsForm.getTeamIds());
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.manualPairings.saved");
-        } catch (final TournamentBracketException exception) {
-            handleBracketException(exception, redirectAttributes);
-        } catch (final IllegalArgumentException exception) {
-            redirectAttributes.addFlashAttribute(
-                    "tournamentErrorCode", "tournament.bracket.error.invalidPairings");
+        } catch (final TournamentBracketException e) {
+            final String errorMsg =
+                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
         return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
     }
@@ -493,13 +431,10 @@ public class HostTournamentController {
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.publish.success");
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
-        } catch (final TournamentBracketException exception) {
-            handleBracketException(exception, redirectAttributes);
-            return new ModelAndView(
-                    "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
-        } catch (final IllegalArgumentException exception) {
-            redirectAttributes.addFlashAttribute(
-                    "tournamentErrorCode", "tournament.bracket.error.invalidSchedule");
+        } catch (final TournamentBracketException e) {
+            final String errorMsg =
+                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
             return new ModelAndView(
                     "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
         }
@@ -733,121 +668,6 @@ public class HostTournamentController {
 
     private boolean isEditable(final Tournament tournament) {
         return TournamentStatus.REGISTRATION == tournament.getStatus();
-    }
-
-    private void applyServiceError(
-            final TournamentLifecycleException exception,
-            final BindingResult bindingResult,
-            final Locale locale) {
-        final String code = lifecycleErrorCode(exception);
-        if (exception instanceof TournamentLifecycleInvalidBracketSizeException) {
-            bindingResult.rejectValue("bracketSize", code);
-        } else if (exception instanceof TournamentLifecycleInvalidTeamSizeException) {
-            bindingResult.rejectValue("teamSize", code);
-        } else if (exception instanceof TournamentLifecycleInvalidRegistrationWindowException) {
-            bindingResult.rejectValue("registrationClosesTime", code);
-        } else if (exception instanceof TournamentLifecycleInvalidJoinModeException) {
-            bindingResult.rejectValue("allowSoloSignup", code);
-        } else {
-            bindingResult.reject(
-                    "CreateTournamentForm.global",
-                    messageSource.getMessage(code, null, code, locale));
-        }
-    }
-
-    private static String lifecycleErrorCode(final TournamentLifecycleException exception) {
-        return switch (exception) {
-            case TournamentLifecycleInvalidBracketSizeException ignored ->
-                    "tournament.lifecycle.error.invalidBracketSize";
-            case TournamentLifecycleInvalidTeamSizeException ignored ->
-                    "tournament.lifecycle.error.invalidTeamSize";
-            case TournamentLifecycleInvalidJoinModeException ignored ->
-                    "tournament.lifecycle.error.invalidJoinMode";
-            case TournamentLifecycleInvalidRegistrationWindowException ignored ->
-                    "tournament.lifecycle.error.invalidRegistrationWindow";
-            case TournamentLifecycleInvalidScheduleException ignored ->
-                    "tournament.lifecycle.error.invalidSchedule";
-            case TournamentLifecycleInvalidFormatException ignored ->
-                    "tournament.lifecycle.error.invalidFormat";
-            case TournamentLifecycleForbiddenException ignored ->
-                    "tournament.lifecycle.error.forbidden";
-            case TournamentLifecycleNotEditableException ignored ->
-                    "tournament.lifecycle.error.notEditable";
-            case TournamentLifecycleNotCancellableException ignored ->
-                    "tournament.lifecycle.error.notCancellable";
-            default -> "tournament.lifecycle.error.invalidDetails";
-        };
-    }
-
-    private static String registrationErrorCode(final TournamentRegistrationException exception) {
-        return switch (exception) {
-            case TournamentRegistrationSoloSignupDisabledException ignored ->
-                    "tournament.registration.error.soloDisabled";
-            case TournamentRegistrationNotOpenException ignored ->
-                    "tournament.registration.error.notOpen";
-            case TournamentRegistrationAlreadyOnTeamException ignored ->
-                    "tournament.registration.error.alreadyOnTeam";
-            case TournamentRegistrationAlreadyAssignedException ignored ->
-                    "tournament.registration.error.alreadyAssigned";
-            case TournamentRegistrationNotInSoloPoolException ignored ->
-                    "tournament.registration.error.notInSoloPool";
-            case TournamentRegistrationSoloPoolFullException ignored ->
-                    "tournament.registration.error.soloPoolFull";
-            case TournamentRegistrationUnderCapacityException ignored ->
-                    "tournament.registration.error.underCapacity";
-            default -> "tournament.registration.error.notFound";
-        };
-    }
-
-    private void handleBracketException(
-            final TournamentBracketException exception,
-            final RedirectAttributes redirectAttributes) {
-        if (exception instanceof TournamentBracketTournamentNotFoundException) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        if (exception instanceof TournamentBracketForbiddenException) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-        if (redirectAttributes != null) {
-            redirectAttributes.addFlashAttribute(
-                    "tournamentErrorCode", bracketErrorCode(exception));
-        }
-    }
-
-    private static String bracketErrorCode(final TournamentBracketException exception) {
-        return switch (exception) {
-            case TournamentBracketMatchNotFoundException ignored ->
-                    "tournament.bracket.error.matchNotFound";
-            case TournamentBracketNotReadyForBracketException ignored ->
-                    "tournament.bracket.error.notReady";
-            case TournamentBracketAlreadyGeneratedException ignored ->
-                    "tournament.bracket.error.alreadyGenerated";
-            case TournamentBracketNotGeneratedException ignored ->
-                    "tournament.bracket.error.notGenerated";
-            case TournamentBracketPairingStrategyRequiredException ignored ->
-                    "tournament.bracket.error.pairingStrategyRequired";
-            case TournamentBracketInvalidPairingsException ignored ->
-                    "tournament.bracket.error.invalidPairings";
-            case TournamentBracketUnderCapacityException ignored ->
-                    "tournament.bracket.error.underCapacity";
-            case TournamentBracketMissingMatchScheduleException ignored ->
-                    "tournament.bracket.error.missingMatchSchedule";
-            case TournamentBracketInvalidScheduleException ignored ->
-                    "tournament.bracket.error.invalidSchedule";
-            case TournamentBracketInvalidRoundOrderException ignored ->
-                    "tournament.bracket.error.invalidRoundOrder";
-            case TournamentBracketNotInProgressException ignored ->
-                    "tournament.bracket.error.notInProgress";
-            case TournamentBracketMatchNotReadyException ignored ->
-                    "tournament.bracket.error.matchNotReady";
-            case TournamentBracketMatchAlreadyDecidedException ignored ->
-                    "tournament.bracket.error.matchAlreadyDecided";
-            case TournamentBracketWinnerNotInMatchException ignored ->
-                    "tournament.bracket.error.winnerNotInMatch";
-            case TournamentBracketForbiddenException ignored ->
-                    "tournament.bracket.error.forbidden";
-            default -> "tournament.bracket.error.notFound";
-        };
     }
 
     private TournamentBracketViewModel buildUngeneratedBracketPage(
