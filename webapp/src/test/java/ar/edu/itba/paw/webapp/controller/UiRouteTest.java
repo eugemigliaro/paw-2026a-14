@@ -707,7 +707,7 @@ class UiRouteTest {
                             final Long matchId,
                             final User actingUser,
                             final UpdateMatchRequest request) {
-                        if (matchId != 42L) {
+                        if (matchId != 42L && matchId != 51L) {
                             throw new MatchNotFoundException();
                         }
                         if (actingUser.getId() != 7L) {
