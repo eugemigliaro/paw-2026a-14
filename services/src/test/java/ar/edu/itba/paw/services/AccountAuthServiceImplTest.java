@@ -36,9 +36,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.context.support.StaticMessageSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -75,7 +73,6 @@ public class AccountAuthServiceImplTest {
                                 true,
                                 24),
                         mailDispatchService,
-                        messageSource(),
                         passwordEncoder,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -558,93 +555,8 @@ public class AccountAuthServiceImplTest {
                         true,
                         24),
                 mailDispatchService,
-                messageSource(),
                 passwordEncoder,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
-    }
-
-    private static MessageSource messageSource() {
-        final StaticMessageSource messageSource = new StaticMessageSource();
-        messageSource.addMessage(
-                "auth.registration.error.emailTaken",
-                Locale.ENGLISH,
-                "An account with that email already exists.");
-        messageSource.addMessage(
-                "auth.registration.error.emailPending",
-                Locale.ENGLISH,
-                "That email is already registered but still pending verification.");
-        messageSource.addMessage(
-                "auth.registration.error.usernameTaken",
-                Locale.ENGLISH,
-                "That username is already in use.");
-        messageSource.addMessage(
-                "auth.registration.error.usernameInvalid",
-                Locale.ENGLISH,
-                "Use 3 to 50 lowercase letters, numbers, or underscores for your username.");
-        messageSource.addMessage(
-                "auth.registration.error.nameInvalid", Locale.ENGLISH, "Enter a valid first name.");
-        messageSource.addMessage(
-                "auth.registration.error.lastNameInvalid",
-                Locale.ENGLISH,
-                "Enter a valid last name.");
-        messageSource.addMessage(
-                "auth.registration.error.phoneInvalid",
-                Locale.ENGLISH,
-                "Enter a valid phone number.");
-        messageSource.addMessage(
-                "auth.registration.error.passwordInvalid",
-                Locale.ENGLISH,
-                "Use a password between 8 and 72 characters.");
-        messageSource.addMessage(
-                "verification.preview.account.title",
-                Locale.ENGLISH,
-                "Verify your Match Point account");
-        messageSource.addMessage(
-                "verification.preview.account.summary",
-                Locale.ENGLISH,
-                "Use this one-time confirmation to activate your account and sign in.");
-        messageSource.addMessage(
-                "verification.preview.account.confirm", Locale.ENGLISH, "Verify account");
-        messageSource.addMessage(
-                "verification.message.notFound",
-                Locale.ENGLISH,
-                "That verification link is invalid or no longer exists.");
-        messageSource.addMessage(
-                "verification.message.alreadyUsed",
-                Locale.ENGLISH,
-                "That verification link was already used.");
-        messageSource.addMessage(
-                "verification.message.expired",
-                Locale.ENGLISH,
-                "That verification link has expired.");
-        messageSource.addMessage(
-                "verification.message.accountVerified",
-                Locale.ENGLISH,
-                "Your email is now verified. You can sign in.");
-        messageSource.addMessage(
-                "verification.message.accountUnavailable",
-                Locale.ENGLISH,
-                "This account verification can no longer be completed.");
-        messageSource.addMessage("passwordReset.mail.title", Locale.ENGLISH, "Reset your password");
-        messageSource.addMessage(
-                "passwordReset.mail.summary",
-                Locale.ENGLISH,
-                "Use this secure link to choose a new password for your Match Point account.");
-        messageSource.addMessage(
-                "passwordReset.preview.title", Locale.ENGLISH, "Choose a new password");
-        messageSource.addMessage(
-                "passwordReset.preview.summary",
-                Locale.ENGLISH,
-                "Use this secure link to set a new password for your account.");
-        messageSource.addMessage(
-                "passwordReset.message.unavailable",
-                Locale.ENGLISH,
-                "This password reset link can no longer be used.");
-        messageSource.addMessage(
-                "passwordReset.message.completed",
-                Locale.ENGLISH,
-                "Your password was updated successfully.");
-        return messageSource;
     }
 
     private static String hashToken(final String rawToken) {

@@ -36,7 +36,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,7 +55,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private final EmailActionRequestDao emailActionRequestDao;
     private final MailProperties mailProperties;
     private final MailDispatchService mailDispatchService;
-    private final MessageSource messageSource;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
@@ -66,14 +64,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final EmailActionRequestDao emailActionRequestDao,
             final MailProperties mailProperties,
             final MailDispatchService mailDispatchService,
-            final MessageSource messageSource,
             final PasswordEncoder passwordEncoder,
             final Clock clock) {
         this.userDao = Objects.requireNonNull(userDao);
         this.emailActionRequestDao = Objects.requireNonNull(emailActionRequestDao);
         this.mailProperties = Objects.requireNonNull(mailProperties);
         this.mailDispatchService = Objects.requireNonNull(mailDispatchService);
-        this.messageSource = Objects.requireNonNull(messageSource);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.clock = Objects.requireNonNull(clock);
     }
