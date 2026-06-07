@@ -6,6 +6,7 @@ import ar.edu.itba.paw.services.exceptions.matchParticipation.*;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.services.exceptions.playerReview.*;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
@@ -79,6 +80,17 @@ public class DomainExceptionErrorResolver {
             case TournamentBracketMatchNotReadyException ignored -> "matchNotReady";
             case TournamentBracketWinnerNotInMatchException ignored -> "winnerNotInMatch";
             case TournamentBracketMatchAlreadyDecidedException ignored -> "matchAlreadyDecided";
+            default -> e.getMessage();
+        };
+    }
+
+    public String resolve(PlayerReviewException e) {
+        return switch (e) {
+            case PlayerReviewInvalidReactionException ignored -> "invalid_reaction";
+            case PlayerReviewSelfReviewException ignored -> "self_review";
+            case PlayerReviewNotEligibleException ignored -> "not_eligible";
+            case PlayerReviewCommentTooLongException ignored -> "comment_too_long";
+            case PlayerReviewUserNotFoundException ignored -> "user_not_found";
             default -> e.getMessage();
         };
     }

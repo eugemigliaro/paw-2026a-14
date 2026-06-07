@@ -13,11 +13,9 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
-import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewInvalidReactionException;
-import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotEligibleException;
-import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewNotFoundException;
-import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewSelfReviewException;
-import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewUserNotFoundException;
+import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewException;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
+import ar.edu.itba.paw.webapp.form.ReviewForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
@@ -33,12 +31,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -56,6 +57,7 @@ public class PublicProfileController {
     private final PlayerReviewService playerReviewService;
     private final ModerationService moderationService;
     private final UserSportRatingService userSportRatingService;
+    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final MessageSource messageSource;
 
     @Autowired
@@ -64,12 +66,19 @@ public class PublicProfileController {
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
             final UserSportRatingService userSportRatingService,
+            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final MessageSource messageSource) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
         this.moderationService = moderationService;
         this.userSportRatingService = userSportRatingService;
+        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.messageSource = messageSource;
+    }
+
+    @ModelAttribute("playerReviewForm")
+    public ReviewForm playerReviewForm() {
+        return new ReviewForm();
     }
 
     @GetMapping("/users/{username}")
@@ -157,27 +166,23 @@ public class PublicProfileController {
     public ModelAndView submitReview(
             @AuthenticatedUser final User user,
             @PathVariable("username") final String username,
-            @RequestParam(value = "reaction", required = true) final PlayerReviewReaction reaction,
-            @RequestParam(value = "comment", required = false) final String comment,
+            @Valid @ModelAttribute("playerReviewForm") final ReviewForm reviewForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
-        final User reviewedUser = findUserByUsernameOrThrow(username);
-        String errorCode = null;
-        try {
-            playerReviewService.submitReview(user, reviewedUser, reaction, comment);
-            return redirectToProfile(username, null, "saved", redirectAttributes);
-        } catch (
-                final PlayerReviewUserNotFoundException
-                        e) { // TODO: move message code to service (?) and catch generic exception
-            // here
-            errorCode = "user_not_found";
-        } catch (final PlayerReviewInvalidReactionException e) {
-            errorCode = "invalid_reaction";
-        } catch (final PlayerReviewSelfReviewException e) {
-            errorCode = "self_review";
-        } catch (final PlayerReviewNotEligibleException e) {
-            errorCode = "not_eligible";
+
+        if (bindingResult.hasErrors()) {
+            return redirectToProfile(username, "invalid_form", null);
         }
-        return redirectToProfile(username, errorCode, null);
+
+        final User reviewedUser = findUserByUsernameOrThrow(username);
+        try {
+            playerReviewService.submitReview(
+                    user, reviewedUser, reviewForm.getReaction(), reviewForm.getComment());
+            return redirectToProfile(username, null, "saved", redirectAttributes);
+        } catch (final PlayerReviewException e) {
+            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            return redirectToProfile(username, errorCode, null);
+        }
     }
 
     @PostMapping("/users/{username}/reviews/delete")
@@ -187,19 +192,13 @@ public class PublicProfileController {
             final RedirectAttributes redirectAttributes) {
         final User reviewedUser = findUserByUsernameOrThrow(username);
 
-        String errorCode = null;
         try {
             playerReviewService.deleteReview(user, reviewedUser);
             return redirectToProfile(username, null, "deleted", redirectAttributes);
-        } catch (
-                final PlayerReviewNotFoundException
-                        e) { // TODO: move message code to service (?) and catch generic exception
-            // here
-            errorCode = "not_found";
-        } catch (final PlayerReviewUserNotFoundException e) {
-            errorCode = "user_not_found";
+        } catch (final PlayerReviewException e) {
+            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            return redirectToProfile(username, errorCode, null);
         }
-        return redirectToProfile(username, errorCode, null);
     }
 
     private void addRatingsModel(final ModelAndView mav, final User user, final Locale locale) {
